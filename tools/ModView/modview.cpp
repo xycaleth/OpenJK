@@ -49,7 +49,7 @@ CModViewApp::CModViewApp()
 /////////////////////////////////////////////////////////////////////////////
 // The one and only CModViewApp object
 
-CModViewApp theApp;
+//CModViewApp theApp;
 
 /////////////////////////////////////////////////////////////////////////////
 // CModViewApp initialization
@@ -144,7 +144,7 @@ void Filename_AddToMRU(LPCSTR psFilename)
 {
 	if (bSafeToAddToMRU)
 	{
-		theApp.AddToRecentFileList(psFilename);
+		//theApp.AddToRecentFileList(psFilename);
 	}
 }
 
