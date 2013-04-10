@@ -256,7 +256,7 @@ bool OldSkins_Read(LPCSTR psLocalFilename_GLM, ModelContainer_t *pContainer)
 //
 bool OldSkins_Apply( ModelContainer_t *pContainer, LPCSTR psSkinName )
 {
-	CWaitCursor wait;
+	//CWaitCursor wait;
 
 	bool bReturn = true;
 

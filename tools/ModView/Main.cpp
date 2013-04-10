@@ -16,8 +16,10 @@ int main ( int argc, char *argv[] )
     MainForm w;
     w.show();
 
-    Model_Delete();
+    int errorCode = app.exec();
+
+    Media_Delete();
     FakeCvars_Shutdown();
 
-    return app.exec();
+    return errorCode;
 }

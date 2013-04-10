@@ -280,6 +280,6 @@
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
-  <slot>OnPaint()</slot>
+  <slot>OnExit()</slot>
  </slots>
 </ui>

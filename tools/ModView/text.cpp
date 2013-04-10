@@ -260,7 +260,8 @@ int Text_DisplayFlat(LPCSTR psString, int x, int y, byte r, byte g, byte b, bool
 					{
 						glLoadIdentity();
 
-						gluOrtho2D(0.0,(GLfloat) g_iScreenWidth, 0.0, (GLfloat) g_iScreenHeight);	
+						//gluOrtho2D(0.0,(GLfloat) g_iScreenWidth, 0.0, (GLfloat) g_iScreenHeight);	
+                        glOrtho (0.0, g_iScreenWidth, 0.0, g_iScreenHeight, -1.0, 1.0);
 						glMatrixMode(GL_MODELVIEW);
 						glPushMatrix();
 						{
@@ -296,7 +297,7 @@ int Text_DisplayFlat(LPCSTR psString, int x, int y, byte r, byte g, byte b, bool
 								iRetVal += iStrlen*TEXT_WIDTH;
 							}		
 						}
-						glPopMatrix();	// GL_MODELVIEW				
+						glPopMatrix();	// GL_MODELVIEW	
 					}
 					glMatrixMode(GL_PROJECTION);
 					glPopMatrix();

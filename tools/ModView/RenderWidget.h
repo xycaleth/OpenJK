@@ -11,8 +11,18 @@ public:
     RenderWidget ( QWidget *parent = 0 );
 
 protected:
+    void initializeGL();
     void paintGL();
 
+    void keyPressEvent ( QKeyEvent *event );
+    void keyReleaseEvent ( QKeyEvent *event );
+
+    void mousePressEvent ( QMouseEvent *event );
+    void mouseMoveEvent ( QMouseEvent *event );
+
+private:
+    int lastX, lastY;
+    bool panning;
 };
 
 #endif

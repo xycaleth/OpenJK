@@ -5,6 +5,7 @@
 #include <QtCore/QTimer>
 #include "generic_stuff.h"
 #include "model.h"
+#include "textures.h"
 
 void StartRenderTimer ( QWidget *parent, RenderWidget *renderWidget )
 {
@@ -20,6 +21,7 @@ MainForm::MainForm ( QWidget *parent )
     : QMainWindow (parent)
 {
     ui.setupUi (this);
+
     CurrentSceneName ("Untitled");
 
     StartRenderTimer (this, ui.renderWidget);
@@ -45,7 +47,7 @@ void MainForm::OnOpenModel()
 
         if ( Model_LoadPrimary (modelName[0].toLatin1()) )
         {
-            currentSceneName = modelName[0].toStdString();
+            CurrentSceneName (modelName[0].toStdString());
         }
     }
 }

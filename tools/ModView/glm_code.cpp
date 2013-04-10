@@ -1006,14 +1006,14 @@ static bool GLMModel_ReadSkinFiles(HTREEITEM hParent, ModelContainer_t *pContain
 	//
 	if (Skins_Read(psLocalFilename, pContainer))	
 	{
-		return Skins_ApplyToTree(hParent, pContainer);
+		return true;//Skins_ApplyToTree(hParent, pContainer);
 	}
 
 	// check for optional .skin files... (CHC-type)
 	//
 	if (OldSkins_Read(psLocalFilename, pContainer))
 	{
-		return OldSkins_ApplyToTree(hParent, pContainer);
+		return true;//OldSkins_ApplyToTree(hParent, pContainer);
 	}
 
 	return false;
@@ -1266,10 +1266,10 @@ bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename, H
 
 				pContainer->iBoneBolt_MaxBoltPoints		= pContainer->iNumBones;	// ... since these are pretty much the same in this format
 				pContainer->iSurfaceBolt_MaxBoltPoints	= pContainer->iNumSurfaces;	// ... since these are pretty much the same in this format
-                /*
+                
 				GLMModel_ReadSkinFiles	  (pContainer->hTreeItem_ModelName, pContainer, psLocalFilename);
-				GLMModel_ReadSequenceInfo (pContainer->hTreeItem_ModelName, pContainer, pMDXMHeader->animName);
-				GLMModel_ReadBoneAliasFile(pContainer->hTreeItem_ModelName, hTreeItem_Bones, pContainer, pMDXMHeader->animName);*/
+				//GLMModel_ReadSequenceInfo (pContainer->hTreeItem_ModelName, pContainer, pMDXMHeader->animName);
+				//GLMModel_ReadBoneAliasFile(pContainer->hTreeItem_ModelName, hTreeItem_Bones, pContainer, pMDXMHeader->animName);
 			}
 		}
 	}
