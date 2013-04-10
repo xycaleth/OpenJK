@@ -641,8 +641,6 @@ ModelContainer_t* ModelContainer_FindFromModelHandle(ModelHandle_t hModel)
 static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelContainer_t *pContainer, HTREEITEM hTreeItem_Parent = NULL);
 static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelContainer_t *pContainer, HTREEITEM hTreeItem_Parent)
 {
-	CWaitCursor wait;
-
 	ModelContainer_Clear(pContainer);	//	ZEROMEM(*pContainer);
 
 	ModelHandle_t hModel = Model_Register( psLocalFilename );

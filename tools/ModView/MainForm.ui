@@ -41,7 +41,7 @@
       <widget class="QTreeView" name="treeView">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>1</horstretch>
+         <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
@@ -49,15 +49,15 @@
         <enum>QFrame::WinPanel</enum>
        </property>
       </widget>
-      <widget class="QGraphicsView" name="graphicsView">
+      <widget class="RenderWidget" name="renderWidget" native="true">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>3</horstretch>
+         <horstretch>4</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
-       <property name="frameShape">
-        <enum>QFrame::WinPanel</enum>
+       <property name="focusPolicy">
+        <enum>Qt::StrongFocus</enum>
        </property>
       </widget>
      </widget>
@@ -251,6 +251,35 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>RenderWidget</class>
+   <extends>QWidget</extends>
+   <header>renderwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionOpen</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnOpenModel()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>OnOpenModel()</slot>
+  <slot>OnPaint()</slot>
+ </slots>
 </ui>

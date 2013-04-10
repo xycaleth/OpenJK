@@ -16,6 +16,8 @@
 #ifndef MDX_FORMAT_H
 #define MDX_FORMAT_H
 
+#include "includes.h"
+
 
 #define MDXM_IDENT			(('M'<<24)+('G'<<16)+('L'<<8)+'2')
 #define MDXA_IDENT			(('A'<<24)+('G'<<16)+('L'<<8)+'2')

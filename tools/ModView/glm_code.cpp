@@ -1167,7 +1167,8 @@ bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename, H
 							// phew, all systems go...
 							//
 							bReturn = true;
-			
+			                
+                            #if 0
 							TreeItemData_t	TreeItemData={0};
 											TreeItemData.iModelHandle = hModel;
 									
@@ -1209,6 +1210,7 @@ bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename, H
 							mdxaSkelOffsets_t *pSkelOffsets = (mdxaSkelOffsets_t *) ((byte *)pMDXAHeader + sizeof(*pMDXAHeader));
 
 							R_GLM_AddBoneToTree( hModel, hTreeItem_Bones, 0, pSkelOffsets);
+                            #endif
 						}
 						else
 						{
@@ -1243,9 +1245,9 @@ bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename, H
 
 	if (bReturn)
 	{
-		bReturn = R_GLMModel_Tree_ReEvalSurfaceText(hModel);
+		//bReturn = R_GLMModel_Tree_ReEvalSurfaceText(hModel);
 
-		if (bReturn)
+		//if (bReturn)
 		{
 			// let's try looking for "<modelname>.frames" in the same dir for simple sequence info...
 			//
@@ -1264,10 +1266,10 @@ bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename, H
 
 				pContainer->iBoneBolt_MaxBoltPoints		= pContainer->iNumBones;	// ... since these are pretty much the same in this format
 				pContainer->iSurfaceBolt_MaxBoltPoints	= pContainer->iNumSurfaces;	// ... since these are pretty much the same in this format
-
+                /*
 				GLMModel_ReadSkinFiles	  (pContainer->hTreeItem_ModelName, pContainer, psLocalFilename);
 				GLMModel_ReadSequenceInfo (pContainer->hTreeItem_ModelName, pContainer, pMDXMHeader->animName);
-				GLMModel_ReadBoneAliasFile(pContainer->hTreeItem_ModelName, hTreeItem_Bones, pContainer, pMDXMHeader->animName);
+				GLMModel_ReadBoneAliasFile(pContainer->hTreeItem_ModelName, hTreeItem_Bones, pContainer, pMDXMHeader->animName);*/
 			}
 		}
 	}
