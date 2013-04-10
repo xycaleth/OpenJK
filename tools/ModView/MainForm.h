@@ -21,6 +21,8 @@ private slots:
 
     void OnChangeBackgroundColor ( const QColor& color );
 
+    void OnAbout();
+
 private:
     std::string currentSceneName;
 
