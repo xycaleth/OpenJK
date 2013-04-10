@@ -46,7 +46,7 @@
         </sizepolicy>
        </property>
        <property name="frameShape">
-        <enum>QFrame::WinPanel</enum>
+        <enum>QFrame::Box</enum>
        </property>
       </widget>
       <widget class="RenderWidget" name="renderWidget" native="true">
@@ -90,6 +90,7 @@
     <property name="title">
      <string>&amp;Edit</string>
     </property>
+    <addaction name="actionChoose_background_color"/>
    </widget>
    <widget class="QMenu" name="menu_View">
     <property name="title">
@@ -130,6 +131,9 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="toolBar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="windowTitle">
     <string>toolBar</string>
    </property>
@@ -186,11 +190,17 @@
    </property>
   </action>
   <action name="actionToolbar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Toolbar</string>
    </property>
   </action>
   <action name="actionStatus_Bar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Status Bar</string>
    </property>
@@ -250,6 +260,11 @@
     <string>Interpolation</string>
    </property>
   </action>
+  <action name="actionChoose_background_color">
+   <property name="text">
+    <string>Choose background color</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -277,9 +292,26 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionChoose_background_color</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnChooseBackgroundColor()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
   <slot>OnExit()</slot>
+  <slot>OnChooseBackgroundColor()</slot>
  </slots>
 </ui>

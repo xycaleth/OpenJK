@@ -17,6 +17,9 @@ public:
 
 private slots:
     void OnOpenModel();
+    void OnChooseBackgroundColor();
+
+    void OnChangeBackgroundColor ( const QColor& color );
 
 private:
     std::string currentSceneName;

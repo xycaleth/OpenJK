@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "MainForm.h"
 
+#include <QtWidgets/QColorDialog>
 #include <QtWidgets/QFileDialog>
 #include <QtCore/QTimer>
 #include "generic_stuff.h"
@@ -25,6 +26,22 @@ MainForm::MainForm ( QWidget *parent )
     CurrentSceneName ("Untitled");
 
     StartRenderTimer (this, ui.renderWidget);
+}
+
+void MainForm::OnChangeBackgroundColor ( const QColor& color )
+{
+    AppVars._R = color.red();
+    AppVars._G = color.green();
+    AppVars._B = color.blue();
+}
+
+void MainForm::OnChooseBackgroundColor()
+{
+    QColorDialog *dialog = new QColorDialog (this);
+    QColor color (AppVars._R, AppVars._G, AppVars._B);
+
+    dialog->setCurrentColor (color);
+    dialog->open (this, SLOT (OnChangeBackgroundColor (const QColor&)));
 }
 
 void MainForm::OnOpenModel()
