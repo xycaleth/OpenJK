@@ -13,6 +13,7 @@ public:
 protected:
     void initializeGL();
     void paintGL();
+    void resizeGL ( int width, int height );
 
     void keyPressEvent ( QKeyEvent *event );
     void keyReleaseEvent ( QKeyEvent *event );

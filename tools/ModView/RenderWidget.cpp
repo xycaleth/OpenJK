@@ -5,6 +5,7 @@
 #include <QtGui/QKeyEvent>
 #include <gl/GL.h>
 #include "model.h"
+#include "text.h"
 #include "textures.h"
 
 const float MOUSE_ROT_SCALE = 0.5f;
@@ -23,6 +24,12 @@ RenderWidget::RenderWidget ( QWidget *parent )
 void RenderWidget::initializeGL()
 {
     OnceOnly_GLVarsInit();
+}
+
+void RenderWidget::resizeGL ( int width, int height )
+{
+	g_iScreenWidth = width;
+	g_iScreenHeight = height;
 }
 
 void RenderWidget::keyPressEvent ( QKeyEvent *event )
