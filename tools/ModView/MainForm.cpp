@@ -6,22 +6,23 @@
 #include "generic_stuff.h"
 #include "model.h"
 
+void StartRenderTimer ( QWidget *parent, RenderWidget *renderWidget )
+{
+    QTimer *fpsTimer = new QTimer (parent);
+    fpsTimer->setInterval (10);
+    fpsTimer->setTimerType (Qt::PreciseTimer);
+    QObject::connect (fpsTimer, SIGNAL (timeout()), renderWidget, SLOT (updateGL()));
+    fpsTimer->start();
+}
+
+
 MainForm::MainForm ( QWidget *parent )
     : QMainWindow (parent)
 {
     ui.setupUi (this);
     CurrentSceneName ("Untitled");
 
-    QTimer *fpsTimer = new QTimer (this);
-    fpsTimer->setInterval (10);
-    fpsTimer->setTimerType (Qt::PreciseTimer);
-    connect (fpsTimer, SIGNAL (timeout()), ui.renderWidget, SLOT (updateGL()));
-    fpsTimer->start();
-}
-
-MainForm::~MainForm()
-{
-    
+    StartRenderTimer (this, ui.renderWidget);
 }
 
 void MainForm::OnOpenModel()
@@ -52,5 +53,5 @@ void MainForm::OnOpenModel()
 void MainForm::CurrentSceneName ( const std::string& sceneName )
 {
     currentSceneName = sceneName;
-    //setWindowTitle (tr ("%1 - ModView").arg (QString::fromStdString (sceneName)));
+    setWindowTitle (tr ("%1 - ModView").arg (QString::fromStdString (currentSceneName)));
 }

@@ -12,7 +12,6 @@ class MainForm : public QMainWindow
 
 public:
     MainForm ( QWidget *parent = 0 );
-    ~MainForm();
 
     void CurrentSceneName ( const std::string& sceneName );
 
