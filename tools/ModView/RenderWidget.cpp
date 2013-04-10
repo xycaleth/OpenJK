@@ -105,5 +105,7 @@ void RenderWidget::mouseMoveEvent ( QMouseEvent *event )
 void RenderWidget::paintGL()
 {
     ModelList_Animation();
-    ModelList_Render (size().width(), size().height());
+
+    QSize frameSize (size());
+    ModelList_Render (frameSize.width(), frameSize.height());
 }
