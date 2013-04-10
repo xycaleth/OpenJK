@@ -211,52 +211,16 @@ typedef struct model_s {
 // the client game, as well as some locally derived info
 typedef struct {
 	refEntity_t	e;
-/*
-	float		axisLength;		// compensate for non-normalized axis
-
-	qboolean	needDlights;	// true for bmodels that touch a dlight
-	qboolean	lightingCalculated;
-	vec3_t		lightDir;		// normalized direction towards light
-	vec3_t		ambientLight;	// color normalized to 0-255
-	int			ambientLightInt;	// 32 bit rgba packed
-	vec3_t		directedLight;
-*/
 } trRefEntity_t;
 
 // trRefdef_t holds everything that comes in refdef_t,
 // as well as the locally generated scene information
-typedef struct {
-/*
-	int			x, y, width, height;
-	float		fov_x, fov_y;
-	vec3_t		vieworg;
-	vec3_t		viewaxis[3];		// transformation matrix
-
-	int			time;				// time in milliseconds for shader effects and other time dependent rendering issues
-	int			rdflags;			// RDF_NOWORLDMODEL, etc
-
-	// 1 bits will prevent the associated area from rendering at all
-	byte		areamask[MAX_MAP_AREA_BYTES];
-	qboolean	areamaskModified;	// qtrue if areamask changed since last scene
-
-	float		floatTime;			// tr.refdef.time / 1000.0
-
-	// text messages for deform text shaders
-	char		text[MAX_RENDER_STRINGS][MAX_RENDER_STRING_LENGTH];
-*/		
+typedef struct {	
 	int			num_entities;
 	trRefEntity_t	entities[MAX_MOD_KNOWN];	//	// MODVIEWHACK	// trRefEntity_t	*entities;
 
-/*
-	int			num_dlights;
-	struct dlight_s	*dlights;
-
-	int			numPolys;
-	struct srfPoly_s	*polys;
-*/
 	int			numDrawSurfs;
 	struct drawSurf_s	drawSurfs[MAX_DRAWSURFS];	//MODVIEWHACK	//*drawSurfs;
-
 } trRefdef_t;
 
 
@@ -269,102 +233,14 @@ typedef struct {
 ** by the frontend.
 */
 typedef struct {
-/*
-	qboolean				registered;		// cleared at shutdown, set at beginRegistration
-
-	int						visCount;		// incremented every time a new vis cluster is entered
-	int						frameCount;		// incremented every frame
-	int						sceneCount;		// incremented every scene
-	int						viewCount;		// incremented every view (twice a scene if portaled)
-											// and every R_MarkFragments call
-
-	int						smpFrame;		// toggles from 0 to 1 every endFrame
-
-	int						frameSceneNum;	// zeroed at RE_BeginFrame
-
-	qboolean				worldMapLoaded;
-	world_t					*world;
-
-	const byte				*externalVisData;	// from RE_SetWorldVisData, shared with CM_Load
-
-	image_t					*defaultImage;
-	image_t					*scratchImage;
-	image_t					*fogImage;
-	image_t					*dlightImage;	// inverse-quare highlight for projective adding
-	image_t					*flareImage;
-	image_t					*whiteImage;			// full of 0xff
-	image_t					*identityLightImage;	// full of tr.identityLightByte
-
-	shader_t				*defaultShader;
-	shader_t				*shadowShader;
-	shader_t				*projectionShadowShader;
-
-	shader_t				*flareShader;
-	shader_t				*sunShader;
-
-	int						numLightmaps;
-	image_t					*lightmaps[MAX_LIGHTMAPS];
-*/
 	trRefEntity_t			*currentEntity;
-/*
-	trRefEntity_t			worldEntity;		// point currentEntity at this when rendering world
-*/
 	int						currentEntityNum;	// used during for-next loop to add all ent surface
-/*
-	int						shiftedEntityNum;	// currentEntityNum << QSORT_ENTITYNUM_SHIFT
-*/
 	model_t					*currentModel;
-/*
-	viewParms_t				viewParms;
 
-	float					identityLight;		// 1.0 / ( 1 << overbrightBits )
-	int						identityLightByte;	// identityLight * 255
-	int						overbrightBits;		// r_overbrightBits->integer, but set to 0 if no hw gamma
-
-	orientationr_t			or;					// for current entity
-*/
 	trRefdef_t				refdef;
-/*
-	int						viewCluster;
 
-	vec3_t					sunLight;			// from the sky shader for this level
-	vec3_t					sunDirection;
-
-	frontEndCounters_t		pc;
-	int						frontEndMsec;		// not in pc due to clearing issue
-
-	//
-	// put large tables at the end, so most elements will be
-	// within the +/32K indexed range on risc processors
-	//
-*/
 	model_t					*models[MAX_MOD_KNOWN];
 	int						numModels;
-/*
-	image_t					*images[MAX_DRAWIMAGES];
-	int						numImages;
-
-	class CTRLandScape		*landscapes[MAX_TERRAINS];
-	int						numTerrains;
-
-	// shader indexes from other modules will be looked up in tr.shaders[]
-	// shader indexes from drawsurfs will be looked up in sortedShaders[]
-	// lower indexed sortedShaders must be rendered first (opaque surfaces before translucent)
-
-	int						numShaders;
-	shader_t				*shaders[MAX_SHADERS];
-	shader_t				*sortedShaders[MAX_SHADERS];
-
-	int						numSkins;
-	skin_t					*skins[MAX_SKINS];
-
-	float					sinTable[FUNCTABLE_SIZE];
-	float					squareTable[FUNCTABLE_SIZE];
-	float					triangleTable[FUNCTABLE_SIZE];
-	float					sawToothTable[FUNCTABLE_SIZE];
-	float					inverseSawToothTable[FUNCTABLE_SIZE];
-	float					fogTable[FOG_TABLE_SIZE];
-*/
 } trGlobals_t;
 
 
