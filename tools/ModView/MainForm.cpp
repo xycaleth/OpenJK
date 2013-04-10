@@ -7,6 +7,7 @@
 #include <QtCore/QTimer>
 #include "generic_stuff.h"
 #include "model.h"
+#include "SceneTreeModel.h"
 #include "textures.h"
 
 void StartRenderTimer ( QWidget *parent, RenderWidget *renderWidget )
@@ -21,9 +22,11 @@ void StartRenderTimer ( QWidget *parent, RenderWidget *renderWidget )
 
 MainForm::MainForm ( QWidget *parent )
     : QMainWindow (parent)
+    , treeModel (new SceneTreeModel (this))
 {
     ui.setupUi (this);
 
+    ui.treeView->setModel (treeModel);
     CurrentSceneName ("Untitled");
 
     StartRenderTimer (this, ui.renderWidget);

@@ -2,10 +2,10 @@
 #define MAINFORM_H
 
 #include <QtWidgets/QMainWindow>
+#include <string>
 #include "ui_MainForm.h"
 
-#include <string>
-
+class SceneTreeModel;
 class MainForm : public QMainWindow
 {
     Q_OBJECT
@@ -24,9 +24,10 @@ private slots:
     void OnAbout();
 
 private:
-    std::string currentSceneName;
-
     Ui::MainWindow ui;
+
+    std::string currentSceneName;
+    SceneTreeModel *treeModel;
 };
 
 #endif
