@@ -1140,8 +1140,6 @@ are initialized
 #define WIN98_BUILD_NUMBER 1998
 
 void Sys_Init( void ) {
-	int cpuid;
-
 	// make sure the timer is high precision, otherwise
 	// NT gets 18ms resolution
 	timeBeginPeriod( 1 );
@@ -1187,87 +1185,6 @@ void Sys_Init( void ) {
 //	Cvar_Get( "win_hinstance", va("%i", (int)g_wv.hInstance), CVAR_ROM );
 //	Cvar_Get( "win_wndproc", va("%i", (int)MainWndProc), CVAR_ROM );
 
-	//
-	// figure out our CPU
-	//
-	Cvar_Get( "sys_cpustring", "detect", 0 );
-	if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring"), "detect" ) )
-	{
-		Com_Printf( "...detecting CPU, found " );
-
-		cpuid = Sys_GetProcessorId();
-
-		switch ( cpuid )
-		{
-		case CPUID_GENERIC:
-			Cvar_Set( "sys_cpustring", "generic" );
-			break;
-		case CPUID_INTEL_UNSUPPORTED:
-			Cvar_Set( "sys_cpustring", "x86 (pre-Pentium)" );
-			break;
-		case CPUID_INTEL_PENTIUM:
-			Cvar_Set( "sys_cpustring", "x86 (P5/PPro, non-MMX)" );
-			break;
-		case CPUID_INTEL_MMX:
-			Cvar_Set( "sys_cpustring", "x86 (P5/Pentium2, MMX)" );
-			break;
-		case CPUID_INTEL_KATMAI:
-			Cvar_Set( "sys_cpustring", "Intel Pentium III" );
-			break;
-		case CPUID_INTEL_WILLIAMETTE:
-			Cvar_Set( "sys_cpustring", "Intel Pentium IV" );
-			break;
-		case CPUID_AMD_3DNOW:
-			Cvar_Set( "sys_cpustring", "AMD w/ 3DNow!" );
-			break;
-		case CPUID_AXP:
-			Cvar_Set( "sys_cpustring", "Alpha AXP" );
-			break;
-		default:
-			Com_Error( ERR_FATAL, "Unknown cpu type %d\n", cpuid );
-			break;
-		}
-	}
-	else
-	{
-		Com_Printf( "...forcing CPU type to " );
-		if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "generic" ) )
-		{
-			cpuid = CPUID_GENERIC;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "x87" ) )
-		{
-			cpuid = CPUID_INTEL_PENTIUM;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "mmx" ) )
-		{
-			cpuid = CPUID_INTEL_MMX;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "3dnow" ) )
-		{
-			cpuid = CPUID_AMD_3DNOW;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "PentiumIII" ) )
-		{
-			cpuid = CPUID_INTEL_KATMAI;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "PentiumIV" ) )
-		{
-			cpuid = CPUID_INTEL_WILLIAMETTE;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "axp" ) )
-		{
-			cpuid = CPUID_AXP;
-		}
-		else
-		{
-			Com_Printf( "WARNING: unknown sys_cpustring '%s'\n", Cvar_VariableString( "sys_cpustring" ) );
-			cpuid = CPUID_GENERIC;
-		}
-	}
-	Cvar_SetValue( "sys_cpuid", cpuid );
-	Com_Printf( "%s\n", Cvar_VariableString( "sys_cpustring" ) );
-
 	Cvar_Set( "username", Sys_GetCurrentUser() );
 
 	IN_Init();		// FIXME: not in dedicated?
@@ -1286,9 +1203,9 @@ WinMain
 //int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 int main(int argc, char **argv)
 {
-	char		cwd[MAX_OSPATH];
-	char *cmdline;
-	int i,len;
+	char	cwd[MAX_OSPATH];
+	int		i;
+	char	commandLine[ MAX_STRING_CHARS ] = { 0 };
 //	int			startTime, endTime;
 
     // should never get a previous instance in Win32
@@ -1296,15 +1213,19 @@ int main(int argc, char **argv)
 //        return 0;
 //	}
 
-	// merge the command line, this is kinda silly
-	for (len = 1, i = 1; i < argc; i++)
-		len += strlen(argv[i]) + 1;
-	cmdline = (char *)malloc(len);
-	*cmdline = 0;
-	for (i = 1; i < argc; i++) {
-		if (i > 1)
-			strcat(cmdline, " ");
-		strcat(cmdline, argv[i]);
+	// Concatenate the command line for passing to Com_Init
+	for( i = 1; i < argc; i++ )
+	{
+		const qboolean containsSpaces = (qboolean)(strchr(argv[i], ' ') != NULL);
+		if (containsSpaces)
+			Q_strcat( commandLine, sizeof( commandLine ), "\"" );
+
+		Q_strcat( commandLine, sizeof( commandLine ), argv[ i ] );
+
+		if (containsSpaces)
+			Q_strcat( commandLine, sizeof( commandLine ), "\"" );
+
+		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
 
 //	g_wv.hInstance = hInstance;
@@ -1328,7 +1249,7 @@ int main(int argc, char **argv)
 
 	Sys_InitStreamThread();
 
-	Com_Init( cmdline );
+	Com_Init( commandLine );
 
 	NET_Init();
 

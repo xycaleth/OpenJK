@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 #pragma once
 #if !defined(RM_INSTANCE_H_INC)
 #define RM_INSTANCE_H_INC
@@ -70,8 +88,8 @@ public:
 	virtual void		Preview				( const vec3_t from );
 
 	virtual void		SetArea				( CRMAreaManager* amanager, CRMArea* area ) { mArea = area; }
-	virtual void		SetFilter			( const char *filter ) { strcpy(mFilter, filter); }
-	virtual void		SetTeamFilter		( const char *teamFilter ) { strcpy(mTeamFilter, teamFilter); }
+	virtual void		SetFilter			( const char *filter ) { Q_strncpyz(mFilter, filter, 64); }
+	virtual void		SetTeamFilter		( const char *teamFilter ) { Q_strncpyz(mTeamFilter, teamFilter, 64); }
 	void				SetObjective		( CRMObjective* obj ) { mObjective = obj; }
 	CRMObjective*		GetObjective		(void) {return mObjective;}
 	bool				HasObjective		() {return mObjective != NULL;}

@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // cvar.c -- dynamic variable tracking
 
 #include "../game/q_shared.h"
@@ -504,7 +522,7 @@ qboolean Cvar_Command( void ) {
 	if (value[0] =='!')	//toggle
 	{
 		char buff[5];
-		sprintf(buff,"%i",!v->value);
+		Com_sprintf(buff, 5, "%i",!v->value);
 		Cvar_Set2 (v->name, buff, qfalse);// toggle the value
 	}
 	else
@@ -560,9 +578,9 @@ void Cvar_Set_f( void ) {
 		if ( l + len >= MAX_STRING_TOKENS - 2 ) {
 			break;
 		}
-		strcat( combined, Cmd_Argv( i ) );
+		Q_strcat( combined, MAX_STRING_TOKENS, Cmd_Argv( i ) );
 		if ( i != c-1 ) {
-			strcat( combined, " " );
+			Q_strcat( combined, MAX_STRING_TOKENS, " " );
 		}
 		l += len;
 	}

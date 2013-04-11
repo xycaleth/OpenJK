@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Knight 2.
+
+    Jedi Knight 2 is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Knight 2 is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Knight 2.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // this include must remain at the top of every bg_xxxx CPP file
 #include "common_headers.h"
 
@@ -8026,7 +8044,7 @@ static void PM_Weapon( void )
 	// check for weapon change
 	// can't change if weapon is firing, but can change again if lowering or raising
 	if ( pm->ps->weaponTime <= 0 || pm->ps->weaponstate != WEAPON_FIRING ) {
-		if ( pm->ps->weapon != pm->cmd.weapon ) {
+		if ( pm->ps->weapon != pm->cmd.weapon && (!pm->ps->viewEntity || pm->ps->viewEntity >= ENTITYNUM_WORLD)) {
 			PM_BeginWeaponChange( pm->cmd.weapon );
 		}
 	}
@@ -8307,7 +8325,9 @@ static void PM_Weapon( void )
 
 	if(pm->gent && pm->gent->NPC != NULL )
 	{//NPCs have their own refire logic
-		return;
+		// eez: Unless they're controlled by the player!
+		if(!PM_ControlledByPlayer())
+			return;
 	}
 
 	if ( g_timescale != NULL )

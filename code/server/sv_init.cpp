@@ -1,3 +1,20 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
 
 // leave this as first line for PCH reasons...
 //
@@ -236,30 +253,6 @@ void SV_SpawnServer( char *server, ForceReload_e eForceReload, qboolean bAllowSc
 	int			i;
 	int			checksum;
 
-// The following fixes for potential issues only work on Xbox
-#ifdef _XBOX
-	extern qboolean stop_icarus;
-	stop_icarus = qfalse;
-
-	//Broken scripts may leave the player locked.  I think that's always bad.
-	extern qboolean player_locked;
-	player_locked = qfalse;
-
-	//If you quit while in Matrix Mode, this never gets cleared!
-	extern qboolean MatrixMode;
-	MatrixMode = qfalse;
-
-	// Temporary code to turn on HDR effect for specific maps only
-	if (!Q_stricmp(server, "t3_rift"))
-	{
-		Cvar_Set( "r_hdreffect", "1" );
-	}
-	else
-	{
-		Cvar_Set( "r_hdreffect", "0" );
-	}
-#endif
-
 	RE_RegisterMedia_LevelLoadBegin( server, eForceReload, bAllowScreenDissolve );
 
 
@@ -272,11 +265,6 @@ void SV_SpawnServer( char *server, ForceReload_e eForceReload, qboolean bAllowSc
 	Com_Printf ("------ Server Initialization ------\n%s\n", com_version->string);
 	Com_Printf ("Server: %s\n",server);	
 
-#ifdef _XBOX
-	// disable vsync during load for speed
-	qglDisable(GL_VSYNC);
-#endif
-
 	// don't let sound stutter and dump all stuff on the hunk
 	CL_MapLoading();
 
@@ -284,20 +272,14 @@ void SV_SpawnServer( char *server, ForceReload_e eForceReload, qboolean bAllowSc
 	{ //rww - only clear if not loading the same map
 		CM_ClearMap();
 	}
-#ifndef _XBOX
 	else if (CM_HasTerrain())
 	{ //always clear when going between maps with terrain
 		CM_ClearMap();
 	}
-#endif
 
 	// Miniheap never changes sizes, so I just put it really early in mem.
 	G2VertSpaceServer->ResetHeap();
 
-#ifdef _XBOX
-	// Deletes all textures
-	R_DeleteTextures();
-#endif
 	Hunk_Clear();
 
 	// Moved up from below to help reduce fragmentation
@@ -316,10 +298,6 @@ void SV_SpawnServer( char *server, ForceReload_e eForceReload, qboolean bAllowSc
 		}
 	}
 
-#ifdef _XBOX
-	SV_ClearLastLevel();
-#endif
-
 	// Collect all the small allocations done by the cvar system
 	// This frees, then allocates. Make it the last thing before other
 	// allocations begin!
@@ -329,17 +307,6 @@ void SV_SpawnServer( char *server, ForceReload_e eForceReload, qboolean bAllowSc
 		This is useful for debugging memory fragmentation.  Please don't
 	   remove it.
 */
-#ifdef _XBOX
-	// We've over-freed the info array above, this puts it back into a working state
-	Ghoul2InfoArray_Reset();
-
-	extern void Z_DumpMemMap_f(void);
-	extern void Z_Details_f(void);
-	extern void Z_TagPointers(memtag_t);
-	Z_DumpMemMap_f();
-//	Z_TagPointers(TAG_ALL);
-	Z_Details_f();
-#endif
 
 	// init client structures and svs.numSnapshotEntities
 	// This is moved down quite a bit, but should be safe. And keeps
@@ -377,13 +344,12 @@ void SV_SpawnServer( char *server, ForceReload_e eForceReload, qboolean bAllowSc
 	sv.time = 1000;
 	G2API_SetTime(sv.time,G2T_SV_TIME);
 
-#ifdef _XBOX
-	CL_StartHunkUsers();
-	CM_LoadMap( va("maps/%s.bsp", server), qfalse, &checksum );
-	RE_LoadWorldMap(va("maps/%s.bsp", server));
-#else
-	CM_LoadMap( va("maps/%s.bsp", server), qfalse, &checksum, qfalse );
+#ifndef _DEBUG
+	Com_Printf("CM_LOADMAP: %s\n", server);
 #endif
+
+
+	CM_LoadMap( va("maps/%s.bsp", server), qfalse, &checksum, qfalse );
 
 	// set serverinfo visible name
 	Cvar_Set( "mapname", server );
@@ -494,7 +460,7 @@ void SV_Init (void) {
 	sv_serverid = Cvar_Get ("sv_serverid", "0", CVAR_SYSTEMINFO | CVAR_ROM );
 
 	// server vars
-	sv_fps = Cvar_Get ("sv_fps", "20", CVAR_TEMP );
+	sv_fps = Cvar_Get ("sv_fps", "40", CVAR_TEMP );
 	sv_timeout = Cvar_Get ("sv_timeout", "120", CVAR_TEMP );
 	sv_zombietime = Cvar_Get ("sv_zombietime", "2", CVAR_TEMP );
 	Cvar_Get ("nextmap", "", CVAR_TEMP );

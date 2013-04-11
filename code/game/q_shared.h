@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 #ifndef __Q_SHARED_H
 #define __Q_SHARED_H
 
@@ -27,12 +45,16 @@
 #pragma warning(disable : 4711)		// selected for automatic inline expansion
 #pragma warning(disable : 4786)		// identifier was truncated
 
+#pragma warning(disable : 4996)		// This function or variable may be unsafe.
+
 #endif
 
 //rww - conveniently toggle "gore" code, for model decals and stuff.
 #ifndef _XBOX
 #define _G2_GORE
 #endif
+
+#define Q3CONFIG_NAME		"openjk_sp.cfg"
 
 #ifndef FINAL_BUILD
 #define G2_PERFORMANCE_ANALYSIS

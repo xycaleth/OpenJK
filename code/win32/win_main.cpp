@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // win_main.h
 
 // leave this as first line for PCH reasons...
@@ -178,7 +196,7 @@ void QDECL Sys_Error( const char *error, ... ) {
     MSG        msg;
 
 	va_start (argptr, error);
-	vsprintf (text, error, argptr);
+	vsprintf_s (text, error, argptr);
 	va_end (argptr);
 
 	Conbuf_AppendText( text );
@@ -437,7 +455,7 @@ char *Sys_GetClipboardData( void ) {
 		if ( ( hClipboardData = GetClipboardData( CF_TEXT ) ) != 0 ) {
 			if ( ( cliptext = (char *) GlobalLock( hClipboardData ) ) != 0 ) {
 				data = (char *) Z_Malloc( GlobalSize( hClipboardData ) + 1, TAG_CLIPBOARD, qfalse);
-				strcpy( data, cliptext );
+				Q_strncpyz( data, cliptext, strlen(data) );
 				GlobalUnlock( hClipboardData );
 				
 				strtok( data, "\n\r\b" );
@@ -933,7 +951,7 @@ sysEvent_t Sys_GetEvent( void ) {
 
 		len = strlen( s ) + 1;
 		b = (char *) Z_Malloc( len, TAG_EVENT, qfalse);
-		strcpy( b, s );
+		Q_strncpyz( b, s, len );
 		Sys_QueEvent( 0, SE_CONSOLE, 0, 0, len, b );
 	}
 
@@ -1005,8 +1023,6 @@ void SH_Register(void);
 #endif
 
 void Sys_Init( void ) {
-	int cpuid;
-
 	// make sure the timer is high precision, otherwise
 	// NT gets 18ms resolution
 	timeBeginPeriod( 1 );
@@ -1056,87 +1072,6 @@ void Sys_Init( void ) {
 	// save out a couple things in rom cvars for the renderer to access
 	Cvar_Get( "win_hinstance", va("%i", (int)g_wv.hInstance), CVAR_ROM );
 	Cvar_Get( "win_wndproc", va("%i", (int)MainWndProc), CVAR_ROM );
-
-	//
-	// figure out our CPU
-	//
-	Cvar_Get( "sys_cpustring", "detect", CVAR_ROM );
-	if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring"), "detect" ) )
-	{
-		Com_Printf( "...detecting CPU, found " );
-
-		cpuid = Sys_GetProcessorId();
-
-		switch ( cpuid )
-		{
-		case CPUID_GENERIC:
-			Cvar_Set( "sys_cpustring", "generic" );
-			break;
-		case CPUID_INTEL_UNSUPPORTED:
-			Cvar_Set( "sys_cpustring", "x86 (pre-Pentium)" );
-			break;
-		case CPUID_INTEL_PENTIUM:
-			Cvar_Set( "sys_cpustring", "x86 (P5/PPro, non-MMX)" );
-			break;
-		case CPUID_INTEL_MMX:
-			Cvar_Set( "sys_cpustring", "x86 (P5/Pentium2, MMX)" );
-			break;
-		case CPUID_INTEL_KATMAI:
-			Cvar_Set( "sys_cpustring", "Intel Pentium III" );
-			break;
-		case CPUID_INTEL_WILLIAMETTE:
-			Cvar_Set( "sys_cpustring", "Intel Pentium IV" );
-			break;
-		case CPUID_AMD_3DNOW:
-			Cvar_Set( "sys_cpustring", "AMD w/ 3DNow!" );
-			break;
-		case CPUID_AXP:
-			Cvar_Set( "sys_cpustring", "Alpha AXP" );
-			break;
-		default:
-			Com_Error( ERR_FATAL, "Unknown cpu type %d\n", cpuid );
-			break;
-		}
-	}
-	else
-	{
-		Com_Printf( "...forcing CPU type to " );
-		if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "generic" ) )
-		{
-			cpuid = CPUID_GENERIC;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "x87" ) )
-		{
-			cpuid = CPUID_INTEL_PENTIUM;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "mmx" ) )
-		{
-			cpuid = CPUID_INTEL_MMX;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "3dnow" ) )
-		{
-			cpuid = CPUID_AMD_3DNOW;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "PentiumIII" ) )
-		{
-			cpuid = CPUID_INTEL_KATMAI;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "PentiumIV" ) )
-		{
-			cpuid = CPUID_INTEL_WILLIAMETTE;
-		}
-		else if ( !Q_stricmp( Cvar_VariableString( "sys_cpustring" ), "axp" ) )
-		{
-			cpuid = CPUID_AXP;
-		}
-		else
-		{
-			Com_Printf( "WARNING: unknown sys_cpustring '%s'\n", Cvar_VariableString( "sys_cpustring" ) );
-			cpuid = CPUID_GENERIC;
-		}
-	}
-	Cvar_SetValue( "sys_cpuid", cpuid );
-	Com_Printf( "%s\n", Cvar_VariableString( "sys_cpustring" ) );
 
 	Cvar_Set( "username", Sys_GetCurrentUser() );
 

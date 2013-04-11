@@ -35,6 +35,7 @@ cvar_t	*sv_maxPing;
 cvar_t	*sv_gametype;
 cvar_t	*sv_pure;
 cvar_t	*sv_floodProtect;
+cvar_t	*sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t	*sv_needpass;
 /*
 =============================================================================
@@ -1057,11 +1058,17 @@ void SV_Frame( int msec ) {
 	if ( sv_fps->integer < 1 ) {
 		Cvar_Set( "sv_fps", "10" );
 	}
-	frameMsec = 1000 / sv_fps->integer ;
+	frameMsec = 1000 / sv_fps->integer * com_timescale->value;
+	// don't let it scale below 1ms
+	if(frameMsec < 1)
+	{
+		Cvar_Set("timescale", va("%f", sv_fps->integer / 1000.0f));
+		frameMsec = 1;
+	}
 
 	sv.timeResidual += msec;
 
-	if (!com_dedicated->integer) SV_BotFrame( svs.time + sv.timeResidual );
+	if (!com_dedicated->integer) SV_BotFrame( sv.time + sv.timeResidual );
 
 	if ( com_dedicated->integer && sv.timeResidual < frameMsec && (!com_timescale || com_timescale->value >= 1) ) {
 		// NET_Sleep will give the OS time slices until either get a packet
@@ -1076,19 +1083,17 @@ void SV_Frame( int msec ) {
 	// 2giga-milliseconds = 23 days, so it won't be too often
 	if ( svs.time > 0x70000000 ) {
 		SV_Shutdown( "Restarting server due to time wrapping" );
-		//Cbuf_AddText( "vstr nextmap\n" );
-		Cbuf_AddText( "map_restart 0\n" );
+		Cbuf_AddText( va( "map %s\n", Cvar_VariableString( "mapname" ) ) );
 		return;
 	}
 	// this can happen considerably earlier when lots of clients play and the map doesn't change
 	if ( svs.nextSnapshotEntities >= 0x7FFFFFFE - svs.numSnapshotEntities ) {
 		SV_Shutdown( "Restarting server due to numSnapshotEntities wrapping" );
-		//Cbuf_AddText( "vstr nextmap\n" );
-		Cbuf_AddText( "map_restart 0\n" );
+		Cbuf_AddText( va( "map %s\n", Cvar_VariableString( "mapname" ) ) );
 		return;
 	}
 
-	if( sv.restartTime && svs.time >= sv.restartTime ) {
+	if( sv.restartTime && sv.time >= sv.restartTime ) {
 		sv.restartTime = 0;
 		Cbuf_AddText( "map_restart 0\n" );
 		return;
@@ -1113,19 +1118,20 @@ void SV_Frame( int msec ) {
 	// update ping based on the all received frames
 	SV_CalcPings();
 
-	if (com_dedicated->integer) SV_BotFrame( svs.time );
+	if (com_dedicated->integer) SV_BotFrame( sv.time );
 
 	// run the game simulation in chunks
 	while ( sv.timeResidual >= frameMsec ) {
 		sv.timeResidual -= frameMsec;
 		svs.time += frameMsec;
+		sv.time += frameMsec;
 
 		// let everything in the world think and move
-		VM_Call( gvm, GAME_RUN_FRAME, svs.time );
+		VM_Call( gvm, GAME_RUN_FRAME, sv.time );
 	}
 
 	//rww - RAGDOLL_BEGIN
-	G2API_SetTime(svs.time,0);
+	G2API_SetTime(sv.time,0);
 	//rww - RAGDOLL_END
 
 	if ( com_speeds->integer ) {

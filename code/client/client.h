@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // client.h -- primary header for client
 #pragma once
 #ifndef __CLIENT_H__
@@ -225,11 +243,7 @@ typedef struct {
 #endif
 } clientStatic_t;
 
-#ifdef _XBOX
-#define	CON_TEXTSIZE	256
-#else
-#define	CON_TEXTSIZE	32768
-#endif
+#define	CON_TEXTSIZE	0x30000 //was 32768
 #define	NUM_CON_TIMES	4
 
 typedef struct {

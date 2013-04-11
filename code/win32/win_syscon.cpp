@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // win_syscon.h
 
 // leave this as first line for PCH reasons...
@@ -201,7 +219,7 @@ LONG WINAPI InputLineWndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		{
 			GetWindowText( s_wcd.hwndInputLine, inputBuffer, sizeof( inputBuffer ) );
 			strncat( s_wcd.consoleText, inputBuffer, sizeof( s_wcd.consoleText ) - strlen( s_wcd.consoleText ) - 5 );
-			strcat( s_wcd.consoleText, "\n" );
+			Q_strcat( s_wcd.consoleText, 512, "\n" );
 			SetWindowText( s_wcd.hwndInputLine, "" );
 
 			Sys_Print( va( "]%s\n", inputBuffer ) );
@@ -422,7 +440,7 @@ char *Sys_ConsoleInput( void )
 		return NULL;
 	}
 		
-	strcpy( s_wcd.returnedText, s_wcd.consoleText );
+	Q_strncpyz( s_wcd.returnedText, s_wcd.consoleText, 512 );
 	s_wcd.consoleText[0] = 0;
 	
 	return s_wcd.returnedText;

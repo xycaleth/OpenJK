@@ -241,6 +241,7 @@ PFNGLGETCOMBINEROUTPUTPARAMETERIVNV		qglGetCombinerOutputParameterivNV = NULL;
 PFNGLGETFINALCOMBINERINPUTPARAMETERFVNV	qglGetFinalCombinerInputParameterfvNV = NULL;
 PFNGLGETFINALCOMBINERINPUTPARAMETERIVNV	qglGetFinalCombinerInputParameterivNV = NULL;
 
+#ifdef _WIN32
 // Declare Pixel Format function pointers.
 PFNWGLGETPIXELFORMATATTRIBIVARBPROC		qwglGetPixelFormatAttribivARB = NULL;
 PFNWGLGETPIXELFORMATATTRIBFVARBPROC		qwglGetPixelFormatAttribfvARB = NULL;
@@ -257,6 +258,7 @@ PFNWGLQUERYPBUFFERARBPROC				qwglQueryPbufferARB = NULL;
 PFNWGLBINDTEXIMAGEARBPROC				qwglBindTexImageARB = NULL;
 PFNWGLRELEASETEXIMAGEARBPROC			qwglReleaseTexImageARB = NULL;
 PFNWGLSETPBUFFERATTRIBARBPROC			qwglSetPbufferAttribARB = NULL;
+#endif
 
 // Declare Vertex and Fragment Program function pointers.
 PFNGLPROGRAMSTRINGARBPROC qglProgramStringARB = NULL;
@@ -864,7 +866,6 @@ void R_PrintLongString(const char *string) {
 
 void GfxInfo_f( void ) 
 {
-	cvar_t *sys_cpustring = Cvar_Get( "sys_cpustring", "", CVAR_ROM );
 	const char *enablestrings[] =
 	{
 		"disabled",
@@ -908,7 +909,6 @@ void GfxInfo_f( void )
 	{
 		Com_Printf ("GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
 	}
-	Com_Printf ("CPU: %s @ %s MHz\n", sys_cpustring->string, Cvar_VariableString("sys_cpuspeed") );
 
 	// rendering primitives
 	{

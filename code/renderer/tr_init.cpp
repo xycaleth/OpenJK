@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // tr_init.c -- functions that are not called every frame
 
 // leave this as first line for PCH reasons...
@@ -1136,7 +1154,7 @@ void R_Register( void )
 	r_ext_point_parameters = Cvar_Get( "r_ext_point_parameters", "1", CVAR_ARCHIVE );
 	r_ext_nv_point_sprite = Cvar_Get( "r_ext_nv_point_sprite", "1", CVAR_ARCHIVE );
 
-	r_picmip = Cvar_Get ("r_picmip", "1", CVAR_ARCHIVE | CVAR_LATCH );
+	r_picmip = Cvar_Get ("r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	r_colorMipLevels = Cvar_Get ("r_colorMipLevels", "0", CVAR_LATCH );
 	AssertCvarRange( r_picmip, 0, 16, qtrue, qfalse );
 	r_detailTextures = Cvar_Get( "r_detailtextures", "1", CVAR_ARCHIVE | CVAR_LATCH );

@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 //wp_saberLoad.cpp
 // leave this line at the top for all NPC_xxxx.cpp files...
 #include "g_headers.h"
@@ -256,6 +274,10 @@ qboolean WP_UseFirstValidSaberStyle( gentity_t *ent, int *saberAnimLevel )
 		else
 		{//can't use dual style if not using 2 sabers
 			validStyles &= ~(1<<SS_DUAL);
+			if( *saberAnimLevel == SS_DUAL )		// saber style switch bug fixed --eez
+			{
+				styleInvalid = qtrue;
+			}
 		}
 		if ( styleInvalid && validStyles )
 		{//using an invalid style and have at least one valid style to use, so switch to it

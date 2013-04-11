@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // leave this as first line for PCH reasons...
 //
 #include "../server/exe_headers.h"
@@ -129,7 +147,7 @@ int G2_IsSurfaceLegal(const model_s *mod_m, const char *surfaceName, int *flags)
 
 	for ( int i = 0 ; i < mod_m->mdxm->numSurfaces ; i++) 
 	{
-	 	if (!stricmp(surfaceName, surf->name))
+	 	if (!Q_stricmp(surfaceName, surf->name))
 	 	{
 			*flags = surf->flags;
 			return i;
@@ -172,7 +190,7 @@ const mdxmSurface_t *G2_FindSurface(CGhoul2Info *ghlInfo, surfaceInfo_v &slist, 
 			const mdxmSurfHierarchy_t	*surfInfo = (mdxmSurfHierarchy_t *)((byte *)surfIndexes + surfIndexes->offsets[surf->thisSurfaceIndex]);
 
   			// are these the droids we're looking for?
-			if (!stricmp (surfInfo->name, surfaceName))
+			if (!Q_stricmp (surfInfo->name, surfaceName))
 			{
 				// yup
 				if (surfIndex)

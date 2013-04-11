@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // this include must remain at the top of every bg_xxxx CPP file
 #include "common_headers.h"
 
@@ -14113,9 +14131,12 @@ static void PM_Weapon( void )
 	}
 
 
-	if(pm->gent && pm->gent->NPC != NULL )
-	{//NPCs have their own refire logic
-		return;
+	if(!PM_ControlledByPlayer())
+	{
+		if(pm->gent && pm->gent->NPC != NULL )
+		{//NPCs have their own refire logic
+			return;
+		}
 	}
 
 	if ( g_timescale != NULL )

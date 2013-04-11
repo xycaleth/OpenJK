@@ -203,6 +203,9 @@ PROTOCOL
 #define	UPDATE_SERVER_NAME			"updatejk3.ravensoft.com"
 #define MASTER_SERVER_NAME			"masterjk3.ravensoft.com"
 
+#define JKHUB_MASTER_SERVER_NAME	"master.jkhub.org"
+#define JKHUB_UPDATE_SERVER_NAME	"update.jkhub.org"
+
 #define	PORT_MASTER			29060
 #define	PORT_UPDATE			29061
 //#define	PORT_AUTHORIZE		29062
@@ -507,6 +510,12 @@ issues.
 
 #define	MAX_FILE_HANDLES	64
 
+#ifdef DEDICATED
+#	define Q3CONFIG_CFG PRODUCT_NAME "_server.cfg"
+#else
+#	define Q3CONFIG_CFG PRODUCT_NAME ".cfg"
+#endif
+
 qboolean FS_Initialized();
 
 void	FS_InitFilesystem (void);
@@ -631,28 +640,6 @@ MISC
 
 ==============================================================
 */
-
-// NOTE NOTE NOTE!!!!!!!!!!!!!
-//
-// Any CPUID_XXXX defined as higher than CPUID_INTEL_MMX *must* have MMX support (eg like CPUID_AMD_3DNOW (0x30) has),
-//	this allows convenient MMX capability checking. If you for some reason want to support some new processor that does
-//	*NOT* have MMX (yeah, right), then define it as a lower number. -slc
-//
-// ( These values are returned by Sys_GetProcessorId )
-//
-#define CPUID_GENERIC			0			// any unrecognized processor
-
-#define CPUID_AXP				0x10
-
-#define CPUID_INTEL_UNSUPPORTED	0x20			// Intel 386/486
-#define CPUID_INTEL_PENTIUM		0x21			// Intel Pentium or PPro
-#define CPUID_INTEL_MMX			0x22			// Intel Pentium/MMX or P2/MMX
-#define CPUID_INTEL_KATMAI		0x23			// Intel Katmai
-#define CPUID_INTEL_WILLIAMETTE	0x24			// Intel Williamette
-
-#define CPUID_AMD_3DNOW			0x30			// AMD K6 3DNOW!
-//
-//==========================================================
 
 #define RoundUp(N, M) ((N) + ((unsigned int)(M)) - (((unsigned int)(N)) % ((unsigned int)(M))))
 #define RoundDown(N, M) ((N) - (((unsigned int)(N)) % ((unsigned int)(M))))
@@ -968,7 +955,7 @@ void	Sys_Print( const char *msg );
 // any game related timing information should come from event timestamps
 int		Sys_Milliseconds (bool baseTime = false);
 
-#if __linux__
+#ifndef _WIN32
 extern "C" void	Sys_SnapVector( float *v );
 
 #else
@@ -977,10 +964,6 @@ void	Sys_SnapVector( float *v );
 
 // the system console is shown when a dedicated server is running
 void	Sys_DisplaySystemConsole( qboolean show );
-
-int		Sys_GetProcessorId( void );
-int		Sys_GetCPUSpeed( void );
-int		Sys_GetPhysicalMemory(void);
 
 void	Sys_BeginStreamedFile( fileHandle_t f, int readahead );
 void	Sys_EndStreamedFile( fileHandle_t f );

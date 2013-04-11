@@ -17,7 +17,7 @@
 #endif
 
 #if !defined (MINIHEAP_H_INC)
-#include "qcommon/miniheap.h"
+#include "qcommon/MiniHeap.h"
 #endif
 
 #ifdef _DONETPROFILE_
@@ -503,7 +503,8 @@ void CL_PlayDemo_f( void ) {
 	}
 
 	// make sure a local server is killed
-	Cvar_Set( "sv_killserver", "1" );
+	// 2 means don't force disconnect of local client
+	Cvar_Set( "sv_killserver", "2" );
 
 	CL_Disconnect( qtrue );
 
@@ -842,9 +843,12 @@ void CL_RequestMotd( void ) {
 	Info_SetValueForKey( info, "rvendor", cls.glconfig.vendor_string );
 	Info_SetValueForKey( info, "version", com_version->string );
 
-	Info_SetValueForKey( info, "cputype", Cvar_VariableString("sys_cpustring") );
-	Info_SetValueForKey( info, "mhz", Cvar_VariableString("sys_cpuspeed") );
-	Info_SetValueForKey( info, "memory", Cvar_VariableString("sys_memory") );
+	//If raven starts filtering for this, add this code back in
+#if 0
+	Info_SetValueForKey( info, "cputype", "Intel Pentium IV");
+	Info_SetValueForKey( info, "mhz", "3000" );
+	Info_SetValueForKey( info, "memory", "4096" );
+#endif
 	Info_SetValueForKey( info, "joystick", Cvar_VariableString("in_joystick") );
 	Info_SetValueForKey( info, "colorbits", va("%d",cls.glconfig.colorBits) );
 

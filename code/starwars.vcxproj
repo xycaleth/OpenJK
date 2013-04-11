@@ -68,7 +68,7 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='SHDebug|Win32'">.\SHDebug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='SHDebug|Win32'">.\SHDebug\exe\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='SHDebug|Win32'">true</LinkIncremental>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='FinalBuild|Win32'">.\FinalBuild\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='FinalBuild|Win32'">.\..\bin\FinalBuild\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='FinalBuild|Win32'">.\FinalBuild\exe\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='FinalBuild|Win32'">false</LinkIncremental>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\..\..\bin\Release\</OutDir>
@@ -87,6 +87,7 @@
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='SHDebug|Win32'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='SHDebug|Win32'" />
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">jasp</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='FinalBuild|Win32'">jasp</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Midl>
@@ -857,13 +858,6 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="0_compiled_first\0_SH_Leak.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='FinalBuild|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='SHDebug|Win32'">
-      </PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="smartheap\SMRTHEAP.C">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='FinalBuild|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -2071,9 +2065,6 @@
     <ClInclude Include="client\OpenAL\altypes.h" />
     <ClInclude Include="client\OpenAL\alu.h" />
     <ClInclude Include="client\OpenAL\alut.h" />
-    <ClInclude Include="smartheap\HEAPAGNT.H" />
-    <ClInclude Include="smartheap\SMRTHEAP.H" />
-    <ClInclude Include="smartheap\smrtheap.hpp" />
     <ClInclude Include="win32\afxres.h" />
     <ClInclude Include="game\anims.h" />
     <ClInclude Include="game\b_public.h" />
@@ -2194,8 +2185,6 @@
     <ClInclude Include="qcommon\MiniHeap.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="SHDebug\HA312W32.DLL" />
-    <None Include="SHDebug\SHW32.DLL" />
     <None Include="win32\background.bmp" />
     <None Include="win32\clear.bmp" />
     <None Include="EaxMan.dll" />

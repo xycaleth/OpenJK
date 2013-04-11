@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // tr_draw.c
 // leave this as first line for PCH reasons...
 //
@@ -101,29 +119,16 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 	}
 	qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
 
-#ifdef _XBOX
-	qglBeginEXT (GL_TRIANGLE_STRIP, 4, 0, 0, 4, 0);//, 0, 0);
-	qglTexCoord2f ( 0.5 / cols,  0.5 / rows );
-	qglVertex2f (x, y);
-	qglTexCoord2f ( ( cols - 0.5 ) / cols ,  0.5 / rows );
-	qglVertex2f (x+w, y);
-	qglTexCoord2f ( 0.5 / cols, ( rows - 0.5 ) / rows );
-	qglVertex2f (x, y+h);
-	qglTexCoord2f ( ( cols - 0.5 ) / cols, ( rows - 0.5 ) / rows );
-	qglVertex2f (x+w, y+h);
-	qglEnd ();
-#else
 	qglBegin (GL_QUADS);
-	qglTexCoord2f ( 0.5 / cols,  0.5 / rows );
+	qglTexCoord2f ( 0.5f / cols,  0.5f / rows );
 	qglVertex2f (x, y);
-	qglTexCoord2f ( ( cols - 0.5 ) / cols ,  0.5 / rows );
+	qglTexCoord2f ( ( cols - 0.5f ) / cols ,  0.5f / rows );
 	qglVertex2f (x+w, y);
-	qglTexCoord2f ( ( cols - 0.5 ) / cols, ( rows - 0.5 ) / rows );
+	qglTexCoord2f ( ( cols - 0.5f ) / cols, ( rows - 0.5f ) / rows );
 	qglVertex2f (x+w, y+h);
-	qglTexCoord2f ( 0.5 / cols, ( rows - 0.5 ) / rows );
+	qglTexCoord2f ( 0.5f / cols, ( rows - 0.5f ) / rows );
 	qglVertex2f (x, y+h);
 	qglEnd ();
-#endif
 }
 
 

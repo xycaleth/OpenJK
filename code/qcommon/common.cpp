@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // common.c -- misc functions used in client and server
 
 #include "../game/q_shared.h"
@@ -125,19 +143,17 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 	char		msg[MAXPRINTMSG];
 
 	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
+	vsprintf_s (msg,fmt,argptr);
 	va_end (argptr);
 
-#ifndef _XBOX
 	if ( rd_buffer ) {
 		if ((strlen (msg) + strlen(rd_buffer)) > (rd_buffersize - 1)) {
 			rd_flush(rd_buffer);
 			*rd_buffer = 0;
 		}
-		strcat (rd_buffer, msg);
+		Q_strcat (rd_buffer, strlen(rd_buffer), msg);
 		return;
 	}
-#endif
 
 	CL_ConsolePrint( msg );
 
@@ -148,7 +164,6 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 	OutputDebugString(msg);
 #endif
 
-#ifndef _XBOX
 	// logfile
 	if ( com_logfile && com_logfile->integer ) {
 		if ( !logfile ) {
@@ -163,7 +178,6 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 			FS_Write(msg, strlen(msg), logfile);
 		}
 	}
-#endif
 }
 
 
@@ -183,7 +197,7 @@ void QDECL Com_DPrintf( const char *fmt, ...) {
 	}
 
 	va_start (argptr,fmt);
-	vsprintf (msg,fmt,argptr);
+	vsprintf_s (msg,fmt,argptr);
 	va_end (argptr);
 	
 	Com_Printf ("%s", msg);
@@ -199,7 +213,7 @@ void Com_WriteCam ( const char *text )
 		extern	cvar_t	*sv_mapname;
 
 		//NOTE: always saves in working dir if using one...
-		sprintf( mapname, "maps/%s_cam.map", sv_mapname->string );
+		Com_sprintf( mapname, MAX_QPATH, "maps/%s_cam.map", sv_mapname->string );
 		camerafile = FS_FOpenFileWrite( mapname );
 	}
 
@@ -227,7 +241,7 @@ void Com_FlushCamFile()
 
 	static	char	flushedMapname[MAX_QPATH];
 	extern	cvar_t	*sv_mapname;
-	sprintf( flushedMapname, "maps/%s_cam.map", sv_mapname->string );
+	Com_sprintf( flushedMapname, MAX_QPATH, "maps/%s_cam.map", sv_mapname->string );
 	Com_Printf("flushed all cams to %s\n", flushedMapname);
 #endif
 }
@@ -275,7 +289,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 //	SCR_UnprecacheScreenshot();
 
 	va_start (argptr,fmt);
-	vsprintf (com_errorMessage,fmt,argptr);
+	vsprintf_s (com_errorMessage,fmt,argptr);
 	va_end (argptr);	
 
 	if ( code != ERR_DISCONNECT ) {
@@ -386,7 +400,7 @@ void Com_ParseCommandLine( char *commandLine ) {
 Com_SafeMode
 
 Check for "safe" on the command line, which will
-skip loading of jaconfig.cfg
+skip loading of openjk_sp.cfg
 ===================
 */
 qboolean Com_SafeMode( void ) {
@@ -427,7 +441,7 @@ void Com_StartupVariable( const char *match ) {
 		}
 
 		s = Cmd_Argv(1);
-		if ( !match || !stricmp( s, match ) ) {
+		if ( !match || !Q_stricmp( s, match ) ) {
 			Cvar_Set( s, Cmd_Argv(2) );
 			cv = Cvar_Get( s, "", 0 );
 			cv->flags |= CVAR_USER_CREATED;
@@ -995,9 +1009,9 @@ void Com_Init( char *commandLine ) {
 		
 		Cbuf_AddText ("exec default.cfg\n");
 
-		// skip the jaconfig.cfg if "safe" is on the command line
+		// skip the openjk_sp.cfg if "safe" is on the command line
 		if ( !Com_SafeMode() ) {
-			Cbuf_AddText ("exec jaconfig.cfg\n");
+			Cbuf_AddText ("exec "Q3CONFIG_NAME"\n");
 		}
 
 		Cbuf_AddText ("exec autoexec.cfg\n");
@@ -1020,7 +1034,7 @@ void Com_Init( char *commandLine ) {
 		Cmd_AddCommand ("quit", Com_Quit_f);
 		Cmd_AddCommand ("writeconfig", Com_WriteConfig_f );
 		
-		com_maxfps = Cvar_Get ("com_maxfps", "85", CVAR_ARCHIVE);
+		com_maxfps = Cvar_Get ("com_maxfps", "125", CVAR_ARCHIVE);
 		
 		com_developer = Cvar_Get ("developer", "0", CVAR_TEMP );
 		com_logfile = Cvar_Get ("logfile", "0", CVAR_TEMP );
@@ -1087,9 +1101,9 @@ void Com_Init( char *commandLine ) {
 		com_frameTime = Com_Milliseconds();
 
 		// add + commands from command line
-#ifndef _XBOX
+//#ifndef _XBOX
 		if ( !Com_AddStartupCommands() ) {
-#ifdef NDEBUG
+//#ifdef NDEBUG
 			// if the user didn't give any commands, run default action
 //			if ( !com_dedicated->integer ) 
 			{
@@ -1099,9 +1113,9 @@ void Com_Init( char *commandLine ) {
 //					Cvar_Set( "nextmap", "cinematic intro" );
 //				}
 			}
-#endif	
+//#endif	
 		}
-#endif
+//#endif
 		com_fullyInitialized = qtrue;
 		Com_Printf ("--- Common Initialization Complete ---\n");
 
@@ -1126,7 +1140,6 @@ void Com_Init( char *commandLine ) {
 //==================================================================
 
 void Com_WriteConfigToFile( const char *filename ) {
-#ifndef _XBOX
 	fileHandle_t	f;
 
 	f = FS_FOpenFileWrite( filename );
@@ -1135,11 +1148,10 @@ void Com_WriteConfigToFile( const char *filename ) {
 		return;
 	}
 
-	FS_Printf (f, "// generated by Star Wars Jedi Academy, do not modify\n");
+	FS_Printf (f, "// generated by OpenJK, do not modify\n");
 	Key_WriteBindings (f);
 	Cvar_WriteVariables (f);
 	FS_FCloseFile( f );
-#endif
 }
 
 
@@ -1162,7 +1174,7 @@ void Com_WriteConfiguration( void ) {
 	}
 	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
 
-	Com_WriteConfigToFile( "jaconfig.cfg" );
+	Com_WriteConfigToFile( Q3CONFIG_NAME );
 }
 
 

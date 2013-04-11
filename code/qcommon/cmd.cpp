@@ -1,3 +1,20 @@
+/*
+This file is part of Jedi Academy.
+
+    Jedi Academy is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Academy is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
 // cmd.c -- Quake script command processing module
 
 #include "../game/q_shared.h"
@@ -8,7 +25,6 @@ int			cmd_wait;
 msg_t		cmd_text;
 byte		cmd_text_buf[MAX_CMD_BUFFER];
 char		cmd_defer_text_buf[MAX_CMD_BUFFER];
-
 
 //=============================================================================
 
@@ -271,7 +287,8 @@ void Cmd_Echo_f (void)
 #define CMD_MAX_NAME 32
 typedef struct cmd_function_s
 {
-	char					name[CMD_MAX_NAME];
+	struct cmd_function_s	*next;
+	char					*name;
 	xcommand_t				function;
 } cmd_function_t;
 
@@ -280,7 +297,21 @@ static	int			cmd_argc;
 static	char		*cmd_argv[MAX_STRING_TOKENS];		// points into cmd_tokenized
 static	char		cmd_tokenized[MAX_STRING_CHARS+MAX_STRING_TOKENS];	// will have 0 bytes inserted
 
-static	cmd_function_t	cmd_functions[CMD_MAX_NUM] = {0};		// possible commands to execute
+static	cmd_function_t	*cmd_functions;		// possible commands to execute
+
+/*
+============
+Cmd_FindCommand
+============
+*/
+cmd_function_t *Cmd_FindCommand( const char *cmd_name )
+{
+	cmd_function_t *cmd;
+	for( cmd = cmd_functions; cmd; cmd = cmd->next )
+		if( !Q_stricmp( cmd_name, cmd->name ) )
+			return cmd;
+	return NULL;
+}
 
 /*
 ============
@@ -329,9 +360,9 @@ char	*Cmd_Args( void ) {
 
 	cmd_args[0] = 0;
 	for ( i = 1 ; i < cmd_argc ; i++ ) {
-		strcat( cmd_args, cmd_argv[i] );
+		Q_strcat( cmd_args, MAX_STRING_CHARS, cmd_argv[i] );
 		if ( i != cmd_argc ) {
-			strcat( cmd_args, " " );
+			Q_strcat( cmd_args, MAX_STRING_CHARS, " " );
 		}
 	}
 
@@ -464,35 +495,23 @@ Cmd_AddCommand
 */
 void	Cmd_AddCommand( const char *cmd_name, xcommand_t function ) {
 	cmd_function_t	*cmd;
-	cmd_function_t	*add = NULL;
-	int c;
 	
 	// fail if the command already exists
-	for ( c = 0; c < CMD_MAX_NUM; ++c )
+	if( Cmd_FindCommand( cmd_name ) )
 	{
-		cmd = cmd_functions + c;
-		if ( !strcmp( cmd_name, cmd->name ) ) {
-			// allow completion-only commands to be silently doubled
-			if ( function != NULL ) {
-				Com_Printf ("Cmd_AddCommand: %s already defined\n", cmd_name);
-			}
-			return;
+		// allow completion-only commands to be silently doubled
+		if ( function != NULL ) {
+			Com_Printf ("Cmd_AddCommand: %s already defined\n", cmd_name);
 		}
-
-		if ( add == NULL && cmd->name[0] == '\0')
-		{
-			add = cmd;
-		}
-	}
-
-	if ( add == NULL )
-	{
-		Com_Printf ("Cmd_AddCommand: Too many commands registered\n", cmd_name);
 		return;
 	}
 
-	Q_strncpyz(add->name, cmd_name, CMD_MAX_NAME, qtrue);
-	add->function = function;
+	// use a small malloc to avoid zone fragmentation
+	cmd = (struct cmd_function_s *)S_Malloc (sizeof(cmd_function_t));
+	cmd->name = CopyString( cmd_name );
+	cmd->function = function;
+	cmd->next = cmd_functions;
+	cmd_functions = cmd;
 }
 
 /*
@@ -503,9 +522,8 @@ Cmd_RemoveCommand
 void	Cmd_RemoveCommand( const char *cmd_name ) {
 	cmd_function_t	*cmd;
 
-	for ( int c = 0; c < CMD_MAX_NUM; ++c )
+	for ( cmd = cmd_functions; cmd; cmd = cmd->next )
 	{
-		cmd = cmd_functions + c;
 		if ( !strcmp( cmd_name, cmd->name ) ) {
 			cmd->name[0] = '\0';
 			return;
@@ -516,7 +534,7 @@ void	Cmd_RemoveCommand( const char *cmd_name ) {
 char *Cmd_CompleteCommandNext (char *partial, char *last)
 {
 	cmd_function_t	*cmd, *base;
-	int				len, c;
+	int				len;
 	
 	len = strlen(partial);
 	
@@ -527,12 +545,11 @@ char *Cmd_CompleteCommandNext (char *partial, char *last)
 	base = NULL;
 	if(last)
 	{
-		for (c = 0; c < CMD_MAX_NUM; ++c)
+		for (cmd = cmd_functions; cmd; cmd = cmd->next)
 		{
-			cmd = cmd_functions + c;
 			if(!strcmp(last, cmd->name))
 			{
-				base = cmd + 1;
+				base = cmd->next;
 				break;
 			}
 		}
@@ -547,17 +564,15 @@ char *Cmd_CompleteCommandNext (char *partial, char *last)
 	}
 
 
-	for (c = base - cmd_functions; c < CMD_MAX_NUM; ++c)
+	for (cmd = base; cmd; cmd = cmd->next)
 	{
-		cmd = cmd_functions + c;
 		if (!strcmp (partial,cmd->name))
 			return cmd->name;
 	}
 
 // check for partial match
-	for (c = base - cmd_functions; c < CMD_MAX_NUM; ++c)
+	for (cmd = base; cmd; cmd = cmd->next)
 	{
-		cmd = cmd_functions + c;
 		if (!strncmp (partial,cmd->name, len))
 			return cmd->name;
 	}
@@ -572,6 +587,7 @@ Cmd_CompleteCommand
 ============
 */
 char *Cmd_CompleteCommand( const char *partial ) {
+	// TODO: replace with something more similar to Cmd_CommandCompletion in MP --eez
 	cmd_function_t	*cmd;
 	int				len;
 	
@@ -581,17 +597,15 @@ char *Cmd_CompleteCommand( const char *partial ) {
 		return NULL;
 		
 	// check for exact match
-	for (int c = 0; c < CMD_MAX_NUM; ++c)
+	for (cmd = cmd_functions; cmd; cmd = cmd->next)
 	{
-		cmd = cmd_functions + c;
 		if (!Q_stricmp( partial, cmd->name))
 			return cmd->name;
 	}
 
 	// check for partial match
-	for (int c = 0; c < CMD_MAX_NUM; ++c)
+	for (cmd = cmd_functions; cmd; cmd = cmd->next)
 	{
-		cmd = cmd_functions + c;
 		if (!Q_stricmpn (partial,cmd->name, len))
 			return cmd->name;
 	}
@@ -608,6 +622,7 @@ A complete command line has been parsed, so try to execute it
 ============
 */
 void	Cmd_ExecuteString( const char *text ) {	
+	cmd_function_t	*cmd, **prev;
 
 	// execute the command line
 	Cmd_TokenizeString( text );		
@@ -616,21 +631,22 @@ void	Cmd_ExecuteString( const char *text ) {
 	}
 
 	// check registered command functions	
-	for ( int c = 0; c < CMD_MAX_NUM; ++c )
+	for ( prev = &cmd_functions ; *prev ; prev = &cmd->next )
 	{
-		if ( !Q_stricmp( cmd_argv[0],cmd_functions[c].name ) ) {
+		cmd = *prev;
+		if ( !Q_stricmp( Cmd_Argv(0), cmd->name ) ) {
 			// rearrange the links so that the command will be
 			// near the head of the list next time it is used
-			cmd_function_t temp = cmd_functions[c];
-			cmd_functions[c] = cmd_functions[0];
-			cmd_functions[0] = temp;
+			*prev = cmd->next;
+			cmd->next = cmd_functions;
+			cmd_functions = cmd;
 
 			// perform the action
-			if ( !temp.function ) {
+			if ( !cmd->function ) {
 				// let the cgame or game handle it
 				break;
 			} else {
-				temp.function ();
+				cmd->function ();
 			}
 			return;
 		}
@@ -679,10 +695,10 @@ void Cmd_List_f (void)
 	}
 
 	i = 0;
-	for ( int c = 0; c < CMD_MAX_NUM; ++c )
+	for ( cmd=cmd_functions; cmd; cmd=cmd->next )
 	{
-		cmd = cmd_functions + c;
 		if (match && !Com_Filter(match, cmd->name, qfalse)) continue;
+
 		Com_Printf ("%s\n", cmd->name);
 		i++;
 	}

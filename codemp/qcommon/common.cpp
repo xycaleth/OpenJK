@@ -165,6 +165,7 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 		}
 	}
 
+
 #if defined(_WIN32) && defined(_DEBUG)
 	if ( *msg )
 	{
@@ -191,7 +192,7 @@ void QDECL Com_DPrintf( const char *fmt, ...) {
 	}
 
 	va_start (argptr,fmt);
-	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
+	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
 	
 	Com_Printf ("%s", msg);
@@ -204,9 +205,9 @@ void QDECL Com_OPrintf( const char *fmt, ...)
 	char		msg[MAXPRINTMSG];
 		
 	va_start (argptr,fmt);
-	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
+	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
-#ifndef __linux__	
+#ifdef _WIN32
 	OutputDebugString(msg);
 #else
 	printf(msg);
@@ -263,7 +264,7 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 	com_errorEntered = qtrue;
 
 	va_start (argptr,fmt);
-	Q_vsnprintf (com_errorMessage, sizeof(com_errorMessage), fmt, argptr);
+	vsprintf (com_errorMessage,fmt,argptr);
 	va_end (argptr);
 
 	if ( code != ERR_DISCONNECT ) {
@@ -1059,6 +1060,7 @@ static void Com_Crash_f( void ) {
 	* ( int * ) 0 = 0x12345678;
 }
 
+
 #ifdef MEM_DEBUG
 	void SH_Register(void);
 #endif
@@ -1105,10 +1107,6 @@ void Com_Init( char *commandLine ) {
 		// done early so bind command exists
 		CL_InitKeyCommands();
 
-#ifdef _WIN32
-		_setmaxstdio(2048);
-#endif
-
 		FS_InitFilesystem ();
 
 		Com_InitJournaling();
@@ -1117,11 +1115,7 @@ void Com_Init( char *commandLine ) {
 
 		// skip the jampconfig.cfg if "safe" is on the command line
 		if ( !Com_SafeMode() ) {
-#ifdef DEDICATED
-			Cbuf_AddText ("exec jampserver.cfg\n");
-#else
-			Cbuf_AddText ("exec jampconfig.cfg\n");
-#endif
+			Cbuf_AddText ("exec " Q3CONFIG_CFG "\n");
 		}
 
 		Cbuf_AddText ("exec autoexec.cfg\n");
@@ -1318,11 +1312,7 @@ void Com_WriteConfiguration( void ) {
 	}
 	cvar_modifiedFlags &= ~CVAR_ARCHIVE;
 
-#ifdef DEDICATED
-	Com_WriteConfigToFile( "jampserver.cfg" );
-#else
-	Com_WriteConfigToFile( "jampconfig.cfg" );
-#endif
+	Com_WriteConfigToFile( Q3CONFIG_CFG );
 }
 
 
@@ -1375,7 +1365,7 @@ int Com_ModifyMsec( int msec ) {
 		// dedicated servers don't want to clamp for a much longer
 		// period, because it would mess up all the client's views
 		// of time.
-		if ( msec > 500 ) {
+		if ( com_sv_running->integer && msec > 500 ) {
 			Com_Printf( "Hitch warning: %i msec frame time\n", msec );
 		}
 		clampTime = 5000;
@@ -1420,7 +1410,6 @@ try
 #endif
 	int		msec, minMsec;
 	static int	lastTime;
-	int key;
  
 	int		timeBeforeFirstEvents;
 	int           timeBeforeServer;
@@ -1436,10 +1425,6 @@ try
 	timeBeforeEvents =0;
 	timeBeforeClient = 0;
 	timeAfter = 0;
-
-
-	// old net chan encryption key
-	key = 0x87243987;
 
 	// write config file if anything changed
 	Com_WriteConfiguration(); 
@@ -1569,9 +1554,6 @@ try
 		c_pointcontents = 0;
 	}
 
-	// old net chan encryption key
-	key = lastTime * 0x87243987;
-
 	com_frameNumber++;
 
 }//try
@@ -1624,6 +1606,8 @@ void Com_Shutdown (void)
 	}
 */
 }
+
+
 
 /*
 =====================
@@ -1693,7 +1677,7 @@ bool Com_ParseTextFile(const char *file, class CGenericParser2 &parser, bool cle
 
 	bufParse = buf;
 	parser.Parse(&bufParse, cleanFirst);
-	delete[] buf;
+	delete buf;
 
 	FS_FCloseFile( f );
 
@@ -1732,7 +1716,7 @@ CGenericParser2 *Com_ParseTextFile(const char *file, bool cleanFirst, bool write
 		parse = 0;
 	}
 
-	delete[] buf;
+	delete buf;
 
 	return parse;
 }

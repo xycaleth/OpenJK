@@ -1,3 +1,21 @@
+/*
+This file is part of Jedi Knight 2.
+
+    Jedi Knight 2 is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    Jedi Knight 2 is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jedi Knight 2.  If not, see <http://www.gnu.org/licenses/>.
+*/
+// Copyright 2001-2013 Raven Software
+
 // cg_view.c -- setup all the parameters (position, angle, etc)
 // for a 3D rendering
 
@@ -355,63 +373,64 @@ CG_CalcIdealThirdPersonViewTarget
 static void CG_CalcIdealThirdPersonViewTarget(void)
 {
 	// Initialize IdealTarget
+	qboolean usesViewEntity = (qboolean)(cg.snap->ps.viewEntity && cg.snap->ps.viewEntity < ENTITYNUM_WORLD);
 	VectorCopy(cg.refdef.vieworg, cameraFocusLoc);
 
-	if ( cg.snap->ps.viewEntity > 0 && cg.snap->ps.viewEntity < ENTITYNUM_WORLD )
+	if ( usesViewEntity )
 	{
+
 		gentity_t *gent = &g_entities[cg.snap->ps.viewEntity];
-		if ( gent->client && (gent->client->NPC_class != CLASS_GONK ) 
-			&& (gent->client->NPC_class != CLASS_INTERROGATOR) 
-			&& (gent->client->NPC_class != CLASS_SENTRY) 
-			&& (gent->client->NPC_class != CLASS_PROBE ) 
-			&& (gent->client->NPC_class != CLASS_MOUSE ) 
-			&& (gent->client->NPC_class != CLASS_R2D2 ) 
-			&& (gent->client->NPC_class != CLASS_R5D2) )
-		{//use the NPC's viewheight
-			cameraFocusLoc[2] += gent->client->ps.viewheight;
-		}
-		else
-		{//droids use a generic offset
+		if ( gent->client && (gent->client->NPC_class == CLASS_GONK ) 
+			|| (gent->client->NPC_class == CLASS_INTERROGATOR) 
+			|| (gent->client->NPC_class == CLASS_SENTRY) 
+			|| (gent->client->NPC_class == CLASS_PROBE ) 
+			|| (gent->client->NPC_class == CLASS_MOUSE ) 
+			|| (gent->client->NPC_class == CLASS_R2D2 ) 
+			|| (gent->client->NPC_class == CLASS_R5D2) )
+		{	// Droids use a generic offset
 			cameraFocusLoc[2] += 4;
+			VectorCopy( cameraFocusLoc,  cameraIdealTarget );
+			return;
 		}
-		VectorCopy( cameraFocusLoc,  cameraIdealTarget );
+
+		if( gent->client->ps.pm_flags & PMF_DUCKED )
+		{	// sort of a nasty hack in order to get this to work. Don't tell Ensiform, or I'll have to kill him. --eez
+			cameraFocusLoc[2] -= CAMERA_CROUCH_NUDGE*4;
+		}
 	}
-	else 
+	// Add in the new viewheight
+	cameraFocusLoc[2] += cg.predicted_player_state.viewheight;
+	if ( cg.overrides.active & CG_OVERRIDE_3RD_PERSON_VOF )
 	{
-		// Add in the new viewheight
-		cameraFocusLoc[2] += cg.predicted_player_state.viewheight;
-		if ( cg.overrides.active & CG_OVERRIDE_3RD_PERSON_VOF )
+		// Add in a vertical offset from the viewpoint, which puts the actual target above the head, regardless of angle.
+		VectorCopy( cameraFocusLoc, cameraIdealTarget );
+		cameraIdealTarget[2] += cg.overrides.thirdPersonVertOffset;
+		//VectorMA(cameraFocusLoc, cg.overrides.thirdPersonVertOffset, cameraup, cameraIdealTarget);
+	}
+	else
+	{
+		// Add in a vertical offset from the viewpoint, which puts the actual target above the head, regardless of angle.
+		VectorCopy( cameraFocusLoc, cameraIdealTarget );
+		cameraIdealTarget[2] += cg_thirdPersonVertOffset.value;
+		//VectorMA(cameraFocusLoc, cg_thirdPersonVertOffset.value, cameraup, cameraIdealTarget);
+	}
+
+	// Now, if the player is crouching, do a little special tweak.  The problem is that the player's head is way out of his bbox.
+	if (cg.predicted_player_state.pm_flags & PMF_DUCKED)
+	{ // Nudge to focus location up a tad.
+		vec3_t nudgepos;
+		trace_t trace;
+
+		VectorCopy(cameraFocusLoc, nudgepos);
+		nudgepos[2]+=CAMERA_CROUCH_NUDGE;
+		CG_Trace(&trace, cameraFocusLoc, cameramins, cameramaxs, nudgepos, cg.predicted_player_state.clientNum, MASK_CAMERACLIP);
+		if (trace.fraction < 1.0)
 		{
-			// Add in a vertical offset from the viewpoint, which puts the actual target above the head, regardless of angle.
-			VectorCopy( cameraFocusLoc, cameraIdealTarget );
-			cameraIdealTarget[2] += cg.overrides.thirdPersonVertOffset;
-			//VectorMA(cameraFocusLoc, cg.overrides.thirdPersonVertOffset, cameraup, cameraIdealTarget);
+			VectorCopy(trace.endpos, cameraFocusLoc);
 		}
 		else
 		{
-			// Add in a vertical offset from the viewpoint, which puts the actual target above the head, regardless of angle.
-			VectorCopy( cameraFocusLoc, cameraIdealTarget );
-			cameraIdealTarget[2] += cg_thirdPersonVertOffset.value;
-			//VectorMA(cameraFocusLoc, cg_thirdPersonVertOffset.value, cameraup, cameraIdealTarget);
-		}
-
-		// Now, if the player is crouching, do a little special tweak.  The problem is that the player's head is way out of his bbox.
-		if (cg.predicted_player_state.pm_flags & PMF_DUCKED)
-		{ // Nudge to focus location up a tad.
-			vec3_t nudgepos;
-			trace_t trace;
-
-			VectorCopy(cameraFocusLoc, nudgepos);
-			nudgepos[2]+=CAMERA_CROUCH_NUDGE;
-			CG_Trace(&trace, cameraFocusLoc, cameramins, cameramaxs, nudgepos, cg.predicted_player_state.clientNum, MASK_CAMERACLIP);
-			if (trace.fraction < 1.0)
-			{
-				VectorCopy(trace.endpos, cameraFocusLoc);
-			}
-			else
-			{
-				VectorCopy(nudgepos, cameraFocusLoc);
-			}
+			VectorCopy(nudgepos, cameraFocusLoc);
 		}
 	}
 }
@@ -1544,7 +1563,14 @@ static qboolean CG_CalcViewValues( void ) {
 	// calculate size of 3D view
 	CG_CalcVrect();
 
-	ps = &cg.predicted_player_state;
+	if( cg.snap->ps.viewEntity != 0 && cg.snap->ps.viewEntity < ENTITYNUM_WORLD )
+	{
+		ps = &g_entities[cg.snap->ps.viewEntity].client->ps;
+	}
+	else
+	{
+		ps = &cg.predicted_player_state;
+	}
 #ifndef FINAL_BUILD
 	trap_Com_SetOrgAngles(ps->origin,ps->viewangles);
 #endif
@@ -1931,6 +1957,10 @@ wasForceSpeed=isForceSpeed;
 		&& ( cg.snap->ps.viewEntity == 0 || cg.snap->ps.viewEntity >= ENTITYNUM_WORLD ) )
 	{
 		CG_AddViewWeapon( &cg.predicted_player_state );
+	}
+	else if( cg.snap->ps.viewEntity != 0 && cg.snap->ps.viewEntity < ENTITYNUM_WORLD )
+	{
+		CG_AddViewWeapon( &g_entities[cg.snap->ps.viewEntity ].client->ps );	// HAX - because I wanted to --eez
 	}
 
 	if ( !cg.hyperspace ) 
