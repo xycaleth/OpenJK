@@ -3,12 +3,14 @@
 
 #include <QtCore/QAbstractItemModel>
 
+class SceneTreeItem;
 class SceneTreeModel : public QAbstractItemModel
 {
     Q_OBJECT
 
 public:
     SceneTreeModel ( QObject *parent = 0 );
+    ~SceneTreeModel();
 
     // Implementation for pure virtual functions.
     QVariant        data ( const QModelIndex& index, int role ) const;
@@ -19,8 +21,13 @@ public:
     int             rowCount ( const QModelIndex& parent = QModelIndex() ) const;
     int             columnCount ( const QModelIndex& parent = QModelIndex() ) const;
 
-    
+    // Model mutator functions.
+
+    // SceneTreeModel takes ownership of 'root'.
+    void            setRoot ( SceneTreeItem *root );
+
 private:
+    SceneTreeItem *root;
 };
 
 #endif

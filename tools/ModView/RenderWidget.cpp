@@ -90,12 +90,16 @@ void RenderWidget::mouseMoveEvent ( QMouseEvent *event )
             AppVars.xPos += ((float)(x - lastX) / 10.0f) * MOUSE_XPOS_SCALE;
 			AppVars.yPos -= ((float)(y - lastY) / 10.0f) * MOUSE_YPOS_SCALE;
         }
+
+        ModelList_ForceRedraw();
     }
 
     if ( buttonsDown & Qt::RightButton )
     {
         AppVars.zPos += ((float)(y - lastY) / 10.0f) * MOUSE_ZPOS_SCALE;
         AppVars.zPos = min (max (AppVars.zPos, -1000.0f), 1000.0f);
+
+        ModelList_ForceRedraw();
     }
 
     lastX = x;
@@ -104,8 +108,6 @@ void RenderWidget::mouseMoveEvent ( QMouseEvent *event )
 
 void RenderWidget::paintGL()
 {
-    ModelList_Animation();
-
     QSize frameSize (size());
     ModelList_Render (frameSize.width(), frameSize.height());
 }

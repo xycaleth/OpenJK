@@ -2,7 +2,6 @@
 #define MAINFORM_H
 
 #include <QtWidgets/QMainWindow>
-#include <string>
 #include "ui_MainForm.h"
 
 class SceneTreeModel;
@@ -13,7 +12,7 @@ class MainForm : public QMainWindow
 public:
     MainForm ( QWidget *parent = 0 );
 
-    void CurrentSceneName ( const std::string& sceneName );
+    void CurrentSceneName ( const QString& sceneName );
 
 private slots:
     void OnOpenModel();
@@ -21,12 +20,13 @@ private slots:
 
     void OnChangeBackgroundColor ( const QColor& color );
 
+    void OnUpdateAnimation();
     void OnAbout();
 
 private:
     Ui::MainWindow ui;
 
-    std::string currentSceneName;
+    QString currentSceneName;
     SceneTreeModel *treeModel;
 };
 

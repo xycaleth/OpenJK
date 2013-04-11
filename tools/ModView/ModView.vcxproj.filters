@@ -545,6 +545,9 @@
     <CustomBuild Include="SceneTreeModel.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="SceneTreeItem.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_MainForm.h">
