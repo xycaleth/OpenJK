@@ -34,7 +34,22 @@ private slots:
     void OnNextFrame();
     void OnPrevFrame();
 
+    void OnScreenshotToFile();
+    void OnScreenshotToClipboard();
+    void OnToggleCleanScreenshot();
     void OnResetViewPoint();
+    void OnCycleFieldOfView();
+    void OnIncreaseLOD();
+    void OnDecreaseLOD();
+    void OnPicmipTo0();
+    void OnPicmipTo1();
+    void OnPicmipTo2();
+    void OnPicmipTo3();
+    void OnShowOpenGLInfo();
+
+private:
+    void ChangeLOD ( int lod );
+    void ChangePicmip ( int level );
 
 private:
     Ui::MainWindow ui;

@@ -289,9 +289,13 @@ static int GLW_ChoosePFD( HDC hDC, PIXELFORMATDESCRIPTOR *pPFD )
 	return bestMatch;
 }
 
-
-
-
+void GL_CacheDriverInfo()
+{
+    csGLVendor = glGetString (GL_VENDOR);
+	csGLRenderer = glGetString (GL_RENDERER);
+	csGLVersion = glGetString (GL_VERSION);
+	csGLExtensions = glGetString (GL_EXTENSIONS);	
+}
 
 HGLRC GL_GenerateRC(HDC hDC, bool bDoubleBuffer/* = true*/)
 {

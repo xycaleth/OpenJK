@@ -13,6 +13,7 @@ void	GL_Exit2D		(void);
 int		GL_GetCorrectedDim		(int iDim);
 char*	GL_GetCorrectedDimString(int iDim);
 LPCSTR	GL_GetInfo(void);
+void    GL_CacheDriverInfo();
 
 
 #ifdef _DEBUG

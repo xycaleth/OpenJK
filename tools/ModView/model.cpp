@@ -3099,7 +3099,7 @@ static void R_ModelContainer_CallBack_InfoText(ModelContainer_t *pContainer, voi
 	//
 	{
 		int iWhichLOD = (AppVars.iLOD < pContainer->iNumLODs) ? AppVars.iLOD : pContainer->iNumLODs-1;
-		pTextData->iTextX = Text_DisplayFlat(	String_EnsureMinLength(va("(LOD %d/%d)",iWhichLOD,pContainer->iNumLODs),ARB_LOD_PADDING),
+		pTextData->iTextX = Text_DisplayFlat(	String_EnsureMinLength(va("(LOD %d/%d)",iWhichLOD + 1,pContainer->iNumLODs),ARB_LOD_PADDING),
 												pTextData->iTextX+(2*TEXT_WIDTH), pTextData->iTextY, 
 												255/2,255,255/2,		// RGB
 												false

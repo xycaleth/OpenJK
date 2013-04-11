@@ -23,6 +23,7 @@ RenderWidget::RenderWidget ( QWidget *parent )
 
 void RenderWidget::initializeGL()
 {
+    GL_CacheDriverInfo();
     OnceOnly_GLVarsInit();
 }
 

@@ -838,7 +838,7 @@ int TextureList_GetMip(void)
 }
 void TextureList_ReMip(int iMIPLevel)
 {
-	CWaitCursor wait;
+	//CWaitCursor wait;
 
 	r_picmip->integer = iMIPLevel;
 

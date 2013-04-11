@@ -121,9 +121,8 @@
     <addaction name="separator"/>
     <addaction name="actionCycle_Field_of_View_10_80_90"/>
     <addaction name="separator"/>
-    <addaction name="actionLOD_1"/>
-    <addaction name="actionLOD2"/>
-    <addaction name="actionLOD3"/>
+    <addaction name="actionIncrease_LOD"/>
+    <addaction name="actionDecrease_LOD"/>
     <addaction name="separator"/>
     <addaction name="actionPicmip_0"/>
     <addaction name="actionPicmip_1"/>
@@ -395,6 +394,16 @@
     <string>OpenGL Driver Info</string>
    </property>
   </action>
+  <action name="actionIncrease_LOD">
+   <property name="text">
+    <string>Increase LOD</string>
+   </property>
+  </action>
+  <action name="actionDecrease_LOD">
+   <property name="text">
+    <string>Decrease LOD</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -646,6 +655,182 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionScreenshot_to_File</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnScreenshotToFile()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionScreenshot_to_Clipboard</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnScreenshotToClipboard()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRemove_Text_Selections_on_Screenshot</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToggleCleanScreenshot()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionCycle_Field_of_View_10_80_90</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnCycleFieldOfView()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPicmip_0</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnPicmipTo0()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPicmip_1</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnPicmipTo1()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPicmip_2</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnPicmipTo2()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPicmip_3</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnPicmipTo3()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionIncrease_LOD</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnIncreaseLOD()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionDecrease_LOD</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnDecreaseLOD()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionOpenGL_Driver_Info</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnShowOpenGLInfo()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -663,5 +848,16 @@
   <slot>OnNextFrame()</slot>
   <slot>OnPrevFrame()</slot>
   <slot>OnToggleInterpolation()</slot>
+  <slot>OnScreenshotToFile()</slot>
+  <slot>OnScreenshotToClipboard()</slot>
+  <slot>OnToggleCleanScreenshot()</slot>
+  <slot>OnCycleFieldOfView()</slot>
+  <slot>OnPicmipTo0()</slot>
+  <slot>OnPicmipTo1()</slot>
+  <slot>OnPicmipTo2()</slot>
+  <slot>OnPicmipTo3()</slot>
+  <slot>OnShowOpenGLInfo()</slot>
+  <slot>OnIncreaseLOD()</slot>
+  <slot>OnDecreaseLOD()</slot>
  </slots>
 </ui>

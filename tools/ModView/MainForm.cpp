@@ -166,3 +166,78 @@ void MainForm::OnPrevFrame()
 {
     ModelList_StepFrame (-1);
 }
+
+void MainForm::OnScreenshotToFile()
+{
+    
+}
+
+void MainForm::OnScreenshotToClipboard()
+{
+}
+
+void MainForm::OnToggleCleanScreenshot()
+{
+}
+
+void MainForm::OnCycleFieldOfView()
+{
+    const float VALID_FOVS[] = { 10.0f, 80.0f, 90.0f };
+    const std::size_t NUM_FOVS = sizeof (VALID_FOVS) / sizeof (VALID_FOVS[0]);
+    for ( int i = 0; i < NUM_FOVS; i++ )
+    {
+        if ( AppVars.dFOV == VALID_FOVS[i] )
+        {
+            AppVars.dFOV = VALID_FOVS[(i + 1) % NUM_FOVS];
+            break;
+        }
+    }
+
+    ModelList_ForceRedraw();
+}
+
+void MainForm::OnIncreaseLOD()
+{
+    // Decrement, because lower LOD *number*,
+    // means an *increased* level of detail in the model.
+    ChangeLOD (AppVars.iLOD - 1);
+}
+
+void MainForm::OnDecreaseLOD()
+{
+    // Increment, because higher LOD *number*,
+    // means a *decreased* level of detail in the model.
+    ChangeLOD (AppVars.iLOD + 1);
+}
+
+void MainForm::OnPicmipTo0() { ChangePicmip (0); }
+void MainForm::OnPicmipTo1() { ChangePicmip (1); }
+void MainForm::OnPicmipTo2() { ChangePicmip (2); }
+void MainForm::OnPicmipTo3() { ChangePicmip (3); }
+
+void MainForm::ChangeLOD ( int lod )
+{
+    if ( lod < 0 )
+    {
+        lod = 0;
+    }
+    else if ( lod >= AppVars.Container.iNumLODs )
+    {
+        lod = AppVars.Container.iNumLODs - 1;
+    }
+
+    AppVars.iLOD = lod;
+    ModelList_ForceRedraw();
+}
+
+void MainForm::ChangePicmip ( int level )
+{
+    TextureList_ReMip (level);
+    ModelList_ForceRedraw();
+}
+
+void MainForm::OnShowOpenGLInfo()
+{
+    // FIXME: Message box is too narrow.
+    QMessageBox::information (this, "OpenGL Driver Info", QString::fromLatin1 (GL_GetInfo()));
+}
