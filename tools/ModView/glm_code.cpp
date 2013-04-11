@@ -722,7 +722,34 @@ static bool R_GLM_AddSurfaceToTree( ModelHandle_t hModel, HTREEITEM htiParent, i
 	return bReturn;
 }
 
+void R_GLM_BoneRecursiveApply (
+    ModelHandle_t model,
+    int boneIndex,
+    mdxaSkelOffsets_t* pSkelOffsets,
+    void (*preCallback) ( mdxaSkel_t *, void * ),
+    void (*callback)( mdxaSkel_t *, int, void * ),
+    void (*postCallback)( mdxaSkel_t *, void * ),
+    void *userData
+)
+{
+    mdxaSkel_t *thisBone = (mdxaSkel_t *)((byte *)pSkelOffsets + pSkelOffsets->offsets[boneIndex]);
+    if ( preCallback != NULL )
+    {
+        preCallback (thisBone, userData);
+    }
 
+	for ( int i = 0; i < thisBone->numChildren; i++ )
+	{
+        int childIndex = thisBone->children[i];
+        mdxaSkel_t *childBone = (mdxaSkel_t *)((byte *)pSkelOffsets + pSkelOffsets->offsets[childIndex]);
+		callback (childBone, childIndex, userData);
+	}
+
+    if ( postCallback != NULL )
+    {
+        postCallback (thisBone, userData);
+    }
+}
 
 static bool R_GLM_AddBoneToTree( ModelHandle_t hModel, HTREEITEM htiParent, int iThisBoneIndex, mdxaSkelOffsets_t* pSkelOffsets)
 {

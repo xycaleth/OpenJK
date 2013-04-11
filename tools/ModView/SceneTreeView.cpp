@@ -7,6 +7,43 @@
 #include "SceneTreeItem.h"
 #include "SceneTreeModel.h"
 
+struct BoneTreeApplication
+{
+    ModelContainer_t *container;
+    mdxaSkelOffsets_t *pSkeletonOffsets;
+    QStack<SceneTreeItem *> nodes;
+};
+
+void BeforeBoneChildrenAdded ( mdxaSkel_t *bone, void *userData )
+{
+    BoneTreeApplication *app = static_cast<BoneTreeApplication *>(userData);
+
+    SceneTreeItem *item = new SceneTreeItem (QString::fromLatin1 (bone->name), app->nodes.back());
+    app->nodes.back()->AddChild (item);
+    app->nodes.append (item);
+}
+
+void AfterBoneChildrenAdded ( mdxaSkel_t *, void *userData )
+{
+    BoneTreeApplication *app = static_cast<BoneTreeApplication *>(userData);
+
+    app->nodes.pop();
+}
+
+void BoneChildrenAdded ( mdxaSkel_t *bone, int boneIndex, void *userData )
+{
+    BoneTreeApplication *app = static_cast<BoneTreeApplication *>(userData);
+
+    R_GLM_BoneRecursiveApply (
+        app->container->hModel,
+        boneIndex,
+        app->pSkeletonOffsets,
+        BeforeBoneChildrenAdded,
+        BoneChildrenAdded,
+        AfterBoneChildrenAdded,
+        static_cast<void *>(app));
+}
+
 struct SurfaceTreeApplication
 {
     ModelContainer_t *container;
@@ -83,12 +120,12 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
     mdxaHeader_t *pMDXAHeader = (mdxaHeader_t *) RE_GetModelData(pMDXMHeader->animIndex);
     mdxmHierarchyOffsets_t *pHierarchyOffsets = (mdxmHierarchyOffsets_t *) ((byte *) pMDXMHeader + sizeof(*pMDXMHeader));
 
-    SurfaceTreeApplication app;
-    app.container = &container;
-    app.pHierarchyOffsets = pHierarchyOffsets;
+    SurfaceTreeApplication surfaceApp;
+    surfaceApp.container = &container;
+    surfaceApp.pHierarchyOffsets = pHierarchyOffsets;
 
     // Add surfaces
-    app.nodes.append (surfacesItem);
+    surfaceApp.nodes.append (surfacesItem);
     R_GLM_SurfaceRecursiveApply (
         container.hModel,
         0,
@@ -96,7 +133,7 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
         BeforeSurfaceChildrenAdded,
         SurfaceChildrenAdded,
         AfterSurfaceChildrenAdded,
-        static_cast<void *>(&app));
+        static_cast<void *>(&surfaceApp));
 
     int numSurfacesInTree = surfacesItem->ChildCountRecursive();
     if ( numSurfacesInTree != pMDXMHeader->numSurfaces )
@@ -107,8 +144,8 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
     }
 
     // Add tags
-    app.nodes.clear();
-    app.nodes.append (tagsItem);
+    surfaceApp.nodes.clear();
+    surfaceApp.nodes.append (tagsItem);
     R_GLM_SurfaceRecursiveApply (
         container.hModel,
         0,
@@ -116,7 +153,23 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
         BeforeTagChildrenAdded,
         TagChildrenAdded,
         NULL,
-        static_cast<void *>(&app));
+        static_cast<void *>(&surfaceApp));
+
+    // Add bones
+    mdxaSkelOffsets_t *pSkelOffsets = (mdxaSkelOffsets_t *)((byte *)pMDXAHeader + sizeof(*pMDXAHeader));
+    BoneTreeApplication boneApp;
+    boneApp.container = &container;
+    boneApp.nodes.append (bonesItem);
+    boneApp.pSkeletonOffsets = pSkelOffsets;
+
+    R_GLM_BoneRecursiveApply (
+        container.hModel,
+        0,
+        pSkelOffsets,
+        BeforeBoneChildrenAdded,
+        BoneChildrenAdded,
+        AfterBoneChildrenAdded,
+        static_cast<void *>(&boneApp));
 
     // And add the items to model!
     modelItem->AddChild (surfacesItem);
@@ -129,11 +182,4 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
     modelItem->AddChild (bonesItem);
 
     model.setRoot (root);
-    #if 0
-	// send bone heirarchy to tree...
-	//
-	mdxaSkelOffsets_t *pSkelOffsets = (mdxaSkelOffsets_t *) ((byte *)pMDXAHeader + sizeof(*pMDXAHeader));
-
-	R_GLM_AddBoneToTree( hModel, hTreeItem_Bones, 0, pSkelOffsets);
-    #endif
 }

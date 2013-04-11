@@ -104,6 +104,16 @@ void R_GLM_SurfaceRecursiveApply (
     void *userData
 );
 
+void R_GLM_BoneRecursiveApply (
+    ModelHandle_t model,
+    int boneIndex,
+    mdxaSkelOffsets_t* pSkelOffsets,
+    void (*preCallback) ( mdxaSkel_t *, void * ),
+    void (*callback)( mdxaSkel_t *, int, void * ),
+    void (*postCallback)( mdxaSkel_t *, void * ),
+    void *userData
+);
+
 #endif	// #ifndef GLM_CODE_H
 
 
