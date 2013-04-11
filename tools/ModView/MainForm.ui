@@ -88,6 +88,8 @@
     <addaction name="actionSave"/>
     <addaction name="actionSave_Scene_As"/>
     <addaction name="separator"/>
+    <addaction name="actionRefresh_All_Textures"/>
+    <addaction name="separator"/>
     <addaction name="actionRecent_Files"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -97,6 +99,11 @@
      <string>&amp;Edit</string>
     </property>
     <addaction name="actionChoose_background_color"/>
+    <addaction name="actionChange_Floor_Position"/>
+    <addaction name="actionChange_Bone_Weighting_Threshold"/>
+    <addaction name="actionPrompt_for_GLA_overrides"/>
+    <addaction name="separator"/>
+    <addaction name="actionChange_global_XYZ_scale"/>
    </widget>
    <widget class="QMenu" name="menu_View">
     <property name="title">
@@ -106,6 +113,24 @@
     <addaction name="actionStatus_Bar"/>
     <addaction name="separator"/>
     <addaction name="actionReset_view_position"/>
+    <addaction name="actionOptions"/>
+    <addaction name="separator"/>
+    <addaction name="actionScreenshot_to_File"/>
+    <addaction name="actionScreenshot_to_Clipboard"/>
+    <addaction name="actionRemove_Text_Selections_on_Screenshot"/>
+    <addaction name="separator"/>
+    <addaction name="actionCycle_Field_of_View_10_80_90"/>
+    <addaction name="separator"/>
+    <addaction name="actionLOD_1"/>
+    <addaction name="actionLOD2"/>
+    <addaction name="actionLOD3"/>
+    <addaction name="separator"/>
+    <addaction name="actionPicmip_0"/>
+    <addaction name="actionPicmip_1"/>
+    <addaction name="actionPicmip_2"/>
+    <addaction name="actionPicmip_3"/>
+    <addaction name="separator"/>
+    <addaction name="actionOpenGL_Driver_Info"/>
    </widget>
    <widget class="QMenu" name="menu_Animation">
     <property name="title">
@@ -214,7 +239,7 @@
   </action>
   <action name="actionReset_view_position">
    <property name="text">
-    <string>Reset view position</string>
+    <string>Reset View Position</string>
    </property>
   </action>
   <action name="actionStart">
@@ -272,12 +297,102 @@
   </action>
   <action name="actionChoose_background_color">
    <property name="text">
-    <string>Choose background color</string>
+    <string>Choose Background Color</string>
    </property>
   </action>
   <action name="actionAbout">
    <property name="text">
     <string>About ModView...</string>
+   </property>
+  </action>
+  <action name="actionRefresh_All_Textures">
+   <property name="text">
+    <string>Refresh All Textures</string>
+   </property>
+  </action>
+  <action name="actionChange_Floor_Position">
+   <property name="text">
+    <string>Change Floor Position</string>
+   </property>
+  </action>
+  <action name="actionChange_Bone_Weighting_Threshold">
+   <property name="text">
+    <string>Change Bone Weight Threshold</string>
+   </property>
+  </action>
+  <action name="actionPrompt_for_GLA_overrides">
+   <property name="text">
+    <string>Prompt for GLA overrides during GLM load</string>
+   </property>
+  </action>
+  <action name="actionChange_global_XYZ_scale">
+   <property name="text">
+    <string>Change Global XYZ Scale</string>
+   </property>
+  </action>
+  <action name="actionOptions">
+   <property name="text">
+    <string>Options</string>
+   </property>
+  </action>
+  <action name="actionScreenshot_to_File">
+   <property name="text">
+    <string>Screenshot to File</string>
+   </property>
+  </action>
+  <action name="actionScreenshot_to_Clipboard">
+   <property name="text">
+    <string>Screenshot to Clipboard</string>
+   </property>
+  </action>
+  <action name="actionRemove_Text_Selections_on_Screenshot">
+   <property name="text">
+    <string>Remove Text/Selections from Screenshot</string>
+   </property>
+  </action>
+  <action name="actionCycle_Field_of_View_10_80_90">
+   <property name="text">
+    <string>Cycle Field of View (10/80/90)</string>
+   </property>
+  </action>
+  <action name="actionLOD_1">
+   <property name="text">
+    <string>LOD 1</string>
+   </property>
+  </action>
+  <action name="actionLOD2">
+   <property name="text">
+    <string>LOD 2</string>
+   </property>
+  </action>
+  <action name="actionLOD3">
+   <property name="text">
+    <string>LOD 3</string>
+   </property>
+  </action>
+  <action name="actionPicmip_0">
+   <property name="text">
+    <string>Picmip 0</string>
+   </property>
+  </action>
+  <action name="actionPicmip_1">
+   <property name="text">
+    <string>Picmip 1</string>
+   </property>
+  </action>
+  <action name="actionPicmip_2">
+   <property name="text">
+    <string>Picmip 2</string>
+   </property>
+  </action>
+  <action name="actionPicmip_3">
+   <property name="text">
+    <string>Picmip 3</string>
+   </property>
+  </action>
+  <action name="actionOpenGL_Driver_Info">
+   <property name="text">
+    <string>OpenGL Driver Info</string>
    </property>
   </action>
  </widget>
@@ -419,6 +534,118 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionGo_to_end_frame</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnAnimationGoToEndFrame()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRewind</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnAnimationRewind()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionFaster</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnAnimationSpeedUp()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSlower</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnAnimationSlowDown()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionNext_frame</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnNextFrame()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionPrevious_frame</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnPrevFrame()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionInterpolation</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToggleInterpolation()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -429,5 +656,12 @@
   <slot>OnAnimationPause()</slot>
   <slot>OnAnimationStartWithLooping()</slot>
   <slot>OnResetViewPoint()</slot>
+  <slot>OnAnimationRewind()</slot>
+  <slot>OnAnimationGoToEndFrame()</slot>
+  <slot>OnAnimationSpeedUp()</slot>
+  <slot>OnAnimationSlowDown()</slot>
+  <slot>OnNextFrame()</slot>
+  <slot>OnPrevFrame()</slot>
+  <slot>OnToggleInterpolation()</slot>
  </slots>
 </ui>

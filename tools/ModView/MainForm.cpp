@@ -122,3 +122,47 @@ void MainForm::OnAnimationStartWithLooping()
 {
     Model_StartAnim (true);
 }
+
+void MainForm::OnAnimationRewind()
+{
+    ModelList_Rewind();
+    ModelList_ForceRedraw();
+}
+
+void MainForm::OnAnimationGoToEndFrame()
+{
+    ModelList_GoToEndFrame();
+    ModelList_ForceRedraw();
+}
+
+void MainForm::OnAnimationSpeedUp()
+{
+    AppVars.dAnimSpeed *= ANIM_FASTER;
+
+    // Need to update the FPS text
+    ModelList_ForceRedraw();
+}
+
+void MainForm::OnAnimationSlowDown()
+{
+    AppVars.dAnimSpeed *= ANIM_SLOWER;
+
+    // Need to update the FPS text
+    ModelList_ForceRedraw();
+}
+
+void MainForm::OnToggleInterpolation()
+{
+    AppVars.bInterpolate = !AppVars.bInterpolate;
+    ModelList_ForceRedraw();
+}
+
+void MainForm::OnNextFrame()
+{
+    ModelList_StepFrame (1);
+}
+
+void MainForm::OnPrevFrame()
+{
+    ModelList_StepFrame (-1);
+}

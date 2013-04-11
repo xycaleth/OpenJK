@@ -26,6 +26,13 @@ private slots:
     void OnAnimationStart();
     void OnAnimationPause();
     void OnAnimationStartWithLooping();
+    void OnAnimationRewind();
+    void OnAnimationGoToEndFrame();
+    void OnAnimationSpeedUp();
+    void OnAnimationSlowDown();
+    void OnToggleInterpolation();
+    void OnNextFrame();
+    void OnPrevFrame();
 
     void OnResetViewPoint();
 
