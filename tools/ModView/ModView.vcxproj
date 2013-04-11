@@ -167,6 +167,7 @@
     <ClCompile Include="R_Model.cpp" />
     <ClCompile Include="R_Surface.cpp" />
     <ClCompile Include="SceneTreeModel.cpp" />
+    <ClCompile Include="SceneTreeView.cpp" />
     <ClCompile Include="SOF2NPCViewer.cpp" />
     <ClCompile Include="Splash.cpp" />
     <ClCompile Include="StdAfx.cpp">
@@ -1695,6 +1696,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_MainForm.h" />
+    <ClInclude Include="SceneTreeView.h" />
     <CustomBuild Include="SceneTreeItem.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </Message>

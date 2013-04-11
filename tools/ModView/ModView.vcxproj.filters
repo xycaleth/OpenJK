@@ -297,6 +297,9 @@
     <ClCompile Include="GeneratedFiles\Release\moc_SceneTreeModel.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="SceneTreeView.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ModView.rc">
@@ -552,6 +555,9 @@
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_MainForm.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneTreeView.h">
+      <Filter>Header Files\GUI</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

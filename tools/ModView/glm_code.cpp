@@ -657,6 +657,35 @@ static LPCSTR GLMModel_CreateSurfaceName( LPCSTR psSurfaceName, bool bOnOff)
 	return (LPCSTR) string;
 }
 
+void R_GLM_SurfaceRecursiveApply (
+    ModelHandle_t model,
+    int surfaceIndex,
+    mdxmHierarchyOffsets_t *pHierarchyOffsets,
+    void (*preCallback) ( mdxmSurfHierarchy_t *, void * ),
+    void (*callback)( mdxmSurfHierarchy_t *, int, void * ),
+    void (*postCallback)( mdxmSurfHierarchy_t *, void * ),
+    void *userData
+)
+{
+    mdxmSurfHierarchy_t *thisSurface = (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[surfaceIndex]);
+    if ( preCallback != NULL )
+    {
+        preCallback (thisSurface, userData);
+    }
+
+	for ( int i = 0; i < thisSurface->numChildren; i++ )
+	{
+        int childIndex = thisSurface->childIndexes[i];
+        mdxmSurfHierarchy_t *childSurface = (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[childIndex]);
+		callback (childSurface, childIndex, userData);
+	}
+
+    if ( postCallback != NULL )
+    {
+        postCallback (thisSurface, userData);
+    }
+}
+
 
 static bool R_GLM_AddSurfaceToTree( ModelHandle_t hModel, HTREEITEM htiParent, int iThisSurfaceIndex, mdxmHierarchyOffsets_t *pHierarchyOffsets, bool bTagsOnly)
 {

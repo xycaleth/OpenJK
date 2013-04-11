@@ -94,6 +94,16 @@ bool			GLMModel_GetBounds(ModelHandle_t hModel, int iLODNumber, int iFrameNumber
 int 			GLMModel_EnsureGenerated_VertEdgeInfo(ModelHandle_t hModel, int iLOD, SurfaceEdgeInfoPerLOD_t &SurfaceEdgeInfoPerLOD);
 void		   *GLMModel_GetDefaultGLA(void);
 
+void R_GLM_SurfaceRecursiveApply (
+    ModelHandle_t model,
+    int surfaceIndex,
+    mdxmHierarchyOffsets_t *pHierarchyOffsets,
+    void (*preCallback) ( mdxmSurfHierarchy_t *, void * ),
+    void (*callback)( mdxmSurfHierarchy_t *, int, void * ),
+    void (*postCallback)( mdxmSurfHierarchy_t *, void * ),
+    void *userData
+);
+
 #endif	// #ifndef GLM_CODE_H
 
 
