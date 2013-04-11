@@ -241,3 +241,9 @@ void MainForm::OnShowOpenGLInfo()
     // FIXME: Message box is too narrow.
     QMessageBox::information (this, "OpenGL Driver Info", QString::fromLatin1 (GL_GetInfo()));
 }
+
+void MainForm::OnRefreshTextures()
+{
+    TextureList_Refresh();
+    ModelList_ForceRedraw();
+}

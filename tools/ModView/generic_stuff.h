@@ -9,7 +9,7 @@ extern char qdir[];
 extern char	gamedir[];
 
 void SetQdirFromPath( const char *path );
-void Filename_RemoveQUAKEBASE(CString &string);
+void Filename_RemoveQUAKEBASE(CString& string);
 bool FileExists (LPCSTR psFilename);
 long FileLen( LPCSTR psFilename);
 char *Filename_WithoutPath(LPCSTR psFilename);

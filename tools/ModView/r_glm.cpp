@@ -3,6 +3,7 @@
 // contains a whole wodge of code pasted from our other codebases in order to quickly get this format up and running...
 //
 #include "stdafx.h"
+#include "GUIHelpers.h"
 #include "includes.h"
 #include "R_Common.h"
 #include "R_Model.h"
@@ -11,7 +12,6 @@
 #include "textures.h"
 #include "skins.h"
 #include "oldskins.h"
-#include "modviewtreeview.h"	// for GetString()
 #include "mc_compress2.h"
 #include "special_defines.h"
 //
@@ -229,11 +229,10 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 	{
 		if (GetYesNo(va("Override anim file:\n\n\"%s\"  ?\n\n( Model: \"%s\" )",mdxm->animName,mdxm->name)))
 		{
-			LPCSTR psNewAnimName = GetString("Enter new anim name",mdxm->animName);
-			if (psNewAnimName)
+			std::string psNewAnimName = GetInputFromPrompt ("Animation Override", "Enter new animation name", mdxm->animName);
+			if (!psNewAnimName.empty())
 			{						
-				strncpy(mdxm->animName,psNewAnimName,sizeof(mdxm->animName)-1);
-				mdxm->animName[sizeof(mdxm->animName)-1]='\0';
+				Q_strncpyz (mdxm->animName,psNewAnimName.c_str(), sizeof(mdxm->animName));
 			}
 		}
 	}

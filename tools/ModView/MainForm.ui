@@ -831,6 +831,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionRefresh_All_Textures</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnRefreshTextures()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -859,5 +875,6 @@
   <slot>OnShowOpenGLInfo()</slot>
   <slot>OnIncreaseLOD()</slot>
   <slot>OnDecreaseLOD()</slot>
+  <slot>OnRefreshTextures()</slot>
  </slots>
 </ui>

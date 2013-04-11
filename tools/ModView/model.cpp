@@ -783,31 +783,31 @@ static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelC
 
 void ModelTree_DeleteAllItems(void)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		gModViewTreeViewhandle->DeleteAllItems();
-	}
+	}*/
 }
 
 DWORD ModelTree_GetItemData(HTREEITEM hTreeItem)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		return gModViewTreeViewhandle->GetTreeCtrl().GetItemData(hTreeItem);
 	}
 
-	assert(0);
+	assert(0);*/
 	return NULL;
 }
 
 bool ModelTree_SetItemText(HTREEITEM hTreeItem, LPCSTR psText)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		return !!gModViewTreeViewhandle->GetTreeCtrl().SetItemText(hTreeItem, psText);
 	}
 
-	assert(0);
+	assert(0);*/
 	return NULL;
 }
 
@@ -820,7 +820,7 @@ bool ModelTree_SetItemText(HTREEITEM hTreeItem, LPCSTR psText)
 //
 LPCSTR ModelTree_GetItemText(HTREEITEM hTreeItem, bool bPure /* = false */)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		if (bPure)
 		{
@@ -849,7 +849,7 @@ LPCSTR ModelTree_GetItemText(HTREEITEM hTreeItem, bool bPure /* = false */)
 		return (LPCSTR) string;
 	}
 
-	assert(0);
+	assert(0);*/
 	return NULL;
 }
 
@@ -918,72 +918,72 @@ int ModelTree_GetChildCount(HTREEITEM hTreeItem)
 {
 	int iChildCount = 0;
 
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit	 
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit	 
 	{		
 		if (gModViewTreeViewhandle->GetTreeCtrl().ItemHasChildren(hTreeItem))
 		{
 			hTreeItem = gModViewTreeViewhandle->GetTreeCtrl().GetChildItem(hTreeItem);			
 			R_ModelTree_FindItemWithThisData(hTreeItem, 0xDEADDEAD, &iChildCount);	// massive-function abuse here! :-)
 		}
-	}
+	}*/
 
 	return iChildCount;
 }
 
 bool ModelTree_ItemHasChildren(HTREEITEM hTreeItem)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		return !!gModViewTreeViewhandle->GetTreeCtrl().ItemHasChildren(hTreeItem);
 	}
 
-	assert(0);
+	assert(0);*/
 	return NULL;
 }
 
 HTREEITEM ModelTree_GetChildItem(HTREEITEM hTreeItem)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		return gModViewTreeViewhandle->GetTreeCtrl().GetChildItem(hTreeItem);
 	}
 
-	assert(0);
+	assert(0);*/
 	return NULL;
 }
 
 HTREEITEM ModelTree_GetNextSiblingItem(HTREEITEM hTreeItem)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		return gModViewTreeViewhandle->GetTreeCtrl().GetNextSiblingItem(hTreeItem);
 	}
 
-	assert(0);
+	assert(0);*/
 	return NULL;
 }
 
 
 HTREEITEM ModelTree_GetRootItem(void)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		return gModViewTreeViewhandle->GetRootItem();
 	}
 
-	ASSERT(0);
+	ASSERT(0);*/
 	return NULL;
 }
 
 
 bool ModelTree_DeleteItem(HTREEITEM hTreeItem)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		return !!gModViewTreeViewhandle->GetTreeCtrl().DeleteItem(hTreeItem);
 	}
 
-	ASSERT(0);
+	ASSERT(0);*/
 	return NULL;
 }
 
@@ -993,7 +993,7 @@ bool ModelTree_DeleteItem(HTREEITEM hTreeItem)
 //
 HTREEITEM ModelTree_GetRootSurface(ModelHandle_t hModel)
 {
-	if (gModViewTreeViewhandle && Model_Loaded(hModel))	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle && Model_Loaded(hModel))	// will be valid unless this is called from app exit
 	{
 		TreeItemData_t	TreeItemData = {0};
 						TreeItemData.iItemType		= TREEITEMTYPE_SURFACEHEADER;
@@ -1006,7 +1006,7 @@ HTREEITEM ModelTree_GetRootSurface(ModelHandle_t hModel)
 		}		
 	}
 
-	ASSERT(0);
+	ASSERT(0);*/
 	return NULL;
 }
 
@@ -1015,7 +1015,7 @@ HTREEITEM ModelTree_GetRootSurface(ModelHandle_t hModel)
 //
 HTREEITEM ModelTree_GetRootBone(ModelHandle_t hModel)
 {
-	if (gModViewTreeViewhandle && Model_Loaded(hModel))	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle && Model_Loaded(hModel))	// will be valid unless this is called from app exit
 	{
 		TreeItemData_t	TreeItemData = {0};
 						TreeItemData.iItemType		= TREEITEMTYPE_BONEHEADER;
@@ -1028,7 +1028,7 @@ HTREEITEM ModelTree_GetRootBone(ModelHandle_t hModel)
 		}		
 	}
 
-	ASSERT(0);
+	ASSERT(0);*/
 	return NULL;
 }
 
@@ -1066,7 +1066,7 @@ void ModelTree_InsertSequences(ModelHandle_t hModel, HTREEITEM hTreeItem_Sequenc
 
 void ModelTree_InsertSequences(ModelContainer_t *pContainer, HTREEITEM hTreeItem_Sequences)
 {
-	CWaitCursor wait;
+	/*CWaitCursor wait;
 	int iSequenceIndex = 0;
 
 	// delete any child items already present...
@@ -1124,7 +1124,7 @@ void ModelTree_InsertSequences(ModelContainer_t *pContainer, HTREEITEM hTreeItem
 		{
 			assert(0 && "ModelTree_InsertSequences(): Unknown sequence ptr!");
 		}
-	}
+	}*/
 }
 
 
@@ -1133,12 +1133,12 @@ void ModelTree_InsertSequences(ModelContainer_t *pContainer, HTREEITEM hTreeItem
 //
 HTREEITEM ModelTree_InsertItem(LPCTSTR psName, HTREEITEM hParent, UINT32 uiUserData /* = NULL */ , HTREEITEM hInsertAfter /* = TVI_LAST */)
 {
-	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
+	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
 		return gModViewTreeViewhandle->InsertItem(psName, hParent, uiUserData, hInsertAfter);
 	}
 
-	ASSERT(0);
+	ASSERT(0);*/
 	return NULL;
 }
 

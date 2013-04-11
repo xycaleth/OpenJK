@@ -740,13 +740,13 @@ static LPCSTR Script_Parse_LoadModel(CGPGroup *pParseGroup)
 
 		// read model in... (need to make local version of this to pass, va() gets used too much during load
 		//
-		extern bool Document_ModelLoadPrimary(LPCSTR psFilename);
 		//char *psFullPathModelName = va("%s%s",gamedir,strModelFile.c_str());
 		char sFullPathModelName[MAX_PATH];
 		strncpy(sFullPathModelName,va("%s%s",gamedir,strModelFile.c_str()),sizeof(sFullPathModelName)-1);
 		sFullPathModelName[sizeof(sFullPathModelName)-1]='\0';
 
-		if (!Document_ModelLoadPrimary( sFullPathModelName ))
+        // Break scripts for now. Fix me later!
+		//if (!Document_ModelLoadPrimary( sFullPathModelName ))
 		{
 			psError = va("Failed to load primary model %s",sFullPathModelName);
 			break;

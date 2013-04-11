@@ -501,7 +501,7 @@ extern void Gallery_AddWarning	(LPCSTR psText);
 
 void ErrorBox(const char *sString)
 {
-	if (Gallery_Active())
+	/*if (Gallery_Active())
 	{
 		Gallery_AddError(sString);
 		Gallery_AddError("\n");
@@ -511,38 +511,38 @@ void ErrorBox(const char *sString)
 	if (!gbErrorBox_Inhibit)
 	{
 		MessageBox( NULL, sString, "Error",		MB_OK|MB_ICONERROR|MB_TASKMODAL );		
-	}
+	}*/
 
 	strLastError = sString;
 }
 void InfoBox(const char *sString)
 {
-	if (Gallery_Active())
+	/*if (Gallery_Active())
 	{
 		Gallery_AddInfo(sString);
 		Gallery_AddInfo("\n");
 		return;
 	}
 
-	MessageBox( NULL, sString, "Info",		MB_OK|MB_ICONINFORMATION|MB_TASKMODAL );		
+	MessageBox( NULL, sString, "Info",		MB_OK|MB_ICONINFORMATION|MB_TASKMODAL );		*/
 }
 void WarningBox(const char *sString)
 {
-	if (Gallery_Active())
+	/*if (Gallery_Active())
 	{
 		Gallery_AddWarning(sString);
 		Gallery_AddWarning("\n");
 		return;
 	}
 
-	MessageBox( NULL, sString, "Warning",	MB_OK|MB_ICONWARNING|MB_TASKMODAL );
+	MessageBox( NULL, sString, "Warning",	MB_OK|MB_ICONWARNING|MB_TASKMODAL );*/
 }
 
 
 
 bool GetYesNo(const char *psQuery)
 {
-	if (Gallery_Active())
+	/*if (Gallery_Active())
 	{
 		Gallery_AddWarning("GetYesNo call (... to which I guessed 'NO' ) using this query...\n\n");
 		Gallery_AddWarning(psQuery);
@@ -552,16 +552,17 @@ bool GetYesNo(const char *psQuery)
 
 	//#define GetYesNo(psQuery)	(!!(MessageBox(AppVars.hWnd,psQuery,"Query",MB_YESNO|MB_ICONWARNING|MB_TASKMODAL)==IDYES))
 	#define _GetYesNo(psQuery)	(!!(AfxMessageBox(psQuery,						MB_YESNO|MB_ICONWARNING|MB_TASKMODAL)==IDYES))
-	return _GetYesNo(psQuery);
+	return _GetYesNo(psQuery);*/
+    return false;
 }
 
 void StatusMessage(LPCSTR psString)	// param can be NULL to indicate fallback to "ready" or whatever you want
 {
-	CMainFrame* pMainFrame = (CMainFrame*) AfxGetMainWnd();
+	/*CMainFrame* pMainFrame = (CMainFrame*) AfxGetMainWnd();
 	if (pMainFrame)
 	{
 		pMainFrame->StatusMessage(psString);
-	}
+	}*/
 }
 
 

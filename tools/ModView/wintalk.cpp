@@ -50,11 +50,12 @@ static bool HandleCommands(LPCSTR psString, byte *pbCommandData, int iCommandDat
 	{
 		psArg = NEXT_ARG;
 
-		if (Document_ModelLoadPrimary( psArg ))
+        // Disable for now, fix me later!
+		/*if (Document_ModelLoadPrimary( psArg ))
 		{
 			CommArea_CommandAck(va("%d",AppVars.hModelLastLoaded));
 		}
-		else
+		else*/
 		{
 			CommArea_CommandError(va("ModView: Failed command: \"%s\"", psString));
 		}

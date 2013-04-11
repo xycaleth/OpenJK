@@ -152,6 +152,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="GetString.cpp" />
+    <ClCompile Include="GUIHelpers.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MainForm.cpp" />
     <ClCompile Include="MainFrm.cpp" />
@@ -1696,6 +1697,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_MainForm.h" />
+    <ClInclude Include="GUIHelpers.h" />
     <ClInclude Include="SceneTreeView.h" />
     <CustomBuild Include="SceneTreeItem.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

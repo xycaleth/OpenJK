@@ -19,6 +19,7 @@ private slots:
     void OnChooseBackgroundColor();
 
     void OnChangeBackgroundColor ( const QColor& color );
+    void OnRefreshTextures();
 
     void OnUpdateAnimation();
     void OnAbout();

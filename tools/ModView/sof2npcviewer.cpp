@@ -6,11 +6,11 @@
 #include "includes.h"
 #include "modview.h"
 #include "files.h"
+#include "GUIHelpers.h"
 #include "r_common.h"
 #include "generic_stuff.h"
 #include "GenericParser2.h"
 #include "script.h"				// so we can access ModView script keyword #defines
-#include "modviewtreeview.h"	// for GetString()
 //
 #include "SOF2NPCViewer.h"
 
@@ -1691,11 +1691,11 @@ void CSOF2NPCViewer::OnGallery()
 	
 	if (GetYesNo("This will load & screenshot every character in the list\n\nThis can take a *LONG* time. Proceed?"))
 	{
-		LPCSTR psOutputPath = GetString("Enter destination dir for screenshots (will be created if not found)", m_bSOF2Mode ? sDEFAULT_SOF2_SCREENSHOTS_DIR : sDEFAULT_JK2_SCREENSHOTS_DIR);
+		std::string psOutputPath = GetInputFromPrompt("Enter Output Directory", "Enter destination dir for screenshots (will be created if not found)", m_bSOF2Mode ? sDEFAULT_SOF2_SCREENSHOTS_DIR : sDEFAULT_JK2_SCREENSHOTS_DIR);
 
-		if (psOutputPath)
+		if (!psOutputPath.empty())
 		{
-			gstrGalleryOutputDir = psOutputPath;
+			gstrGalleryOutputDir = psOutputPath.c_str();
 
 			// now for the fun (and mega-tacky!!) part, go through every item in the listbox, 
 			//	and generate a complete script for it... :-)    Heh, CPU-abuse!!

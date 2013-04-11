@@ -300,6 +300,9 @@
     <ClCompile Include="SceneTreeView.cpp">
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="GUIHelpers.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ModView.rc">
@@ -557,6 +560,9 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="SceneTreeView.h">
+      <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GUIHelpers.h">
       <Filter>Header Files\GUI</Filter>
     </ClInclude>
   </ItemGroup>
