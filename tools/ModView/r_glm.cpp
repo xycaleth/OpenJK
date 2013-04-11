@@ -820,7 +820,7 @@ qboolean G2_Stop_Bone_Anim_Index( boneInfo_t *blist, int index)
 	// did we find it?
 	if (index != -1)
 	{
-		blist[index].flags &= ~(BONE_ANIM_OVERRIDE_LOOP || BONE_ANIM_OVERRIDE);
+		blist[index].flags &= ~(BONE_ANIM_OVERRIDE_LOOP | BONE_ANIM_OVERRIDE);
 		// try and remove this bone if we can
 		return G2_Remove_Bone_Index(blist, index);
 	}
@@ -996,7 +996,7 @@ qboolean G2_Stop_Bone_Anim(const qhandle_t model, boneInfo_t *blist, const char 
 	// did we find it?
 	if (index != -1)
 	{
-		blist[index].flags &= ~(BONE_ANIM_OVERRIDE_LOOP || BONE_ANIM_OVERRIDE);
+		blist[index].flags &= ~(BONE_ANIM_OVERRIDE_LOOP | BONE_ANIM_OVERRIDE);
 		// try and remove this bone if we can
 		return G2_Remove_Bone_Index(blist, index);
 	}
@@ -1015,7 +1015,7 @@ qboolean G2_Stop_Bone_Angles(const qhandle_t model, boneInfo_t *blist, const cha
 	// did we find it?
 	if (index != -1)
 	{
-		blist[index].flags &= ~(BONE_ANGLES_RELATIVE || BONE_ANGLES_ADDITIVE || BONE_ANGLES_ABSOLUTE);
+		blist[index].flags &= ~(BONE_ANGLES_RELATIVE | BONE_ANGLES_ADDITIVE | BONE_ANGLES_ABSOLUTE);
 		// try and remove this bone if we can
 		return G2_Remove_Bone_Index(blist, index);
 	}
