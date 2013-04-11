@@ -15,6 +15,7 @@ public:
     void            AddChild ( SceneTreeItem *child );
     SceneTreeItem  *Child ( int row ) const;
     int             ChildCount() const;
+    int             ChildCountRecursive() const;
 
     QVariant        Data() const;
     void            Data ( const QString& data );

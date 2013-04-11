@@ -78,12 +78,9 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
     SceneTreeItem *surfacesItem = new SceneTreeItem (QObject::tr ("Surfaces"), modelItem);
     SceneTreeItem *tagsItem = new SceneTreeItem (QObject::tr ("Tags"), modelItem);
     SceneTreeItem *bonesItem = new SceneTreeItem (QObject::tr ("Bones"), modelItem);
-    modelItem->AddChild (surfacesItem);
-    modelItem->AddChild (tagsItem);
-    modelItem->AddChild (bonesItem);
 
     mdxmHeader_t *pMDXMHeader = (mdxmHeader_t *) RE_GetModelData (container.hModel);
-	mdxaHeader_t *pMDXAHeader = (mdxaHeader_t *) RE_GetModelData(pMDXMHeader->animIndex);
+    mdxaHeader_t *pMDXAHeader = (mdxaHeader_t *) RE_GetModelData(pMDXMHeader->animIndex);
     mdxmHierarchyOffsets_t *pHierarchyOffsets = (mdxmHierarchyOffsets_t *) ((byte *) pMDXMHeader + sizeof(*pMDXMHeader));
 
     SurfaceTreeApplication app;
@@ -101,6 +98,14 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
         AfterSurfaceChildrenAdded,
         static_cast<void *>(&app));
 
+    int numSurfacesInTree = surfacesItem->ChildCountRecursive();
+    if ( numSurfacesInTree != pMDXMHeader->numSurfaces )
+    {
+        ErrorBox (va ("Model has %d surfaces, but only %d of them are connected through the heirarchy, the rest will never be recursed into.\n\n"
+                        "This model needs rebuilding.",
+                        pMDXMHeader->numSurfaces, numSurfacesInTree));
+    }
+
     // Add tags
     app.nodes.clear();
     app.nodes.append (tagsItem);
@@ -113,29 +118,18 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
         NULL,
         static_cast<void *>(&app));
 
+    // And add the items to model!
+    modelItem->AddChild (surfacesItem);
+
+    if ( tagsItem->ChildCount() > 0 )
+    {
+        modelItem->AddChild (tagsItem);
+    }
+
+    modelItem->AddChild (bonesItem);
+
     model.setRoot (root);
     #if 0
-	// send surface heirarchy to tree...
-	//
-	mdxmHierarchyOffsets_t *pHierarchyOffsets = (mdxmHierarchyOffsets_t *) ((byte *) pMDXMHeader + sizeof(*pMDXMHeader));
-
-	R_GLM_AddSurfaceToTree( hModel, hTreeItem_Surfaces, 0, pHierarchyOffsets, false);
-	R_GLM_AddSurfaceToTree( hModel, hTreeItem_TagSurfaces, 0, pHierarchyOffsets, true);
-
-	// special error check for badly-hierarchied surfaces... (bad test data inadvertently supplied by Rob Gee :-)
-	//
-	int iNumSurfacesInTree = ModelTree_GetChildCount(hTreeItem_Surfaces);
-	if (iNumSurfacesInTree != pMDXMHeader->numSurfaces)
-	{
-		ErrorBox(va("Model has %d surfaces, but only %d of them are connected up through the heirarchy, the rest will never be recursed into.\n\nThis model needs rebuilding, guys...",pMDXMHeader->numSurfaces,iNumSurfacesInTree));
-		bReturn = false;
-	}
-
-	if (!ModelTree_ItemHasChildren( hTreeItem_TagSurfaces ))
-	{
-		ModelTree_DeleteItem( hTreeItem_TagSurfaces );
-	}
-
 	// send bone heirarchy to tree...
 	//
 	mdxaSkelOffsets_t *pSkelOffsets = (mdxaSkelOffsets_t *) ((byte *)pMDXAHeader + sizeof(*pMDXAHeader));

@@ -36,6 +36,17 @@ int SceneTreeItem::ChildCount() const
     return children.size();
 }
 
+int SceneTreeItem::ChildCountRecursive() const
+{
+    int count = 0;
+    for ( int i = 0; i < ChildCount(); i++ )
+    {
+        count += Child(i)->ChildCountRecursive() + 1;
+    }
+
+    return count;
+}
+
 QVariant SceneTreeItem::Data() const
 {
     return data;
