@@ -221,6 +221,9 @@
    <property name="text">
     <string>Start</string>
    </property>
+   <property name="toolTip">
+    <string>Start</string>
+   </property>
   </action>
   <action name="actionStart_with_forced_wrapping">
    <property name="text">
@@ -229,7 +232,7 @@
   </action>
   <action name="actionStop">
    <property name="text">
-    <string>Stop</string>
+    <string>Pause</string>
    </property>
   </action>
   <action name="actionRewind">
@@ -352,11 +355,79 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionStart</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnAnimationStart()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionStop</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnAnimationPause()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionStart_with_forced_wrapping</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnAnimationStartWithLooping()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionReset_view_position</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnResetViewPoint()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
   <slot>OnExit()</slot>
   <slot>OnChooseBackgroundColor()</slot>
   <slot>OnAbout()</slot>
+  <slot>OnAnimationStart()</slot>
+  <slot>OnAnimationPause()</slot>
+  <slot>OnAnimationStartWithLooping()</slot>
+  <slot>OnResetViewPoint()</slot>
  </slots>
 </ui>

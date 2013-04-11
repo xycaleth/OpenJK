@@ -101,3 +101,24 @@ void MainForm::CurrentSceneName ( const QString& sceneName )
     currentSceneName = sceneName;
     setWindowTitle (tr ("%1 - ModView").arg (currentSceneName));
 }
+
+void MainForm::OnResetViewPoint()
+{
+    AppVars_ResetViewParams();
+    ModelList_ForceRedraw();
+}
+
+void MainForm::OnAnimationStart()
+{
+    Model_StartAnim();
+}
+
+void MainForm::OnAnimationPause()
+{
+    Model_StopAnim();
+}
+
+void MainForm::OnAnimationStartWithLooping()
+{
+    Model_StartAnim (true);
+}

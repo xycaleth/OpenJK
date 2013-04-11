@@ -23,6 +23,12 @@ private slots:
     void OnUpdateAnimation();
     void OnAbout();
 
+    void OnAnimationStart();
+    void OnAnimationPause();
+    void OnAnimationStartWithLooping();
+
+    void OnResetViewPoint();
+
 private:
     Ui::MainWindow ui;
 
