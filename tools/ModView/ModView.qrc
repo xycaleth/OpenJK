@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>res/modview.ico</file>
+    </qresource>
+</RCC>

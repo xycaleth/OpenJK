@@ -306,6 +306,9 @@
     <ClCompile Include="SceneTreeItemAction.cpp">
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratedFiles\qrc_ModView.cpp">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ModView.rc">
@@ -556,6 +559,9 @@
     </CustomBuild>
     <CustomBuild Include="SceneTreeModel.h">
       <Filter>Header Files\GUI</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ModView.qrc">
+      <Filter>Source Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

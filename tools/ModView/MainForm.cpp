@@ -44,15 +44,17 @@ void MainForm::OnUpdateAnimation()
 
 void MainForm::OnAbout()
 {
-    QMessageBox::about (this,
-        tr ("About ModView"),
-        tr ("<p><b>ModView 3.0</b><br />"
+    QMessageBox about (this);
+    about.setWindowTitle (tr ("About ModView"));
+    about.setText (tr ("<p><b>ModView 3.0</b><br />"
             "Written by Alex 'Xycaleth' Lo.</p>"
             "<p><b>ModView 2.5</b><br />"
             "Written by Ste Cork and Mike Crowns.</p>"
             "<p>Copyright (c) 2000 - 2013, Raven Software.<br />"
             "Released under GNU General Public License, version 2.0.</p>"
             "<p>Current formats supported: Ghoul 2 (.glm, .gla)</p>"));
+    about.setIconPixmap (QPixmap (":/images/res/modview.ico"));
+    about.exec();
 }
 
 void MainForm::OnChangeBackgroundColor ( const QColor& color )
