@@ -99,8 +99,7 @@ void MainForm::OnOpenModel()
 
 void MainForm::CurrentSceneName ( const QString& sceneName )
 {
-    currentSceneName = sceneName;
-    setWindowTitle (tr ("%1 - ModView").arg (currentSceneName));
+    setWindowTitle (tr ("%1 - ModView").arg (sceneName));
 }
 
 void MainForm::OnResetViewPoint()

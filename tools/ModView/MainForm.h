@@ -60,7 +60,6 @@ private:
 private:
     Ui::MainWindow ui;
 
-    QString currentSceneName;
     SceneTreeModel *treeModel;
 
     SceneTreeItemClickAction treeItemClickAction;
