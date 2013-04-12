@@ -62,7 +62,7 @@ private:
     QString currentSceneName;
     SceneTreeModel *treeModel;
 
-    SceneTreeItemAction treeItemAction;
+    SceneTreeItemDblClickAction treeItemDblClickAction;
 };
 
 #endif

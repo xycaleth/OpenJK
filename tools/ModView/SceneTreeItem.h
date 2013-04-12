@@ -5,6 +5,7 @@
 #include <QtCore/QString>
 #include <QtCore/QVariant>
 
+#include <string>
 #include "model.h"
 #include "sequence.h"
 
@@ -63,6 +64,17 @@ public:
 private:
     const mdxmSurfHierarchy_t *surface;
     int surfaceIndex;
+};
+
+class SkinSceneTreeItem : public SceneTreeItem
+{
+public:
+    SkinSceneTreeItem ( const std::string& skinName, ModelHandle_t model, SceneTreeItem *parent = 0 );
+
+    void Accept ( ISceneTreeItemVisitor *visitor );
+
+private:
+    std::string skinName;
 };
 
 #endif

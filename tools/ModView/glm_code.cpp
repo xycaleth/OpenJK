@@ -996,14 +996,14 @@ static bool GLMModel_ReadSkinFiles(ModelContainer_t *pContainer, LPCSTR psLocalF
 	//
 	if (Skins_Read(psLocalFilename, pContainer))	
 	{
-		return true;//Skins_ApplyToTree(hParent, pContainer);
+		return true;
 	}
 
 	// check for optional .skin files... (CHC-type)
 	//
 	if (OldSkins_Read(psLocalFilename, pContainer))
 	{
-		return true;//OldSkins_ApplyToTree(hParent, pContainer);
+		return true;
 	}
 
 	return false;

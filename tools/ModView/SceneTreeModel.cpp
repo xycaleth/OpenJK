@@ -104,6 +104,17 @@ void SurfaceSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
     visitor->Visit (GetModel(), surface, surfaceIndex);
 }
 
+SkinSceneTreeItem::SkinSceneTreeItem ( const std::string& skinName, ModelHandle_t model, SceneTreeItem *parent )
+    : SceneTreeItem (QString::fromStdString (skinName), model, parent)
+    , skinName (skinName)
+{
+}
+
+void SkinSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
+{
+    visitor->Visit (GetModel(), skinName.c_str());
+}
+
 //=============================================================================
 // Scene Tree Model class implementation
 //=============================================================================

@@ -11,6 +11,7 @@ public:
 
     virtual void Visit ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface, int surfaceIndex ) = 0;
     virtual void Visit ( ModelHandle_t model, const Sequence_t *sequence, int sequenceIndex ) = 0;
+    virtual void Visit ( ModelHandle_t model, const char *skinName ) = 0;
 };
 
 #endif

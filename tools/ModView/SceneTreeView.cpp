@@ -123,7 +123,7 @@ struct CompareSequencesByFrame
     }
 };
 
-void AddSequencesToTree ( SceneTreeItem *root, const ModelContainer_t *container, const SequenceList_t& sequenceList )
+void AddSequencesToTree ( SceneTreeItem *root, const ModelContainer_t& container, const SequenceList_t& sequenceList )
 {
     std::vector<int> sequenceIndices (sequenceList.size(), -1);
     for ( int i = 0; i < sequenceList.size(); i++ )
@@ -135,7 +135,15 @@ void AddSequencesToTree ( SceneTreeItem *root, const ModelContainer_t *container
 
     for ( int i = 0; i < sequenceList.size(); i++ )
     {
-        root->AddChild (new SequenceSceneTreeItem (&sequenceList[sequenceIndices[i]], sequenceIndices[i], container->hModel, root));
+        root->AddChild (new SequenceSceneTreeItem (&sequenceList[sequenceIndices[i]], sequenceIndices[i], container.hModel, root));
+    }
+}
+
+void AddSkinsToTree ( SceneTreeItem *root, const ModelContainer& container, const OldSkinSets_t& skins )
+{
+    for ( OldSkinSets_t::const_iterator skin = skins.begin(); skin != skins.end(); skin++ )
+    {
+        root->AddChild (new SkinSceneTreeItem (skin->first, container.hModel, root));
     }
 }
 
@@ -205,12 +213,16 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
         AfterBoneChildrenAdded,
         static_cast<void *>(&boneApp));
 
+    // Add skins
+    SceneTreeItem *skinsItem = new SceneTreeItem (QObject::tr ("Skins"), container.hModel, modelItem);
+    AddSkinsToTree (skinsItem, container, container.OldSkinSets);
+
     // Add animation sequences
     SceneTreeItem *sequencesItem = NULL;
     if ( !container.SequenceList.empty() )
     {
         sequencesItem = new SceneTreeItem (QObject::tr ("Sequences"), container.hModel, modelItem);
-        AddSequencesToTree (sequencesItem, &container, container.SequenceList);
+        AddSequencesToTree (sequencesItem, container, container.SequenceList);
     }
 
     // And add the items to model!
@@ -221,6 +233,7 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
         modelItem->AddChild (tagsItem);
     }
 
+    modelItem->AddChild (skinsItem);
     modelItem->AddChild (bonesItem);
 
     if ( sequencesItem != NULL )
