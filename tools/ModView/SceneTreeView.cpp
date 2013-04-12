@@ -2,10 +2,13 @@
 #include "SceneTreeView.h"
 
 #include <QtCore/QStack>
+#include <algorithm>
+#include <vector>
 #include "glm_code.h"
 #include "r_model.h"
 #include "SceneTreeItem.h"
 #include "SceneTreeModel.h"
+#include "sequence.h"
 
 struct BoneTreeApplication
 {
@@ -105,6 +108,37 @@ void TagChildrenAdded ( mdxmSurfHierarchy_t *surface, int surfaceIndex, void *us
         static_cast<void *>(app));
 }
 
+struct CompareSequencesByFrame
+{
+    const SequenceList_t& sequences;
+
+    CompareSequencesByFrame ( const SequenceList_t& sequences )
+        : sequences (sequences)
+    {
+    }
+
+    bool operator () ( int left, int right )
+    {
+        return sequences[left].iStartFrame < sequences[right].iStartFrame;
+    }
+};
+
+void AddSequencesToTree ( SceneTreeItem *root, const SequenceList_t& sequenceList )
+{
+    std::vector<int> sequenceIndices (sequenceList.size(), -1);
+    for ( int i = 0; i < sequenceList.size(); i++ )
+    {
+        sequenceIndices[i] = i;
+    }
+
+    std::sort (sequenceIndices.begin(), sequenceIndices.end(), CompareSequencesByFrame (sequenceList));
+
+    for ( int i = 0; i < sequenceList.size(); i++ )
+    {
+        root->AddChild (new SceneTreeItem (Sequence_CreateTreeName (&sequenceList[sequenceIndices[i]]), root));
+    }
+}
+
 void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container, SceneTreeModel& model )
 {
     SceneTreeItem *root = new SceneTreeItem ("");
@@ -171,6 +205,14 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
         AfterBoneChildrenAdded,
         static_cast<void *>(&boneApp));
 
+    // Add animation sequences
+    SceneTreeItem *sequencesItem = NULL;
+    if ( !container.SequenceList.empty() )
+    {
+        sequencesItem = new SceneTreeItem (QObject::tr ("Sequences"), modelItem);
+        AddSequencesToTree (sequencesItem, container.SequenceList);
+    }
+
     // And add the items to model!
     modelItem->AddChild (surfacesItem);
 
@@ -180,6 +222,11 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
     }
 
     modelItem->AddChild (bonesItem);
+
+    if ( sequencesItem != NULL )
+    {
+        modelItem->AddChild (sequencesItem);
+    }
 
     model.setRoot (root);
 }

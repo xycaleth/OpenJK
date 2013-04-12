@@ -14,7 +14,7 @@
 
 
 
-LPCSTR Sequence_CreateTreeName(Sequence_t *pSequence)
+LPCSTR Sequence_CreateTreeName(const Sequence_t *pSequence)
 {
 	static CString str;
 
@@ -150,7 +150,7 @@ Sequence_t*	Sequence_CreateDefault(int iNumFrames)
 }
 
 
-LPCSTR Sequence_GetName(Sequence_t *pSequence, bool bUsedForDisplay /* = false */)
+LPCSTR Sequence_GetName(const Sequence_t *pSequence, bool bUsedForDisplay /* = false */)
 {
 	if (!bUsedForDisplay)
 	{
