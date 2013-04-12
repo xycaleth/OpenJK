@@ -190,22 +190,15 @@ int SceneTreeModel::columnCount ( const QModelIndex& parent ) const
 
 void SceneTreeModel::setRoot ( SceneTreeItem *root )
 {
-    bool changed = this->root != NULL;
-    delete this->root;
-
-    if ( !changed )
+    if ( this->root != NULL )
     {
-        beginInsertRows (QModelIndex(), 0, 0);
+        beginRemoveRows (QModelIndex(), 0, 0);
+            delete this->root;
+            this->root = NULL;
+        endRemoveRows();
     }
 
-    this->root = root;
-
-    if ( !changed )
-    {
-        endInsertRows();
-    }
-    else
-    {
-        emit dataChanged (createIndex (0, 0), createIndex (1, 0));
-    }
+    beginInsertRows (QModelIndex(), 0, 0);
+        this->root = root;
+    endInsertRows();
 }
