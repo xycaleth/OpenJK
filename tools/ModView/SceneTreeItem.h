@@ -77,4 +77,16 @@ private:
     std::string skinName;
 };
 
+class BoneSceneTreeItem : public SceneTreeItem
+{
+public:
+    BoneSceneTreeItem ( const mdxaSkel_t *bone, int boneIndex, ModelHandle_t model, SceneTreeItem *parent = 0 );
+
+    void Accept ( ISceneTreeItemVisitor *visitor );
+
+private:
+    const mdxaSkel_t *bone;
+    int boneIndex;
+};
+
 #endif

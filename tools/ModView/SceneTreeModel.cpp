@@ -115,6 +115,18 @@ void SkinSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
     visitor->Visit (GetModel(), skinName.c_str());
 }
 
+BoneSceneTreeItem::BoneSceneTreeItem ( const mdxaSkel_t *bone, int boneIndex, ModelHandle_t model, SceneTreeItem *parent )
+    : SceneTreeItem (bone->name, model, parent)
+    , bone (bone)
+    , boneIndex (boneIndex)
+{
+}
+
+void BoneSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
+{
+    visitor->Visit (GetModel(), bone, boneIndex);
+}
+
 //=============================================================================
 // Scene Tree Model class implementation
 //=============================================================================

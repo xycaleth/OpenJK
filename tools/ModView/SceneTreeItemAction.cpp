@@ -7,8 +7,6 @@
 // Double click actions
 //==============================================================================
 
-void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface, int surfaceIndex ) { }
-
 void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const Sequence_t *sequence, int sequenceIndex )
 {
     // multiseqlock or single lock?...
@@ -29,6 +27,9 @@ void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const char *skinN
     Model_ApplyOldSkin (model, skinName);
 }
 
+void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface, int surfaceIndex ) { }
+void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const mdxaSkel_t *bone, int boneIndex ) { }
+
 
 //==============================================================================
 // Single click actions
@@ -36,7 +37,14 @@ void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const char *skinN
 
 void SceneTreeItemClickAction::Visit ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface, int surfaceIndex )
 {
+    Model_SetBoneHighlight (model, iITEMHIGHLIGHT_NONE);
     Model_SetSurfaceHighlight (model, surfaceIndex);
+}
+
+void SceneTreeItemClickAction::Visit ( ModelHandle_t model, const mdxaSkel_t *bone, int boneIndex )
+{
+    Model_SetSurfaceHighlight (model, iITEMHIGHLIGHT_NONE);
+    Model_SetBoneHighlight (model, boneIndex);
 }
 
 void SceneTreeItemClickAction::Visit ( ModelHandle_t model, const Sequence_t *sequence, int sequenceIndex ) { }

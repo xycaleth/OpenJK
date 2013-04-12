@@ -21,7 +21,7 @@ void BeforeBoneChildrenAdded ( mdxaSkel_t *bone, int index, void *userData )
 {
     BoneTreeApplication *app = static_cast<BoneTreeApplication *>(userData);
 
-    SceneTreeItem *item = new SceneTreeItem (QString::fromLatin1 (bone->name), app->container->hModel, app->nodes.back());
+    SceneTreeItem *item = new BoneSceneTreeItem (bone, index, app->container->hModel, app->nodes.back());
     app->nodes.back()->AddChild (item);
     app->nodes.append (item);
 }
