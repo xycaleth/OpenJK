@@ -448,9 +448,6 @@
     <ClCompile Include="files.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="ModView.rc" />
-  </ItemGroup>
-  <ItemGroup>
     <CustomBuild Include="CommArea.h">
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </Command>
@@ -1703,6 +1700,7 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="resource1.h" />
     <ClInclude Include="SceneTreeItemAction.h" />
     <ClInclude Include="GeneratedFiles\ui_MainForm.h" />
     <ClInclude Include="GUIHelpers.h" />
@@ -1763,7 +1761,11 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Rcc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">.\GeneratedFiles\qrc_%(Filename).cpp;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\rcc.exe" -name "%(Filename)" -no-compress "%(FullPath)" -o .\GeneratedFiles\qrc_%(Filename).cpp</Command>
+      <SubType>Designer</SubType>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="modview.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
