@@ -268,5 +268,10 @@ void MainForm::OnClickedTreeView ( const QModelIndex& index )
     }
 
     SceneTreeItem *item = static_cast<SceneTreeItem *>(index.internalPointer());
+
+    ModelHandle_t model = item->GetModel();
+    Model_SetBoneHighlight (model, iITEMHIGHLIGHT_NONE);
+    Model_SetSurfaceHighlight (model, iITEMHIGHLIGHT_NONE);
+
     item->Accept (&treeItemClickAction);
 }

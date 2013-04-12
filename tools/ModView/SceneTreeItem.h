@@ -31,7 +31,6 @@ public:
     // the visitor pattern...
     virtual void    Accept ( ISceneTreeItemVisitor *visitor ) {};
 
-protected:
     ModelHandle_t   GetModel() const;
 
 private:

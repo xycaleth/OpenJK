@@ -3160,7 +3160,7 @@ static void R_ModelContainer_CallBack_InfoText(ModelContainer_t *pContainer, voi
 			// no space after "Seq: now because Sequence_GetName() prepends with either ' ' or '-'...
 			//
 			pTextData->iTextX = Text_DisplayFlat(  va("Seq:%s",String_EnsureMinLength(Sequence_GetName(pSequence,true),pTextData->iSequenceNameCharsNeeded)), iPrimarySeqTextX, pTextData->iTextY, _R,_G,_B);
-			pTextData->iTextX = Text_DisplayFlat(	va("(%d/%d)",pContainer->iCurrentFrame_Primary - pSequence->iStartFrame, pSequence->iFrameCount),
+			pTextData->iTextX = Text_DisplayFlat(	va("(%d/%d)",pContainer->iCurrentFrame_Primary - pSequence->iStartFrame, pSequence->iFrameCount - 1),
 										pTextData->iTextX+(1*TEXT_WIDTH), pTextData->iTextY,
 										_R,
 										_G,

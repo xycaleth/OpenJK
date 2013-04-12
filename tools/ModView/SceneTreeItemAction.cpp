@@ -36,14 +36,12 @@ void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const mdxaSkel_t 
 //==============================================================================
 
 void SceneTreeItemClickAction::Visit ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface, int surfaceIndex )
-{
-    Model_SetBoneHighlight (model, iITEMHIGHLIGHT_NONE);
+{   
     Model_SetSurfaceHighlight (model, surfaceIndex);
 }
 
 void SceneTreeItemClickAction::Visit ( ModelHandle_t model, const mdxaSkel_t *bone, int boneIndex )
 {
-    Model_SetSurfaceHighlight (model, iITEMHIGHLIGHT_NONE);
     Model_SetBoneHighlight (model, boneIndex);
 }
 
