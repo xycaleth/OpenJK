@@ -3,10 +3,11 @@
 
 #include "model.h"
 
-void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface, int surfaceIndex )
-{
-    OutputDebugString ("Clicked a surface!\n");
-}
+//==============================================================================
+// Double click actions
+//==============================================================================
+
+void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface, int surfaceIndex ) { }
 
 void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const Sequence_t *sequence, int sequenceIndex )
 {
@@ -27,3 +28,16 @@ void SceneTreeItemDblClickAction::Visit ( ModelHandle_t model, const char *skinN
 {
     Model_ApplyOldSkin (model, skinName);
 }
+
+
+//==============================================================================
+// Single click actions
+//==============================================================================
+
+void SceneTreeItemClickAction::Visit ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface, int surfaceIndex )
+{
+    Model_SetSurfaceHighlight (model, surfaceIndex);
+}
+
+void SceneTreeItemClickAction::Visit ( ModelHandle_t model, const Sequence_t *sequence, int sequenceIndex ) { }
+void SceneTreeItemClickAction::Visit ( ModelHandle_t model, const char *skinName ) { }

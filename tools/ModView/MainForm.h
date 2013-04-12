@@ -50,7 +50,8 @@ private slots:
     void OnPicmipTo3();
     void OnShowOpenGLInfo();
 
-    void OnDoubleClickedTreeView ( const QModelIndex& index);
+    void OnDoubleClickedTreeView ( const QModelIndex& index );
+    void OnClickedTreeView ( const QModelIndex& index );
 
 private:
     void ChangeLOD ( int lod );
@@ -62,6 +63,7 @@ private:
     QString currentSceneName;
     SceneTreeModel *treeModel;
 
+    SceneTreeItemClickAction treeItemClickAction;
     SceneTreeItemDblClickAction treeItemDblClickAction;
 };
 

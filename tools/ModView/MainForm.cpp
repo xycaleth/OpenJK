@@ -259,3 +259,14 @@ void MainForm::OnDoubleClickedTreeView ( const QModelIndex& index )
     SceneTreeItem *item = static_cast<SceneTreeItem *>(index.internalPointer());
     item->Accept (&treeItemDblClickAction);
 }
+
+void MainForm::OnClickedTreeView ( const QModelIndex& index )
+{
+    if ( !index.isValid() )
+    {
+        return;
+    }
+
+    SceneTreeItem *item = static_cast<SceneTreeItem *>(index.internalPointer());
+    item->Accept (&treeItemClickAction);
+}
