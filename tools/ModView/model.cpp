@@ -4373,15 +4373,11 @@ bool Model_Sequence_Lock( ModelHandle_t hModel, LPCSTR psSequenceName, bool bPri
 	return false;
 }
 
-bool Model_Sequence_Lock( ModelHandle_t hModel, int iSequenceNumber, bool bPrimary)
+bool Model_Sequence_Lock( ModelContainer_t *pContainer, int iSequenceNumber, bool bPrimary)
 {
-	bool bReturn = false;
+    bool bReturn = false;
 
-	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
-
-	assert(pContainer);
-
-	if (pContainer)
+    if (pContainer)
 	{		
 		if (iSequenceNumber < pContainer->SequenceList.size())
 		{
@@ -4410,7 +4406,16 @@ bool Model_Sequence_Lock( ModelHandle_t hModel, int iSequenceNumber, bool bPrima
 
 	ModelList_ForceRedraw();
 
-	return bReturn;
+    return bReturn;
+}
+
+bool Model_Sequence_Lock( ModelHandle_t hModel, int iSequenceNumber, bool bPrimary)
+{
+	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
+
+	assert(pContainer);
+
+	return Model_Sequence_Lock (pContainer, iSequenceNumber, bPrimary);
 }
 
 bool Model_Sequence_UnLock( ModelHandle_t hModel, bool bPrimary)
@@ -5070,7 +5075,7 @@ bool Model_MultiSeq_IsActive(ModelHandle_t hModel, bool bPrimary)
 	return false;
 }
 
-bool Model_MultiSeq_IsActive(ModelContainer_t *pContainer, bool bPrimary)	
+bool Model_MultiSeq_IsActive(const ModelContainer_t *pContainer, bool bPrimary)	
 {
 	if (bPrimary)
 	{

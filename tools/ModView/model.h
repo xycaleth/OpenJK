@@ -417,7 +417,7 @@ bool	Model_SetG2SurfaceRootOverride	(ModelHandle_t hModel, int iSurfaceNum);
 
 bool	Model_MultiSeq_Add		( ModelHandle_t hModel, int iSequenceNumber, bool bPrimary, bool bActivate = true);
 bool	Model_MultiSeq_IsActive	( ModelHandle_t		hModel,		bool bPrimary);
-bool	Model_MultiSeq_IsActive	( ModelContainer_t *pContainer, bool bPrimary);
+bool	Model_MultiSeq_IsActive	( const ModelContainer_t *pContainer, bool bPrimary);
 void	Model_MultiSeq_SetActive( ModelHandle_t hModel, bool bPrimary, bool bActive);
 int		Model_MultiSeq_GetNumEntries(ModelHandle_t		hModel,			bool bPrimary);
 int		Model_MultiSeq_GetNumEntries(ModelContainer_t	*pContainer,	bool bPrimary);

@@ -661,16 +661,16 @@ void R_GLM_SurfaceRecursiveApply (
     ModelHandle_t model,
     int surfaceIndex,
     mdxmHierarchyOffsets_t *pHierarchyOffsets,
-    void (*preCallback) ( mdxmSurfHierarchy_t *, void * ),
+    void (*preCallback) ( mdxmSurfHierarchy_t *, int, void * ),
     void (*callback)( mdxmSurfHierarchy_t *, int, void * ),
-    void (*postCallback)( mdxmSurfHierarchy_t *, void * ),
+    void (*postCallback)( mdxmSurfHierarchy_t *, int, void * ),
     void *userData
 )
 {
     mdxmSurfHierarchy_t *thisSurface = (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[surfaceIndex]);
     if ( preCallback != NULL )
     {
-        preCallback (thisSurface, userData);
+        preCallback (thisSurface, surfaceIndex, userData);
     }
 
 	for ( int i = 0; i < thisSurface->numChildren; i++ )
@@ -682,7 +682,7 @@ void R_GLM_SurfaceRecursiveApply (
 
     if ( postCallback != NULL )
     {
-        postCallback (thisSurface, userData);
+        postCallback (thisSurface, surfaceIndex, userData);
     }
 }
 
@@ -690,16 +690,16 @@ void R_GLM_BoneRecursiveApply (
     ModelHandle_t model,
     int boneIndex,
     mdxaSkelOffsets_t* pSkelOffsets,
-    void (*preCallback) ( mdxaSkel_t *, void * ),
+    void (*preCallback) ( mdxaSkel_t *, int, void * ),
     void (*callback)( mdxaSkel_t *, int, void * ),
-    void (*postCallback)( mdxaSkel_t *, void * ),
+    void (*postCallback)( mdxaSkel_t *, int, void * ),
     void *userData
 )
 {
     mdxaSkel_t *thisBone = (mdxaSkel_t *)((byte *)pSkelOffsets + pSkelOffsets->offsets[boneIndex]);
     if ( preCallback != NULL )
     {
-        preCallback (thisBone, userData);
+        preCallback (thisBone, boneIndex, userData);
     }
 
 	for ( int i = 0; i < thisBone->numChildren; i++ )
@@ -711,7 +711,7 @@ void R_GLM_BoneRecursiveApply (
 
     if ( postCallback != NULL )
     {
-        postCallback (thisBone, userData);
+        postCallback (thisBone, boneIndex, userData);
     }
 }
 

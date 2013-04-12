@@ -847,6 +847,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>treeView</sender>
+   <signal>doubleClicked(QModelIndex)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnDoubleClickedTreeView(QModelIndex)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>127</x>
+     <y>315</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -876,5 +892,6 @@
   <slot>OnIncreaseLOD()</slot>
   <slot>OnDecreaseLOD()</slot>
   <slot>OnRefreshTextures()</slot>
+  <slot>OnDoubleClickedTreeView(QModelIndex)</slot>
  </slots>
 </ui>

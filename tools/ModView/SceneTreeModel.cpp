@@ -1,15 +1,17 @@
 #include "stdafx.h"
 #include "SceneTreeModel.h"
 
+#include "ISceneTreeItemVisitor.h"
 #include "SceneTreeItem.h"
 
 //=============================================================================
 // Scene Tree Item class implementation
 //=============================================================================
 
-SceneTreeItem::SceneTreeItem ( const QString& data, SceneTreeItem *parent )
+SceneTreeItem::SceneTreeItem ( const QString& data, ModelHandle_t model, SceneTreeItem *parent )
     : data (data)
     , parent (parent)
+    , model (model)
 {
 }
 
@@ -19,6 +21,11 @@ SceneTreeItem::~SceneTreeItem()
     {
         delete children[i];
     }
+}
+
+ModelHandle_t SceneTreeItem::GetModel() const
+{
+    return model;
 }
 
 void SceneTreeItem::AddChild ( SceneTreeItem *child )
@@ -70,6 +77,31 @@ int SceneTreeItem::Row() const
 SceneTreeItem *SceneTreeItem::Parent() const
 {
     return parent;
+}
+
+
+SequenceSceneTreeItem::SequenceSceneTreeItem ( const Sequence_t *sequence, int sequenceIndex, ModelHandle_t model, SceneTreeItem *parent )
+    : SceneTreeItem (Sequence_CreateTreeName (sequence), model, parent)
+    , sequence (sequence)
+    , sequenceIndex (sequenceIndex)
+{
+}
+
+void SequenceSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
+{
+    visitor->Visit (GetModel(), sequence, sequenceIndex);
+}
+
+SurfaceSceneTreeItem::SurfaceSceneTreeItem ( const mdxmSurfHierarchy_t *surface, int surfaceIndex, ModelHandle_t model, SceneTreeItem *parent )
+    : SceneTreeItem (surface->name, model, parent)
+    , surface (surface)
+    , surfaceIndex (surfaceIndex)
+{
+}
+
+void SurfaceSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
+{
+    visitor->Visit (GetModel(), surface, surfaceIndex);
 }
 
 //=============================================================================

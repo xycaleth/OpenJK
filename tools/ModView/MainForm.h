@@ -4,6 +4,8 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_MainForm.h"
 
+#include "SceneTreeItemAction.h"
+
 class SceneTreeModel;
 class MainForm : public QMainWindow
 {
@@ -48,6 +50,8 @@ private slots:
     void OnPicmipTo3();
     void OnShowOpenGLInfo();
 
+    void OnDoubleClickedTreeView ( const QModelIndex& index);
+
 private:
     void ChangeLOD ( int lod );
     void ChangePicmip ( int level );
@@ -57,6 +61,8 @@ private:
 
     QString currentSceneName;
     SceneTreeModel *treeModel;
+
+    SceneTreeItemAction treeItemAction;
 };
 
 #endif

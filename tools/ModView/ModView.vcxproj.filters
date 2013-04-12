@@ -288,9 +288,6 @@
     <ClCompile Include="RenderWidget.cpp">
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
-    <ClCompile Include="SceneTreeModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_SceneTreeModel.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -301,6 +298,12 @@
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
     <ClCompile Include="GUIHelpers.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneTreeModel.cpp">
+      <Filter>Source Files\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneTreeItemAction.cpp">
       <Filter>Source Files\GUI</Filter>
     </ClCompile>
   </ItemGroup>
@@ -548,11 +551,11 @@
     <CustomBuild Include="MainForm.h">
       <Filter>Header Files\GUI</Filter>
     </CustomBuild>
-    <CustomBuild Include="SceneTreeModel.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="SceneTreeItem.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\GUI</Filter>
+    </CustomBuild>
+    <CustomBuild Include="SceneTreeModel.h">
+      <Filter>Header Files\GUI</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -563,6 +566,12 @@
       <Filter>Header Files\GUI</Filter>
     </ClInclude>
     <ClInclude Include="GUIHelpers.h">
+      <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ISceneTreeItemVisitor.h">
+      <Filter>Header Files\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneTreeItemAction.h">
       <Filter>Header Files\GUI</Filter>
     </ClInclude>
   </ItemGroup>

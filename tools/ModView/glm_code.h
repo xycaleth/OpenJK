@@ -98,9 +98,9 @@ void R_GLM_SurfaceRecursiveApply (
     ModelHandle_t model,
     int surfaceIndex,
     mdxmHierarchyOffsets_t *pHierarchyOffsets,
-    void (*preCallback) ( mdxmSurfHierarchy_t *, void * ),
+    void (*preCallback) ( mdxmSurfHierarchy_t *, int, void * ),
     void (*callback)( mdxmSurfHierarchy_t *, int, void * ),
-    void (*postCallback)( mdxmSurfHierarchy_t *, void * ),
+    void (*postCallback)( mdxmSurfHierarchy_t *, int, void * ),
     void *userData
 );
 
@@ -108,9 +108,9 @@ void R_GLM_BoneRecursiveApply (
     ModelHandle_t model,
     int boneIndex,
     mdxaSkelOffsets_t* pSkelOffsets,
-    void (*preCallback) ( mdxaSkel_t *, void * ),
+    void (*preCallback) ( mdxaSkel_t *, int, void * ),
     void (*callback)( mdxaSkel_t *, int, void * ),
-    void (*postCallback)( mdxaSkel_t *, void * ),
+    void (*postCallback)( mdxaSkel_t *, int, void * ),
     void *userData
 );
 

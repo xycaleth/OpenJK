@@ -17,16 +17,16 @@ struct BoneTreeApplication
     QStack<SceneTreeItem *> nodes;
 };
 
-void BeforeBoneChildrenAdded ( mdxaSkel_t *bone, void *userData )
+void BeforeBoneChildrenAdded ( mdxaSkel_t *bone, int index, void *userData )
 {
     BoneTreeApplication *app = static_cast<BoneTreeApplication *>(userData);
 
-    SceneTreeItem *item = new SceneTreeItem (QString::fromLatin1 (bone->name), app->nodes.back());
+    SceneTreeItem *item = new SceneTreeItem (QString::fromLatin1 (bone->name), app->container->hModel, app->nodes.back());
     app->nodes.back()->AddChild (item);
     app->nodes.append (item);
 }
 
-void AfterBoneChildrenAdded ( mdxaSkel_t *, void *userData )
+void AfterBoneChildrenAdded ( mdxaSkel_t *, int index, void *userData )
 {
     BoneTreeApplication *app = static_cast<BoneTreeApplication *>(userData);
 
@@ -54,16 +54,16 @@ struct SurfaceTreeApplication
     QStack<SceneTreeItem *> nodes;
 };
 
-void BeforeSurfaceChildrenAdded ( mdxmSurfHierarchy_t *surface, void *userData )
+void BeforeSurfaceChildrenAdded ( mdxmSurfHierarchy_t *surface, int index, void *userData )
 {
     SurfaceTreeApplication *app = static_cast<SurfaceTreeApplication *>(userData);
 
-    SceneTreeItem *item = new SceneTreeItem (QString::fromLatin1 (surface->name), app->nodes.back());
+    SceneTreeItem *item = new SurfaceSceneTreeItem (surface, index, app->container->hModel, app->nodes.back());
     app->nodes.back()->AddChild (item);
     app->nodes.append (item);
 }
 
-void AfterSurfaceChildrenAdded ( mdxmSurfHierarchy_t *surface, void *userData )
+void AfterSurfaceChildrenAdded ( mdxmSurfHierarchy_t *surface, int index, void *userData )
 {
     SurfaceTreeApplication *app = static_cast<SurfaceTreeApplication *>(userData);
 
@@ -84,23 +84,23 @@ void SurfaceChildrenAdded ( mdxmSurfHierarchy_t *surface, int surfaceIndex, void
         static_cast<void *>(app));
 }
 
-void BeforeTagChildrenAdded ( mdxmSurfHierarchy_t *surface, void *userData )
+void BeforeTagChildrenAdded ( mdxmSurfHierarchy_t *surface, int index, void *userData )
 {
     SurfaceTreeApplication *app = static_cast<SurfaceTreeApplication *>(userData);
 
     if ( surface->flags & G2SURFACEFLAG_ISBOLT )
     {
-        app->nodes.back()->AddChild (new SceneTreeItem (QString::fromLatin1 (surface->name), app->nodes.back()));
+        app->nodes.back()->AddChild (new SurfaceSceneTreeItem (surface, index, app->container->hModel, app->nodes.back()));
     }
 }
 
-void TagChildrenAdded ( mdxmSurfHierarchy_t *surface, int surfaceIndex, void *userData )
+void TagChildrenAdded ( mdxmSurfHierarchy_t *surface, int index, void *userData )
 {
     SurfaceTreeApplication *app = static_cast<SurfaceTreeApplication *>(userData);
 
     R_GLM_SurfaceRecursiveApply (
         app->container->hModel,
-        surfaceIndex,
+        index,
         app->pHierarchyOffsets,
         BeforeTagChildrenAdded,
         TagChildrenAdded,
@@ -123,7 +123,7 @@ struct CompareSequencesByFrame
     }
 };
 
-void AddSequencesToTree ( SceneTreeItem *root, const SequenceList_t& sequenceList )
+void AddSequencesToTree ( SceneTreeItem *root, const ModelContainer_t *container, const SequenceList_t& sequenceList )
 {
     std::vector<int> sequenceIndices (sequenceList.size(), -1);
     for ( int i = 0; i < sequenceList.size(); i++ )
@@ -135,20 +135,20 @@ void AddSequencesToTree ( SceneTreeItem *root, const SequenceList_t& sequenceLis
 
     for ( int i = 0; i < sequenceList.size(); i++ )
     {
-        root->AddChild (new SceneTreeItem (Sequence_CreateTreeName (&sequenceList[sequenceIndices[i]]), root));
+        root->AddChild (new SequenceSceneTreeItem (&sequenceList[sequenceIndices[i]], sequenceIndices[i], container->hModel, root));
     }
 }
 
 void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container, SceneTreeModel& model )
 {
-    SceneTreeItem *root = new SceneTreeItem ("");
-    SceneTreeItem *modelItem = new SceneTreeItem (QString ("==> %1 <==").arg (QString::fromLatin1 (Filename_WithoutPath (modelName.toLatin1()))), root);
+    SceneTreeItem *root = new SceneTreeItem ("", 0);
+    SceneTreeItem *modelItem = new SceneTreeItem (QString ("==> %1 <==").arg (QString::fromLatin1 (Filename_WithoutPath (modelName.toLatin1()))), container.hModel, root);
 
     root->AddChild (modelItem);
 
-    SceneTreeItem *surfacesItem = new SceneTreeItem (QObject::tr ("Surfaces"), modelItem);
-    SceneTreeItem *tagsItem = new SceneTreeItem (QObject::tr ("Tags"), modelItem);
-    SceneTreeItem *bonesItem = new SceneTreeItem (QObject::tr ("Bones"), modelItem);
+    SceneTreeItem *surfacesItem = new SceneTreeItem (QObject::tr ("Surfaces"), container.hModel, modelItem);
+    SceneTreeItem *tagsItem = new SceneTreeItem (QObject::tr ("Tags"), container.hModel, modelItem);
+    SceneTreeItem *bonesItem = new SceneTreeItem (QObject::tr ("Bones"), container.hModel, modelItem);
 
     mdxmHeader_t *pMDXMHeader = (mdxmHeader_t *) RE_GetModelData (container.hModel);
     mdxaHeader_t *pMDXAHeader = (mdxaHeader_t *) RE_GetModelData(pMDXMHeader->animIndex);
@@ -209,8 +209,8 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
     SceneTreeItem *sequencesItem = NULL;
     if ( !container.SequenceList.empty() )
     {
-        sequencesItem = new SceneTreeItem (QObject::tr ("Sequences"), modelItem);
-        AddSequencesToTree (sequencesItem, container.SequenceList);
+        sequencesItem = new SceneTreeItem (QObject::tr ("Sequences"), container.hModel, modelItem);
+        AddSequencesToTree (sequencesItem, &container, container.SequenceList);
     }
 
     // And add the items to model!

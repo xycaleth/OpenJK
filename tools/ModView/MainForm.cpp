@@ -7,6 +7,7 @@
 #include <QtCore/QTimer>
 #include "generic_stuff.h"
 #include "model.h"
+#include "SceneTreeItem.h"
 #include "SceneTreeModel.h"
 #include "SceneTreeView.h"
 #include "textures.h"
@@ -246,4 +247,15 @@ void MainForm::OnRefreshTextures()
 {
     TextureList_Refresh();
     ModelList_ForceRedraw();
+}
+
+void MainForm::OnDoubleClickedTreeView ( const QModelIndex& index )
+{
+    if ( !index.isValid() )
+    {
+        return;
+    }
+
+    SceneTreeItem *item = static_cast<SceneTreeItem *>(index.internalPointer());
+    item->Accept (&treeItemAction);
 }
