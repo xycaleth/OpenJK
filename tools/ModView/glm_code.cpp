@@ -686,42 +686,6 @@ void R_GLM_SurfaceRecursiveApply (
     }
 }
 
-
-static bool R_GLM_AddSurfaceToTree( ModelHandle_t hModel, HTREEITEM htiParent, int iThisSurfaceIndex, mdxmHierarchyOffsets_t *pHierarchyOffsets, bool bTagsOnly)
-{
-	bool bReturn = true;
-
-	mdxmSurfHierarchy_t *pSurfHierarchy_This = (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[iThisSurfaceIndex]);
-
-
-	// insert me...
-	//
-	TreeItemData_t	TreeItemData={0};
-					TreeItemData.iItemType		= bTagsOnly ? TREEITEMTYPE_GLM_TAGSURFACE : TREEITEMTYPE_GLM_SURFACE;
-					TreeItemData.iModelHandle	= hModel;
-					TreeItemData.iItemNumber	= iThisSurfaceIndex;					
-
-	HTREEITEM htiThis = NULL;
-	if (!bTagsOnly || (pSurfHierarchy_This->flags & G2SURFACEFLAG_ISBOLT) )
-	{
-		htiThis = ModelTree_InsertItem(	GLMModel_CreateSurfaceName(pSurfHierarchy_This->name, true),	// LPCTSTR psName, 
-										htiParent,			// HTREEITEM hParent
-										TreeItemData.uiData,// TREEITEMTYPE_GLM_SURFACE | iThisSurfaceIndex	// UINT32 uiUserData
-										bTagsOnly?TVI_SORT:TVI_LAST
-										);
-	}
-
-	// insert my children...
-	//
-	for (int iChild = 0; iChild < pSurfHierarchy_This->numChildren; iChild++)
-	{
-		R_GLM_AddSurfaceToTree(	hModel, bTagsOnly?htiParent:htiThis, pSurfHierarchy_This->childIndexes[iChild], pHierarchyOffsets, bTagsOnly );
-	}
-
-
-	return bReturn;
-}
-
 void R_GLM_BoneRecursiveApply (
     ModelHandle_t model,
     int boneIndex,
@@ -750,36 +714,6 @@ void R_GLM_BoneRecursiveApply (
         postCallback (thisBone, userData);
     }
 }
-
-static bool R_GLM_AddBoneToTree( ModelHandle_t hModel, HTREEITEM htiParent, int iThisBoneIndex, mdxaSkelOffsets_t* pSkelOffsets)
-{
-	bool bReturn = true;
-
-	mdxaSkel_t *pSkeletonEntry_This = (mdxaSkel_t *) ((byte *) pSkelOffsets + pSkelOffsets->offsets[ iThisBoneIndex ] );
-
-	
-	// insert me...
-	//
-	TreeItemData_t	TreeItemData={0};
-					TreeItemData.iItemType		= TREEITEMTYPE_GLM_BONE;
-					TreeItemData.iModelHandle	= hModel;
-					TreeItemData.iItemNumber	= iThisBoneIndex;
-
-	HTREEITEM htiThis = ModelTree_InsertItem(	pSkeletonEntry_This->name,	// LPCTSTR psName, 
-												htiParent,					// HTREEITEM hParent
-												TreeItemData.uiData	//	TREEITEMTYPE_GLM_BONE | iThisBoneIndex	// UINT32 uiUserData
-												);
-
-	// insert my children...
-	//
-	for (int iChild = 0; iChild < pSkeletonEntry_This->numChildren; iChild++)
-	{
-		R_GLM_AddBoneToTree( hModel, htiThis, pSkeletonEntry_This->children[iChild], pSkelOffsets);
-	}
-
-	return bReturn;
-}
-
 
 // Note, this function is only really supposed to be called once, to setup the Container that owns this model
 //
@@ -1056,7 +990,7 @@ bool R_GLMModel_Tree_ReEvalSurfaceText(ModelHandle_t hModel, HTREEITEM hTreeItem
 // return is success/fail (but it's an optional file, so return bool is just FYI really)
 //    (note that partial failures still count as successes, as long as at least one file succeeds)
 //
-static bool GLMModel_ReadSkinFiles(HTREEITEM hParent, ModelContainer_t *pContainer, LPCSTR psLocalFilename)
+static bool GLMModel_ReadSkinFiles(ModelContainer_t *pContainer, LPCSTR psLocalFilename)
 {
 	// check for optional .g2skin files... (SOF2-type)
 	//
@@ -1150,7 +1084,7 @@ static bool GLMModel_ReadBoneAliasFile(HTREEITEM hParent, HTREEITEM hInsertAfter
 // return = true if some sequences created (because of having found a valid animation file, 
 //	either "<modelname>.frames" (SOF2) or "animation.cfg" (CHC)...
 //
-static bool GLMModel_ReadSequenceInfo(HTREEITEM hTreeItem_Root, ModelContainer_t *pContainer, LPCSTR psLocalFilename_GLA)
+static bool GLMModel_ReadSequenceInfo(ModelContainer_t *pContainer, LPCSTR psLocalFilename_GLA)
 {
 	// try a CHC-style "animation.cfg" file...
 	//
@@ -1172,7 +1106,7 @@ static bool GLMModel_ReadSequenceInfo(HTREEITEM hTreeItem_Root, ModelContainer_t
 //
 // this MUST be called after Jake's code has finished, since I read from his tables...
 //
-bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename, HTREEITEM hTreeItem_Parent /* = NULL */)
+bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename)
 {
 	bool bReturn = false;
 
@@ -1180,8 +1114,6 @@ bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename, H
 
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
 	mdxaHeader_t	*pMDXAHeader	= (mdxaHeader_t	*) RE_GetModelData(pMDXMHeader->animIndex);
-	
-	HTREEITEM hTreeItem_Bones		= NULL;
 
 	if (pMDXMHeader->ident == MDXM_IDENT)
 	{
@@ -1242,33 +1174,23 @@ bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename, H
 
 	if (bReturn)
 	{
-		//bReturn = R_GLMModel_Tree_ReEvalSurfaceText(hModel);
+		// now fill in the fields we need in the container to avoid GLM-specific queries...
+		//
+		pContainer->pModelInfoFunction				= GLMModel_Info;
+		pContainer->pModelGetBoneNameFunction		= GLMModel_GetBoneName;
+		pContainer->pModelGetBoneBoltNameFunction	= GLMModel_GetBoneName;	// same thing in this format
+		pContainer->pModelGetSurfaceNameFunction	= GLMModel_GetSurfaceName;
+		pContainer->pModelGetSurfaceBoltNameFunction= GLMModel_GetSurfaceName;	// same thing in this format
+		pContainer->iNumFrames		= GLMModel_GetNumFrames	( hModel );
+		pContainer->iNumLODs		= GLMModel_GetNumLODs	( hModel );
+		pContainer->iNumBones		= GLMModel_GetNumBones	( hModel );
+		pContainer->iNumSurfaces	= GLMModel_GetNumSurfaces(hModel );
 
-		//if (bReturn)
-		{
-			// let's try looking for "<modelname>.frames" in the same dir for simple sequence info...
-			//
-			{
-				// now fill in the fields we need in the container to avoid GLM-specific queries...
-				//
-				pContainer->pModelInfoFunction				= GLMModel_Info;
-				pContainer->pModelGetBoneNameFunction		= GLMModel_GetBoneName;
-				pContainer->pModelGetBoneBoltNameFunction	= GLMModel_GetBoneName;	// same thing in this format
-				pContainer->pModelGetSurfaceNameFunction	= GLMModel_GetSurfaceName;
-				pContainer->pModelGetSurfaceBoltNameFunction= GLMModel_GetSurfaceName;	// same thing in this format
-				pContainer->iNumFrames		= GLMModel_GetNumFrames	( hModel );
-				pContainer->iNumLODs		= GLMModel_GetNumLODs	( hModel );
-				pContainer->iNumBones		= GLMModel_GetNumBones	( hModel );
-				pContainer->iNumSurfaces	= GLMModel_GetNumSurfaces(hModel );
-
-				pContainer->iBoneBolt_MaxBoltPoints		= pContainer->iNumBones;	// ... since these are pretty much the same in this format
-				pContainer->iSurfaceBolt_MaxBoltPoints	= pContainer->iNumSurfaces;	// ... since these are pretty much the same in this format
+		pContainer->iBoneBolt_MaxBoltPoints		= pContainer->iNumBones;	// ... since these are pretty much the same in this format
+		pContainer->iSurfaceBolt_MaxBoltPoints	= pContainer->iNumSurfaces;	// ... since these are pretty much the same in this format
                 
-				GLMModel_ReadSkinFiles	  (pContainer->hTreeItem_ModelName, pContainer, psLocalFilename);
-				GLMModel_ReadSequenceInfo (pContainer->hTreeItem_ModelName, pContainer, pMDXMHeader->animName);
-			    GLMModel_ReadBoneAliasFile(pContainer->hTreeItem_ModelName, hTreeItem_Bones, pContainer, pMDXMHeader->animName);
-			}
-		}
+		GLMModel_ReadSkinFiles	  (pContainer, psLocalFilename);
+		GLMModel_ReadSequenceInfo (pContainer, pMDXMHeader->animName);
 	}
 
 	return bReturn;

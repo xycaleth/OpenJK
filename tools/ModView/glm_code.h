@@ -71,7 +71,7 @@ typedef struct
 ////////////////////////////////////////////////
 
 
-bool			GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename, HTREEITEM hTreeItem_Parent = NULL);
+bool			GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename);
 SurfaceOnOff_t	GLMModel_Surface_GetStatus( ModelHandle_t hModel, int iSurfaceIndex );
 void			GLMModel_DeleteExtra(void);
 bool			GLMModel_SurfaceContainsBoneReference(ModelHandle_t hModel, int iLODNumber, int iSurfaceNumber, int iBoneNumber);

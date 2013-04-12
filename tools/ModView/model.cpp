@@ -686,7 +686,7 @@ static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelC
 			{
 				case MOD_MDXM:
 					
-					bModelOk = GLMModel_Parse( pContainer, psLocalFilename, hTreeItem_Parent);
+					bModelOk = GLMModel_Parse(pContainer, psLocalFilename);
 
 					if (bModelOk)
 					{
