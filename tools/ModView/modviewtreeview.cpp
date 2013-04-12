@@ -796,7 +796,8 @@ void CModViewTreeView::OnGlmsurfaceInfo()
 			CWaitCursor wait;
 			LPCSTR psInfoString = Model_GLMSurfaceVertInfo( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber );
 
-			SendStringToNotepad(psInfoString, va("%s_%s_vertinfo.txt",Filename_WithoutPath(Filename_WithoutExt(Model_GetFilename(gTreeItemData.iModelHandle))),String_RemoveOccurences(Model_GetSurfaceName(gTreeItemData.iModelHandle,gTreeItemData.iItemNumber),"*")));
+            // Commented out string_removeoccurences cause it needs rewriting
+			SendStringToNotepad(psInfoString, va("%s_%s_vertinfo.txt",Filename_WithoutPath(Filename_WithoutExt(Model_GetFilename(gTreeItemData.iModelHandle))),/*String_RemoveOccurences*/(Model_GetSurfaceName(gTreeItemData.iModelHandle,gTreeItemData.iItemNumber),"*")));
 		}
 	}
 	else
@@ -1614,7 +1615,9 @@ void CModViewTreeView::OnSequencesSortalphabetically()
 {
 	AppVars.bSortSequencesByAlpha = !AppVars.bSortSequencesByAlpha;
 
+    #ifdef USE_MFC
 	ModelTree_InsertSequences( gTreeItemData.iModelHandle, ghTreeItem_RButtonMenu );	
+    #endif
 }
 
 void CModViewTreeView::OnUpdateSequencesSortalphabetically(CCmdUI* pCmdUI) 

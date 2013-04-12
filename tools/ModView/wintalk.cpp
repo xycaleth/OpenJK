@@ -434,6 +434,7 @@ static bool HandleCommands(LPCSTR psString, byte *pbCommandData, int iCommandDat
 		}
 	}
 	else
+    #ifdef USE_MFC
 	IF_ARG("modeltree_getrootsurface")	// <modelhandle>
 	{
 		psArg = NEXT_ARG;
@@ -501,6 +502,7 @@ static bool HandleCommands(LPCSTR psString, byte *pbCommandData, int iCommandDat
 		CommArea_CommandAck(va("%d",hTreeItem));
 	}
 	else
+    #endif
 	IF_ARG("errorbox_disable")
 	{
 		gbErrorBox_Inhibit = true;

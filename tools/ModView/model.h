@@ -188,8 +188,10 @@ struct ModelContainer
 	//
 	// more freaky stuff to do with MODVIEW, rather than the format as a whole...
 	//
+    #ifdef USE_MFC
 	HTREEITEM		hTreeItem_ModelName;	// filled in by format-specific parser, so we can add a "BoltOns" treeitem later
 	HTREEITEM		hTreeItem_BoltOns;		// attached underneath hTreeItem_ModelName, and passed as parent tree item to bolted containers
+    #endif
 	//
 	// these 2 are just for viewing bone highlights and shouldn't be used for anything else...
 	//
@@ -373,6 +375,7 @@ void	ModelList_GoToEndFrame();
 bool	ModelList_StepFrame(int iStepVal, bool bAutoAnimOff = true);
 bool	ModelList_Animation(void);
 
+#ifdef USE_MFC
 void		ModelTree_DeleteAllItems(void);
 bool		ModelTree_DeleteItem(HTREEITEM hTreeItem);
 HTREEITEM	ModelTree_GetRootItem(void);
@@ -388,6 +391,7 @@ HTREEITEM	ModelTree_GetNextSiblingItem(HTREEITEM hTreeItem);
 HTREEITEM	ModelTree_InsertItem(LPCTSTR psName, HTREEITEM hParent, UINT32 uiUserData = NULL, HTREEITEM hInsertAfter = TVI_LAST);
 HTREEITEM	ModelTree_GetRootSurface(ModelHandle_t hModel);
 HTREEITEM	ModelTree_GetRootBone(ModelHandle_t hModel);
+#endif
 
 void R_ModelContainer_Apply(ModelContainer_t* pContainer, void (*pFunction) ( ModelContainer_t* pContainer, void *pvData), void *pvData = NULL);
 

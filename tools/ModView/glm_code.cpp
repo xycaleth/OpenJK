@@ -924,6 +924,7 @@ static LPCSTR GLMModel_Info( ModelHandle_t hModel )
 //
 // hTreeItem = tree item to start from, pass NULL to start from root
 //
+#ifdef USE_MFC
 bool R_GLMModel_Tree_ReEvalSurfaceText(ModelHandle_t hModel, HTREEITEM hTreeItem /* = NULL */, bool bDeadFromHereOn /* = false */)
 {
 	bool bReturn = false;
@@ -983,6 +984,7 @@ bool R_GLMModel_Tree_ReEvalSurfaceText(ModelHandle_t hModel, HTREEITEM hTreeItem
 
 	return true;
 }
+#endif
 
 
 // read an optional set of skin files (SOF2-style), and if present, add them into the model tree...
@@ -1008,78 +1010,6 @@ static bool GLMModel_ReadSkinFiles(ModelContainer_t *pContainer, LPCSTR psLocalF
 
 	return false;
 }
-	  
-
-// read an optional bone alias file, and if present then add into the model tree...
-//  (this may become a generic model function, not just a GLMModel one, but for now...
-//
-// return is success/fail (but it's an optional file, so return bool is just FYI really)
-//    (note that partial failures still count as successes, as long as at least one alias succeeds)
-//
-static bool GLMModel_ReadBoneAliasFile(HTREEITEM hParent, HTREEITEM hInsertAfter, ModelContainer_t *pContainer, LPCSTR psLocalFilename)
-{	
-	TreeItemData_t	TreeItemData = {0};
-					TreeItemData.iModelHandle = pContainer->hModel;
-
-	HTREEITEM hTreeItem_BoneAliases	= NULL;
-	bool bReturn = false;
-
-
-	// check for optional alias file...
-	//
-	CString strALIASFilename(va("%s%s.alias",gamedir,psLocalFilename));
-	CString strErrors;
-
-	if (FileExists(strALIASFilename))
-	{
-		TreeItemData.iItemType	= TREEITEMTYPE_BONEALIASHEADER;
-		hTreeItem_BoneAliases	= ModelTree_InsertItem("Bone Aliases", hParent, TreeItemData.uiData, hInsertAfter);
-	
-		if (hTreeItem_BoneAliases)
-		{	
-			if (Parser_Load(strALIASFilename, pContainer->Aliases))
-			{
-				for (MappedString_t::iterator it = pContainer->Aliases.begin(); it != pContainer->Aliases.end(); ++it)
-				{
-					CString strBoneName_Real (((*it).first).c_str());
-					CString strBoneName_Alias(((*it).second).c_str());
-
-					int iRealBoneIndex = ModelContainer_BoneIndexFromName(pContainer, strBoneName_Real);
-
-					if (iRealBoneIndex != -1)
-					{
-						TreeItemData.iItemType	= TREEITEMTYPE_GLM_BONEALIAS;
-						TreeItemData.iItemNumber= iRealBoneIndex;
-
-						ModelTree_InsertItem(strBoneName_Alias, hTreeItem_BoneAliases, TreeItemData.uiData );
-
-						bReturn = true;
-					}
-					else
-					{
-						strErrors += va("Bone: \"%s\" (Alias: \"%s\")",(LPCSTR) strBoneName_Real, (LPCSTR) strBoneName_Alias);
-					}
-				}				
-			}
-			else
-			{
-				TreeItemData.iItemType = TREEITEMTYPE_NULL;
-				ModelTree_InsertItem("Error during parse!",	hTreeItem_BoneAliases, TreeItemData.uiData);
-			}
-		}	
-	}
-
-	if (!strErrors.IsEmpty())
-	{
-		strErrors.Insert(0,va("The following bone names in the alias file: \"%s\"\n\n...had no corresponding bones in the anim file for the model: \"%s\"\n\n\n",(LPCSTR) strALIASFilename, pContainer->sLocalPathName));
-		ErrorBox(strErrors);
-	}
-
-	bReturn = true;
-
-	return bReturn;
-}
-
 
 // return = true if some sequences created (because of having found a valid animation file, 
 //	either "<modelname>.frames" (SOF2) or "animation.cfg" (CHC)...
@@ -1225,7 +1155,7 @@ bool GLMModel_Surface_SetStatus( ModelHandle_t hModel, int iSurfaceIndex, Surfac
 
 		if (trap_G2_SetSurfaceOnOff (hModel, pContainer->slist, psSurfaceName, eStatus, iSurfaceIndex))
 		{
-			R_GLMModel_Tree_ReEvalSurfaceText(hModel);
+			//R_GLMModel_Tree_ReEvalSurfaceText(hModel);
 			bReturn = true;
 		}
 		else
@@ -1249,7 +1179,7 @@ void GLMModel_Surfaces_DefaultAll(ModelHandle_t hModel)
 	if (pContainer)
 	{
 		trap_G2_SurfaceOffList(hModel, &pContainer->slist);
-		R_GLMModel_Tree_ReEvalSurfaceText(hModel);
+		//R_GLMModel_Tree_ReEvalSurfaceText(hModel);
 	}
 }
 

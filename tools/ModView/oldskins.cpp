@@ -3,6 +3,10 @@
 // module containing code for old ID/EF1/CHC style skins...
 //
 #include "stdafx.h"
+
+#include <algorithm>
+#include <functional>
+#include <string>
 #include "includes.h"
 #include "files.h"
 #include "r_common.h"
@@ -10,6 +14,7 @@
 //#include "glm_code.h"
 //#include "R_Model.h"
 //#include "R_Surface.h"
+#include "StringUtils.h"
 #include "textures.h"
 //#include "TEXT.H"
 //#include "sequence.h"
@@ -27,64 +32,63 @@
 
 OldSkinSets_t OldSkinsFound;
 
-
 // returns NULL for all ok, else error string...
 //
 LPCSTR OldSkins_Parse(LPCSTR psSkinName, LPCSTR psText)
 {
-	CString strText(psText);
-			strText.Replace(va("%c%c",0x0A,0x0D),va("%c",0x0A));	// file was read in binary mode, so account for 0x0A/0x0D pairs
-			strText.Replace("\t","");
-			strText.Replace(" ","");
-			strText.MakeLower();
-	
-	while (!strText.IsEmpty())
-	{
-		CString strThisLine;
-		
-		int iLoc = strText.Find('\n');
+	std::string strText(psText);
 
-		if (iLoc == -1)
+    strText = Replace (strText, "\n\r", "\n"); // file was read in binary mode, so account for 0x0A/0x0D pairs
+    std::remove (strText.begin(), strText.end(), '\t');
+    std::remove (strText.begin(), strText.end(), ' ');
+
+    std::transform (strText.begin(), strText.end(), strText.begin(), tolower);
+	
+	while (!strText.empty())
+	{
+		std::string strThisLine;
+		
+		std::size_t iLoc = strText.find('\n');
+
+		if (iLoc == std::string::npos)
 		{
 			strThisLine = strText;
-			strText.Empty();
+			strText.clear();
 		}
 		else
 		{
-			strThisLine = strText.Left(iLoc);
-			strText = strText.Mid(iLoc+1);
+			strThisLine = strText.substr (iLoc);
+			strText = strText.substr (iLoc+1);
 		}
 
-		if (!strThisLine.IsEmpty())
+		if (!strThisLine.empty())
 		{
-			iLoc = strThisLine.Find(',');
+			iLoc = strThisLine.find (',');
 			if (iLoc != -1)
 			{	
-				CString strSurfaceName	(strThisLine.Left(iLoc));						
-				CString strTGAName		(strThisLine.Mid (iLoc+1));
+				std::string strSurfaceName (strThisLine.substr (0, iLoc));						
+				std::string strTGAName (strThisLine.substr (iLoc+1));
 
-				strSurfaceName.TrimLeft();
-				strSurfaceName.TrimRight();
-				strTGAName.TrimLeft();
-				strTGAName.TrimRight();
+                Trim (strSurfaceName);
+                Trim (strTGAName);
 
 				//
 				// new bit to cope with faulty ID skin files, where they have spurious lines like "tag_torso,"
 				//
 				// ("tag" is "*" in ghoul2)
 				//
-				if (strSurfaceName.GetAt(0) == '*' || strTGAName.IsEmpty())
+				if ( strTGAName.empty() || strSurfaceName[0] == '*' )
 				{
 					// crap line, so ignore it...
 				}
 				else
 				{
-					OldSkinsFound[psSkinName].push_back(StringPairVector_t::value_type((LPCSTR)strSurfaceName,(LPCSTR)strTGAName));
+					OldSkinsFound[psSkinName].push_back(std::make_pair (strSurfaceName, strTGAName));
 				}
 			}
 			else
 			{
-				return va("Error parsing line \"%s\" in skin \"%s\"!",(LPCSTR)strThisLine,psSkinName);
+				return va("Error parsing line \"%s\" in skin \"%s\"!",strThisLine.c_str(),psSkinName);
 			}			
 		}
 	}
@@ -94,21 +98,18 @@ LPCSTR OldSkins_Parse(LPCSTR psSkinName, LPCSTR psText)
 
 // converts stuff like "<path>/stormtrooper_blue.skin" to "blue"...
 //
-LPCSTR OldSkins_FilenameToSkinDescription(string strLocalSkinFileName)
+std::string OldSkins_FilenameToSkinDescription(string strLocalSkinFileName)
 {
-	static char sTemp[1024];
+	std::string strSkinName(Filename_WithoutPath(Filename_WithoutExt(strLocalSkinFileName.c_str())));
 
-	CString strSkinName(Filename_WithoutPath(Filename_WithoutExt(strLocalSkinFileName.c_str())));
-
-	strSkinName.MakeLower();
-	int iLoc = strSkinName.Find('_');
-	if (iLoc != -1)
+	ToLower (strSkinName);
+	std::size_t iLoc = strSkinName.find('_');
+	if (iLoc != std::string::npos)
 	{
-		strSkinName = strSkinName.Mid(iLoc+1);
+		strSkinName = strSkinName.substr(iLoc+1);
 	}
 
-	sprintf(sTemp,strSkinName);
-	return sTemp;
+	return strSkinName;
 }
 
 
@@ -126,8 +127,8 @@ static bool OldSkins_Read(LPCSTR psLocalFilename_GLM)
 
 	if (psSkinsPath)
 	{
-		CString strSkinFileMustContainThisName( Filename_WithoutPath( Filename_WithoutExt( psLocalFilename_GLM )) );	
-				strSkinFileMustContainThisName += "_";	// eg: "turret_canon_"
+		std::string strSkinFileMustContainThisName( Filename_WithoutPath( Filename_WithoutExt( psLocalFilename_GLM )) );	
+		strSkinFileMustContainThisName += "_";	// eg: "turret_canon_"
 		char **ppsSkinFiles;
 		int iSkinFiles;
 
@@ -166,7 +167,7 @@ static bool OldSkins_Read(LPCSTR psLocalFilename_GLM)
 			string strLocalSkinFileName(ppsSkinFiles[i]);
 
 			// only look at skins that begin "modelname_skinvariation" for a given "modelname_"
-			if (!strnicmp(strSkinFileMustContainThisName,strLocalSkinFileName.c_str(),strlen(strSkinFileMustContainThisName)))
+			if (!strnicmp(strSkinFileMustContainThisName.c_str(),strLocalSkinFileName.c_str(),strSkinFileMustContainThisName.length()))
 			{
 				Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", Filename_PathOnly(psLocalFilename_GLM), strLocalSkinFileName.c_str() );
 				//ri.Printf( PRINT_ALL, "...loading '%s'\n", sFileName );
@@ -179,7 +180,7 @@ static bool OldSkins_Read(LPCSTR psLocalFilename_GLM)
 
 				char *psDataPtr = buffers[i];
 
-				psError = OldSkins_Parse( OldSkins_FilenameToSkinDescription(strLocalSkinFileName), psDataPtr);
+				psError = OldSkins_Parse( OldSkins_FilenameToSkinDescription(strLocalSkinFileName).c_str(), psDataPtr);
 				if (psError)
 				{
 					ErrorBox(va("Skins_Read(): Error reading file \"%s\"!\n\n( Skins will be ignored for this model )\n\nError was:\n\n%s",sFileName,psError));
@@ -314,7 +315,7 @@ bool OldSkins_Apply( ModelContainer_t *pContainer, LPCSTR psSkinName )
 	return bReturn;
 }
 
-
+#ifdef USE_MFC
 
 bool OldSkins_ApplyToTree(HTREEITEM hTreeItem_Parent, ModelContainer_t *pContainer)
 {
@@ -374,6 +375,7 @@ bool OldSkins_ApplyToTree(HTREEITEM hTreeItem_Parent, ModelContainer_t *pContain
 
 	return bReturn;
 }
+#endif
 
 
 // sets up valid skin tables based on first entries loaded, also registers/binds appropriate textures...
@@ -425,7 +427,6 @@ GLuint OldSkins_GetGLBind(ModelContainer_t *pContainer, LPCSTR psSurfaceName)
 	return pContainer->MaterialBinds[psSurfaceName];
 }
 
-
 extern bool g_bReportImageLoadErrors;
 bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 {
@@ -440,7 +441,7 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	//SkinFileMaterialsMissing_t SkinFileMaterialsMissing;
 	int iThisSkinIndex = 0;
 
-	CString strSkinFileSurfaceDiscrepancies;
+	std::string strSkinFileSurfaceDiscrepancies;
 	
 	for (OldSkinSets_t::iterator itOldSkins = pContainer->OldSkinSets.begin(); itOldSkins != pContainer->OldSkinSets.end(); ++itOldSkins, iThisSkinIndex++)
 	{					
@@ -529,22 +530,22 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	// If too many lines to fit on screen (which is now happening), send 'em to notepad instead...
 	//
 	// ( tacky way of counting lines...)
-	CString strTackyCount(strNotFoundList.c_str());
-			strTackyCount += strFoundList.c_str();			
+	std::string strTackyCount(strNotFoundList.c_str());
+	strTackyCount += strFoundList.c_str();			
 
-	int iLines = strTackyCount.Replace('\n','?');	// :-)
+	int iLines = std::count_if (strTackyCount.begin(), strTackyCount.end(), std::bind1st (std::equal_to<char>(), '\n'));	// :-)
 
 	#define MAX_BOX_LINES_HERE 50
 
 	// new popup before the other ones...
 	//
-	if (!strSkinFileSurfaceDiscrepancies.IsEmpty())
+	if (!strSkinFileSurfaceDiscrepancies.empty())
 	{
-		strSkinFileSurfaceDiscrepancies.Insert(0,va("( \"%s\" )\n\nThe following skin file errors occured during cross-checking...\n\n",pContainer->sLocalPathName));
+		strSkinFileSurfaceDiscrepancies.insert (0,va("( \"%s\" )\n\nThe following skin file errors occured during cross-checking...\n\n",pContainer->sLocalPathName));
 
-		if (GetYesNo(va("%s\n\nSend copy of report to Notepad?", (LPCSTR) strSkinFileSurfaceDiscrepancies)))
+		if (GetYesNo(va("%s\n\nSend copy of report to Notepad?", strSkinFileSurfaceDiscrepancies.c_str())))
 		{
-			SendStringToNotepad( strSkinFileSurfaceDiscrepancies, "skinfile_discrepancies.txt");
+			SendStringToNotepad( strSkinFileSurfaceDiscrepancies.c_str(), "skinfile_discrepancies.txt");
 		}
 	}
 

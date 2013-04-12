@@ -4,12 +4,14 @@
 #ifndef GENERIC_STUFF_H
 #define GENERIC_STUFF_H
 
+#include <string>
+
 
 extern char qdir[];
 extern char	gamedir[];
 
 void SetQdirFromPath( const char *path );
-void Filename_RemoveQUAKEBASE(CString& string);
+void Filename_RemoveQUAKEBASE(std::string& string);
 bool FileExists (LPCSTR psFilename);
 long FileLen( LPCSTR psFilename);
 char *Filename_WithoutPath(LPCSTR psFilename);
@@ -20,7 +22,6 @@ char *String_EnsureMinLength(LPCSTR psString, int iMinLength);
 char *String_ToLower(LPCSTR psString);
 char *String_ToUpper(LPCSTR psString);
 char *String_ForwardSlash(LPCSTR psString);
-char *String_RemoveOccurences(LPCSTR psString, LPCSTR psSubStr);
 char *va(char *format, ...);
 char *scGetTempPath(void);
 LPCSTR InputSaveFileName(LPCSTR psInitialSaveName, LPCSTR psCaption, LPCSTR psInitialPath, LPCSTR psFilter, LPCSTR psExtension);
@@ -46,7 +47,7 @@ int LoadFile (LPCSTR psPathedFilename, void **bufferptr, int bReportErrors = tru
 int SaveFile (LPCSTR psPathedFilename, const void *pBuffer, int iSize);
 
 
-bool TextFile_Read(CString &strFile, LPCSTR psFullPathedFilename, bool bLoseSlashSlashREMs = true, bool bLoseBlankLines = true);
+bool TextFile_Read(std::string &strFile, LPCSTR psFullPathedFilename, bool bLoseSlashSlashREMs = true, bool bLoseBlankLines = true);
 bool SendFileToNotepad(LPCSTR psFilename);
 bool SendStringToNotepad(LPCSTR psWhatever, LPCSTR psLocalFileName);
 

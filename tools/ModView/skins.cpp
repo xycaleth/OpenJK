@@ -3,6 +3,10 @@
 // file to control model-loading scripts (scripts are purely a viewer convenience for multiple-bolt stuff)
 //
 #include "stdafx.h"
+
+#include <algorithm>
+#include <functional>
+#include <string>
 #include "includes.h"
 #include "files.h"
 #include "r_common.h"
@@ -249,34 +253,34 @@ static LPCSTR Skins_Parse(string strThisSkinFileName, CGPGroup *pFileGroup, CGPG
 
 // returns NULL if error, else usable (local) path...
 //
-static LPCSTR Skins_ModelNameToSkinPath(LPCSTR psModelFilename)
+std::string Skins_ModelNameToSkinPath(const std::string& psModelFilename)
 {
-	static CString str;
-			str = psModelFilename;
-			str.MakeLower();
- 	while  (str.Replace('\\','/')){}	
+	std::string str (psModelFilename);
+	
+    std::transform (str.begin(), str.end(), str.begin(), ::tolower);
+    std::replace (str.begin(), str.end(), '\\', '/');
 
 	// special case for anything in the "objects" dir...
 	//
-	int i = str.Find("models/objects/");
-	if (i>=0)
+	std::size_t i = str.find ("models/objects/");
+	if (i != std::string::npos)
 	{
-		str = str.Left(i+strlen("models/objects/"));
-		str+= "skins";
-		return (LPCSTR) str;
+		str = str.substr (0, i + strlen("models/objects/"));
+		str += "skins";
+		return str;
 	}
 
 	// or anything else...
 	//
-	i = str.Find("models/");
-	if (i>=0)
+	i = str.find ("models/");
+	if (i != std::string::npos)
 	{
-		str = str.Left(i+strlen("models/"));
-		str+= "characters/skins";		
-		return (LPCSTR) str;
+		str = str.substr (0, i + strlen("models/"));
+		str += "characters/skins";		
+		return str;
 	}
 
-	return NULL;
+	return std::string();
 }
 
 
@@ -358,9 +362,9 @@ static bool Skins_Read(LPCSTR psModelFilename)
 
 	CWaitCursor;
 
-	LPCSTR psSkinsPath = Skins_ModelNameToSkinPath(psModelFilename);	// eg "models/characters/skins"
+	std::string psSkinsPath = Skins_ModelNameToSkinPath(psModelFilename);	// eg "models/characters/skins"
 
-	if (psSkinsPath)
+	if (!psSkinsPath.empty())
 	{
 		string strThisModelBaseName(String_ToLower(Filename_WithoutExt(Filename_WithoutPath(psModelFilename))));
 
@@ -846,7 +850,6 @@ bool Skins_ApplySkinShaderVariant(ModelContainer_t *pContainer, LPCSTR psSkin, L
 	return Skins_ApplySkinFile(pContainer, psSkin, psEthnic, false, false, psMaterial, iVariant );
 }
 
-
 // returns false for "at least one shader or material missing", else true for all ok...
 //
 extern bool g_bReportImageLoadErrors;
@@ -925,7 +928,7 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	
 	// see if we were missing any model materials in these skins...
 	//
-	CString strModelMaterialsMissing;
+	std::string strModelMaterialsMissing;
 	if (SkinFileMaterialsMissing.size())
 	{
 		for (SkinFileMaterialsMissing_t::iterator itSkinFileMaterialsMissing = SkinFileMaterialsMissing.begin(); itSkinFileMaterialsMissing != SkinFileMaterialsMissing.end(); ++itSkinFileMaterialsMissing)
@@ -955,24 +958,24 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 			}
 		}
 	}
-	if (!strModelMaterialsMissing.IsEmpty())
+	if (!strModelMaterialsMissing.empty())
 	{
 		if (iSkinNumber == -1)
 		{
-			strModelMaterialsMissing.Insert(0, "One or more skin files are missing some material definitions referenced by this model's currently-active surfaces.\nList follows...\n\n");
+			strModelMaterialsMissing.insert (0, "One or more skin files are missing some material definitions referenced by this model's currently-active surfaces.\nList follows...\n\n");
 		}
 		else
 		{
-			strModelMaterialsMissing.Insert(0, "This skin file is missing one or more material definitions referenced by this model's currently-active surfaces.\nList follows...\n\n");
+			strModelMaterialsMissing.insert (0, "This skin file is missing one or more material definitions referenced by this model's currently-active surfaces.\nList follows...\n\n");
 		}
 	}
 
 	
-	if (!strModelMaterialsMissing.IsEmpty())
+	if (!strModelMaterialsMissing.empty())
 	{
 		if (bCheckMissingMaterials)
 		{
-			WarningBox(va("Summary Part 1: Missing materials\n\n%s",(LPCSTR)strModelMaterialsMissing));
+			WarningBox(va("Summary Part 1: Missing materials\n\n%s", strModelMaterialsMissing.c_str()));
 		}
 	}
 
@@ -982,10 +985,10 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	// If too many lines to fit on screen (which is now happening), send 'em to notepad instead...
 	//
 	// ( tacky way of counting lines...)
-	CString strTackyCount(strNotFoundList.c_str());
-			strTackyCount += strFoundList.c_str();
+	std::string strTackyCount(strNotFoundList.c_str());
+	strTackyCount += strFoundList.c_str();
 
-	int iLines = strTackyCount.Replace('\n','?');	// :-)
+	int iLines = std::count_if (strTackyCount.begin(), strTackyCount.end(), std::bind1st (std::equal_to<char>(), '\n'));
 
 	#define MAX_BOX_LINES_HERE 50
 
@@ -1024,7 +1027,7 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	return bReturn;
 }
 
-
+#ifdef USE_MFC
 
 bool Skins_ApplyToTree (HTREEITEM hTreeItem_Parent, ModelContainer_t *pContainer)
 {
@@ -1096,7 +1099,7 @@ bool Skins_ApplyToTree (HTREEITEM hTreeItem_Parent, ModelContainer_t *pContainer
 }
 
 
-
+#endif
 
 // called directly from renderer...
 //

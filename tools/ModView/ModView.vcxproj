@@ -182,6 +182,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="StringUtils.cpp" />
     <ClCompile Include="TEXT.CPP" />
     <ClCompile Include="Textures.cpp" />
     <ClCompile Include="anims.cpp" />
@@ -1706,6 +1707,7 @@
     <ClInclude Include="GUIHelpers.h" />
     <ClInclude Include="ISceneTreeItemVisitor.h" />
     <ClInclude Include="SceneTreeView.h" />
+    <ClInclude Include="StringUtils.h" />
     <CustomBuild Include="SceneTreeItem.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </Message>

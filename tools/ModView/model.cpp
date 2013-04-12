@@ -257,8 +257,10 @@ static void ModelContainer_Clear(ModelContainer_t* pContainer, void *pvData)
 		pContainer->tSurfaceBolt_BoltPoints.clear();
 	}
 
+    #ifdef USE_MFC
 	pContainer->hTreeItem_ModelName = NULL;
 	pContainer->hTreeItem_BoltOns	= NULL;
+    #endif
 }
 
 
@@ -379,7 +381,7 @@ void AppVars_WriteIdeal(void)
 {
 	if (!AppVars.strLoadedModelPath.IsEmpty())
 	{
-		CString strOut;
+		std::string strOut;
 
 #define OUTBYTE(blah)	strOut += va("%s:%d\n",#blah,AppVars.blah);
 #define OUTDOUBLE(blah) strOut += va("%s:%f\n",#blah,AppVars.blah);
@@ -407,7 +409,7 @@ void AppVars_WriteIdeal(void)
 		FILE *fHandle = fopen(psIdealName,"wt");
 		if (fHandle)
 		{
-			fprintf(fHandle,(LPCSTR)strOut);
+			fprintf(fHandle,strOut.c_str());
 			fclose(fHandle);
 		}
 		else
@@ -430,7 +432,7 @@ void AppVars_ReadIdeal(void)
 		FILE *fHandle = fopen(psIdealName,"rt");
 		if (fHandle)
 		{
-			CString str;
+			std::string str;
 			char sLine[1024];
 
 			while (fgets(sLine,sizeof(sLine),fHandle)!=NULL)
@@ -441,7 +443,7 @@ void AppVars_ReadIdeal(void)
 					*strchr(sLine,'\n') = '\0';
 
 				str += sLine;
-				str += "\n";
+				str += '\n';
 			}
 						
 			fclose(fHandle);
@@ -463,44 +465,44 @@ void AppVars_ReadIdeal(void)
 			//
 			while (1)
 			{
-				int iLoc = str.Find('\n');
-				if (iLoc == -1)
+				std::size_t iLoc = str.find ('\n');
+				if (iLoc == std::string::npos)
 					break;
 				
-				CString strThis = str.Left(iLoc);				
-				if (strThis.IsEmpty())
+				std::string strThis = str.substr (0, iLoc);				
+				if (strThis.empty())
 					break;
 
-				str = str.Mid(iLoc+1);			
+				str = str.substr(iLoc+1);			
 
-				iLoc = strThis.Find(':');
-				if (iLoc == -1)
+				iLoc = strThis.find(':');
+				if (iLoc == std::string::npos)
 					break;
 
-				CString strValue = strThis.Mid(iLoc+1);
-				strThis = strThis.Left(iLoc);
+				std::string strValue = strThis.substr (iLoc+1);
+				strThis = strThis.substr (0, iLoc);
 
 				// now look for one of the named/saved fields...
 				//
 
 #define CHECKBOOL(blah)									\
-				if (strThis.CompareNoCase(#blah) == 0)	\
+				if (Q_stricmp (strThis.c_str(), #blah) == 0)	\
 				{										\
-					AppVars.blah = !!atoi(strValue);	\
+					AppVars.blah = !!atoi(strValue.c_str());	\
 					continue;							\
 				}
 				
 #define CHECKBYTE(blah)									\
-				if (strThis.CompareNoCase(#blah) == 0)	\
+				if (Q_stricmp (strThis.c_str(), #blah) == 0)	\
 				{										\
-					AppVars.blah = atoi(strValue);		\
+					AppVars.blah = atoi(strValue.c_str());		\
 					continue;							\
 				}
 
 #define CHECKDOUBLE(blah)								\
-				if (strThis.CompareNoCase(#blah) == 0)	\
+				if (Q_stricmp (strThis.c_str(), #blah) == 0)	\
 				{										\
-					AppVars.blah = atof(strValue);		\
+					AppVars.blah = atof(strValue.c_str());		\
 					continue;							\
 				}
 
@@ -549,7 +551,9 @@ void Model_Delete(void)
 	//
 //	SAFEFREE(pvLoadedModel);
 	
+    #ifdef USE_MFC
 	ModelTree_DeleteAllItems();
+    #endif
 
 	// delete any format-specific stuff that this code doesn't know about...
 	//
@@ -586,15 +590,15 @@ LPCSTR Model_GetSupportedTypesFilter(bool bScriptsEtcAlsoAllowed /* = false */)
 //			code-exit mechanism that they use to be trapped properly...
 //
 // call this before calling any cut/paste other-format model code
-ModelHandle_t Model_Register( CString strLocalFilename )
+ModelHandle_t Model_Register( const std::string& strLocalFilename )
 {
 	ModelHandle_t hModel = NULL;
 
 	try
 	{
-		StatusMessage(va("Registering model: \"%s\"\n",(LPCSTR)strLocalFilename));
+		StatusMessage(va("Registering model: \"%s\"\n", strLocalFilename.c_str()));
 
-		hModel = RE_RegisterModel( strLocalFilename );
+		hModel = RE_RegisterModel( strLocalFilename.c_str() );
 	}
 
 	catch(LPCSTR psMessage)
@@ -638,8 +642,8 @@ ModelContainer_t* ModelContainer_FindFromModelHandle(ModelHandle_t hModel)
 // note that this doesn't know or care whether it's the parent container or a bolt on, and neither should it.
 //	Any error will delete all loaded models (as per usual)...
 //
-static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelContainer_t *pContainer, HTREEITEM hTreeItem_Parent = NULL);
-static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelContainer_t *pContainer, HTREEITEM hTreeItem_Parent)
+static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelContainer_t *pContainer);
+static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelContainer_t *pContainer)
 {
 	ModelContainer_Clear(pContainer);	//	ZEROMEM(*pContainer);
 
@@ -780,7 +784,7 @@ static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelC
 	return hModel;
 }
 
-
+#ifdef USE_MFC
 void ModelTree_DeleteAllItems(void)
 {
 	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
@@ -918,7 +922,7 @@ int ModelTree_GetChildCount(HTREEITEM hTreeItem)
 {
 	int iChildCount = 0;
 
-	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit	 
+	if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit	 
 	{		
 		if (gModViewTreeViewhandle->GetTreeCtrl().ItemHasChildren(hTreeItem))
 		{
@@ -1032,9 +1036,6 @@ HTREEITEM ModelTree_GetRootBone(ModelHandle_t hModel)
 	return NULL;
 }
 
-
-
-
 static int SortSequenceBy_Alpha(const void *elem1, const void *elem2)
 {
 	Sequence_t *pSeq1 = *(Sequence_t**)elem1;
@@ -1049,7 +1050,7 @@ static int SortSequenceBy_FrameNum(const void *elem1, const void *elem2)
 
 	return pSeq1->iStartFrame - pSeq2->iStartFrame;
 }
-	
+
 void ModelTree_InsertSequences(ModelHandle_t hModel, HTREEITEM hTreeItem_Sequences)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
@@ -1141,7 +1142,7 @@ HTREEITEM ModelTree_InsertItem(LPCTSTR psName, HTREEITEM hParent, UINT32 uiUserD
 	ASSERT(0);*/
 	return NULL;
 }
-
+#endif
 
 bool Model_Loaded(ModelHandle_t hModel /* = NULL */)
 {
@@ -1167,6 +1168,7 @@ static ModelContainer_t *ModelContainer_AllocNew(void)
 //
 static bool ModelContainer_EnsureBoltOnHeader(ModelContainer_t *pContainer)
 {
+    #ifdef USE_MFC
 	bool bReturn = false;
 
 	if (pContainer->hTreeItem_BoltOns)
@@ -1179,6 +1181,9 @@ static bool ModelContainer_EnsureBoltOnHeader(ModelContainer_t *pContainer)
 	pContainer->hTreeItem_BoltOns = ModelTree_InsertItem("BoltOns", pContainer->hTreeItem_ModelName, TreeItemData.uiData);
 
 	return !!pContainer->hTreeItem_BoltOns;
+    #else
+    return true;
+    #endif
 }
 
 
@@ -1194,12 +1199,12 @@ static bool _Actual_Model_LoadPrimary(LPCSTR psFullPathedFilename)
 	{
 		Model_Delete();
 
-		CString strLocalFilename( psFullPathedFilename );
+		std::string strLocalFilename( psFullPathedFilename );
 		Filename_RemoveQUAKEBASE(strLocalFilename);
 
 //		AppVars.Container = *ModelContainer_AllocNew();
 		ModelContainer_Clear(&AppVars.Container);
-		ModelHandle_t hModel = ModelContainer_RegisterModel(strLocalFilename, &AppVars.Container);//ModelContainer_AllocNew());
+		ModelHandle_t hModel = ModelContainer_RegisterModel(strLocalFilename.c_str(), &AppVars.Container);//ModelContainer_AllocNew());
 
 		if (hModel)
 		{
@@ -1383,7 +1388,9 @@ bool Model_DeleteBoltOn(ModelContainer_t *pContainer, int iBoltPointToDelete, bo
 			
 				// delete all tree items from the bolt downwards... (including models bolted to the bolt)
 				//	
+                #ifdef USE_MFC
 				ModelTree_DeleteItem(pBoltedContainer->hTreeItem_ModelName);
+                #endif
 
 				// delete underlying containers... (including models bolted to the bolt)
 				//
@@ -1410,11 +1417,13 @@ bool Model_DeleteBoltOn(ModelContainer_t *pContainer, int iBoltPointToDelete, bo
 			// finally, for neatness, check if our BoltOns treeitem is now empty (no children), and delete it if so.
 			//	(a new one will be created if a bolt is added again later)
 			//
+            #ifdef USE_MFC
 			if (!ModelTree_ItemHasChildren(pContainer->hTreeItem_BoltOns))
 			{
 				ModelTree_DeleteItem(pContainer->hTreeItem_BoltOns);
 				pContainer->hTreeItem_BoltOns = NULL;
 			}
+            #endif
 
 			bReturn = true;
 		}
@@ -1613,7 +1622,7 @@ static bool _Actual_Model_LoadBoltOn(LPCSTR psFullPathedFilename, ModelHandle_t 
 		//
 		if (iBoltIndex < (bBoltIsBone?pContainer->iBoneBolt_MaxBoltPoints:pContainer->iSurfaceBolt_MaxBoltPoints) && iBoltIndex >= 0)
 		{
-			CString strLocalFilename( psFullPathedFilename );
+			std::string strLocalFilename( psFullPathedFilename );
 			Filename_RemoveQUAKEBASE(strLocalFilename);
 
 			ModelContainer_t *pContainer_BoltOn = ModelContainer_AllocNew();
@@ -1638,7 +1647,7 @@ static bool _Actual_Model_LoadBoltOn(LPCSTR psFullPathedFilename, ModelHandle_t 
 															pContainer->tSurfaceBolt_BoltPoints	[ iBoltIndex ].vBoltedContainers;
 
 			ModelContainer_t *pNewContainerLocation =	&vBoltedContainers[ vBoltedContainers.size() -1 ];
-			ModelHandle_t hModel = ModelContainer_RegisterModel(strLocalFilename, pNewContainerLocation, pContainer->hTreeItem_BoltOns);
+			ModelHandle_t hModel = ModelContainer_RegisterModel(strLocalFilename.c_str(), pNewContainerLocation);
 
 			if (bBoltIsBone)
 			{

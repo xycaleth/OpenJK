@@ -3,6 +3,8 @@
 // ( Note:  this file is actually for both SOF2 NPCs and JK2 Bots now )
 
 #include "stdafx.h"
+
+#include <algorithm>
 #include "includes.h"
 #include "modview.h"
 #include "files.h"
@@ -10,6 +12,7 @@
 #include "r_common.h"
 #include "generic_stuff.h"
 #include "GenericParser2.h"
+#include "StringUtils.h"
 #include "script.h"				// so we can access ModView script keyword #defines
 //
 #include "SOF2NPCViewer.h"
@@ -831,24 +834,24 @@ void CSOF2NPCViewer::BOT_ScanFiles(bool bForceRefresh)
 
 	TheBOTFiles.clear();
 	
-	CString strFileName( va("%sbotfiles\\bots.txt",gpsGameDir) );
-	CString strBOTFile;
-	if (TextFile_Read(strBOTFile, strFileName, false, true))
+	std::string strFileName( va("%sbotfiles\\bots.txt",gpsGameDir) );
+	std::string strBOTFile;
+	if (TextFile_Read(strBOTFile, strFileName.c_str(), false, true))
 	{
 		int iLoc;
 
 		bool bStopHere = false;
-		while ( !bStopHere && (iLoc = strBOTFile.Find("{")) != -1)		/*}*/
+		while ( !bStopHere && (iLoc = strBOTFile.find("{")) != std::string::npos)		/*}*/
 		{
 			/*{*/
-			int iLoc2 = strBOTFile.Find("}",iLoc);
+			std::size_t iLoc2 = strBOTFile.find("}",iLoc);
 
-			if (iLoc2 != -1)
+			if (iLoc2 != std::string::npos)
 			{
-				CString strThisBot( strBOTFile.Left(iLoc2) );
-						strThisBot = strThisBot.Mid(iLoc+1);
+				std::string strThisBot( strBOTFile.substr (0, iLoc2) );
+				strThisBot = strThisBot.substr (iLoc+1);
 
-				strBOTFile = strBOTFile.Mid(iLoc2+1);
+				strBOTFile = strBOTFile.substr (iLoc2+1);
 
 				BOTFile_t Bot;
 
@@ -864,66 +867,64 @@ void CSOF2NPCViewer::BOT_ScanFiles(bool bForceRefresh)
 						}
 				*/
 
-				while (!strThisBot.IsEmpty())
+				while (!strThisBot.empty())
 				{
-					CString strLine;
+					std::string strLine;
 
-					iLoc = strThisBot.FindOneOf("\n\r");
-					if (iLoc != -1)
+					iLoc = strThisBot.find_first_of("\n\r");
+					if (iLoc != std::string::npos)
 					{
-						strLine = strThisBot.Left(iLoc);
-						strThisBot = strThisBot.Mid(iLoc+1);
+						strLine = strThisBot.substr (0, iLoc);
+						strThisBot = strThisBot.substr (iLoc+1);
 					}
 					else
 					{
 						strLine = strThisBot;
-						strThisBot.Empty();
+						strThisBot.clear();
 					}
 
-					strLine.TrimLeft();
-					strLine.TrimRight();
+					Trim (strLine);
 
-					if (!strLine.IsEmpty())
+					if (!strLine.empty())
 					{
-						if (!strnicmp(strLine,"name", 4))
+						if (!strnicmp(strLine.c_str(),"name", 4))
 						{
-							CString str(strLine.Mid(4));
-									str.TrimLeft();
-									str.Replace("\"","");
+							std::string str (strLine.substr (0, 4));
+							Trim (str);
 
-							if (!str.CompareNoCase("@STOPHERE"))
+							if (!Q_stricmp (str.c_str(), "STOPHERE"))
 							{
 								bStopHere = true;
 								break;
 							}
 
-							Bot.strName = (LPCSTR) str;
+							Bot.strName = str;
 							//OutputDebugString(va("Bot name: \"%s\"\n",(LPCSTR) str));
 						}
 						else
-						if (!strnicmp(strLine,"model",5))
+						if (!strnicmp(strLine.c_str(),"model",5))
 						{
-							CString str(strLine.Mid(5));
-									str.TrimLeft();
-									str.Replace("\"","");
+							std::string str (strLine.substr (5));
+							LeftTrim (str);
+							str = Replace (str, "\"", "");
 
-							Bot.strModel = (LPCSTR) str;
+							Bot.strModel = str;
 							//OutputDebugString(va("Bot model: \"%s\"\n",(LPCSTR) str));
 						}
 						else
-						if (!strnicmp(strLine,"color1",6))
+						if (!strnicmp(strLine.c_str(),"color1",6))
 						{
-							Bot.iColor1 = atoi(&((LPCSTR)strLine)[6]);
+							Bot.iColor1 = atoi(&(strLine.c_str())[6]);
 
 							//OutputDebugString(va("Bot color1: %d\n",Bot.iColor1));
 						}
 						else
-						if (!strnicmp(strLine,"//",2))
+						if (!strnicmp(strLine.c_str(),"//",2))
 						{
-							CString str( strLine.Mid(2) );
-									str.TrimLeft();
+							std::string str( strLine.substr(2) );
+							LeftTrim (str);
 
-							Bot.strComment = (LPCSTR) str;
+							Bot.strComment = str;
 
 							//OutputDebugString(va("Bot comment: \"%s\"\n",Bot.strComment.c_str()));
 						}
@@ -937,14 +938,14 @@ void CSOF2NPCViewer::BOT_ScanFiles(bool bForceRefresh)
 			}
 			else
 			{
-				ErrorBox(va("Mismatching braces in \"%s\"!",(LPCSTR)strFileName));
-				strBOTFile.Empty();
+				ErrorBox(va("Mismatching braces in \"%s\"!", strFileName.c_str()));
+				strBOTFile.clear();
 			}
 		}
 	}
 	else
 	{
-		ErrorBox(va("Failed to open file \"%s\"!",(LPCSTR)strFileName));
+		ErrorBox(va("Failed to open file \"%s\"!", strFileName.c_str()));
 	}
 }
 

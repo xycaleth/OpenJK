@@ -2,6 +2,9 @@
 //
 
 #include "stdafx.h"
+
+#include <algorithm>
+#include "StringUtils.h"
 #include "includes.h"
 #include "MainFrm.h"
 //
@@ -124,10 +127,10 @@ static bool SetQdirFromPath2( const char *path, const char *psBaseDir )
 //
 //	and produces "textures/borg/name.tga"
 //
-void Filename_RemoveQUAKEBASE(CString &string)
+void Filename_RemoveQUAKEBASE( std::string& string )
 {
-	string.Replace("\\","/");		
-	string.MakeLower();	
+    std::replace (string.begin(), string.end(), '\\', '/');
+	ToLower (string);
 
 /*
 	int loc = string.Find("/quake");	
@@ -150,7 +153,7 @@ void Filename_RemoveQUAKEBASE(CString &string)
 */
 
 //	SetQdirFromPath( string );
-	string.Replace( gamedir, "" );	
+    Replace (string, gamedir, "");
 }
 
 
@@ -347,18 +350,6 @@ char *String_ForwardSlash(LPCSTR psString)
 
 	return strlwr(sString);	
 }
-
-
-char *String_RemoveOccurences(LPCSTR psString, LPCSTR psSubStr)
-{
-	static CString str;
-	str = psString;
-
-	str.Replace(psSubStr,"");
-
-	return const_cast < char * > ((LPCSTR) str);	// :-)
-}
-
 
 char	*va(char *format, ...)
 {
@@ -712,7 +703,7 @@ LPCSTR scGetUserName(void)
 
 
 
-bool TextFile_Read(CString &strFile, LPCSTR psFullPathedFilename, bool bLoseSlashSlashREMs /* = true */, bool bLoseBlankLines /* = true */)
+bool TextFile_Read(std::string &strFile, LPCSTR psFullPathedFilename, bool bLoseSlashSlashREMs /* = true */, bool bLoseBlankLines /* = true */)
 {
 	FILE *fhTextFile = fopen(psFullPathedFilename,"rt");
 	if (fhTextFile)
@@ -720,7 +711,7 @@ bool TextFile_Read(CString &strFile, LPCSTR psFullPathedFilename, bool bLoseSlas
 		char sLine[32768];	// sod it, should be enough for one line.
 		char *psLine;		
 
-		strFile.Empty();
+		strFile.clear();
 
 		while ((psLine = fgets( sLine, sizeof(sLine), fhTextFile ))!=NULL)
 		{
@@ -731,12 +722,11 @@ bool TextFile_Read(CString &strFile, LPCSTR psFullPathedFilename, bool bLoseSlas
 			else
 			{
 				// lose any whitespace to either side
-				CString strTemp(psLine);
-				strTemp.TrimLeft();
-				strTemp.TrimRight();
+				std::string strTemp(psLine);
+				Trim (strTemp);
 				strTemp+="\n";	// restore the CR that got trimmed off by TrimRight()
 
-				if (bLoseBlankLines && (strTemp.IsEmpty() || strTemp.GetAt(0)=='\n'))
+				if (bLoseBlankLines && (strTemp.empty() || strTemp[0] =='\n'))
 				{
 					// do nothing
 				}
