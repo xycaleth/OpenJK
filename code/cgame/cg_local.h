@@ -595,6 +595,9 @@ extern	vmCvar_t		cg_debugAnim;
 extern	vmCvar_t		cg_debugAnimTarget;
 extern	vmCvar_t		cg_gun_frame;
 #endif
+extern	vmCvar_t		cg_gun_x;
+extern	vmCvar_t		cg_gun_y;
+extern	vmCvar_t		cg_gun_z;
 extern	vmCvar_t		cg_debugSaber;
 extern	vmCvar_t		cg_debugEvents;
 extern	vmCvar_t		cg_errorDecay;
@@ -745,7 +748,7 @@ void CG_TileClear( void );
 void CG_CenterPrint( const char *str, int y );
 void CG_DrawActive( stereoFrame_t stereoView );
 void CG_ScrollText( const char *str, int iPixelWidth );
-void CG_CaptionText( const char *str, int sound, int y );
+void CG_CaptionText( const char *str, int sound );
 void CG_CaptionTextStop( void );
 
 //

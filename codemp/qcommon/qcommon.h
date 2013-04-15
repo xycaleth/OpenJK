@@ -533,6 +533,9 @@ char	**FS_ListFiles( const char *directory, const char *extension, int *numfiles
 void	FS_FreeFileList( char **fileList );
 //rwwRMG - changed to fileList to not conflict with list type
 
+void FS_Remove( const char *osPath );
+void FS_HomeRemove( const char *homePath );
+
 qboolean FS_FileExists( const char *file );
 
 int		FS_LoadStack();
@@ -556,6 +559,8 @@ int		FS_FOpenFileRead( const char *qpath, fileHandle_t *file, qboolean uniqueFIL
 
 int		FS_FileIsInPAK(const char *filename, int *pChecksum );
 // returns 1 if a file is in the PAK file, otherwise -1
+
+qboolean FS_FindPureDLL(const char *name);
 
 int		FS_Write( const void *buffer, int len, fileHandle_t f );
 
@@ -867,6 +872,9 @@ void S_ClearSoundBuffer( void );
 // call before filesystem access
 
 void SCR_DebugGraph (float value, int color);	// FIXME: move logging to common?
+
+// AVI files have the start of pixel lines 4 byte-aligned
+#define AVI_LINE_PADDING 4
 
 
 //
