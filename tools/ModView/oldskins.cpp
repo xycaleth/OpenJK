@@ -38,7 +38,7 @@ LPCSTR OldSkins_Parse(LPCSTR psSkinName, LPCSTR psText)
 {
 	std::string strText(psText);
 
-    strText = Replace (strText, "\n\r", "\n"); // file was read in binary mode, so account for 0x0A/0x0D pairs
+    strText = Replace (strText, "\r\n", "\n"); // file was read in binary mode, so account for 0x0A/0x0D pairs
     std::remove (strText.begin(), strText.end(), '\t');
     std::remove (strText.begin(), strText.end(), ' ');
 
@@ -57,14 +57,14 @@ LPCSTR OldSkins_Parse(LPCSTR psSkinName, LPCSTR psText)
 		}
 		else
 		{
-			strThisLine = strText.substr (iLoc);
+			strThisLine = strText.substr (0, iLoc);
 			strText = strText.substr (iLoc+1);
 		}
 
 		if (!strThisLine.empty())
 		{
 			iLoc = strThisLine.find (',');
-			if (iLoc != -1)
+			if (iLoc != std::string::npos)
 			{	
 				std::string strSurfaceName (strThisLine.substr (0, iLoc));						
 				std::string strTGAName (strThisLine.substr (iLoc+1));

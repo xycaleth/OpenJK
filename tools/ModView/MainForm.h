@@ -1,6 +1,7 @@
 #ifndef MAINFORM_H
 #define MAINFORM_H
 
+#include <QtCore/QSettings>
 #include <QtWidgets/QMainWindow>
 #include "ui_MainForm.h"
 
@@ -12,12 +13,14 @@ class MainForm : public QMainWindow
     Q_OBJECT
 
 public:
-    MainForm ( QWidget *parent = 0 );
+    MainForm ( QSettings& settings, QWidget *parent = 0 );
 
     void CurrentSceneName ( const QString& sceneName );
 
 private slots:
     void OnOpenModel();
+    void OnOpenRecentModel();
+    void OnClearRecentFiles();
     void OnChooseBackgroundColor();
 
     void OnChangeBackgroundColor ( const QColor& color );
@@ -52,18 +55,24 @@ private slots:
 
     void OnDoubleClickedTreeView ( const QModelIndex& index );
     void OnClickedTreeView ( const QModelIndex& index );
+    void OnRightClickTreeView ( const QPoint& point );
 
 private:
     void ChangeLOD ( int lod );
     void ChangePicmip ( int level );
 
+    void PopulateMRUFiles ( const QStringList& mruFiles );
+    void OpenModel ( const QString& modelPath );
+
 private:
     Ui::MainWindow ui;
 
+    QSettings *settings;
     SceneTreeModel *treeModel;
 
     SceneTreeItemClickAction treeItemClickAction;
     SceneTreeItemDblClickAction treeItemDblClickAction;
+    SceneTreeItemDblClickAction treeItemRightClickAction;
 };
 
 #endif

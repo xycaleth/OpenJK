@@ -153,7 +153,7 @@ void Filename_RemoveQUAKEBASE( std::string& string )
 */
 
 //	SetQdirFromPath( string );
-    Replace (string, gamedir, "");
+    string = Replace (string, gamedir, "");
 }
 
 

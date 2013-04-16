@@ -158,9 +158,9 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
     SceneTreeItem *tagsItem = new SceneTreeItem (QObject::tr ("Tags"), container.hModel, modelItem);
     SceneTreeItem *bonesItem = new SceneTreeItem (QObject::tr ("Bones"), container.hModel, modelItem);
 
-    mdxmHeader_t *pMDXMHeader = (mdxmHeader_t *) RE_GetModelData (container.hModel);
-    mdxaHeader_t *pMDXAHeader = (mdxaHeader_t *) RE_GetModelData(pMDXMHeader->animIndex);
-    mdxmHierarchyOffsets_t *pHierarchyOffsets = (mdxmHierarchyOffsets_t *) ((byte *) pMDXMHeader + sizeof(*pMDXMHeader));
+    mdxmHeader_t *pMDXMHeader = (mdxmHeader_t *)RE_GetModelData (container.hModel);
+    mdxaHeader_t *pMDXAHeader = (mdxaHeader_t *)RE_GetModelData (pMDXMHeader->animIndex);
+    mdxmHierarchyOffsets_t *pHierarchyOffsets = (mdxmHierarchyOffsets_t *)((byte *)pMDXMHeader + sizeof (*pMDXMHeader));
 
     SurfaceTreeApplication surfaceApp;
     surfaceApp.container = &container;
@@ -198,7 +198,7 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
         static_cast<void *>(&surfaceApp));
 
     // Add bones
-    mdxaSkelOffsets_t *pSkelOffsets = (mdxaSkelOffsets_t *)((byte *)pMDXAHeader + sizeof(*pMDXAHeader));
+    mdxaSkelOffsets_t *pSkelOffsets = (mdxaSkelOffsets_t *)((byte *)pMDXAHeader + sizeof (*pMDXAHeader));
     BoneTreeApplication boneApp;
     boneApp.container = &container;
     boneApp.nodes.append (bonesItem);

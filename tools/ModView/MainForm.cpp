@@ -22,16 +22,64 @@ void StartRenderTimer ( QWidget *parent, RenderWidget *renderWidget )
 }
 
 
-MainForm::MainForm ( QWidget *parent )
+MainForm::MainForm ( QSettings& settings, QWidget *parent )
     : QMainWindow (parent)
+    , settings (&settings)
     , treeModel (new SceneTreeModel (this))
 {
     ui.setupUi (this);
 
     ui.treeView->setModel (treeModel);
+    ui.treeView->setContextMenuPolicy (Qt::CustomContextMenu);
+    connect (ui.treeView, SIGNAL (customContextMenuRequested (const QPoint&)), SLOT(OnRightClickTreeView (const QPoint&)));
+
+    PopulateMRUFiles (settings.value ("mru").toStringList());
+
     CurrentSceneName (tr ("Untitled"));
 
     StartRenderTimer (this, ui.renderWidget);
+}
+
+void MainForm::PopulateMRUFiles ( const QStringList& mruFiles )
+{
+    ui.menuRecent_Files->clear();
+
+    if ( !mruFiles.empty() )
+    {
+        for ( int i = 0, j = 1; i < mruFiles.size(); i++, j++ )
+        {
+            QAction *action = new QAction (QString ("%1. %2").arg (j).arg (mruFiles[i]), ui.menuRecent_Files);
+            action->setData (mruFiles[i]);
+
+            connect (action, SIGNAL (triggered()), SLOT (OnOpenRecentModel()));
+
+            ui.menuRecent_Files->addAction (action);
+        }
+
+        ui.menuRecent_Files->addSeparator();
+        ui.menuRecent_Files->addAction (tr ("Clear recent files list"), this, SLOT (OnClearRecentFiles()));
+    }
+    else
+    {
+        QAction *action = new QAction (tr ("No recently used files"), ui.menuRecent_Files);
+        action->setDisabled (true);
+
+        ui.menuRecent_Files->addAction (action);
+    }
+}
+
+void MainForm::OnClearRecentFiles()
+{
+    QStringList emptyList;
+    
+    settings->setValue ("mru", emptyList);
+    PopulateMRUFiles (emptyList);
+}
+
+void MainForm::OnOpenRecentModel()
+{
+    QString filename = static_cast<QAction *>(sender())->data().toString();
+    OpenModel (filename);
 }
 
 void MainForm::OnUpdateAnimation()
@@ -91,11 +139,41 @@ void MainForm::OnOpenModel()
             return;
         }
 
-        if ( Model_LoadPrimary (modelName[0].toLatin1()) )
+        OpenModel (modelName[0]);
+    }
+}
+
+void MainForm::OpenModel ( const QString& modelPath )
+{
+    if ( Model_LoadPrimary (modelPath.toLatin1()) )
+    {
+        CurrentSceneName (modelPath);
+        SetupSceneTreeModel (modelPath, AppVars.Container, *treeModel);
+
+        QStringList mruList = settings->value ("mru").toStringList();
+        int pos = mruList.indexOf (modelPath);
+            
+        if ( pos == -1 )
         {
-            CurrentSceneName (modelName[0]);
-            SetupSceneTreeModel (modelName[0], AppVars.Container, *treeModel);
+            // Not in the MRU list. Add it!
+            mruList.push_front (modelPath);
+            if ( mruList.size() > 5 )
+            {
+                mruList.pop_back();
+            }
         }
+        else if ( pos > 0 )
+        {
+            // 0 implies top of the list.
+            // Anything more than that, then we want to move the file
+            // to the top of the list.
+
+            mruList.move (pos, 0);
+        }
+
+        settings->setValue ("mru", mruList);
+
+        PopulateMRUFiles (mruList);
     }
 }
 
@@ -275,4 +353,16 @@ void MainForm::OnClickedTreeView ( const QModelIndex& index )
     Model_SetSurfaceHighlight (model, iITEMHIGHLIGHT_NONE);
 
     item->Accept (&treeItemClickAction);
+}
+
+void MainForm::OnRightClickTreeView ( const QPoint& point )
+{
+    QModelIndex selectedIndex = ui.treeView->indexAt (point);
+    if ( !selectedIndex.isValid() )
+    {
+        return;
+    }
+
+    SceneTreeItem *item = static_cast<SceneTreeItem *>(selectedIndex.internalPointer());
+    item->Accept (&treeItemRightClickAction);
 }
