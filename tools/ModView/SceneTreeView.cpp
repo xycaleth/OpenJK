@@ -123,6 +123,21 @@ struct CompareSequencesByFrame
     }
 };
 
+struct CompareSequencesByName
+{
+    const SequenceList_t& sequences;
+
+    CompareSequencesByName ( const SequenceList_t& sequences )
+        : sequences (sequences)
+    {
+    }
+
+    bool operator () ( int left, int right )
+    {
+        return std::strcmp (sequences[left].sName, sequences[right].sName) < 0;
+    }
+};
+
 void AddSequencesToTree ( SceneTreeItem *root, const ModelContainer_t& container, const SequenceList_t& sequenceList )
 {
     std::vector<int> sequenceIndices (sequenceList.size(), -1);

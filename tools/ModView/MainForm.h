@@ -72,7 +72,7 @@ private:
 
     SceneTreeItemClickAction treeItemClickAction;
     SceneTreeItemDblClickAction treeItemDblClickAction;
-    SceneTreeItemDblClickAction treeItemRightClickAction;
+    SceneTreeItemRightClickAction treeItemRightClickAction;
 };
 
 #endif
