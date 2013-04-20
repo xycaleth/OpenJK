@@ -12,14 +12,10 @@ extern "C"
 #endif
 
 
-#ifndef LPCSTR 
-typedef const char * LPCSTR;
-#endif
-
 void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height );
 
-void JPG_ErrorThrow(LPCSTR message);
-void JPG_MessageOut(LPCSTR message);
+void JPG_ErrorThrow(const char * message);
+void JPG_MessageOut(const char * message);
 #define ERROR_STRING_NO_RETURN(message) JPG_ErrorThrow(message)
 #define MESSAGE_STRING(message)			JPG_MessageOut(message)
 

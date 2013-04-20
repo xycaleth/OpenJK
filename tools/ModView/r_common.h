@@ -338,14 +338,13 @@ extern refimport_t ri;
 //////////////////////////////////////////////////////////
 //
 // some crap for compile-ease...
-#define Q_stricmp	stricmp
 #define Q_strlwr	strlwr
 #define LittleLong(x) x
 #define LittleShort(x) x
 #define LittleFloat(x) x
 #define R_SyncRenderThread()
 #define Com_Error ri.Error
-void Q_strncpyz( char *dest, LPCSTR src, int destlen);
+void Q_strncpyz( char *dest, const char * src, int destlen);
 float Com_Clamp( float min, float max, float value );
 //
 // some generic import functions... (all in R_MODEL.H)

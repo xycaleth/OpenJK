@@ -7,7 +7,7 @@
 #define COMMON_HEADERS_H
 
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 
 
 #define trap_Z_Malloc(_size, _tag)	malloc(_size)	// dunno if GP2 need calloc or malloc, so...

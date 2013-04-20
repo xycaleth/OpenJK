@@ -34,7 +34,7 @@ OldSkinSets_t OldSkinsFound;
 
 // returns NULL for all ok, else error string...
 //
-LPCSTR OldSkins_Parse(LPCSTR psSkinName, LPCSTR psText)
+const char * OldSkins_Parse(const char * psSkinName, const char * psText)
 {
 	std::string strText(psText);
 
@@ -115,15 +115,13 @@ std::string OldSkins_FilenameToSkinDescription(string strLocalSkinFileName)
 
 // returns true if at least one set of skin data was read, else false...
 //
-static bool OldSkins_Read(LPCSTR psLocalFilename_GLM)
+static bool OldSkins_Read(const char * psLocalFilename_GLM)
 {
-	LPCSTR psError = NULL;
-
-	CWaitCursor;
+	const char * psError = NULL;
 
 	OldSkinsFound.clear();
 	
-	LPCSTR psSkinsPath = va("%s%s",gamedir,Filename_PathOnly(psLocalFilename_GLM));
+	const char * psSkinsPath = va("%s%s",gamedir,Filename_PathOnly(psLocalFilename_GLM));
 
 	if (psSkinsPath)
 	{
@@ -167,7 +165,7 @@ static bool OldSkins_Read(LPCSTR psLocalFilename_GLM)
 			string strLocalSkinFileName(ppsSkinFiles[i]);
 
 			// only look at skins that begin "modelname_skinvariation" for a given "modelname_"
-			if (!strnicmp(strSkinFileMustContainThisName.c_str(),strLocalSkinFileName.c_str(),strSkinFileMustContainThisName.length()))
+			if (!Q_stricmpn(strSkinFileMustContainThisName.c_str(),strLocalSkinFileName.c_str(),strSkinFileMustContainThisName.length()))
 			{
 				Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", Filename_PathOnly(psLocalFilename_GLM), strLocalSkinFileName.c_str() );
 				//ri.Printf( PRINT_ALL, "...loading '%s'\n", sFileName );
@@ -215,12 +213,12 @@ static bool OldSkins_Read(LPCSTR psLocalFilename_GLM)
 
 
 int DaysSinceCompile(void);
-bool OldSkins_FilesExist(LPCSTR psLocalFilename_GLM)
+bool OldSkins_FilesExist(const char * psLocalFilename_GLM)
 {		
 	return OldSkins_Read(psLocalFilename_GLM);
 }
 
-bool OldSkins_Read(LPCSTR psLocalFilename_GLM, ModelContainer_t *pContainer)
+bool OldSkins_Read(const char * psLocalFilename_GLM, ModelContainer_t *pContainer)
 {
 	if (OldSkins_Read(psLocalFilename_GLM))
 	{
@@ -255,7 +253,7 @@ bool OldSkins_Read(LPCSTR psLocalFilename_GLM, ModelContainer_t *pContainer)
 // this fills in a modelcontainer's "MaterialBinds" and "MaterialShaders" fields (registering textures etc)
 //	based on the skinset pointed at by pContainer->OldSkinSets and strSkinFile
 //
-bool OldSkins_Apply( ModelContainer_t *pContainer, LPCSTR psSkinName )
+bool OldSkins_Apply( ModelContainer_t *pContainer, const char * psSkinName )
 {
 	//CWaitCursor wait;
 
@@ -271,7 +269,7 @@ bool OldSkins_Apply( ModelContainer_t *pContainer, LPCSTR psSkinName )
 	{
 		// when we're at this point we know it's GLM model, and that the shader name is in fact a material name...
 		//
-		LPCSTR psMaterialName = GLMModel_GetSurfaceShaderName( pContainer->hModel, iSurface );
+		const char * psMaterialName = GLMModel_GetSurfaceShaderName( pContainer->hModel, iSurface );
 
 		pContainer->MaterialShaders	[psMaterialName] = "";			// just insert the key for now, so the map<> is legit.
 		pContainer->MaterialBinds	[psMaterialName] = (GLuint) 0;	// default to gl-white-notfound texture
@@ -287,12 +285,12 @@ bool OldSkins_Apply( ModelContainer_t *pContainer, LPCSTR psSkinName )
 
 		for (int iSkinEntry = 0; iSkinEntry < StringPairs.size(); iSkinEntry++)
 		{
-			LPCSTR psMaterialName = StringPairs[iSkinEntry].first.c_str();
-			LPCSTR psShaderName   = StringPairs[iSkinEntry].second.c_str();
+			const char * psMaterialName = StringPairs[iSkinEntry].first.c_str();
+			const char * psShaderName   = StringPairs[iSkinEntry].second.c_str();
 
 			pContainer->MaterialShaders[psMaterialName] = psShaderName;
 
-//			LPCSTR psLocalTexturePath = R_FindShader( psShaderName );		// shader->texture name
+//			const char * psLocalTexturePath = R_FindShader( psShaderName );		// shader->texture name
 //			if (psLocalTexturePath && strlen(psLocalTexturePath))
 //			{
 //				TextureHandle_t hTexture = TextureHandle_ForName( psLocalTexturePath );
@@ -411,7 +409,7 @@ void OldSkins_ApplyDefault(ModelContainer_t *pContainer)
 }
 
 
-GLuint OldSkins_GetGLBind(ModelContainer_t *pContainer, LPCSTR psSurfaceName)
+GLuint OldSkins_GetGLBind(ModelContainer_t *pContainer, const char * psSurfaceName)
 {
 /*	debug only, do NOT leave in or massive performance hit!!
 
@@ -490,7 +488,6 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 
 	// now process the unique list we've just built...
 	//
-	CWaitCursor wait;
 	string strFoundList;
 	string strNotFoundList;
 	int iUniqueIndex = 0;

@@ -46,7 +46,7 @@ bool gbSplashScreenRunning = false;
 bool gbSplashNotNeededByApp = false;
 bool gbSplashScreenNotNeededByTimer = false;
 CString strSplashText = SPLASH_DEFAULT_TEXT;
-void CSplashWnd::StatusMessage(LPCSTR psMessage)	// can be NULL for "not bothered"
+void CSplashWnd::StatusMessage(const char * psMessage)	// can be NULL for "not bothered"
 {
 	strSplashText = psMessage ? psMessage : SPLASH_DEFAULT_TEXT;
 	strSplashText.TrimRight();	// remove trailing CRs which show up as black marks

@@ -126,13 +126,13 @@ void CommArea_ShutDown(void)
 }
 
 
-static LPCSTR CommArea_MapViewOfFile(void)
+static const char * CommArea_MapViewOfFile(void)
 {
 	gpMappedCommArea = (CommArea_t *) MapViewOfFile(hFileMap,			// HANDLE hFileMappingObject,  // file-mapping object to map into 
-													FILE_MAP_ALL_ACCESS,// DWORD dwDesiredAccess,      // access mode
-													0,					// DWORD dwFileOffsetHigh,     // high-order 32 bits of file offset
-													0,					// DWORD dwFileOffsetLow,      // low-order 32 bits of file offset
-													0					// DWORD dwNumberOfBytesToMap  // number of bytes to map
+													FILE_MAP_ALL_ACCESS,// unsigned int dwDesiredAccess,      // access mode
+													0,					// unsigned int dwFileOffsetHigh,     // high-order 32 bits of file offset
+													0,					// unsigned int dwFileOffsetLow,      // low-order 32 bits of file offset
+													0					// unsigned int dwNumberOfBytesToMap  // number of bytes to map
 													);
 
 	return gpMappedCommArea ? NULL : SystemErrorString();
@@ -143,19 +143,19 @@ static LPCSTR CommArea_MapViewOfFile(void)
 
 // return is either error message, or NULL for success...
 //
-LPCSTR CommArea_ServerInitOnceOnly(void)
+const char * CommArea_ServerInitOnceOnly(void)
 {
-	LPCSTR psError = NULL;
+	const char * psError = NULL;
 
 	hFileMap = CreateFileMapping(	INVALID_HANDLE_VALUE,	// HANDLE hFile	 // handle to file to map
 									NULL,					// LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
-									PAGE_READWRITE,			// DWORD flProtect,	// protection for mapping object
-									0,						// DWORD dwMaximumSizeHigh,   // high-order 32 bits of object size
-									sizeof(CommArea_USEONLYDURINGINIT),		// DWORD dwMaximumSizeLow,    // low-order 32 bits of object size
+									PAGE_READWRITE,			// unsigned int flProtect,	// protection for mapping object
+									0,						// unsigned int dwMaximumSizeHigh,   // high-order 32 bits of object size
+									sizeof(CommArea_USEONLYDURINGINIT),		// unsigned int dwMaximumSizeLow,    // low-order 32 bits of object size
 									sCOMMAREA_NAME			// LPCTSTR lpName             // name of file-mapping object
 									);
 
-	DWORD dwError = GetLastError();
+	unsigned int dwError = GetLastError();
 	if (hFileMap == NULL || dwError == ERROR_ALREADY_EXISTS)
 	{
 		psError = SystemErrorString(dwError);
@@ -191,11 +191,11 @@ LPCSTR CommArea_ServerInitOnceOnly(void)
 
 // return is either error message, or NULL for success...
 //
-LPCSTR CommArea_ClientInitOnceOnly(void)
+const char * CommArea_ClientInitOnceOnly(void)
 {
-	LPCSTR psError = NULL;
+	const char * psError = NULL;
 
-	hFileMap = OpenFileMapping(	FILE_MAP_ALL_ACCESS,	// DWORD dwDesiredAccess,  // access mode
+	hFileMap = OpenFileMapping(	FILE_MAP_ALL_ACCESS,	// unsigned int dwDesiredAccess,  // access mode
 								true,					// BOOL bInheritHandle,    // inherit flag
 								sCOMMAREA_NAME			// LPCTSTR lpName          // pointer to name of file-mapping object
 								);
@@ -225,7 +225,7 @@ LPCSTR CommArea_ClientInitOnceOnly(void)
 			{
 				if (gpMappedCommArea->iSize != sizeof(*gpMappedCommArea))
 				{
-					sprintf(sError,"CommArea struct size mismatch, found %d but expected %d!",gpMappedCommArea->iSize, sizeof(*gpMappedCommArea));
+					sprintf(sError,"CommArea struct size mismatch, found %d but expected %ld!",gpMappedCommArea->iSize, sizeof(*gpMappedCommArea));
 					psError = sError;
 				}
 				else
@@ -272,7 +272,7 @@ bool CommArea_IsIdle(void)
 //
 // This can be safely called even if the OnceOnlyInit call failed
 //
-LPCSTR CommArea_IsCommandWaiting(byte **ppbDataPassback, int *piDatasizePassback)
+const char * CommArea_IsCommandWaiting(byte **ppbDataPassback, int *piDatasizePassback)
 {
 	assert(ppbDataPassback);
 	assert(piDatasizePassback);
@@ -295,7 +295,7 @@ LPCSTR CommArea_IsCommandWaiting(byte **ppbDataPassback, int *piDatasizePassback
 //
 // return = response string (may be blank), else NULL for none  (optional data fields are filled in if supplied)
 //
-LPCSTR CommArea_IsAckWaiting(byte **ppbDataPassback /* = NULL */, int *piDatasizePassback /* = NULL */)
+const char * CommArea_IsAckWaiting(byte **ppbDataPassback /* = NULL */, int *piDatasizePassback /* = NULL */)
 {		
 	assert(gpMappedCommArea);
 
@@ -318,7 +318,7 @@ LPCSTR CommArea_IsAckWaiting(byte **ppbDataPassback /* = NULL */, int *piDatasiz
 //
 // return = errmess or NULL for ok
 //
-static LPCSTR CommArea_SetupAndLegaliseOutgoingData(LPCSTR psCommand, byte *pbData, int iDataSize)
+static const char * CommArea_SetupAndLegaliseOutgoingData(const char * psCommand, byte *pbData, int iDataSize)
 {
 	if (!gpMappedCommArea)
 		return sERROR_COMMAREAUNINITIALISED;
@@ -365,13 +365,13 @@ static LPCSTR CommArea_SetupAndLegaliseOutgoingData(LPCSTR psCommand, byte *pbDa
 //
 // NOTE: if there's an error then the acknowledge is NOT sent!!!!
 //
-LPCSTR CommArea_CommandAck(LPCSTR psCommand /* = NULL */, byte *pbData /* = NULL */, int iDataSize /* = 0 */)
+const char * CommArea_CommandAck(const char * psCommand /* = NULL */, byte *pbData /* = NULL */, int iDataSize /* = 0 */)
 {
 	assert(gpMappedCommArea );
 
 	if (gpMappedCommArea && gpMappedCommArea->eStatus == (bIAmServer ? cst_CLIENTREQ : cst_SERVERREQ) )
 	{
-		LPCSTR psError = CommArea_SetupAndLegaliseOutgoingData(psCommand, pbData, iDataSize);
+		const char * psError = CommArea_SetupAndLegaliseOutgoingData(psCommand, pbData, iDataSize);
 		if (psError)
 		{
 			assert(0);
@@ -393,7 +393,7 @@ LPCSTR CommArea_CommandAck(LPCSTR psCommand /* = NULL */, byte *pbData /* = NULL
 //
 // This can be safely called even if the OnceOnlyInit call failed
 //
-LPCSTR CommArea_IsErrorWaiting(void)
+const char * CommArea_IsErrorWaiting(void)
 {		
 	if (gpMappedCommArea && gpMappedCommArea->eStatus == (bIAmServer ? cst_CLIENTERR : cst_SERVERERR) )
 	{
@@ -409,7 +409,7 @@ LPCSTR CommArea_IsErrorWaiting(void)
 // You can ignore the return error from this if you only call it sensibly, ie when you know there was an error
 //	that wanted displaying...
 //
-LPCSTR CommArea_CommandClear(void)
+const char * CommArea_CommandClear(void)
 {
 	assert(gpMappedCommArea );		
 
@@ -435,7 +435,7 @@ LPCSTR CommArea_CommandClear(void)
 //
 // NOTE: if there's an error (like you're calling this at the wrong time) then this error is NOT sent!!!!
 //
-LPCSTR CommArea_CommandError(LPCSTR psError)
+const char * CommArea_CommandError(const char * psError)
 {
 	assert(gpMappedCommArea);
 
@@ -456,7 +456,7 @@ LPCSTR CommArea_CommandError(LPCSTR psError)
 
 // return NULL = success, else error message...  (pbData can be NULL if desired, ditto iDataSize)
 //
-LPCSTR CommArea_IssueCommand(LPCSTR psCommand, byte *pbData /* = NULL */, int iDataSize /* = 0 */)
+const char * CommArea_IssueCommand(const char * psCommand, byte *pbData /* = NULL */, int iDataSize /* = 0 */)
 {
 	if (!CommArea_IsIdle())
 		return sERROR_BUSY;
@@ -465,7 +465,7 @@ LPCSTR CommArea_IssueCommand(LPCSTR psCommand, byte *pbData /* = NULL */, int iD
 	if (!gpMappedCommArea)
 		return sERROR_COMMAREAUNINITIALISED;
 
-	LPCSTR psError = CommArea_SetupAndLegaliseOutgoingData(psCommand, pbData, iDataSize);
+	const char * psError = CommArea_SetupAndLegaliseOutgoingData(psCommand, pbData, iDataSize);
 	if (psError)
 	{
 		assert(0);

@@ -7,7 +7,6 @@
 
 #include "stdafx.h"
 #include "includes.h"
-#include "ModViewTreeView.h"
 #include "glm_code.h"
 #include "R_Model.h"
 #include "R_Surface.h"
@@ -17,6 +16,7 @@
 #include "script.h"
 #include "shader.h"
 #include "skins.h"
+#include "StringUtils.h"
 //
 #include "model.h"
 
@@ -83,9 +83,9 @@ double getDoubleTime (void)
 
 // returns NULL if not attached to anything, else name of tag-surface or boltpoint
 //
-static LPCSTR Stats_GetParentAttachmentPointString(ModelContainer_t *pContainer)
+static const char * Stats_GetParentAttachmentPointString(ModelContainer_t *pContainer)
 {
-	LPCSTR psAttachedVia =	(!pContainer->pBoneBolt_ParentContainer)? 
+	const char * psAttachedVia =	(!pContainer->pBoneBolt_ParentContainer)? 
 							((!pContainer->pSurfaceBolt_ParentContainer)?
 								NULL:
 								pContainer->pSurfaceBolt_ParentContainer->tSurfaceBolt_BoltPoints[pContainer->iSurfaceBolt_ParentBoltIndex].sAttachName.c_str())
@@ -97,10 +97,10 @@ static LPCSTR Stats_GetParentAttachmentPointString(ModelContainer_t *pContainer)
 
 // returned string will be valid for printing, even if only blank...
 //
-static LPCSTR Stats_GetAttachmentString(ModelContainer_t *pContainer)
+static const char * Stats_GetAttachmentString(ModelContainer_t *pContainer)
 {
-	LPCSTR psAttachedVia		= Stats_GetParentAttachmentPointString(pContainer);
-	LPCSTR psAttachmentString	= va("%s", psAttachedVia?va("(bolt: \"%s\")",psAttachedVia):"");
+	const char * psAttachedVia		= Stats_GetParentAttachmentPointString(pContainer);
+	const char * psAttachmentString	= va("%s", psAttachedVia?va("(bolt: \"%s\")",psAttachedVia):"");
 
 	return psAttachmentString;
 }
@@ -379,7 +379,7 @@ void AppVars_OnceOnlyInit(void)
 
 void AppVars_WriteIdeal(void)
 {
-	if (!AppVars.strLoadedModelPath.IsEmpty())
+	if (!AppVars.strLoadedModelPath.empty())
 	{
 		std::string strOut;
 
@@ -404,12 +404,12 @@ void AppVars_WriteIdeal(void)
 		OUTDOUBLE(rotAngleY);
 		OUTDOUBLE(rotAngleZ);
 
-		LPCSTR psIdealName = va("%s.ideal",Filename_WithoutExt(AppVars.strLoadedModelPath));
+		const char * psIdealName = va("%s.ideal",Filename_WithoutExt(AppVars.strLoadedModelPath.c_str()));
 
 		FILE *fHandle = fopen(psIdealName,"wt");
 		if (fHandle)
 		{
-			fprintf(fHandle,strOut.c_str());
+			fputs(strOut.c_str(), fHandle);
 			fclose(fHandle);
 		}
 		else
@@ -425,9 +425,9 @@ void AppVars_WriteIdeal(void)
 
 void AppVars_ReadIdeal(void)
 {
-	if (!AppVars.strLoadedModelPath.IsEmpty())
+	if (!AppVars.strLoadedModelPath.empty())
 	{
-		LPCSTR psIdealName = va("%s.ideal",Filename_WithoutExt(AppVars.strLoadedModelPath));
+		const char * psIdealName = va("%s.ideal",Filename_WithoutExt(AppVars.strLoadedModelPath.c_str()));
 
 		FILE *fHandle = fopen(psIdealName,"rt");
 		if (fHandle)
@@ -485,7 +485,7 @@ void AppVars_ReadIdeal(void)
 				// now look for one of the named/saved fields...
 				//
 
-#define CHECKBOOL(blah)									\
+#define CHECKBOOL(blah) \
 				if (Q_stricmp (strThis.c_str(), #blah) == 0)	\
 				{										\
 					AppVars.blah = !!atoi(strValue.c_str());	\
@@ -569,7 +569,7 @@ void Model_Delete(void)
 
 
 
-LPCSTR Model_GetSupportedTypesFilter(bool bScriptsEtcAlsoAllowed /* = false */)
+const char * Model_GetSupportedTypesFilter(bool bScriptsEtcAlsoAllowed /* = false */)
 {
 	static char sFilterString[1024];
 
@@ -601,7 +601,7 @@ ModelHandle_t Model_Register( const std::string& strLocalFilename )
 		hModel = RE_RegisterModel( strLocalFilename.c_str() );
 	}
 
-	catch(LPCSTR psMessage)
+	catch(const char * psMessage)
 	{
 		Model_Delete();
 		ErrorBox(psMessage);
@@ -642,8 +642,8 @@ ModelContainer_t* ModelContainer_FindFromModelHandle(ModelHandle_t hModel)
 // note that this doesn't know or care whether it's the parent container or a bolt on, and neither should it.
 //	Any error will delete all loaded models (as per usual)...
 //
-static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelContainer_t *pContainer);
-static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelContainer_t *pContainer)
+static ModelHandle_t ModelContainer_RegisterModel(const char * psLocalFilename, ModelContainer_t *pContainer);
+static ModelHandle_t ModelContainer_RegisterModel(const char * psLocalFilename, ModelContainer_t *pContainer)
 {
 	ModelContainer_Clear(pContainer);	//	ZEROMEM(*pContainer);
 
@@ -671,7 +671,7 @@ static ModelHandle_t ModelContainer_RegisterModel(LPCSTR psLocalFilename, ModelC
 			}
 		}
 
-		catch(LPCSTR psMessage)
+		catch(const char * psMessage)
 		{
 			Model_Delete();
 			ErrorBox(psMessage);
@@ -793,7 +793,7 @@ void ModelTree_DeleteAllItems(void)
 	}*/
 }
 
-DWORD ModelTree_GetItemData(HTREEITEM hTreeItem)
+unsigned int ModelTree_GetItemData(HTREEITEM hTreeItem)
 {
 	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
@@ -804,7 +804,7 @@ DWORD ModelTree_GetItemData(HTREEITEM hTreeItem)
 	return NULL;
 }
 
-bool ModelTree_SetItemText(HTREEITEM hTreeItem, LPCSTR psText)
+bool ModelTree_SetItemText(HTREEITEM hTreeItem, const char * psText)
 {
 	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
@@ -822,7 +822,7 @@ bool ModelTree_SetItemText(HTREEITEM hTreeItem, LPCSTR psText)
 //
 // this function was written so Keith could remote-query from ConfuseEd...
 //
-LPCSTR ModelTree_GetItemText(HTREEITEM hTreeItem, bool bPure /* = false */)
+const char * ModelTree_GetItemText(HTREEITEM hTreeItem, bool bPure /* = false */)
 {
 	/*if (gModViewTreeViewhandle)	// will be valid unless this is called from app exit
 	{
@@ -850,7 +850,7 @@ LPCSTR ModelTree_GetItemText(HTREEITEM hTreeItem, bool bPure /* = false */)
 		//
 		static CString	string;
 						string = gModViewTreeViewhandle->GetTreeCtrl().GetItemText(hTreeItem);
-		return (LPCSTR) string;
+		return (const char *) string;
 	}
 
 	assert(0);*/
@@ -873,7 +873,7 @@ static HTREEITEM R_ModelTree_FindItemWithThisData(HTREEITEM hTreeItem, UINT32 ui
 		{
 			*piItemsScanned +=1;
 		}
-//		LPCSTR psText = ModelTree_GetItemText(hTreeItem);
+//		const char * psText = ModelTree_GetItemText(hTreeItem);
 //		OutputDebugString(va("Scanning item %X (%s)\n",hTreeItem,psText));
 
 		// check this tree item...
@@ -1187,7 +1187,7 @@ static bool ModelContainer_EnsureBoltOnHeader(ModelContainer_t *pContainer)
 }
 
 
-static bool _Actual_Model_LoadPrimary(LPCSTR psFullPathedFilename)
+static bool _Actual_Model_LoadPrimary(const char * psFullPathedFilename)
 {
 	bool bReturn = false;
 
@@ -1232,7 +1232,7 @@ static bool _Actual_Model_LoadPrimary(LPCSTR psFullPathedFilename)
 	return bReturn;
 }
 
-bool Model_LoadPrimary(LPCSTR psFullPathedFilename)
+bool Model_LoadPrimary(const char * psFullPathedFilename)
 {
 	gbRenderInhibit = true;
 	bool b = _Actual_Model_LoadPrimary(psFullPathedFilename);
@@ -1245,7 +1245,7 @@ bool Model_LoadPrimary(LPCSTR psFullPathedFilename)
 
 
 
-void Model_ApplyOldSkin( ModelHandle_t hModel, LPCSTR psSkin )
+void Model_ApplyOldSkin( ModelHandle_t hModel, const char * psSkin )
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
 	
@@ -1263,7 +1263,7 @@ void Model_ApplyOldSkin( ModelHandle_t hModel, LPCSTR psSkin )
 }
 
 
-bool Model_SkinHasSurfacePrefs( ModelHandle_t hModel, LPCSTR psSkin )
+bool Model_SkinHasSurfacePrefs( ModelHandle_t hModel, const char * psSkin )
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
 	
@@ -1280,7 +1280,7 @@ bool Model_SkinHasSurfacePrefs( ModelHandle_t hModel, LPCSTR psSkin )
 	return false;
 }
 
-void Model_ApplyEthnicSkin(ModelHandle_t hModel, LPCSTR psSkin, LPCSTR psEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces )
+void Model_ApplyEthnicSkin(ModelHandle_t hModel, const char * psSkin, const char * psEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces )
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
 	
@@ -1297,7 +1297,7 @@ void Model_ApplyEthnicSkin(ModelHandle_t hModel, LPCSTR psSkin, LPCSTR psEthnic,
 	ModelList_ForceRedraw();
 }
 
-void Model_ApplySkinShaderVariant( ModelHandle_t hModel, LPCSTR psSkin, LPCSTR psEthnic, LPCSTR psMaterial, int iVariant)
+void Model_ApplySkinShaderVariant( ModelHandle_t hModel, const char * psSkin, const char * psEthnic, const char * psMaterial, int iVariant)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
 	
@@ -1410,9 +1410,7 @@ bool Model_DeleteBoltOn(ModelContainer_t *pContainer, int iBoltPointToDelete, bo
 				}
 */
 			}
-			int iSize = pBoltOn->vBoltedContainers.size();
 			pBoltOn->vBoltedContainers.erase(pBoltOn->vBoltedContainers.begin() + iBoltOnBegin, pBoltOn->vBoltedContainers.begin() + iBoltOnEnd);
-			int iSize2 = pBoltOn->vBoltedContainers.size();
 
 			// finally, for neatness, check if our BoltOns treeitem is now empty (no children), and delete it if so.
 			//	(a new one will be created if a bolt is added again later)
@@ -1576,7 +1574,7 @@ int Model_CountItemsBoltedHere(ModelHandle_t hModel, int iBoltIndex, bool bBoltI
 }
 
 
-bool Model_LoadBoltOn(LPCSTR psFullPathedFilename, ModelHandle_t hModel, LPCSTR psBoltName, bool bBoltIsBone, bool bBoltReplacesAllExisting)
+bool Model_LoadBoltOn(const char * psFullPathedFilename, ModelHandle_t hModel, const char * psBoltName, bool bBoltIsBone, bool bBoltReplacesAllExisting)
 {
 	int iBoltIndex = Model_GetBoltIndex(hModel, psBoltName, bBoltIsBone);
 	
@@ -1586,7 +1584,7 @@ bool Model_LoadBoltOn(LPCSTR psFullPathedFilename, ModelHandle_t hModel, LPCSTR 
 	return Model_LoadBoltOn(psFullPathedFilename, hModel, iBoltIndex, bBoltIsBone, bBoltReplacesAllExisting);
 }
 
-static bool _Actual_Model_LoadBoltOn(LPCSTR psFullPathedFilename, ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone, bool bBoltReplacesAllExisting)
+static bool _Actual_Model_LoadBoltOn(const char * psFullPathedFilename, ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone, bool bBoltReplacesAllExisting)
 {
 	if (!hModel)
 	{
@@ -1691,7 +1689,7 @@ static bool _Actual_Model_LoadBoltOn(LPCSTR psFullPathedFilename, ModelHandle_t 
 	return bReturn;
 }
 
-bool Model_LoadBoltOn(LPCSTR psFullPathedFilename, ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone, bool bBoltReplacesAllExisting)
+bool Model_LoadBoltOn(const char * psFullPathedFilename, ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone, bool bBoltReplacesAllExisting)
 {
 	gbRenderInhibit = true;
 	bool b = _Actual_Model_LoadBoltOn(psFullPathedFilename, hModel, iBoltIndex, bBoltIsBone, bBoltReplacesAllExisting);
@@ -1725,7 +1723,7 @@ bool Model_SurfaceIsTag( ModelHandle_t hModel, int iSurfaceIndex)
 	return false;
 }
 
-LPCSTR Model_GLMSurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool bShortVersionForTag )
+const char * Model_GLMSurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool bShortVersionForTag )
 {
 	if (Model_Loaded(hModel))
 	{
@@ -1737,7 +1735,7 @@ LPCSTR Model_GLMSurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool bShor
 
 // generate info suitable for sending to Notepad (can be a BIG string)...
 //
-LPCSTR Model_GLMSurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex )
+const char * Model_GLMSurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex )
 {
 	if (Model_Loaded(hModel))
 	{
@@ -1760,7 +1758,7 @@ bool Model_SurfaceContainsBoneReference(ModelHandle_t hModel, int iLODNumber, in
 	return false;
 }
 
-LPCSTR	Model_GLMBoneInfo( ModelHandle_t hModel, int iBoneIndex )
+const char *	Model_GLMBoneInfo( ModelHandle_t hModel, int iBoneIndex )
 {
 	if (Model_Loaded(hModel))
 	{
@@ -1785,7 +1783,7 @@ int Model_GetNumFrames( ModelHandle_t hModel )
 }
 
 
-LPCSTR Model_Info( ModelHandle_t hModel )
+const char * Model_Info( ModelHandle_t hModel )
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 	if (pContainer)
@@ -1802,7 +1800,7 @@ LPCSTR Model_Info( ModelHandle_t hModel )
 	return sERROR_CONTAINER_NOT_FOUND;
 }
 
-LPCSTR Model_GetBoneName( ModelHandle_t hModel, int iBoneIndex )
+const char * Model_GetBoneName( ModelHandle_t hModel, int iBoneIndex )
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 	if (pContainer)
@@ -1819,7 +1817,7 @@ LPCSTR Model_GetBoneName( ModelHandle_t hModel, int iBoneIndex )
 	return sERROR_CONTAINER_NOT_FOUND;
 }
 
-LPCSTR Model_GetSurfaceName( ModelContainer_t *pContainer, int iSurfaceIndex )
+const char * Model_GetSurfaceName( ModelContainer_t *pContainer, int iSurfaceIndex )
 {
 	if (pContainer->pModelGetSurfaceNameFunction)
 	{
@@ -1831,7 +1829,7 @@ LPCSTR Model_GetSurfaceName( ModelContainer_t *pContainer, int iSurfaceIndex )
 	return NULL;
 }
 
-LPCSTR Model_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex )
+const char * Model_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex )
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 	if (pContainer)
@@ -1849,7 +1847,7 @@ LPCSTR Model_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex )
 //
 // returns -1 for error, so check it!!
 //
-int Model_GetBoltIndex( ModelHandle_t hModel, LPCSTR psBoltName, bool bBoltIsBone)
+int Model_GetBoltIndex( ModelHandle_t hModel, const char * psBoltName, bool bBoltIsBone)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 	if (pContainer)
@@ -1867,7 +1865,7 @@ int Model_GetBoltIndex( ModelHandle_t hModel, LPCSTR psBoltName, bool bBoltIsBon
 //
 // returns -1 for error, so check it!!
 //
-int Model_GetBoltIndex( ModelContainer_t *pContainer, LPCSTR psBoltName, bool bBoltIsBone )	// semi-recursive now
+int Model_GetBoltIndex( ModelContainer_t *pContainer, const char * psBoltName, bool bBoltIsBone )	// semi-recursive now
 {
 	if (pContainer->pModelGetBoneBoltNameFunction && pContainer->pModelGetSurfaceBoltNameFunction)
 	{
@@ -1875,7 +1873,7 @@ int Model_GetBoltIndex( ModelContainer_t *pContainer, LPCSTR psBoltName, bool bB
 		//
 		for (int i=0; i<(bBoltIsBone?pContainer->iBoneBolt_MaxBoltPoints:pContainer->iSurfaceBolt_MaxBoltPoints); i++)
 		{
-			if (!stricmp(Model_GetBoltName( pContainer, i, bBoltIsBone), psBoltName ))
+			if (!Q_stricmp(Model_GetBoltName( pContainer, i, bBoltIsBone), psBoltName ))
 				return i;
 		}
 	
@@ -1890,7 +1888,7 @@ int Model_GetBoltIndex( ModelContainer_t *pContainer, LPCSTR psBoltName, bool bB
 				{
 					string strAliasName = (*it).second;
 
-					if (!stricmp(strAliasName.c_str(), psBoltName))
+					if (!Q_stricmp(strAliasName.c_str(), psBoltName))
 					{
 						string strRealName = (*it).first;
 						bAlreadyHere = true;
@@ -1911,7 +1909,7 @@ int Model_GetBoltIndex( ModelContainer_t *pContainer, LPCSTR psBoltName, bool bB
 }
 
 
-LPCSTR Model_GetBoltName( ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone )
+const char * Model_GetBoltName( ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone )
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 	if (pContainer)
@@ -1923,7 +1921,7 @@ LPCSTR Model_GetBoltName( ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone
 }
 
 
-LPCSTR Model_GetBoltName( ModelContainer_t *pContainer, int iBoltIndex, bool bBoltIsBone )
+const char * Model_GetBoltName( ModelContainer_t *pContainer, int iBoltIndex, bool bBoltIsBone )
 {
 	if (bBoltIsBone)
 	{
@@ -1945,7 +1943,7 @@ LPCSTR Model_GetBoltName( ModelContainer_t *pContainer, int iBoltIndex, bool bBo
 }
 
 
-LPCSTR Model_GetFilename( ModelHandle_t hModel )
+const char * Model_GetFilename( ModelHandle_t hModel )
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 	if (pContainer)
@@ -1959,11 +1957,11 @@ LPCSTR Model_GetFilename( ModelHandle_t hModel )
 
 // this returns the full disk path of the primary model... (mainly only used for new-file browsing)
 //
-LPCSTR Model_GetFullPrimaryFilename( void )
+const char * Model_GetFullPrimaryFilename( void )
 {
 	if (Model_Loaded())
 	{
-		return AppVars.strLoadedModelPath;
+		return AppVars.strLoadedModelPath.c_str();
 	}
 	
 	// only usually gets here on first File-Open if not launched via file-association...
@@ -1994,7 +1992,7 @@ bool Model_GLMSurface_SetStatus( ModelHandle_t hModel, int iSurfaceIndex, Surfac
 	return false;
 }
 
-bool Model_GLMSurface_SetStatus( ModelHandle_t hModel, LPCSTR psSurfaceName, SurfaceOnOff_t eStatus )
+bool Model_GLMSurface_SetStatus( ModelHandle_t hModel, const char * psSurfaceName, SurfaceOnOff_t eStatus )
 {
 	if (Model_Loaded(hModel))
 	{
@@ -2005,7 +2003,7 @@ bool Model_GLMSurface_SetStatus( ModelHandle_t hModel, LPCSTR psSurfaceName, Sur
 			//
 			for (int iSurface=0; iSurface<pContainer->iNumSurfaces; iSurface++)
 			{
-				if (!stricmp(psSurfaceName, pContainer->pModelGetSurfaceNameFunction( pContainer->hModel, iSurface )))
+				if (!Q_stricmp(psSurfaceName, pContainer->pModelGetSurfaceNameFunction( pContainer->hModel, iSurface )))
 				{
 					return Model_GLMSurface_SetStatus( pContainer->hModel, iSurface, eStatus);
 				}
@@ -2078,11 +2076,11 @@ static bool Model_SurfaceIsDifferentFromDefault(ModelContainer_t *pContainer, Su
 	{
 		// this surface's status matches the query, now is it naturally this way?
 		//
-		LPCSTR psSurfaceName = Model_GetSurfaceName( pContainer, iSurface );
+		const char * psSurfaceName = Model_GetSurfaceName( pContainer, iSurface );
 			
 		if (psSurfaceName)	// problems if we don't have this of course, but errormessaged already
 		{
-			bool bSurfaceNameIncludesOFF = !stricmp("_off", &psSurfaceName[strlen(psSurfaceName)-4]);
+			bool bSurfaceNameIncludesOFF = !Q_stricmp("_off", &psSurfaceName[strlen(psSurfaceName)-4]);
 
 			switch (eThisStatus)
 			{
@@ -2102,7 +2100,10 @@ static bool Model_SurfaceIsDifferentFromDefault(ModelContainer_t *pContainer, Su
 
 					// no surface will ever have this set initially, the loader can only set ON or OFF...
 					//
-					return true;					
+					return true;
+                    
+                default:
+                    break;
 			}
 		}
 	}
@@ -2128,7 +2129,7 @@ int Model_GetNumSurfacesDifferentFromDefault(ModelContainer_t *pContainer, Surfa
 }
 
 
-LPCSTR Model_GetSurfaceDifferentFromDefault(ModelContainer_t *pContainer, SurfaceOnOff_t eStatus, int iSurfaceIndex)
+const char * Model_GetSurfaceDifferentFromDefault(ModelContainer_t *pContainer, SurfaceOnOff_t eStatus, int iSurfaceIndex)
 {
 	for (int iSurface=0; iSurface<pContainer->iNumSurfaces; iSurface++)
 	{	
@@ -2350,8 +2351,8 @@ static void ModelDraw_BoundingBox( ModelContainer_t *pContainer, bool bDrawingFo
 			//
 			for (int i=0; i<sizeof(v3Corners)/sizeof(v3Corners[0]); i++)
 			{
-				extern LPCSTR vtos(vec3_t v3);
-				LPCSTR psCoordString = vtos(v3Corners[i]);
+				extern const char * vtos(vec3_t v3);
+				const char * psCoordString = vtos(v3Corners[i]);
 					
 				Text_Display(psCoordString,v3Corners[i],200,70,0);//228/2,107/2,35/2);
 			}
@@ -2698,7 +2699,7 @@ static void ModelList_AddModelsToDrawList(void)
 //	highlighting. This just affects outputs size and brightness, to make things easier to see.
 
 //
-static void DrawTagOrigin(bool bHilitAsPure, LPCSTR psTagText /* can be NULL */)
+static void DrawTagOrigin(bool bHilitAsPure, const char * psTagText /* can be NULL */)
 {
  	// draw origin lines...
 	//						
@@ -2820,7 +2821,7 @@ static void ModelContainer_DrawTagSurfaceHighlights(ModelContainer_t *pContainer
 			{
 				// this may get called twice, so pre-eval it here for speed...
 				//
-				LPCSTR psSurfaceName = Model_GetSurfaceName( pContainer->hModel, iSurfaceIndex );
+				const char * psSurfaceName = Model_GetSurfaceName( pContainer->hModel, iSurfaceIndex );
 
 				glPushMatrix();
 				{
@@ -2866,7 +2867,7 @@ static void ModelContainer_DrawBoneHighlights(ModelContainer_t *pContainer)
 		{
 			// this may get called twice, so pre-eval it here for speed...
 			//
-			LPCSTR psBoneName = Model_GetBoneName( pContainer->hModel, iBoneIndex );
+			const char * psBoneName = Model_GetBoneName( pContainer->hModel, iBoneIndex );
 
 			bool bHilitAsPureBone = (	pContainer->iBoneHighlightNumber == iITEMHIGHLIGHT_ALL	
 										||
@@ -2969,7 +2970,7 @@ static Sequence_t *Stats_GetSequenceDisplayInfo(ModelContainer_t *pContainer, bo
 #define ARB_LOD_PADDING			9
 
 
-static LPCSTR Stats_GetVertInfo(int iVerts, int iTris, int iSurfs, int iXFormedG2Bones, int iRenderedBoneWeights, int iOmittedBoneWeights)
+static const char * Stats_GetVertInfo(int iVerts, int iTris, int iSurfs, int iXFormedG2Bones, int iRenderedBoneWeights, int iOmittedBoneWeights)
 {
 	return va("(V:%4d T:%4d S:%2d%s)",
 					iVerts,
@@ -2983,7 +2984,7 @@ static LPCSTR Stats_GetVertInfo(int iVerts, int iTris, int iSurfs, int iXFormedG
 				);
 }
 
-static LPCSTR Stats_GetVertInfo(ModelContainer_t *pContainer)
+static const char * Stats_GetVertInfo(ModelContainer_t *pContainer)
 {
 	return Stats_GetVertInfo(	pContainer->iRenderedVerts,	// int iVerts, 
 								pContainer->iRenderedTris,	// int iTris,
@@ -2994,7 +2995,7 @@ static LPCSTR Stats_GetVertInfo(ModelContainer_t *pContainer)
 								);
 }
 
-static LPCSTR Stats_GetName(ModelContainer_t *pContainer)
+static const char * Stats_GetName(ModelContainer_t *pContainer)
 {
 	return va("%s",Filename_WithoutExt(Filename_WithoutPath(pContainer->sLocalPathName)));
 }
@@ -3279,7 +3280,7 @@ static void R_ModelContainer_CallBack_InfoText(ModelContainer_t *pContainer, voi
 				for (int iSeqIndex=0; iSeqIndex<Model_MultiSeq_GetNumEntries(pContainer, !iLockPass); iSeqIndex++)
 				{
 					int		iSeqEntry	= Model_MultiSeq_GetEntry(pContainer, iSeqIndex, !iLockPass);
-					LPCSTR	psSeqName	= Model_Sequence_GetName (pContainer, iSeqEntry, true );
+					const char *	psSeqName	= Model_Sequence_GetName (pContainer, iSeqEntry, true );
 															
 					r=0,g=200,b=200;	// default cyan
 
@@ -3364,7 +3365,7 @@ static void ModelDraw_InfoText_Header(void)
 		
 	if (AppVars.bBoneWeightThreshholdingActive)
 	{
-		LPCSTR psThreshholdString = va("BoneWeightThresh: %g%%",AppVars.fBoneWeightThreshholdPercent);
+		const char * psThreshholdString = va("BoneWeightThresh: %g%%",AppVars.fBoneWeightThreshholdPercent);
 		Text_DisplayFlat(psThreshholdString, iFPS_Xpos - ((strlen(psThreshholdString)+2)*TEXT_WIDTH),1*TEXT_DEPTH,
 									180,180,180,false);
 	}
@@ -3566,7 +3567,7 @@ static void ModelList_Render_Actual(int iWindowWidth, int iWindowHeight)
 	//		RB_GetDrawStats(&giTotVertsDrawn, &giTotTrisDrawn, &giTotSurfsDrawn);		
 		}
 
-		catch(LPCSTR psMessage)
+		catch(const char * psMessage)
 		{
 			Model_Delete();
 			ErrorBox(psMessage);
@@ -4248,7 +4249,7 @@ bool Model_SecondaryAnimLockingActive(const ModelContainer_t *pContainer)
 //
 // returns NULL if no lock present...
 //
-LPCSTR Model_Sequence_GetLockedName( ModelHandle_t hModel, bool bPrimary)
+const char * Model_Sequence_GetLockedName( ModelHandle_t hModel, bool bPrimary)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 
@@ -4292,7 +4293,7 @@ bool Model_Sequence_IsLocked( ModelHandle_t hModel, int iSequenceNumber, bool bP
 
 // UI query function.  ('bUsedForDisplay' signifies that return can be prepended with '-' if a reverse sequence)
 //
-LPCSTR Model_Sequence_GetName(ModelHandle_t hModel, int iSequenceNumber, bool bUsedForDisplay /* = false */)
+const char * Model_Sequence_GetName(ModelHandle_t hModel, int iSequenceNumber, bool bUsedForDisplay /* = false */)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 
@@ -4307,7 +4308,7 @@ LPCSTR Model_Sequence_GetName(ModelHandle_t hModel, int iSequenceNumber, bool bU
 }
 // ('bUsedForDisplay' signifies that return can be prepended with '-' if a reverse sequence)
 //
-LPCSTR Model_Sequence_GetName(ModelContainer_t *pContainer, int iSequenceNumber, bool bUsedForDisplay /* = false */)
+const char * Model_Sequence_GetName(ModelContainer_t *pContainer, int iSequenceNumber, bool bUsedForDisplay /* = false */)
 {
 	if (iSequenceNumber < pContainer->SequenceList.size())
 	{
@@ -4323,11 +4324,11 @@ LPCSTR Model_Sequence_GetName(ModelContainer_t *pContainer, int iSequenceNumber,
 
 // returns seq index for supplied name, else -1 for error...
 //
-int Model_Sequence_IndexForName(ModelContainer_t *pContainer, LPCSTR psSeqName)
+int Model_Sequence_IndexForName(ModelContainer_t *pContainer, const char * psSeqName)
 {
 	for (int iSeq=0; iSeq<pContainer->SequenceList.size(); iSeq++)
 	{
-		if (!stricmp(pContainer->SequenceList[iSeq].sName, psSeqName))
+		if (!Q_stricmp(pContainer->SequenceList[iSeq].sName, psSeqName))
 			return iSeq;
 	}
 
@@ -4338,7 +4339,7 @@ int Model_Sequence_IndexForName(ModelContainer_t *pContainer, LPCSTR psSeqName)
 
 // re-eval function for when toggling full path names on/off (Jarrod request)
 //
-LPCSTR Model_Sequence_GetTreeName(ModelHandle_t hModel, int iSequenceNumber)
+const char * Model_Sequence_GetTreeName(ModelHandle_t hModel, int iSequenceNumber)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 
@@ -4365,13 +4366,13 @@ LPCSTR Model_Sequence_GetTreeName(ModelHandle_t hModel, int iSequenceNumber)
 // a fairly inefficient function because of what it calls, but it's only used in "bursts" rather than every loop,
 //	so who cares?...
 //
-bool Model_Sequence_Lock( ModelHandle_t hModel, LPCSTR psSequenceName, bool bPrimary, bool bOktoShowErrorBox /* = true */)
+bool Model_Sequence_Lock( ModelHandle_t hModel, const char * psSequenceName, bool bPrimary, bool bOktoShowErrorBox /* = true */)
 {
 	int iTotSequences = Model_GetNumSequences(hModel);
 
 	for (int i=0; i<iTotSequences; i++)
 	{
-		if (!stricmp(Model_Sequence_GetName	( hModel, i), psSequenceName))
+		if (!Q_stricmp(Model_Sequence_GetName	( hModel, i), psSequenceName))
 			return Model_Sequence_Lock( hModel, i, bPrimary);
 	}
 
@@ -4644,7 +4645,7 @@ int Model_GetNumSequences(ModelHandle_t hModel)
 //
 // NULL return = error
 //
-LPCSTR Model_GetSequenceString(ModelHandle_t hModel, int iSequenceNum)
+const char * Model_GetSequenceString(ModelHandle_t hModel, int iSequenceNum)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
 
@@ -4679,7 +4680,7 @@ bool Model_SetSurfaceHighlight(ModelHandle_t hModel, int iSurfaceIndex)
 
 // this version uses bone names instead, used for easier remote calling...
 //
-bool Model_SetSurfaceHighlight(ModelHandle_t hModel, LPCSTR psSurfaceName)
+bool Model_SetSurfaceHighlight(ModelHandle_t hModel, const char * psSurfaceName)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
 	
@@ -4689,7 +4690,7 @@ bool Model_SetSurfaceHighlight(ModelHandle_t hModel, LPCSTR psSurfaceName)
 		//
 		for (int iSurface=0; iSurface<pContainer->iNumSurfaces; iSurface++)
 		{
-			if (!stricmp(psSurfaceName, pContainer->pModelGetSurfaceNameFunction( hModel, iSurface )))
+			if (!Q_stricmp(psSurfaceName, pContainer->pModelGetSurfaceNameFunction( hModel, iSurface )))
 			{
 				Model_SetSurfaceHighlight(hModel, iSurface);
 				return true;
@@ -4725,7 +4726,7 @@ bool Model_SetBoneHighlight(ModelHandle_t hModel, int iBoneIndex)
 //
 // this is now slightly recursive, at least if you supply an aliased bone name...
 //
-int ModelContainer_BoneIndexFromName(ModelContainer_t *pContainer, LPCSTR psBoneName)
+int ModelContainer_BoneIndexFromName(ModelContainer_t *pContainer, const char * psBoneName)
 {
 	int iBone = 0;
 
@@ -4733,7 +4734,7 @@ int ModelContainer_BoneIndexFromName(ModelContainer_t *pContainer, LPCSTR psBone
 	//
 	for (iBone=0; iBone<pContainer->iNumBones; iBone++)
 	{
-		if (!stricmp(psBoneName, pContainer->pModelGetBoneNameFunction( pContainer->hModel, iBone )))
+		if (!Q_stricmp(psBoneName, pContainer->pModelGetBoneNameFunction( pContainer->hModel, iBone )))
 		{
 			return iBone;
 		}
@@ -4777,7 +4778,7 @@ int ModelContainer_BoneIndexFromName(ModelContainer_t *pContainer, LPCSTR psBone
 
 			if (ModelContainer_GetBoneAliasPair(pContainer, i, strBoneNameReal, strBoneNameAlias))
 			{
-				if (!stricmp(strBoneNameAlias.c_str(), psBoneName))
+				if (!Q_stricmp(strBoneNameAlias.c_str(), psBoneName))
 				{
 					bAlreadyHere = true;
 					iBone = ModelContainer_BoneIndexFromName(pContainer, strBoneNameReal.c_str());	// pass real bone name
@@ -4803,7 +4804,7 @@ int ModelContainer_BoneIndexFromName(ModelContainer_t *pContainer, LPCSTR psBone
 
 // this version uses bone names instead, used for easier remote calling...
 //
-bool Model_SetBoneHighlight(ModelHandle_t hModel, LPCSTR psBoneName)
+bool Model_SetBoneHighlight(ModelHandle_t hModel, const char * psBoneName)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
 	
@@ -4837,7 +4838,7 @@ void Model_StopAnim()
 // for use with script files and remote control, since it's safer to use bone names rather than indexes, in case they change 
 //	 after the script was saved out or something
 //
-bool Model_SetSecondaryAnimStart(ModelHandle_t hModel, LPCSTR psBoneName)
+bool Model_SetSecondaryAnimStart(ModelHandle_t hModel, const char * psBoneName)
 {
 	bool bReturn = false;
 
@@ -5013,13 +5014,13 @@ int Model_GetG2SurfaceRootOverride(ModelHandle_t hModel)
 }
 
 
-bool Model_SetG2SurfaceRootOverride	(ModelContainer_t *pContainer, LPCSTR psSurfaceName)
+bool Model_SetG2SurfaceRootOverride	(ModelContainer_t *pContainer, const char * psSurfaceName)
 {
 	for (int iSurface = 0; iSurface<pContainer->iNumSurfaces; iSurface++)
 	{
-		LPCSTR psScannedSurfaceName = Model_GetSurfaceName( pContainer, iSurface );
+		const char * psScannedSurfaceName = Model_GetSurfaceName( pContainer, iSurface );
 
-		if (!stricmp(psScannedSurfaceName,psSurfaceName))
+		if (!Q_stricmp(psScannedSurfaceName,psSurfaceName))
 		{
 			Model_SetG2SurfaceRootOverride(pContainer, iSurface);
 			return true;
@@ -5398,7 +5399,7 @@ static void BuildTangentVectors(mdxmVertex_t *v, int numVerts, mdxmTriangle_t *t
 	}
 }
 
-bool Model_Save(LPCSTR psFullPathedFilename)
+bool Model_Save(const char * psFullPathedFilename)
 {
 	long pos;
 	mdxmLOD_t*	lod;
@@ -5527,24 +5528,24 @@ bool Model_Save(LPCSTR psFullPathedFilename)
 				compv.normal[1] = (short)(LittleFloat( v->normal[1] ) * POINT_SCALE );
 				compv.normal[2] = (short)(LittleFloat( v->normal[2] ) * POINT_SCALE );*/
 
-				/*compv.normal = ( ( ((DWORD)(v->normal[2] *  511.0f)) & 0x3ff ) << 22L ) |
-							   ( ( ((DWORD)(v->normal[1] * 1023.0f)) & 0x7ff ) << 11L ) |
-							   ( ( ((DWORD)(v->normal[0] * 1023.0f)) & 0x7ff ) <<  0L );
+				/*compv.normal = ( ( ((unsigned int)(v->normal[2] *  511.0f)) & 0x3ff ) << 22L ) |
+							   ( ( ((unsigned int)(v->normal[1] * 1023.0f)) & 0x7ff ) << 11L ) |
+							   ( ( ((unsigned int)(v->normal[0] * 1023.0f)) & 0x7ff ) <<  0L );
 
-				compv.tangent = ( ( ((DWORD)(_tangents[ver][2] *  511.0f)) & 0x3ff ) << 22L ) |
-							    ( ( ((DWORD)(_tangents[ver][1] * 1023.0f)) & 0x7ff ) << 11L ) |
-							    ( ( ((DWORD)(_tangents[ver][0] * 1023.0f)) & 0x7ff ) <<  0L );*/
+				compv.tangent = ( ( ((unsigned int)(_tangents[ver][2] *  511.0f)) & 0x3ff ) << 22L ) |
+							    ( ( ((unsigned int)(_tangents[ver][1] * 1023.0f)) & 0x7ff ) << 11L ) |
+							    ( ( ((unsigned int)(_tangents[ver][0] * 1023.0f)) & 0x7ff ) <<  0L );*/
 
-				unsigned int ix = unsigned int( (v->normal[0] * 127.f) + 128.f );
-				unsigned int iy = unsigned int( (v->normal[1] * 127.f) + 128.f );
-				unsigned int iz = unsigned int( (v->normal[2] * 127.f) + 128.f );
+				unsigned int ix = (unsigned int)( (v->normal[0] * 127.f) + 128.f );
+				unsigned int iy = (unsigned int)( (v->normal[1] * 127.f) + 128.f );
+				unsigned int iz = (unsigned int)( (v->normal[2] * 127.f) + 128.f );
 				unsigned int iw = 0; // we don't use the w component (just padding)
 
 				compv.normal = (iw << 24) | (ix << 16) | (iy << 8) | (iz << 0);
 
-				ix = unsigned int( (_tangents[ver][0] * 127.f) + 128.f );
-				iy = unsigned int( (_tangents[ver][1] * 127.f) + 128.f );
-				iz = unsigned int( (_tangents[ver][2] * 127.f) + 128.f );
+				ix = (unsigned int)( (_tangents[ver][0] * 127.f) + 128.f );
+				iy = (unsigned int)( (_tangents[ver][1] * 127.f) + 128.f );
+				iz = (unsigned int)( (_tangents[ver][2] * 127.f) + 128.f );
 
 				compv.tangent = (iw << 24) | (ix << 16) | (iy << 8) | (iz << 0);
 

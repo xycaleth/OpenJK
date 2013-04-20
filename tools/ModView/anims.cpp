@@ -5,7 +5,11 @@
 // Currently reads either "<name>.frames" and/or "animtion.cfg" files...
 //
 #include "stdafx.h"
+
+#include <algorithm>
+#include "StringUtils.h"
 #include "includes.h"
+#include "r_common.h"
 //
 #include "sequence.h"
 //
@@ -13,9 +17,9 @@
 
 
 
-bool Anims_ReadFile_FRAMES(ModelContainer_t *pContainer, LPCSTR psLocalFilename_GLA)
+bool Anims_ReadFile_FRAMES(ModelContainer_t *pContainer, const char * psLocalFilename_GLA)
 {
-	LPCSTR psFilename = va("%s%s.frames",gamedir,Filename_WithoutExt(psLocalFilename_GLA));
+	const char * psFilename = va("%s%s.frames",gamedir,Filename_WithoutExt(psLocalFilename_GLA));
 
 	FILE *fHandle = fopen(psFilename,"rt");
 
@@ -50,14 +54,14 @@ bool Anims_ReadFile_FRAMES(ModelContainer_t *pContainer, LPCSTR psLocalFilename_
 			}
 
 			sLine[sizeof(sLine)-1]='\0';
-			strlwr(sLine);
+			ToLower(sLine);
 
 			// :-)
-			CString str(sLine);
-					str.TrimLeft();
-					str.TrimRight();
-					str.Replace("\"","");
-				strcpy(sLine,str);
+            std::string str(sLine);
+            Trim (str);
+            
+            std::remove(str.begin(), str.end(), '"');
+            Q_strncpyz (sLine, str.c_str(), sizeof(sLine));
 
 			if (strstr(sLine,".xsi"))
 			{
@@ -69,29 +73,32 @@ bool Anims_ReadFile_FRAMES(ModelContainer_t *pContainer, LPCSTR psLocalFilename_
 				        Sequence.sNameWithPath[sizeof(Sequence.sNameWithPath)-1]='\0';
 			}
 			else
-			if (strnicmp(sLine,"startframe",strlen("startframe"))==0)
+			if (Q_stricmpn(sLine,"startframe",strlen("startframe"))==0)
 			{
-				CString str(&sLine[strlen("startframe")]);
-						str.Replace("\"","");
-				Sequence.iStartFrame = atoi(str);
+                std::string str(&sLine[strlen("startframe")]);
+                
+                std::remove (str.begin(), str.end(), '"');
+				Sequence.iStartFrame = atoi(str.c_str());
 
 				bStartFrameRead = true;
 			}
 			else
-			if (strnicmp(sLine,"duration",strlen("duration"))==0)
+			if (Q_stricmpn(sLine,"duration",strlen("duration"))==0)
 			{
-				CString str(&sLine[strlen("duration")]);
-						str.Replace("\"","");
-				Sequence.iFrameCount = atoi(str);				
+                std::string str(&sLine[strlen("duration")]);
+                std::remove (str.begin(), str.end(), '"');
+
+				Sequence.iFrameCount = atoi(str.c_str());
 
 				bDurationRead = true;
 			}
 			else
-			if (strnicmp(sLine,"fps",strlen("fps"))==0)
+			if (Q_stricmpn(sLine,"fps",strlen("fps"))==0)
 			{
-				CString str(&sLine[strlen("fps")]);
-						str.Replace("\"","");
-				Sequence.iFPS = atoi(str);				
+                std::string str(&sLine[strlen("fps")]);
+                std::remove (str.begin(), str.end(), '"');
+
+				Sequence.iFPS = atoi(str.c_str());
 
 				bFPSRead = true;
 			}
@@ -143,11 +150,10 @@ typedef struct
 } Sequence_t;
 */
 
-static bool LoadAnimationCFG(LPCSTR psFullPath, ModelContainer_t *pContainer, FILE *handle)//, HDC hDC)	// hDC for text metrics
+static bool LoadAnimationCFG(const char * psFullPath, ModelContainer_t *pContainer, FILE *handle)//, HDC hDC)	// hDC for text metrics
 {
 //	int  iLongestTextMetric = 0;
 //	SIZE Size;
-	bool bOk = false;	
 
 //	FILE *handle = fopen(psFullPath,"rt");
 
@@ -186,23 +192,23 @@ static bool LoadAnimationCFG(LPCSTR psFullPath, ModelContainer_t *pContainer, FI
 			//
 			// our cfg files don't have "sex" (how depressingly apt...)
 			//
-			if (strnicmp(sLineBuffer,"sex",3)==0)
+			if (Q_stricmpn(sLineBuffer,"sex",3)==0)
 				continue;
 			//
 			// or this other crap either...
 			//
-			if (strnicmp(sLineBuffer,"footsteps",9)==0)
+			if (Q_stricmpn(sLineBuffer,"footsteps",9)==0)
 				continue;
-			if (strnicmp(sLineBuffer,"headoffset",10)==0)
+			if (Q_stricmpn(sLineBuffer,"headoffset",10)==0)
 				continue;
-			if (strnicmp(sLineBuffer,"soundpath",9)==0)
+			if (Q_stricmpn(sLineBuffer,"soundpath",9)==0)
 				continue;
 
 			Sequence_t seq;
 			memset(&seq,0,sizeof(seq));
 
 			char sLine[2048];
-			int iElementsDone = sscanf( sLineBuffer, "%s %d %d %d %d", &sLine, &seq.iStartFrame, &seq.iFrameCount, &seq.iLoopFrame, &seq.iFPS );
+			int iElementsDone = sscanf( sLineBuffer, "%s %d %d %d %d", sLine, &seq.iStartFrame, &seq.iFrameCount, &seq.iLoopFrame, &seq.iFPS );
 			if (iElementsDone == EOF)
 				continue;	// probably skipping over a comment line
 
@@ -225,7 +231,7 @@ static bool LoadAnimationCFG(LPCSTR psFullPath, ModelContainer_t *pContainer, FI
 //					mdview.bAnimIsMultiPlayerFormat = true;
 					// scanned an ID line in ok, now convert it to Raven format...
 					//
-					iElementsDone = sscanf( sComment, "%s", &sLine );	// grab anim name from original saved comment
+					iElementsDone = sscanf( sComment, "%s", sLine );	// grab anim name from original saved comment
 					if (iElementsDone == 1)
 					{
 						// ... and convert their loop format to ours...
@@ -242,11 +248,11 @@ static bool LoadAnimationCFG(LPCSTR psFullPath, ModelContainer_t *pContainer, FI
 
 						// now do the folding number stuff since ID don't do it in their files...
 						//
-						if ( !strnicmp(sLine,"TORSO_",6) && iFirstFrameAfterBoth == -1)
+						if ( !Q_stricmpn(sLine,"TORSO_",6) && iFirstFrameAfterBoth == -1)
 						{
 							iFirstFrameAfterBoth = seq.iStartFrame;
 						}
-						if ( !strnicmp(sLine,"LEGS_",5))
+						if ( !Q_stricmpn(sLine,"LEGS_",5))
 						{
 							if (iFirstFrameAfterTorso == -1)
 							{
@@ -402,9 +408,9 @@ static bool LoadAnimationCFG(LPCSTR psFullPath, ModelContainer_t *pContainer, FI
 	return !!(pContainer->SequenceList.size());
 }
 
-bool Anims_ReadFile_ANIMATION_CFG(ModelContainer_t *pContainer, LPCSTR psLocalFilename_GLA)
+bool Anims_ReadFile_ANIMATION_CFG(ModelContainer_t *pContainer, const char * psLocalFilename_GLA)
 {
-	LPCSTR psFilename = va("%s%s/animation.cfg",gamedir,Filename_PathOnly(psLocalFilename_GLA));
+	const char * psFilename = va("%s%s/animation.cfg",gamedir,Filename_PathOnly(psLocalFilename_GLA));
 
 	FILE *fHandle = fopen(psFilename,"rt");
 

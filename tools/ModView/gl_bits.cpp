@@ -20,7 +20,7 @@ CString csGLVersion;
 CString csGLExtensions;
 
 
-LPCSTR GL_GetInfo(void)
+const char * GL_GetInfo(void)
 {
 	static CString string;
 

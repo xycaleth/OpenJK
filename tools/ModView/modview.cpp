@@ -118,7 +118,7 @@ BOOL CModViewApp::InitInstance()
 
 	if (gbStartMinimized)
 	{
-		extern void FuckingWellSetTheDocumentNameAndDontBloodyIgnoreMeYouCunt(LPCSTR psDocName);
+		extern void FuckingWellSetTheDocumentNameAndDontBloodyIgnoreMeYouCunt(const char * psDocName);
 					FuckingWellSetTheDocumentNameAndDontBloodyIgnoreMeYouCunt("Untitled");
 	}
 
@@ -140,7 +140,7 @@ extern void R_LoadQuaternionIndex(const char* filename);
 	return TRUE;
 }
 
-void Filename_AddToMRU(LPCSTR psFilename)
+void Filename_AddToMRU(const char * psFilename)
 {
 	if (bSafeToAddToMRU)
 	{

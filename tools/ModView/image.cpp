@@ -3,14 +3,11 @@
 
 #include "stdafx.h"
 #include "includes.h"
-#include "modview.h"
+//#include "modview.h"
 #include "textures.h"
 //
 #include "image.h"
 
-#ifndef DWORD
-#define DWORD unsigned long
-#endif
 
 
 #define iDSTAMP_CELL_PIXDIM			16	// adjust this, higher = more secure but less stamps on picture
@@ -34,7 +31,7 @@
 	typedef struct
 	{
 		WatermarkData_t Data;
-		DWORD	dwCRC;
+		unsigned int	dwCRC;
 	} Watermark_t;
 	typedef struct
 	{
@@ -123,7 +120,7 @@ Watermark_t TheWatermark;
 
 // return NULL = legal, else string saying why not...
 //
-static LPCSTR DStamp_TextIsLegal(LPCSTR psText)
+static const char * DStamp_TextIsLegal(const char * psText)
 {
 	int iLen = strlen(psText);
 	if (iLen > sizeof(TheWatermark.Data.sText))
@@ -162,9 +159,9 @@ static void DStamp_DecryptData(void *pvData, int iByteLength)
 	DStamp_EncryptData(pvData,iByteLength);
 }
 
-static DWORD DStamp_UpdateCRC(DWORD dwCRC, byte b)
+static unsigned int DStamp_UpdateCRC(unsigned int dwCRC, byte b)
 {
-	dwCRC += (DWORD) b;
+	dwCRC += (unsigned int) b;
 
 	if (dwCRC & (1<<31))
 	{
@@ -180,11 +177,11 @@ static DWORD DStamp_UpdateCRC(DWORD dwCRC, byte b)
 	return dwCRC;
 }
 
-static DWORD DStamp_CalcBlockCRC(void *pvData, int iByteLength)
+static unsigned int DStamp_CalcBlockCRC(void *pvData, int iByteLength)
 {
 	byte *pData = (byte*) pvData;
 
-	DWORD dwCRC = 0;
+	unsigned int dwCRC = 0;
 	
 	for (int i=0; i<iByteLength; i++)
 	{
@@ -197,7 +194,7 @@ static DWORD DStamp_CalcBlockCRC(void *pvData, int iByteLength)
 
 
 
-static LPCSTR DStamp_GetYear(void)
+static const char * DStamp_GetYear(void)
 {
 	static char sTemp[20];	
     time_t ltime;	
@@ -212,7 +209,7 @@ static LPCSTR DStamp_GetYear(void)
 }
 
 
-static Watermark_t *DStamp_InitWatermark(LPCSTR psText)
+static Watermark_t *DStamp_InitWatermark(const char * psText)
 {
 	Watermark_t *pWatermark = &TheWatermark;
 
@@ -354,9 +351,9 @@ static void DStamp_MarkInstance(DStampData_t *pData, int iInstancePixelX, int iI
 
 // see if we can read some watermark data, else return NULL...
 //
-static LPCSTR DStamp_ReadInstance(DStampData_t *pData, int iInstancePixelX, int iInstancePixelY)
+static const char * DStamp_ReadInstance(DStampData_t *pData, int iInstancePixelX, int iInstancePixelY)
 {
-	LPCSTR psMessage = NULL;
+	const char * psMessage = NULL;
 
 	int iTxtByte = 0;
 	int iTxtBit  = 0;
@@ -398,7 +395,7 @@ static LPCSTR DStamp_ReadInstance(DStampData_t *pData, int iInstancePixelX, int 
 
 	if (!strncmp(pData->pWatermark->Data.sHDR,"HDR",3))
 	{
-		DWORD dwCRC = DStamp_CalcBlockCRC(&pData->pWatermark->Data, sizeof(pData->pWatermark->Data));
+		unsigned int dwCRC = DStamp_CalcBlockCRC(&pData->pWatermark->Data, sizeof(pData->pWatermark->Data));
 
 		char sString[100];
 		char sDate[100];
@@ -411,12 +408,16 @@ static LPCSTR DStamp_ReadInstance(DStampData_t *pData, int iInstancePixelX, int 
 
 		if (dwCRC == pData->pWatermark->dwCRC)
 		{
+#ifdef WIN32
 			OutputDebugString(sOutput);
+#endif
 			psMessage = &sOutput[0];
 		}
 		else
 		{
+#ifdef WIN32
 			OutputDebugString(va("Skipping non-CRC HDR-match: %s\n",sOutput));
+#endif
 		}
 	}
 
@@ -425,9 +426,9 @@ static LPCSTR DStamp_ReadInstance(DStampData_t *pData, int iInstancePixelX, int 
 
 // return is NULL for ok, else error string...
 //
-LPCSTR DStamp_MarkImage(byte *pPixels, int iWidth, int iHeight, int iPlanes, LPCSTR psText)
+const char * DStamp_MarkImage(byte *pPixels, int iWidth, int iHeight, int iPlanes, const char * psText)
 {
-	LPCSTR psError = NULL;
+	const char * psError = NULL;
 
 	if (iPlanes == 24 || iPlanes == 32)
 	{
@@ -470,7 +471,7 @@ LPCSTR DStamp_MarkImage(byte *pPixels, int iWidth, int iHeight, int iPlanes, LPC
 						int iInstancePixelY = (iInstanceY * iDSTAMP_INSTANCE_PIXDIM) + iYStart;
 
 						DStamp_MarkInstance(&Data, iInstancePixelX, iInstancePixelY);
-	//					LPCSTR psMessage = DStamp_ReadInstance(&Data, iInstancePixelX, iInstancePixelY);
+	//					const char * psMessage = DStamp_ReadInstance(&Data, iInstancePixelX, iInstancePixelY);
 	//					if (psMessage)
 	//					{
 	//						OutputDebugString(va("Marked Instance with message \"%s\"\n",psMessage));
@@ -496,9 +497,9 @@ LPCSTR DStamp_MarkImage(byte *pPixels, int iWidth, int iHeight, int iPlanes, LPC
 	return psError;
 }
 
-bool DStamp_MarkImage(Texture_t *pTexture, LPCSTR psText)
+bool DStamp_MarkImage(Texture_t *pTexture, const char * psText)
 {	
-	LPCSTR psError = DStamp_MarkImage(pTexture->pPixels, pTexture->iWidth, pTexture->iHeight, 32, psText);
+	const char * psError = DStamp_MarkImage(pTexture->pPixels, pTexture->iWidth, pTexture->iHeight, 32, psText);
 
 	if (!psError)
 		return true;
@@ -509,12 +510,12 @@ bool DStamp_MarkImage(Texture_t *pTexture, LPCSTR psText)
 
 void DStamp_AnalyseImage(byte *pPixels, int iWidth, int iHeight, int iPlanes)
 {
-	CWaitCursor wait;
-
 	const int iBlockSampleSize = 8;
 
+#ifdef WIN32
 	PROGRESS_INIT;
 	PROGRESS_SETRANGE((iHeight/iBlockSampleSize));
+#endif
 
 	DStampImage_t	Image;
 					Image.pPixels	= pPixels;
@@ -844,11 +845,11 @@ void DStamp_AnalyseImage(Texture_t *pTexture)
 	DStamp_AnalyseImage(pTexture->pPixels, pTexture->iWidth, pTexture->iHeight, 32);
 }
 
-LPCSTR	DStamp_ReadImage(byte *pPixels, int iWidth, int iHeight, int iPlanes)
+const char *	DStamp_ReadImage(byte *pPixels, int iWidth, int iHeight, int iPlanes)
 {
 	CWaitCursor wait;
 
-	LPCSTR psMessage = NULL;
+	const char * psMessage = NULL;
 
 	if (iPlanes == 24 || iPlanes == 32)
 	{
@@ -885,7 +886,7 @@ LPCSTR	DStamp_ReadImage(byte *pPixels, int iWidth, int iHeight, int iPlanes)
 			if (((CModViewApp*)AfxGetApp())->m_pMainWnd)
 			{				
 				pProgress = new CProgressCtrl;
-				bool bOK = !!pProgress->Create(	WS_CHILD|WS_VISIBLE|PBS_SMOOTH,		// DWORD dwStyle, 
+				bool bOK = !!pProgress->Create(	WS_CHILD|WS_VISIBLE|PBS_SMOOTH,		// unsigned int dwStyle, 
 												CRect(100,100,200,200),				// const RECT& rect, 
 												((CModViewApp*)AfxGetApp())->m_pMainWnd,	// CWnd* pParentWnd, 
 												1									// UINT nID 

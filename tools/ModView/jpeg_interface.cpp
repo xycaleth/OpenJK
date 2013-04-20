@@ -8,7 +8,7 @@
 //#include "tr_local.h"
 #include "jpeg_interface.h"
 
-#include "jpeg6\jpeglib.h"
+#include "jpeg6/jpeglib.h"
 
 void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height ) 
 {	
@@ -187,7 +187,7 @@ void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height
 	  jpeg_destroy_decompress(&cinfo);
   }
 
-	catch(LPCSTR psMessage)
+	catch(const char * psMessage)
 	{	
 		ErrorBox(va("JPEG read error: %s",psMessage));
 		jpeg_destroy_decompress(&cinfo);
@@ -217,16 +217,18 @@ void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height
 
 
 
-void JPG_ErrorThrow(LPCSTR message)
+void JPG_ErrorThrow(const char * message)
 {
 //	ri.Error( ERR_FATAL, "%s\n", message );
 	throw (message);
 }
 
-void JPG_MessageOut(LPCSTR message)
+void JPG_MessageOut(const char * message)
 {
 //	ri.Printf(PRINT_ALL, "%s\n", message);
+#ifdef WIN32
 	OutputDebugString(va("%s\n", message));
+#endif
 }
 
 void *JPG_Malloc( int iSize )

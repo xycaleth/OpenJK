@@ -85,7 +85,7 @@ void CModViewDoc::Dump(CDumpContext& dc) const
 CString strLastRealDocName;
 
 CModViewDoc* gpLastOpenedModViewDoc = NULL;
-void FuckingWellSetTheDocumentNameAndDontBloodyIgnoreMeYouCunt(LPCSTR psDocName)
+void FuckingWellSetTheDocumentNameAndDontBloodyIgnoreMeYouCunt(const char * psDocName)
 {
 	if (gpLastOpenedModViewDoc)
 	{
@@ -96,13 +96,13 @@ void FuckingWellSetTheDocumentNameAndDontBloodyIgnoreMeYouCunt(LPCSTR psDocName)
 	}
 }
 
-LPCSTR LengthenFilenameW95W98(LPCSTR psFilename)
+const char * LengthenFilenameW95W98(const char * psFilename)
 {
 	// need to do this for Xmen models when running from a batch file under W95/98...
 	//
 	static char sDest[1024];
 	sDest[0]='\0';
-	DWORD dwCount = GetLongPathName(psFilename,sDest,sizeof(sDest));
+	unsigned int dwCount = GetLongPathName(psFilename,sDest,sizeof(sDest));
 	
 	return sDest;
 }
@@ -175,7 +175,7 @@ BOOL CModViewDoc::OnOpenDocument(LPCTSTR lpszPathName)
 
 // allows main doc code to be called by wintalk command
 //
-bool Document_ModelLoadPrimary(LPCSTR psFilename)
+bool Document_ModelLoadPrimary(const char * psFilename)
 {
 	return !!(!gpDocument ? NULL : gpDocument->OnOpenDocument(psFilename));
 }

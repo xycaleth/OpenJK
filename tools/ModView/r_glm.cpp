@@ -14,6 +14,7 @@
 #include "oldskins.h"
 #include "mc_compress2.h"
 #include "special_defines.h"
+#include "StringUtils.h"
 //
 #include "r_glm.h"
 
@@ -298,7 +299,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 		}
 
 		// find the next surface
-		surfInfo = (mdxmSurfHierarchy_t *)( (byte *)surfInfo + (int)( &((mdxmSurfHierarchy_t *)0)->childIndexes[ surfInfo->numChildren ] ));
+		surfInfo = (mdxmSurfHierarchy_t *)( (byte *)surfInfo + sizeof (mdxmSurfHierarchy_t) + sizeof (int) * (surfInfo->numChildren));
   	}
 
 
@@ -532,7 +533,7 @@ qboolean G2_SetSurfaceOnOff (qhandle_t model, surfaceInfo_t *slist, const char *
 		surfInfo = (mdxmSurfHierarchy_t *)((byte *)surfIndexes + surfIndexes->offsets[surf->thisSurfaceIndex]);
 
   		// same name as one already in?
-		if (!stricmp (surfInfo->name, surfaceName))
+		if (!Q_stricmp (surfInfo->name, surfaceName))
 		{
 			assert(surface == i);
 			// set descendants value
@@ -602,7 +603,7 @@ void G2_GetSurfaceList (qhandle_t model, surfaceInfo_t *slist)
 		mdxmSurface_t *surface = (mdxmSurface_t *) ((byte*)pLODSurfOffset +  pLODSurfOffset->offsets[i]);
 //		OutputDebugString(va("Master surface list %d/%d: '%s'\n",i,mod->mdxm->numSurfaces,surf->name));
 		// if we have the word "_off_" in the name, then we want it off to begin with
-	 	if (!stricmp("_off", &surf->name[strlen(surf->name)-4]))
+	 	if (!Q_stricmp("_off", &surf->name[strlen(surf->name)-4]))
 	 	{
 			G2_SetSurfaceOnOff(model, slist, surf->name, SURF_OFF, i);
 		}
@@ -611,7 +612,7 @@ void G2_GetSurfaceList (qhandle_t model, surfaceInfo_t *slist)
 			G2_SetSurfaceOnOff(model, slist, surf->name, SURF_ON, i);
 		}
 		// find the next surface
-  		surf = (mdxmSurfHierarchy_t *)( (byte *)surf + (int)( &((mdxmSurfHierarchy_t *)0)->childIndexes[ surf->numChildren ] ));
+  		surf = (mdxmSurfHierarchy_t *)( (byte *)surf + sizeof (mdxmSurfHierarchy_t) + sizeof (int) * (surf->numChildren - 1));
   		surface =(mdxmSurface_t *)( (byte *)surface + surface->ofsEnd );
 	}
 }
@@ -647,7 +648,7 @@ SurfaceOnOff_t G2_IsSurfaceOff (qhandle_t model, surfaceInfo_t *slist, const cha
 		surfInfo = (mdxmSurfHierarchy_t *)((byte *)surfIndexes + surfIndexes->offsets[surf->thisSurfaceIndex]);
 
 		// same name as one already in?
-		if (!stricmp (surfInfo->name, surfaceName))
+		if (!Q_stricmp (surfInfo->name, surfaceName))
 		{
 			// if this surface is root or OFF+NO DESCENDANTS, then just return it, else if it's OFF or ON, then for
 			//	100% accuracy we should really check the ancestors to see if we're inherently off because of 
@@ -681,7 +682,7 @@ SurfaceOnOff_t G2_IsSurfaceOff (qhandle_t model, surfaceInfo_t *slist, const cha
 					surf = mod->mdxmsurf[0][slist[i].surface];
 					surfInfo = (mdxmSurfHierarchy_t *)((byte *)surfIndexes + surfIndexes->offsets[surf->thisSurfaceIndex]);
 
-					if (!stricmp (surfInfo->name, surfaceName))
+					if (!Q_stricmp (surfInfo->name, surfaceName))
 						break;
 				}
 			}
@@ -719,7 +720,7 @@ int G2_Find_Bone(const model_t *mod, boneInfo_t *blist, const char *boneName)
 		skel = (mdxaSkel_t *)((byte *)mod->mdxa + sizeof(mdxaHeader_t) + offsets->offsets[blist[i].boneNumber]);
 
 		// if name is the same, we found it
-		if (!stricmp(skel->name, boneName))
+		if (!Q_stricmp(skel->name, boneName))
 		{
 			return i;
 		}
@@ -746,7 +747,7 @@ int G2_Add_Bone (const model_t *mod, boneInfo_t *blist, const char *boneName)
 		{
 			skel = (mdxaSkel_t *)((byte *)mod->mdxa + sizeof(mdxaHeader_t) + offsets->offsets[blist[i].boneNumber]);
 			// if name is the same, we found it
-			if (!stricmp(skel->name, boneName))
+			if (!Q_stricmp(skel->name, boneName))
 			{
 				return i;
 			}
@@ -761,7 +762,7 @@ int G2_Add_Bone (const model_t *mod, boneInfo_t *blist, const char *boneName)
 			skel = (mdxaSkel_t *)((byte *)mod->mdxa + sizeof(mdxaHeader_t) + offsets->offsets[x]);
 
 			// if name is the same, we found it
-			if (!stricmp(skel->name, boneName))
+			if (!Q_stricmp(skel->name, boneName))
 			{
 				blist[i].flags = 0;
 				blist[i].boneNumber = x;
@@ -925,7 +926,7 @@ qboolean G2_Set_Bone_Anim(const qhandle_t model, boneInfo_t *blist, const char *
 		// start up the animation:)
 		blist[index].newFrame = startFrame;
 		// if we weren't previously animating, set the current frame to the same as the new frame so interpolation doesn't freak out
-		if (!(blist[index].flags && (BONE_ANIM_OVERRIDE | BONE_ANIM_OVERRIDE_LOOP)))
+		if (!(blist[index].flags & (BONE_ANIM_OVERRIDE | BONE_ANIM_OVERRIDE_LOOP)))
 		{
 			blist[index].currentFrame = startFrame;
 		}
@@ -947,7 +948,7 @@ qboolean G2_Set_Bone_Anim(const qhandle_t model, boneInfo_t *blist, const char *
 		blist[index].newFrame = startFrame;
 
 		// if we weren't previously animating, set the current frame to the same as the new frame so interpolation doesn't freak out
-		if (!(blist[index].flags && (BONE_ANIM_OVERRIDE | BONE_ANIM_OVERRIDE_LOOP)))
+		if (!(blist[index].flags & (BONE_ANIM_OVERRIDE | BONE_ANIM_OVERRIDE_LOOP)))
 		{
 			blist[index].currentFrame = startFrame;
 		}
@@ -972,7 +973,7 @@ qboolean G2_Get_Bone_Anim(const qhandle_t model, boneInfo_t *blist, const char *
 	if (index != -1)
 	{ 
 		// are we an animating bone?
-		if (blist[index].flags && (BONE_ANIM_OVERRIDE_LOOP || BONE_ANIM_OVERRIDE))
+		if (blist[index].flags & (BONE_ANIM_OVERRIDE_LOOP | BONE_ANIM_OVERRIDE))
 		{
 			*currentFrame = blist[index].currentFrame;
 			*startFrame = blist[index].startFrame;
@@ -1036,7 +1037,7 @@ void G2_Animate_Bone_List(boneInfo_t *blist, float timeoffset)
 		if (blist[i].boneNumber != -1)
 		{
 			// are we animating?
-			if (blist[i].flags && (BONE_ANIM_OVERRIDE_LOOP || BONE_ANIM_OVERRIDE))
+			if (blist[i].flags & (BONE_ANIM_OVERRIDE_LOOP | BONE_ANIM_OVERRIDE))
 			{
 				// set up old frame
 				blist[i].currentFrame = blist[i].newFrame;
@@ -1283,7 +1284,7 @@ void G2_TransformBone (mdxaBone_t *pModViewFeedback_BoneList, bool *pModViewFeed
 	float			delta, actualFrame;
 	mdxBone4_t		overrideMatrix;
 */
-	int				angleOverride = 0;
+	//int				angleOverride = 0;
 
 	// decide here if we should go down this path? - is this bone used? -If not, return from this function. Due the hierarchial nature of the bones
 	// any bone below this one in the tree shouldn't be used either.
@@ -1448,7 +1449,7 @@ void G2_TransformGhoulBones( mdxaHeader_t *header, int *usedBoneList, refEntity_
 void R_RenderSurfaces(surfaceInfo_t *slist, trRefEntity_t *ent, int iLOD)//MODVIEWREM, shader_t *cust_shader, int fogNum, qboolean	personalModel)
 {
 	int			i;
-	shader_t	*shader = 0;
+	//shader_t	*shader = 0;
 	GLuint gluiTextureBind = 0;
 	
 	// back track and get the surfinfo struct for this surface
@@ -1664,9 +1665,9 @@ void R_AddGhoulSurfaces( trRefEntity_t *ent ) {
 	mdxaHeader_t	*aHeader;
 	mdxmHeader_t	*mHeader;
 	mdxmLOD_t		*lod;
-	shader_t		*shader = 0;
-	shader_t		*cust_shader = 0;
-	int				fogNum = 0;
+	//shader_t		*shader = 0;
+	//shader_t		*cust_shader = 0;
+	//int				fogNum = 0;
 /*MODVIEWREM
 	qboolean		personalModel;
 	int				cull;

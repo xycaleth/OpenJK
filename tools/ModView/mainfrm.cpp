@@ -277,10 +277,10 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 
 void CMainFrame::OnFileOpen() 
 {		
-	LPCSTR psFullPathedFilename = InputLoadFileName("",				// LPCSTR psInitialLoadName, 
-													"Load Model",	// LPCSTR psCaption,
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// LPCSTR psInitialDir, 
-													Model_GetSupportedTypesFilter(true)			// LPCSTR psFilter
+	const char * psFullPathedFilename = InputLoadFileName("",				// const char * psInitialLoadName, 
+													"Load Model",	// const char * psCaption,
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// const char * psInitialDir, 
+													Model_GetSupportedTypesFilter(true)			// const char * psFilter
 													);
 
 	if (psFullPathedFilename)
@@ -362,7 +362,7 @@ void CMainFrame::OnUpdateViewOrigin(CCmdUI* pCmdUI)
 
 
 
-LPCSTR GetYearAsString(void)
+const char * GetYearAsString(void)
 {
 	static char sTemp[20];	
     time_t ltime;	
@@ -519,10 +519,10 @@ void CMainFrame::OnUpdateFileSaveAs(CCmdUI* pCmdUI)
 
 void CMainFrame::OnModelSaveAs()
 {
-	LPCSTR psFullPathedFilename = InputSaveFileName(va("%s",Filename_WithoutExt(Model_GetFullPrimaryFilename())),
-													"Save Model",	// LPCSTR psCaption,
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// LPCSTR psInitialDir, 
-													Model_GetSupportedTypesFilter(true),			// LPCSTR psFilter
+	const char * psFullPathedFilename = InputSaveFileName(va("%s",Filename_WithoutExt(Model_GetFullPrimaryFilename())),
+													"Save Model",	// const char * psCaption,
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// const char * psInitialDir, 
+													Model_GetSupportedTypesFilter(true),			// const char * psFilter
 													".glm"
 													);
 
@@ -621,7 +621,7 @@ void CMainFrame::OnEditBgrndcolour()
 
 	if (ChooseColor(&cc))
 	{
-		DWORD d = cc.rgbResult;				
+		unsigned int d = cc.rgbResult;				
 		AppVars._B = (cc.rgbResult>>16) & 0xFF;
 		AppVars._G = (cc.rgbResult>>8 ) & 0xFF;
 		AppVars._R = (cc.rgbResult>>0 ) & 0xFF;
@@ -742,7 +742,7 @@ void CMainFrame::OnEditTestfunction()
 	//
 	SetQdirFromPath( "w:/game/base/blah" );
 
-	LPCSTR psTexturename = "textures/tests/ste_special_test_data/merk3";//blank";//merk3";
+	const char * psTexturename = "textures/tests/ste_special_test_data/merk3";//blank";//merk3";
 	TextureHandle_t hTexture = TextureHandle_ForName( psTexturename );
 	if (hTexture == -1)
 	{
@@ -755,7 +755,7 @@ void CMainFrame::OnEditTestfunction()
 	DStamp_AnalyseImage(pTexture);
 
 
-	LPCSTR psOutputName = "c:\\test.tga";
+	const char * psOutputName = "c:\\test.tga";
 	TGA_Write(psOutputName, pTexture->pPixels, pTexture->iWidth, pTexture->iHeight, 32); 
 
 	// load it back in again...
@@ -780,7 +780,7 @@ void CMainFrame::OnEditTestfunction()
 
 	if (pPixels)
 	{
-		LPCSTR psMessage = DStamp_ReadImage(pPixels, iWidth, iHeight, 32);
+		const char * psMessage = DStamp_ReadImage(pPixels, iWidth, iHeight, 32);
 
 		if (psMessage)
 		{
@@ -835,14 +835,14 @@ void CMainFrame::OnUpdateFileWritescript(CCmdUI* pCmdUI)
 	pCmdUI->Enable(Model_Loaded());
 }
 
-extern void Filename_AddToMRU(LPCSTR psFilename);
+extern void Filename_AddToMRU(const char * psFilename);
 void CMainFrame::OnFileWritescript() 
 {
-	LPCSTR psFullPathedFilename = InputSaveFileName(va("%s%s",Filename_WithoutExt(Model_GetFullPrimaryFilename()),Script_GetExtension()),	// LPCSTR psInitialSaveName, 
-													"Write Script",			// LPCSTR psCaption, 
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//LPCSTR psInitialPath,
-													Script_GetFilter(),		// LPCSTR psFilter
-													Script_GetExtension()	// LPCSTR psExtension
+	const char * psFullPathedFilename = InputSaveFileName(va("%s%s",Filename_WithoutExt(Model_GetFullPrimaryFilename()),Script_GetExtension()),	// const char * psInitialSaveName, 
+													"Write Script",			// const char * psCaption, 
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//const char * psInitialPath,
+													Script_GetFilter(),		// const char * psFilter
+													Script_GetExtension()	// const char * psExtension
 													);
 	if (psFullPathedFilename)
 	{
@@ -857,10 +857,10 @@ void CMainFrame::OnFileWritescript()
 
 void CMainFrame::OnFileReadscript() 
 {
-	LPCSTR psFullPathedFilename = InputLoadFileName("",				// LPCSTR psInitialLoadName, 
-													"Read Script",	// LPCSTR psCaption,
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// LPCSTR psInitialDir, 
-													Script_GetFilter()			// LPCSTR psFilter
+	const char * psFullPathedFilename = InputLoadFileName("",				// const char * psInitialLoadName, 
+													"Read Script",	// const char * psCaption,
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// const char * psInitialDir, 
+													Script_GetFilter()			// const char * psFilter
 													);
 	if (psFullPathedFilename)
 	{
@@ -1055,8 +1055,8 @@ void CMainFrame::OnUpdateViewFloor(CCmdUI* pCmdUI)
 
 void CMainFrame::OnEditSetfloorAbs()
 {
-	LPCSTR psPrompt = "Input new floor value, e.g. \"-50\"";
-	LPCSTR psFloorZ = GetString(psPrompt);
+	const char * psPrompt = "Input new floor value, e.g. \"-50\"";
+	const char * psFloorZ = GetString(psPrompt);
 	
 	if (psFloorZ)
 	{
@@ -1098,8 +1098,8 @@ void CMainFrame::OnEditSetboneweightThreshhold()
 
 	do
 	{	
-		LPCSTR psPrompt = "Input new bone-weight-threshhold percentage, e.g. \"50\", which will cause all bone-weights below that value to be ignored\n\n( Input must be within the range 0..100 )";
-		LPCSTR psPercent= GetString(psPrompt);
+		const char * psPrompt = "Input new bone-weight-threshhold percentage, e.g. \"50\", which will cause all bone-weights below that value to be ignored\n\n( Input must be within the range 0..100 )";
+		const char * psPercent= GetString(psPrompt);
 
 		if (psPercent)
 		{
@@ -1184,7 +1184,7 @@ void CMainFrame::OnFileViewSof2Npcs()
 {	
 	if (!gamedir[0])
 	{
-		LPCSTR psBasePathToCopy = sSOF2BASEDIR;
+		const char * psBasePathToCopy = sSOF2BASEDIR;
 		if (!GetYesNo("Warning: base path not known yet, shall I assume ' " sSOF2BASEDIR " ' ?"))
 		{
 			psBasePathToCopy = GetString("Enter suitable base path\n\n( format example: \"" sSOF2BASEDIR "\" )");
@@ -1209,7 +1209,7 @@ void CMainFrame::OnFileViewSof2Npcs()
 //			CString strCaption;
 //			while (GalleryRead_ExtractEntry(strCaption, strScript))
 //			{
-//				OutputDebugString(va("\"%s\" (script len %d)\n",(LPCSTR)strCaption,strScript.GetLength()));
+//				OutputDebugString(va("\"%s\" (script len %d)\n",(const char *)strCaption,strScript.GetLength()));
 //			}
 			extern CString strGalleryErrors;
 			extern CString strGalleryWarnings;
@@ -1231,10 +1231,10 @@ void CMainFrame::OnFileViewSof2Npcs()
 
 				string strOutputFileName( va("%s\\%s",scGetTempPath(),"temp.mvs") );
 				
-				int iReturn = SaveFile(strOutputFileName.c_str(),(LPCSTR)strScript, strScript.GetLength());
+				int iReturn = SaveFile(strOutputFileName.c_str(),(const char *)strScript, strScript.GetLength());
 				if (iReturn != -1)
 				{
-					extern bool Document_ModelLoadPrimary(LPCSTR psFilename);
+					extern bool Document_ModelLoadPrimary(const char * psFilename);
 					Document_ModelLoadPrimary(strOutputFileName.c_str());
 				}
 			}
@@ -1276,7 +1276,7 @@ void CMainFrame::OnUpdateViewDoublesidedpolys(CCmdUI* pCmdUI)
 
 
 
-void GetUsedIDs(set <int> &UsedIDs, LPCSTR psLocalDir)
+void GetUsedIDs(set <int> &UsedIDs, const char * psLocalDir)
 {
 	char **ppsFiles;
 	int iFiles;
@@ -1311,7 +1311,7 @@ void GetUsedIDs(set <int> &UsedIDs, LPCSTR psLocalDir)
 			int iLoc = strTemp.Find("\nID ");
 			if (iLoc != -1)
 			{
-				LPCSTR pID = &((LPCSTR)strTemp)[iLoc+4];
+				const char * pID = &((const char *)strTemp)[iLoc+4];
 				int iID = atoi(pID);
 				UsedIDs.insert(iID);
 			}
@@ -1321,7 +1321,7 @@ void GetUsedIDs(set <int> &UsedIDs, LPCSTR psLocalDir)
 	Sys_FreeFileList( ppsFiles );
 }
 
-int GetUniqueStripEdID( LPCSTR psLocalWorkDir, LPCSTR psNetDir)
+int GetUniqueStripEdID( const char * psLocalWorkDir, const char * psNetDir)
 {
 	set <int> UsedIDs;
 
@@ -1373,10 +1373,10 @@ static void XLS_To_SP(void)
 //	CString strFileName_XRefLevelnames	(sWORKDIR "\\JK2_LevelNamesInOrder.txt");
 
 
-	LPCSTR psError = NULL;
+	const char * psError = NULL;
 	char *psData_XLS = NULL;
 	
-	StatusMessage(va("Reading \"%s\"\n",(LPCSTR) strFileName_ExportedXLS));
+	StatusMessage(va("Reading \"%s\"\n",(const char *) strFileName_ExportedXLS));
 	int iSize = LoadFile(strFileName_ExportedXLS, (void**)&psData_XLS);
 	if (iSize != -1)
 	{
@@ -1497,7 +1497,7 @@ static void XLS_To_SP(void)
 
 							if (!strXLS_Speech.IsEmpty())
 							{
-	//							OutputDebugString(va("Label: \"%s\", Char: \"%s\", Speech: \"%s\"\n",(LPCSTR)strXLS_Label, (LPCSTR)strXLS_Character, (LPCSTR) strXLS_Speech ));
+	//							OutputDebugString(va("Label: \"%s\", Char: \"%s\", Speech: \"%s\"\n",(const char *)strXLS_Label, (const char *)strXLS_Character, (const char *) strXLS_Speech ));
 
 
 								// now enter into table...
@@ -1517,7 +1517,7 @@ static void XLS_To_SP(void)
 								strTemp = strXLS_Label.Mid(5);
 								int iLabel_CharSpeechNum = atoi(strTemp);
 
-	//							OutputDebugString(va("Level: %d, Char: \"%s\", Speech %d\n",iLabel_Level,(LPCSTR)strLabel_Char, iLabel_CharSpeechNum));
+	//							OutputDebugString(va("Level: %d, Char: \"%s\", Speech %d\n",iLabel_Level,(const char *)strLabel_Char, iLabel_CharSpeechNum));
 
 								Speech_t Speech;							
 								
@@ -1534,22 +1534,22 @@ static void XLS_To_SP(void)
 							}
 							else
 							{
-								WarningBox(va("Unable to get speech from line:\n%s\n",(LPCSTR)strThisLineOriginalForErrorReporting));
+								WarningBox(va("Unable to get speech from line:\n%s\n",(const char *)strThisLineOriginalForErrorReporting));
 							}
 						}
 						else
 						{
-							WarningBox(va("Unable to get speech from line:\n%s\n",(LPCSTR)strThisLineOriginalForErrorReporting));
+							WarningBox(va("Unable to get speech from line:\n%s\n",(const char *)strThisLineOriginalForErrorReporting));
 						}
 					}
 					else
 					{
-						WarningBox(va("Unable to get character name from line:\n%s\n",(LPCSTR)strThisLineOriginalForErrorReporting));
+						WarningBox(va("Unable to get character name from line:\n%s\n",(const char *)strThisLineOriginalForErrorReporting));
 					}
 				}
 				else
 				{
-					WarningBox(va("Unable to get label from line:\n%s\n",(LPCSTR)strThisLineOriginalForErrorReporting));
+					WarningBox(va("Unable to get label from line:\n%s\n",(const char *)strThisLineOriginalForErrorReporting));
 				}
 			}
 		}
@@ -1562,7 +1562,7 @@ static void XLS_To_SP(void)
 
 		char *psData_LevelNames = NULL;
 		
-		StatusMessage(va("Reading \"%s\"\n",(LPCSTR) strFileName_LevelNames));
+		StatusMessage(va("Reading \"%s\"\n",(const char *) strFileName_LevelNames));
 		iSize = LoadFile(strFileName_LevelNames, (void**)&psData_LevelNames);
 		if (iSize != -1)
 		{
@@ -1627,11 +1627,11 @@ static void XLS_To_SP(void)
 				}
 				else
 				{
-					CString strStripEdFileNameBase((LevelNames.find(iLevel) != LevelNames.end())?(LPCSTR)LevelNames[iLevel]:"_unknown");
+					CString strStripEdFileNameBase((LevelNames.find(iLevel) != LevelNames.end())?(const char *)LevelNames[iLevel]:"_unknown");
 
 					CString strStripEdText;
 
-					StatusMessage(va("Constructing SP file \"%s\"\n",(LPCSTR)strStripEdFileNameBase));
+					StatusMessage(va("Constructing SP file \"%s\"\n",(const char *)strStripEdFileNameBase));
 
 					// some basic stuff first...
 					//				
@@ -1647,9 +1647,9 @@ static void XLS_To_SP(void)
 					{
 						Speech_t &Speech = Speeches[iSpeech];
 
-	//					OutputDebugString(va("%d/%d: \"%s\"\n",iSpeech,Speeches.size(),(LPCSTR) Speeches[iSpeech].strSpeech));
+	//					OutputDebugString(va("%d/%d: \"%s\"\n",iSpeech,Speeches.size(),(const char *) Speeches[iSpeech].strSpeech));
 
-						StatusMessage(va("%s: Adding string %d\n",(LPCSTR)strStripEdFileNameBase,iSpeech));
+						StatusMessage(va("%s: Adding string %d\n",(const char *)strStripEdFileNameBase,iSpeech));
 
 						strStripEdText += va("INDEX %d\n",iSpeech);
 						strStripEdText += "{\n";
@@ -1658,22 +1658,22 @@ static void XLS_To_SP(void)
 						strStripEdText += "}\n";
 					}
 
-					CString strOutputFileName(va("%s\\%s.sp",sWORKDIR,(LPCSTR)strStripEdFileNameBase));
-					StatusMessage(va("Writing \"%s\"... \n",(LPCSTR) strOutputFileName));
+					CString strOutputFileName(va("%s\\%s.sp",sWORKDIR,(const char *)strStripEdFileNameBase));
+					StatusMessage(va("Writing \"%s\"... \n",(const char *) strOutputFileName));
 
 					strStripEdText.Replace("\n","\r\n");	// make it suitable for binary write
-					SaveFile((LPCSTR) strOutputFileName, (LPCSTR) strStripEdText, strStripEdText.GetLength() );
+					SaveFile((const char *) strOutputFileName, (const char *) strStripEdText, strStripEdText.GetLength() );
 				}
 			}
 		}
 		else
 		{
-			ErrorBox(va("Unable to open \"%s\"!",(LPCSTR)strFileName_LevelNames));
+			ErrorBox(va("Unable to open \"%s\"!",(const char *)strFileName_LevelNames));
 		}
 	}
 	else
 	{
-		ErrorBox(va("Unable to open \"%s\"!",(LPCSTR)strFileName_ExportedXLS));
+		ErrorBox(va("Unable to open \"%s\"!",(const char *)strFileName_ExportedXLS));
 	}
 
 	StatusMessage(NULL);
@@ -1712,7 +1712,7 @@ void CMainFrame::OnFileViewJk2Bots()
 {
 	if (!gamedir[0])
 	{
-		LPCSTR psBasePathToCopy = sJK2BASEDIR;
+		const char * psBasePathToCopy = sJK2BASEDIR;
 		if (!GetYesNo("Warning: base path not known yet, shall I assume ' " sJK2BASEDIR " ' ?"))
 		{
 			psBasePathToCopy = GetString("Enter suitable base path\n\n( format example: \"" sJK2BASEDIR "\" )");
@@ -1737,7 +1737,7 @@ void CMainFrame::OnFileViewJk2Bots()
 //			CString strCaption;
 //			while (GalleryRead_ExtractEntry(strCaption, strScript))
 //			{
-//				OutputDebugString(va("\"%s\" (script len %d)\n",(LPCSTR)strCaption,strScript.GetLength()));
+//				OutputDebugString(va("\"%s\" (script len %d)\n",(const char *)strCaption,strScript.GetLength()));
 //			}
 			extern CString strGalleryErrors;
 			extern CString strGalleryWarnings;
@@ -1759,10 +1759,10 @@ void CMainFrame::OnFileViewJk2Bots()
 
 				string strOutputFileName( va("%s\\%s",scGetTempPath(),"temp.mvs") );
 				
-				int iReturn = SaveFile(strOutputFileName.c_str(),(LPCSTR)strScript, strScript.GetLength());
+				int iReturn = SaveFile(strOutputFileName.c_str(),(const char *)strScript, strScript.GetLength());
 				if (iReturn != -1)
 				{
-					extern bool Document_ModelLoadPrimary(LPCSTR psFilename);
+					extern bool Document_ModelLoadPrimary(const char * psFilename);
 					Document_ModelLoadPrimary(strOutputFileName.c_str());
 				}
 			}
@@ -1779,7 +1779,7 @@ void CMainFrame::OnAnimationEndframe()
 #define sJK3BASEDIR "c:\\ja\\base\\"
 void CMainFrame::OnFileBatchconvert()
 {
-	LPCSTR psBasePathToCopy = sJK3BASEDIR;
+	const char * psBasePathToCopy = sJK3BASEDIR;
 	if (!GetYesNo("Warning: base path not known yet, shall I assume ' " sJK3BASEDIR " ' ?"))
 	{
 		psBasePathToCopy = GetString("Enter suitable base path\n\n( format example: \"" sJK3BASEDIR "\" )");

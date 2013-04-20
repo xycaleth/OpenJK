@@ -3,7 +3,11 @@
 
 #include <QtGui/QMouseEvent>
 #include <QtGui/QKeyEvent>
+#if defined(__APPLE__) && defined(__MACH__)
+#include <OpenGL/gl.h>
+#else
 #include <gl/GL.h>
+#endif
 #include "model.h"
 #include "text.h"
 #include "textures.h"

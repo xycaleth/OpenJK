@@ -18,7 +18,7 @@ extern "C"
 {
 #endif
 
-#include "..\jpeg_interface.h"
+#include "../jpeg_interface.h"
 
 
 // -slc

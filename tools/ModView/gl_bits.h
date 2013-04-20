@@ -5,14 +5,15 @@
 #define GL_BITS_H
 
 
-HGLRC	GL_GenerateRC	(HDC hDC, bool bDoubleBuffer = true);
+
+//HGLRC	GL_GenerateRC	(HDC hDC, bool bDoubleBuffer = true);
 //GLuint	GL_BindImage	(CImage *image);
 void	GL_Enter3D( double dFOV, int iWindowWidth, int iWindowDepth, bool bWireFrame, bool bCLS = true );
 void	GL_Enter2D		(int iWindowWidth, int iWindowDepth, bool bCLS = true);
 void	GL_Exit2D		(void);
 int		GL_GetCorrectedDim		(int iDim);
 char*	GL_GetCorrectedDimString(int iDim);
-LPCSTR	GL_GetInfo(void);
+const char *	GL_GetInfo(void);
 void    GL_CacheDriverInfo();
 
 
@@ -29,7 +30,7 @@ typedef struct tagFRECT
     float    top;
     float    right;
     float    bottom;
-} FRECT, FAR *LPFRECT;
+} FRECT, *LPFRECT;
 
 
 

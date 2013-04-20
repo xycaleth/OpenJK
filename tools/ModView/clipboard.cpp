@@ -16,9 +16,9 @@
 
 
 
-BOOL ClipBoard_SendDIB(LPVOID pvData, int iBytes)
+bool ClipBoard_SendDIB(void *pvData, int iBytes)
 {
-	HGLOBAL hXferBuffer = GlobalAlloc((UINT)GMEM_MOVEABLE|GMEM_DDESHARE,(DWORD)iBytes);	
+	HGLOBAL hXferBuffer = GlobalAlloc((UINT)GMEM_MOVEABLE|GMEM_DDESHARE,(unsigned int)iBytes);	
 	if (hXferBuffer)
 	{
    		char *psLockedDest = (char*) GlobalLock(hXferBuffer);	
@@ -44,9 +44,9 @@ BOOL ClipBoard_SendDIB(LPVOID pvData, int iBytes)
 }
 
 
-BOOL Clipboard_SendString(LPCSTR psString)
+BOOL Clipboard_SendString(const char * psString)
 {
-	HGLOBAL hXferBuffer = GlobalAlloc((UINT)GMEM_MOVEABLE|GMEM_DDESHARE,(DWORD)strlen(psString)+1);	
+	HGLOBAL hXferBuffer = GlobalAlloc((UINT)GMEM_MOVEABLE|GMEM_DDESHARE,(unsigned int)strlen(psString)+1);	
 	if (hXferBuffer)
 	{
    		char *psLockedDest = (char*) GlobalLock(hXferBuffer);	
@@ -102,7 +102,7 @@ typedef struct
 } MEMORYBMP, *PMEMORYBMP;
 
 
-static bool BMP_FlipTrueColour(LPCSTR psFilename);
+static bool BMP_FlipTrueColour(const char * psFilename);
 
 
 static int iBMP_PixelWriteOffset;
@@ -140,7 +140,7 @@ void BMP_Free(void)
 //
 // if psFileName == NULL, open memory file instead
 //
-static bool BMP_Open(LPCSTR psFilename, int iWidth, int iHeight)
+static bool BMP_Open(const char * psFilename, int iWidth, int iHeight)
 {
 	BITMAPFILEHEADER BMPFileHeader;
 	BITMAPINFOHEADER BMPInfoHeader;
@@ -262,7 +262,7 @@ static bool BMP_WriteLinePadding(int iPixelsPerLine)
 //
 // (psFilename can be NULL for mem files)
 //
-static bool BMP_Close(LPCSTR psFilename, bool bFlipFinal)
+static bool BMP_Close(const char * psFilename, bool bFlipFinal)
 {
 	if (fhBMP)
 	{
@@ -295,7 +295,7 @@ static bool BMP_Close(LPCSTR psFilename, bool bFlipFinal)
 }
 
 
-static bool BMP_FlipTrueColour(LPCSTR psFilename)
+static bool BMP_FlipTrueColour(const char * psFilename)
 {
 	BITMAPFILEHEADER BMPFileHeader;
 	BITMAPINFOHEADER BMPInfoHeader;
@@ -369,8 +369,8 @@ static bool BMP_FlipTrueColour(LPCSTR psFilename)
 
 // if psFilename == NULL, takes a memory screenshot in DIB format (for copying to clipboard)
 //
-bool ScreenShot(LPCSTR psFilename,			// else NULL = take memory snapshot (for clipboard)
-				LPCSTR psCopyrightMessage,	// /* = NULL */
+bool ScreenShot(const char * psFilename,			// else NULL = take memory snapshot (for clipboard)
+				const char * psCopyrightMessage,	// /* = NULL */
 				int iWidth,					// /* = <screenwidth>  */
 				int iHeight					// /* = <screenheight> */
 				)

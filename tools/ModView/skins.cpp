@@ -14,6 +14,7 @@
 //#include "glm_code.h"
 //#include "R_Model.h"
 //#include "R_Surface.h"
+#include "StringUtils.h"
 #include "textures.h"
 //#include "TEXT.H"
 //#include "sequence.h"
@@ -153,9 +154,9 @@ material
 #define sSKINKEYWORD_SURFACES_OFF			"surfaces_off"
 #define sSKINKEYWORD_SURFACES_OFFNOCHILDREN	"surfaces_offnochildren"
 
-static LPCSTR Skins_Parse(string strThisSkinFileName, CGPGroup *pFileGroup, CGPGroup *pParseGroup_Prefs)
+static const char * Skins_Parse(string strThisSkinFileName, CGPGroup *pFileGroup, CGPGroup *pParseGroup_Prefs)
 {
-	LPCSTR psError = NULL;
+	const char * psError = NULL;
 
 	// read any optional surface on/off blocks...
 	//
@@ -289,7 +290,7 @@ std::string Skins_ModelNameToSkinPath(const std::string& psModelFilename)
 static bool Skins_ParseThisFile(CGenericParser2 &SkinParser,
 								/*const*/char *psSkinFileData, string &strThisModelBaseName,
 								CGPGroup	*&pFileGroup, CGPGroup *&pParseGroup_Prefs,
-								LPCSTR psSkinFileName, G2SkinModelPrefs_t &G2SkinModelPrefs
+								const char * psSkinFileName, G2SkinModelPrefs_t &G2SkinModelPrefs
 								)
 {
 	bool bParseThisSkinFile = false;
@@ -343,7 +344,7 @@ static bool Skins_ParseThisFile(CGenericParser2 &SkinParser,
 
 typedef struct FT_s
 {
-	FILETIME ft;
+	time_t ft;
 	bool bValid;
 
 	FT_s()
@@ -356,12 +357,9 @@ static SkinFileTimeDates_t SkinFileTimeDates;
 
 // returns true if at least one set of skin data was read, else false...
 //
-static bool Skins_Read(LPCSTR psModelFilename)
+static bool Skins_Read(const char * psModelFilename)
 {
-	LPCSTR psError = NULL;
-
-	CWaitCursor;
-
+	const char * psError = NULL;
 	std::string psSkinsPath = Skins_ModelNameToSkinPath(psModelFilename);	// eg "models/characters/skins"
 
 	if (!psSkinsPath.empty())
@@ -374,7 +372,7 @@ static bool Skins_Read(LPCSTR psModelFilename)
 		// scan for skin files...
 		//
 		ppsSkinFiles =	//ri.FS_ListFiles( "shaders", ".shader", &iSkinFiles );
-						Sys_ListFiles(	va("%s%s",gamedir,psSkinsPath),// const char *directory, 
+						Sys_ListFiles(	va("%s%s",gamedir,psSkinsPath.c_str()),// const char *directory, 
 										".g2skin",	// const char *extension, 
 										NULL,		// char *filter, 
 										&iSkinFiles,// int *numfiles, 
@@ -399,21 +397,21 @@ static bool Skins_Read(LPCSTR psModelFilename)
 		//					
 		// for now, I just scan each file and if it's out of date then I invalidate it's model-prefs info...
 		//
-		extern bool GetFileTime(LPCSTR psFileName, FILETIME &ft);
+		extern bool GetFileTime(const char * psFileName, time_t &ft);
 		for ( int i=0; i<iSkinFiles; i++)
 		{
 			bool bReParseThisFile = false;
 
 			char sFileName[MAX_QPATH];
-			LPCSTR psFileName = ppsSkinFiles[i];
-			Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", psSkinsPath, psFileName );
+			const char * psFileName = ppsSkinFiles[i];
+			Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", psSkinsPath.c_str(), psFileName );
 			psFileName = &sFileName[0];
 											  
 			// have a go at getting this time/date stamp if not already present...
 			//
 			if (!SkinFileTimeDates[psFileName].bValid)
 			{
-				FILETIME ft;
+				time_t ft;
 				if (GetFileTime(psFileName, ft))
 				{
 					SkinFileTimeDates[psFileName].ft = ft;
@@ -425,12 +423,12 @@ static bool Skins_Read(LPCSTR psModelFilename)
 			//
 			if (SkinFileTimeDates[psFileName].bValid)
 			{
-				FILETIME ft;
+				time_t ft;
 				if (GetFileTime(psFileName, ft))
 				{
-					LONG l = CompareFileTime( &SkinFileTimeDates[psFileName].ft, &ft);
+                    double l = difftime(SkinFileTimeDates[psFileName].ft, ft);
 
-					bReParseThisFile = (l<0);
+					bReParseThisFile = (l<0.0);
 				}
 				else
 				{
@@ -459,9 +457,9 @@ static bool Skins_Read(LPCSTR psModelFilename)
 			{
 				char sFileName[MAX_QPATH];
 
-				string strThisSkinFile(ppsSkinFiles[i]);
+				std::string strThisSkinFile(ppsSkinFiles[i]);
 
-				Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", psSkinsPath, strThisSkinFile.c_str() );
+				Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", psSkinsPath.c_str(), strThisSkinFile.c_str() );
 				StatusMessage( va("Scanning skin %d/%d: \"%s\"...",i+1,iSkinFiles,sFileName));
 
 				//ri.Printf( PRINT_ALL, "...loading '%s'\n", sFileName );
@@ -578,7 +576,7 @@ _bDiskLoadOccured = true;
 
 // ask if there are any skins available for the supplied GLM model path...
 //
-bool Skins_FilesExist(LPCSTR psModelFilename)
+bool Skins_FilesExist(const char * psModelFilename)
 {
 	return Skins_Read(psModelFilename);
 }
@@ -589,11 +587,11 @@ static void Skins_ApplyVariant(ModelContainer_t *pContainer, SkinSet_t::iterator
 {
 	if (itMaterialShaders != (*itEthnic).second.end())
 	{
-		LPCSTR psShaderName	= (*itMaterialShaders).second[iVariant].c_str();	// shader name to load from skinset
+		const char * psShaderName	= (*itMaterialShaders).second[iVariant].c_str();	// shader name to load from skinset
 
 		pContainer->MaterialShaders[strMaterialName] = psShaderName;
 
-		LPCSTR psLocalTexturePath = R_FindShader( psShaderName );		// shader->texture name
+		const char * psLocalTexturePath = R_FindShader( psShaderName );		// shader->texture name
 
 		if (psLocalTexturePath && strlen(psLocalTexturePath))
 		{
@@ -631,8 +629,6 @@ bool Skins_ApplySkinFile(ModelContainer_t *pContainer, string strSkinFile, strin
 						 bool bApplySurfacePrefs, bool bDefaultSurfaces,
 						 string strMaterial, int iVariant)	// optional params, else "" and -1
 {
-	CWaitCursor wait;
-
 	bool bReturn = true;
 
 
@@ -680,7 +676,7 @@ bool Skins_ApplySkinFile(ModelContainer_t *pContainer, string strSkinFile, strin
 		{
 			// when we're at this point we know it's GLM model, and that the shader name is in fact a material name...
 			//
-			LPCSTR psMaterialName = GLMModel_GetSurfaceShaderName( pContainer->hModel, iSurface );
+			const char * psMaterialName = GLMModel_GetSurfaceShaderName( pContainer->hModel, iSurface );
 
 			pContainer->MaterialShaders	[psMaterialName] = "";			// just insert the key for now, so the map<> is legit.
 			pContainer->MaterialBinds	[psMaterialName] = (GLuint) 0;	// default to gl-white-notfound texture
@@ -717,7 +713,7 @@ bool Skins_ApplySkinFile(ModelContainer_t *pContainer, string strSkinFile, strin
 			{
 				for (MappedString_t::iterator itMaterial = pContainer->MaterialShaders.begin(); itMaterial != pContainer->MaterialShaders.end(); ++itMaterial)
 				{
-					LPCSTR psMaterialName = (*itMaterial).first.c_str();
+					const char * psMaterialName = (*itMaterial).first.c_str();
 
 					// find this material in the skinset...
 					//
@@ -753,7 +749,7 @@ void Skins_ApplyDefault(ModelContainer_t *pContainer)
 
 // returns true if at least one set of skin data was read, else false...
 //
-bool Skins_Read(LPCSTR psModelFilename, ModelContainer_t *pContainer)
+bool Skins_Read(const char * psModelFilename, ModelContainer_t *pContainer)
 {
 	if (Skins_Read(psModelFilename))
 	{
@@ -807,7 +803,7 @@ static void SkinSet_Validate_BuildList(StringSet_t &strUniqueSkinShaders, SkinSe
 		{
 			string strModelMaterial = (*itMaterialsReferenced);
 
-			if (!strModelMaterial.empty() && stricmp(strModelMaterial.c_str(),"[NoMaterial]"))
+			if (!strModelMaterial.empty() && Q_stricmp(strModelMaterial.c_str(),"[NoMaterial]"))
 			{
 				if (MaterialsDefinedInThisEthnicVariant.find(strModelMaterial) == MaterialsDefinedInThisEthnicVariant.end())
 				{
@@ -824,7 +820,7 @@ static void SkinSet_Validate_BuildList(StringSet_t &strUniqueSkinShaders, SkinSe
 
 // UI-code...
 //	
-bool Skins_FileHasSurfacePrefs(ModelContainer_t *pContainer, LPCSTR psSkin)
+bool Skins_FileHasSurfacePrefs(ModelContainer_t *pContainer, const char * psSkin)
 {
 	SkinSetsSurfacePrefs_t::iterator itSurfPrefs = pContainer->SkinSetsSurfacePrefs.find(psSkin);
 	if (itSurfPrefs != pContainer->SkinSetsSurfacePrefs.end())
@@ -840,12 +836,12 @@ bool Skins_FileHasSurfacePrefs(ModelContainer_t *pContainer, LPCSTR psSkin)
 	return false;
 }
 
-bool Skins_ApplyEthnic( ModelContainer_t *pContainer, LPCSTR psSkin, LPCSTR psEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces)
+bool Skins_ApplyEthnic( ModelContainer_t *pContainer, const char * psSkin, const char * psEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces)
 {
 	return Skins_ApplySkinFile(pContainer, psSkin, psEthnic, bApplySurfacePrefs, bDefaultSurfaces);
 }
 
-bool Skins_ApplySkinShaderVariant(ModelContainer_t *pContainer, LPCSTR psSkin, LPCSTR psEthnic, LPCSTR psMaterial, int iVariant )
+bool Skins_ApplySkinShaderVariant(ModelContainer_t *pContainer, const char * psSkin, const char * psEthnic, const char * psMaterial, int iVariant )
 {
 	return Skins_ApplySkinFile(pContainer, psSkin, psEthnic, false, false, psMaterial, iVariant );
 }
@@ -870,7 +866,7 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 
 		if (bOnOff)
 		{
-			LPCSTR psMaterial = GLMModel_GetSurfaceShaderName( pContainer->hModel, iSurface);
+			const char * psMaterial = GLMModel_GetSurfaceShaderName( pContainer->hModel, iSurface);
 
 			MaterialsPresentInModel.insert(MaterialsPresentInModel.end(),psMaterial);
 		}
@@ -891,7 +887,6 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 
 	// now process the unique list we've just built...
 	//
-	CWaitCursor wait;
 	string strFoundList;
 	string strNotFoundList;
 	int iUniqueIndex = 0;
@@ -1104,7 +1099,7 @@ bool Skins_ApplyToTree (HTREEITEM hTreeItem_Parent, ModelContainer_t *pContainer
 // called directly from renderer...
 //
 extern ModelContainer_t* gpContainerBeingRendered;
-GLuint AnySkin_GetGLBind( ModelHandle_t hModel, LPCSTR psMaterialName, LPCSTR psSurfaceName )
+GLuint AnySkin_GetGLBind( ModelHandle_t hModel, const char * psMaterialName, const char * psSurfaceName )
 {
 	ModelContainer_t *pContainer = gpContainerBeingRendered;	// considerably faster during rendering process :-)
 

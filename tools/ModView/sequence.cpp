@@ -14,11 +14,11 @@
 
 
 
-LPCSTR Sequence_CreateTreeName(const Sequence_t *pSequence)
+const char * Sequence_CreateTreeName(const Sequence_t *pSequence)
 {
-	static CString str;
+	static std::string str;
 
-	LPCSTR psSequenceName = (AppVars.bFullPathsInSequenceTreeitems && pSequence->sNameWithPath[0])? pSequence->sNameWithPath : Sequence_GetName(pSequence,true);//->sName;
+	const char * psSequenceName = (AppVars.bFullPathsInSequenceTreeitems && pSequence->sNameWithPath[0])? pSequence->sNameWithPath : Sequence_GetName(pSequence,true);//->sName;
 
 	str = va("%s ( %d..%d ) ( # = %d )",
 			String_EnsureMinLength(psSequenceName, 16),
@@ -32,7 +32,7 @@ LPCSTR Sequence_CreateTreeName(const Sequence_t *pSequence)
 		str += va(" ( loopframe %d )", pSequence->iStartFrame + pSequence->iLoopFrame);
 	}
 
-	return (LPCSTR) str;
+	return str.c_str();
 }
 
 void Sequence_Clear(Sequence_t *pSequence)
@@ -126,7 +126,7 @@ int Sequence_ReturnLongestSequenceNameLength(ModelContainer_t *pContainer)
 
 // called by external apps via remote control...
 //
-LPCSTR Sequence_ReturnRemoteQueryString(Sequence_t *pSequence)
+const char * Sequence_ReturnRemoteQueryString(Sequence_t *pSequence)
 {
 	static char sString[1024];
 
@@ -150,7 +150,7 @@ Sequence_t*	Sequence_CreateDefault(int iNumFrames)
 }
 
 
-LPCSTR Sequence_GetName(const Sequence_t *pSequence, bool bUsedForDisplay /* = false */)
+const char * Sequence_GetName(const Sequence_t *pSequence, bool bUsedForDisplay /* = false */)
 {
 	if (!bUsedForDisplay)
 	{

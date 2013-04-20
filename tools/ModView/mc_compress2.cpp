@@ -2,17 +2,20 @@
 //
 //
 #include <math.h>
+#ifdef WIN32
 #include <windows.h>
+#endif
 
 #include "mc_compress2.h"
 #include <assert.h>
+#include <string.h>
 
 
 extern 
 #ifdef _CARCASS 
 "C"
 #endif
-char *va(char *format, ...);
+const char *va(char *format, ...);
 
 
 
@@ -50,6 +53,7 @@ typedef map <string, float> Thing_t;
 							Thing_t Thing;
 void crap(void)
 {
+#ifdef WIN32
 	OutputDebugString(va("Table size %d\n",Thing.size()));
 	for (Thing_t::iterator it = Thing.begin(); it!=Thing.end(); ++it)
 	{
@@ -58,7 +62,7 @@ void crap(void)
 
 		OutputDebugString(va("(%s) %f\n",str->c_str(),f));
 	}
-
+#endif
 /*	OutputDebugString(va("Table size %d\n",Table.size()));
 	int iHighestUsageCount = 0;
 

@@ -4,8 +4,14 @@
 #ifndef INCLUDES_H
 #define INCLUDES_H
 
-#include <gl\gl.h>
-#include <gl\glu.h>
+#if defined(__APPLE__) && defined(__MACH__)
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#else
+#include <gl/gl.h>
+#include <gl/glu.h>
+#endif
+
 #include <assert.h>
 #include <math.h>
 

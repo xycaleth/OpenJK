@@ -24,7 +24,7 @@ public:
 	static void EnableSplashScreen(BOOL bEnable = TRUE);
 	static void ShowSplashScreen(CWnd* pParentWnd = NULL);
 	static BOOL PreTranslateAppMessage(MSG* pMsg);
-	static void StatusMessage(LPCSTR psMessage);
+	static void StatusMessage(const char * psMessage);
 	static void HideSplashScreen(bool bCalledFromApp);
 
 

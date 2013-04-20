@@ -5,10 +5,11 @@
 
 #include "stdafx.h"
 #include "includes.h"
-#include "R_Common.h"
+#include "r_common.h"
 #include "textures.h"
 //
 #include "R_Model.h"
+#include "StringUtils.h"
 
 
 trGlobals_t tr;
@@ -32,7 +33,7 @@ void Com_Printf( const char *format, ... )
 	ErrorBox(string[index]);
 }
 
-void Q_strncpyz( char *dest, LPCSTR src, int destlen)
+void Q_strncpyz( char *dest, const char * src, int destlen)
 {
 	strncpy(dest,src,destlen);
 	dest[destlen-1] = '\0';
@@ -149,7 +150,7 @@ void Crap_Printf( int printLevel, const char *format, ...)
 	
 	va_start (argptr, format);
 //	vsprintf (string[index], format,argptr);
-	_vsnprintf(string[index], sizeof(string[0]), format, argptr);
+	vsnprintf(string[index], sizeof(string[0]), format, argptr);
 	va_end (argptr);
 	string[index][sizeof(string[0])-1] = '\0';
 
@@ -611,7 +612,7 @@ ModelHandle_t RE_RegisterModel( const char *name ) {
 		char filename[1024];
 
 		strcpy( filename, name );
-		strlwr( filename );	// for bin map<> cacheing to work
+		ToLower( filename );	// for bin map<> cacheing to work
 
 		if ( lod != 0 ) {
 			char namebuf[80];
@@ -753,7 +754,7 @@ fail:
 R_LoadMD3
 =================
 */
-static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name ) {
+qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name ) {
 	int					i, j;
 	md3Header_t			*pinmodel;
     md3Frame_t			*frame;
@@ -848,7 +849,7 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 		surf->ident = SF_MD3;
 
 		// lowercase the surface name so skin compares are faster
-		Q_strlwr( surf->name );
+		ToLower( surf->name );
 
 		// strip off a trailing _1 or _2
 		// this is a crutch for q3data being a mess
@@ -906,7 +907,7 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 R_LoadMD4
 =================
 */
-static qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
+qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
 	int					i, j, k;
 	md4Header_t			*pinmodel, *md4;
     md4Frame_t			*frame;
@@ -952,7 +953,7 @@ static qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
     // we don't need to swap tags in the renderer, they aren't used
     
 	// swap all the frames
-	frameSize = (int)( &((md4Frame_t *)0)->bones[ md4->numBones ] );
+	frameSize = sizeof(md4Frame_t) + sizeof(int) * (md4->numBones - 1);
     for ( i = 0 ; i < md4->numFrames ; i++, frame++) {
 	    frame = (md4Frame_t *) ( (byte *)md4 + md4->ofsFrames + i * frameSize );
     	frame->radius = LF( frame->radius );

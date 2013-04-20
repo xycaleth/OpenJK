@@ -12,7 +12,7 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height );
 
 // externalised for DMark code...
 //
-bool TGA_Write(LPCSTR psFullPathedFilename, byte *pPixels, int iWidth, int iHeight, int iPlanes);
+bool TGA_Write(const char * psFullPathedFilename, byte *pPixels, int iWidth, int iHeight, int iPlanes);
 void LoadTGA ( const char *name, byte **pic, int *width, int *height);
 
 #endif

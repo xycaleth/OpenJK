@@ -4,6 +4,7 @@
 #ifndef TEXTURES_H
 #define TEXTURES_H
 
+#include <ctime>
 
 typedef struct
 {
@@ -15,7 +16,7 @@ typedef struct
 	GLuint		gluiBind;			// id the texture is actually bound to (may be zero if file was missing)
 	GLuint		gluiDesiredBind;	// id the texture would be bound to if present (used for refresh purposes)
 	int			iUsageCount;		
-	FILETIME	ft;
+    time_t ft;
 	bool		bFTValid;
 } Texture_t;
 
@@ -27,10 +28,10 @@ void TextureList_DeleteAll(void);
 int  TextureList_GetMip(void);
 void TextureList_ReMip(int iMIPLevel);
 void TextureList_Refresh(void);
-TextureHandle_t TextureHandle_ForName(LPCSTR psLocalTexturePath);
+TextureHandle_t TextureHandle_ForName(const char * psLocalTexturePath);
 GLuint Texture_GetGLBind( TextureHandle_t thHandle);
 Texture_t *Texture_GetTextureData( TextureHandle_t thHandle );
-int  Texture_Load( LPCSTR psLocalTexturePath, bool bInhibitStatus = false );
+int  Texture_Load( const char * psLocalTexturePath, bool bInhibitStatus = false );
 
 
 void FakeCvars_Shutdown(void);

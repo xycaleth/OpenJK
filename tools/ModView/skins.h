@@ -12,7 +12,7 @@ protected:
 	string m_sName;
 
 public:
-	CSkinMaterialShader(LPCSTR psName) {m_sName=psName;}
+	CSkinMaterialShader(const char * psName) {m_sName=psName;}
 	~CSkinMaterialShader()			{ OutputDebugString( va("~CSkinMaterialShader(): %s\n",m_sName.c_str()) ); }
 };
 */
@@ -31,17 +31,17 @@ typedef map<string,SkinSet_t> SkinSets_t;						// map key = (eg) "thug",entry = 
 
 typedef map<string,SurfaceOnOffPrefs_t> SkinSetsSurfacePrefs_t;
 
-bool Skins_ApplyEthnic	( ModelContainer_t *pContainer, LPCSTR psSkin, LPCSTR psEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces);
-bool Skins_ApplySkinShaderVariant(ModelContainer_t *pContainer, LPCSTR psSkin, LPCSTR psEthnic, LPCSTR psMaterial, int iVariant );
+bool Skins_ApplyEthnic	( ModelContainer_t *pContainer, const char * psSkin, const char * psEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces);
+bool Skins_ApplySkinShaderVariant(ModelContainer_t *pContainer, const char * psSkin, const char * psEthnic, const char * psMaterial, int iVariant );
 bool Skins_Validate		( ModelContainer_t *pContainer, int iSkinNumber );
 bool Skins_ApplySkinFile(ModelContainer_t *pContainer, string strSkinFile, string strEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces, string strMaterial = "", int iVariant = -1);
-bool Skins_FilesExist	(LPCSTR psModelFilename);
-bool Skins_Read			(LPCSTR psModelFilename, ModelContainer_t *pContainer);
-bool Skins_ApplyToTree	(HTREEITEM hTreeItem_Parent, ModelContainer_t *pContainer);
+bool Skins_FilesExist	(const char * psModelFilename);
+bool Skins_Read			(const char * psModelFilename, ModelContainer_t *pContainer);
+//bool Skins_ApplyToTree	(HTREEITEM hTreeItem_Parent, ModelContainer_t *pContainer);
 void Skins_ApplyDefault	(ModelContainer_t *pContainer);
-bool Skins_FileHasSurfacePrefs(ModelContainer_t *pContainer, LPCSTR psSkin);
+bool Skins_FileHasSurfacePrefs(ModelContainer_t *pContainer, const char * psSkin);
 void Skins_KillPreCacheInfo(void);
-GLuint AnySkin_GetGLBind( ModelHandle_t hModel, LPCSTR psMaterialName, LPCSTR psSurfaceName );
+GLuint AnySkin_GetGLBind( ModelHandle_t hModel, const char * psMaterialName, const char * psSurfaceName );
 
 
 #endif	// #ifndef SKINS_H

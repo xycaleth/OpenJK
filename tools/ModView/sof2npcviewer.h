@@ -14,7 +14,7 @@ class CSOF2NPCViewer : public CDialog
 {
 // Construction
 public:
-	CSOF2NPCViewer(bool bSOF2Mode, CString *pFeedback, LPCSTR psGameDir, CWnd* pParent = NULL);   // standard constructor
+	CSOF2NPCViewer(bool bSOF2Mode, CString *pFeedback, const char * psGameDir, CWnd* pParent = NULL);   // standard constructor
 
 // Dialog Data
 	//{{AFX_DATA(CSOF2NPCViewer)
@@ -63,8 +63,8 @@ protected:
 
 bool Gallery_Active(void);
 void Gallery_Done(void);
-LPCSTR Gallery_GetOutputDir(void);
-LPCSTR Gallery_GetSeqToLock(void);
+const char * Gallery_GetOutputDir(void);
+const char * Gallery_GetSeqToLock(void);
 int GalleryRead_ExtractEntry(CString &strCaption, CString &strScript);
 
 

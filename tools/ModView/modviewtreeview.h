@@ -26,7 +26,7 @@ public:
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CModViewTreeView)
 	public:
-	virtual BOOL Create(LPCTSTR lpszClassName, LPCTSTR lpszWindowName, DWORD dwStyle, const RECT& rect, CWnd* pParentWnd, UINT nID, CCreateContext* pContext = NULL);
+	virtual BOOL Create(LPCTSTR lpszClassName, LPCTSTR lpszWindowName, unsigned int dwStyle, const RECT& rect, CWnd* pParentWnd, UINT nID, CCreateContext* pContext = NULL);
 	protected:
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 	virtual void PostNcDestroy();
@@ -167,7 +167,7 @@ public:
 
 
 extern CModViewTreeView* gModViewTreeViewhandle;
-LPCSTR GetString(LPCSTR psPrompt, LPCSTR psDefault = NULL, bool bLowerCaseTheResult = true);
+const char * GetString(const char * psPrompt, const char * psDefault = NULL, bool bLowerCaseTheResult = true);
 /////////////////////////////////////////////////////////////////////////////
 
 //{{AFX_INSERT_LOCATION}}

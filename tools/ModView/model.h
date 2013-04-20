@@ -21,7 +21,7 @@ typedef struct
 			unsigned int iItemNumber	: 16;	// allows 65536 surfaces, bones, sequences etc
 		};
 		//
-		UINT32 uiData;
+		unsigned int uiData;
 	};
 } TreeItemData_t;
 
@@ -216,11 +216,11 @@ struct ModelContainer
 
 	// some function ptrs to be filled in by specific model types...
 	//
-	LPCSTR			(*pModelInfoFunction)				( ModelHandle_t hModel );
-	LPCSTR			(*pModelGetBoneNameFunction)		( ModelHandle_t hModel, int iBoneIndex );
-	LPCSTR			(*pModelGetBoneBoltNameFunction)	( ModelHandle_t hModel, int iBoltIndex );		// same as above in GLM model
-	LPCSTR			(*pModelGetSurfaceNameFunction)		( ModelHandle_t hModel, int iSurfaceIndex );
-	LPCSTR			(*pModelGetSurfaceBoltNameFunction)	( ModelHandle_t hModel, int iSurfaceIndex );// same as above in GLM model
+	const char *			(*pModelInfoFunction)				( ModelHandle_t hModel );
+	const char *			(*pModelGetBoneNameFunction)		( ModelHandle_t hModel, int iBoneIndex );
+	const char *			(*pModelGetBoneBoltNameFunction)	( ModelHandle_t hModel, int iBoltIndex );		// same as above in GLM model
+	const char *			(*pModelGetSurfaceNameFunction)		( ModelHandle_t hModel, int iSurfaceIndex );
+	const char *			(*pModelGetSurfaceBoltNameFunction)	( ModelHandle_t hModel, int iSurfaceIndex );// same as above in GLM model
 };
 
 
@@ -229,7 +229,7 @@ const double ANIM_FASTER = 0.9;
 
 typedef struct
 {
-	CString			strLoadedModelPath;	// full disk path of primary model
+    std::string         strLoadedModelPath;	// full disk path of primary model
 	
 //	int					iNumContainers;	 //deleteme
 	int					iTotalContainers;
@@ -269,7 +269,7 @@ typedef struct
 
 	int		iLOD;
 
-	byte	_R, _G, _B;	// CLS colour
+	unsigned char	_R, _G, _B;	// CLS colour
 
 	double	dFOV;
 	double	dAnimSpeed;
@@ -285,7 +285,9 @@ typedef struct
 
 	// other crap...
 	//
+#if !defined(__APPLE__) && !defined(__MACH__)
 	HWND	hWnd;
+#endif
 	bool	bFinished;	// true only at final app shutdown, may be useful for some checks
 	bool	bAllowGLAOverrides;
 	bool	bShowPolysAsDoubleSided;
@@ -307,64 +309,64 @@ void AppVars_ResetViewParams(void);
 void App_OnceOnly(void);
 
 ModelHandle_t	Model_GetPrimaryHandle(void);
-bool	Model_Loaded(ModelHandle_t hModel = NULL);
+bool	Model_Loaded(ModelHandle_t hModel = (ModelHandle_t)0);
 void	Model_Delete(void);
 void	Model_ValidateSkin( ModelHandle_t hModel, int iSkinNumber);
-void	Model_ApplyOldSkin( ModelHandle_t hModel, LPCSTR psSkin );
-void	Model_ApplyEthnicSkin(ModelHandle_t hModel, LPCSTR psSkin, LPCSTR psEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces );
-bool	Model_SkinHasSurfacePrefs( ModelHandle_t hModel, LPCSTR psSkin );
-void	Model_ApplySkinShaderVariant( ModelHandle_t hModel, LPCSTR psSkin, LPCSTR psEthnic, LPCSTR psMaterial, int iVariant );
-LPCSTR	Model_GetSupportedTypesFilter(bool bScriptsEtcAlsoAllowed = false);
+void	Model_ApplyOldSkin( ModelHandle_t hModel, const char * psSkin );
+void	Model_ApplyEthnicSkin(ModelHandle_t hModel, const char * psSkin, const char * psEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces );
+bool	Model_SkinHasSurfacePrefs( ModelHandle_t hModel, const char * psSkin );
+void	Model_ApplySkinShaderVariant( ModelHandle_t hModel, const char * psSkin, const char * psEthnic, const char * psMaterial, int iVariant );
+const char *	Model_GetSupportedTypesFilter(bool bScriptsEtcAlsoAllowed = false);
 bool	Model_DeleteBoltOn(ModelHandle_t hModel, int iBoltPointToDelete, bool bBoltIsBone, int iBoltOnAtBoltPoint);
 bool	Model_DeleteBoltOn(ModelContainer_t *pContainer, int iBoltPointToDelete, bool bBoltIsBone, int iBoltOnAtBoltPoint);
 bool	Model_DeleteBoltOn(ModelContainer_t *pContainer);
 bool	Model_DeleteBoltOn(ModelHandle_t hModelBoltOn);
 bool	Model_HasParent(ModelHandle_t hModel);
 int		Model_CountItemsBoltedHere(ModelHandle_t hModel, int iBoltindex, bool bBoltIsBone);
-bool	Model_LoadPrimary(LPCSTR psFullPathedFilename);
-bool	Model_Save(LPCSTR psFullPathedFilename);
-bool	Model_LoadBoltOn(LPCSTR psFullPathedFilename, ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone, bool bBoltReplacesAllExisting);
-bool	Model_LoadBoltOn(LPCSTR psFullPathedFilename, ModelHandle_t hModel, LPCSTR psBoltName, bool bBoltIsBone, bool bBoltReplacesAllExisting);
+bool	Model_LoadPrimary(const char * psFullPathedFilename);
+bool	Model_Save(const char * psFullPathedFilename);
+bool	Model_LoadBoltOn(const char * psFullPathedFilename, ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone, bool bBoltReplacesAllExisting);
+bool	Model_LoadBoltOn(const char * psFullPathedFilename, ModelHandle_t hModel, const char * psBoltName, bool bBoltIsBone, bool bBoltReplacesAllExisting);
 int		Model_GetNumBoneAliases(ModelHandle_t hModel);
 bool	Model_GetBoneAliasPair(ModelHandle_t hModel, int iAliasIndex, string &strRealName,string &strAliasName);
 bool	ModelContainer_GetBoneAliasPair(ModelContainer_t *pContainer, int iAliasIndex, string &strRealName,string &strAliasName);
 int		Model_GetNumSequences(ModelHandle_t hModel);					// remote helper func only
-LPCSTR	Model_GetSequenceString(ModelHandle_t hModel, int iSequenceNum);// remote helper func only
+const char *	Model_GetSequenceString(ModelHandle_t hModel, int iSequenceNum);// remote helper func only
 bool	Model_SetSecondaryAnimStart(ModelHandle_t hModel, int iBoneNum);
-bool	Model_SetSecondaryAnimStart(ModelHandle_t hModel, LPCSTR psBoneName);
+bool	Model_SetSecondaryAnimStart(ModelHandle_t hModel, const char * psBoneName);
 int		Model_GetSecondaryAnimStart(ModelHandle_t hModel);
-LPCSTR	Model_Info( ModelHandle_t hModel );
+const char *	Model_Info( ModelHandle_t hModel );
 void	Model_StartAnim(bool bForceWrap = false );
 void	Model_StopAnim();
 float	Model_GetLowestPointOnPrimaryModel(void);
-LPCSTR	Model_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex );
-LPCSTR	Model_GetSurfaceName( ModelContainer_t *pContainer, int iSurfaceIndex );
+const char *	Model_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex );
+const char *	Model_GetSurfaceName( ModelContainer_t *pContainer, int iSurfaceIndex );
 bool	Model_SurfaceIsTag( ModelContainer_t *pContainer, int iSurfaceIndex);
 bool	Model_SurfaceIsTag( ModelHandle_t hModel, int iSurfaceIndex);
-LPCSTR	Model_GetBoneName( ModelHandle_t hModel, int iBoneIndex );
-int		Model_GetBoltIndex( ModelHandle_t hModel, LPCSTR psBoltName, bool bBoltIsBone);
-int		Model_GetBoltIndex( ModelContainer_t *pContainer, LPCSTR psBoltName, bool bBoltIsBone );
-LPCSTR	Model_GetBoltName( ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone );
-LPCSTR	Model_GetBoltName( ModelContainer_t *pContainer, int iBoltIndex, bool bBoltIsBone );
-LPCSTR	Model_GetFullPrimaryFilename( void );
-LPCSTR	Model_GetFilename( ModelHandle_t hModel );
-LPCSTR	Model_GLMBoneInfo( ModelHandle_t hModel, int iBoneIndex );
-LPCSTR	Model_GLMSurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool bShortVersionForTag );
-LPCSTR	Model_GLMSurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex );
+const char *	Model_GetBoneName( ModelHandle_t hModel, int iBoneIndex );
+int		Model_GetBoltIndex( ModelHandle_t hModel, const char * psBoltName, bool bBoltIsBone);
+int		Model_GetBoltIndex( ModelContainer_t *pContainer, const char * psBoltName, bool bBoltIsBone );
+const char *	Model_GetBoltName( ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone );
+const char *	Model_GetBoltName( ModelContainer_t *pContainer, int iBoltIndex, bool bBoltIsBone );
+const char *	Model_GetFullPrimaryFilename( void );
+const char *	Model_GetFilename( ModelHandle_t hModel );
+const char *	Model_GLMBoneInfo( ModelHandle_t hModel, int iBoneIndex );
+const char *	Model_GLMSurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool bShortVersionForTag );
+const char *	Model_GLMSurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex );
 bool	Model_SurfaceContainsBoneReference(ModelHandle_t hModel, int iLODNumber, int iSurfaceNumber, int iBoneNumber);
 bool	Model_GLMSurface_Off(ModelHandle_t hModel, int iSurfaceIndex );
 bool	Model_GLMSurface_On(ModelHandle_t hModel, int iSurfaceIndex );
 bool	Model_GLMSurface_NoDescendants(ModelHandle_t hModel, int iSurfaceIndex );
 bool	Model_GLMSurface_SetStatus( ModelHandle_t hModel, int iSurfaceIndex, SurfaceOnOff_t eStatus );
-bool	Model_GLMSurface_SetStatus( ModelHandle_t hModel, LPCSTR psSurfaceName, SurfaceOnOff_t eStatus );
+bool	Model_GLMSurface_SetStatus( ModelHandle_t hModel, const char * psSurfaceName, SurfaceOnOff_t eStatus );
 void	Model_GLMSurfaces_DefaultAll(ModelHandle_t hModel);
 SurfaceOnOff_t Model_GLMSurface_GetStatus( ModelHandle_t hModel, int iSurfaceIndex );
 int		Model_GetNumSurfacesDifferentFromDefault(ModelContainer_t *pContainer, SurfaceOnOff_t eStatus);
-LPCSTR	Model_GetSurfaceDifferentFromDefault(ModelContainer_t *pContainer, SurfaceOnOff_t eStatus, int iSurfaceIndex);
+const char *	Model_GetSurfaceDifferentFromDefault(ModelContainer_t *pContainer, SurfaceOnOff_t eStatus, int iSurfaceIndex);
 bool	Model_SetBoneHighlight(ModelHandle_t hModel, int iBoneIndex);
-bool	Model_SetBoneHighlight(ModelHandle_t hModel, LPCSTR psBoneName);
+bool	Model_SetBoneHighlight(ModelHandle_t hModel, const char * psBoneName);
 bool	Model_SetSurfaceHighlight(ModelHandle_t hModel, int iSurfaceindex);
-bool	Model_SetSurfaceHighlight(ModelHandle_t hModel, LPCSTR psSurfaceName);
+bool	Model_SetSurfaceHighlight(ModelHandle_t hModel, const char * psSurfaceName);
 int		Model_EnsureGenerated_VertEdgeInfo(ModelContainer_t *pContainer, int iLOD);
 int		Model_EnsureGenerated_VertEdgeInfo(ModelHandle_t hModel, int iLOD);
 
@@ -379,9 +381,9 @@ bool	ModelList_Animation(void);
 void		ModelTree_DeleteAllItems(void);
 bool		ModelTree_DeleteItem(HTREEITEM hTreeItem);
 HTREEITEM	ModelTree_GetRootItem(void);
-bool		ModelTree_SetItemText(HTREEITEM hTreeItem, LPCSTR psText);
-LPCSTR		ModelTree_GetItemText(HTREEITEM hTreeItem, bool bPure = false);
-DWORD		ModelTree_GetItemData(HTREEITEM hTreeItem);
+bool		ModelTree_SetItemText(HTREEITEM hTreeItem, const char * psText);
+const char *		ModelTree_GetItemText(HTREEITEM hTreeItem, bool bPure = false);
+unsigned int		ModelTree_GetItemData(HTREEITEM hTreeItem);
 HTREEITEM	ModelTree_GetChildItem(HTREEITEM hTreeItem);
 bool		ModelTree_ItemHasChildren(HTREEITEM hTreeItem);
 int			ModelTree_GetChildCount(HTREEITEM hTreeItem);
@@ -396,27 +398,27 @@ HTREEITEM	ModelTree_GetRootBone(ModelHandle_t hModel);
 void R_ModelContainer_Apply(ModelContainer_t* pContainer, void (*pFunction) ( ModelContainer_t* pContainer, void *pvData), void *pvData = NULL);
 
 ModelContainer_t*	ModelContainer_FindFromModelHandle(ModelHandle_t hModel);
-int		ModelContainer_BoneIndexFromName(ModelContainer_t *pContainer, LPCSTR psBoneName);
+int		ModelContainer_BoneIndexFromName(ModelContainer_t *pContainer, const char * psBoneName);
 
 void	Media_Delete(void);
 void	AppVars_WriteIdeal(void);
 void	AppVars_ReadIdeal(void);
 
 bool	Model_Sequence_Lock		( ModelHandle_t hModel, int iSequenceNumber,   bool bPrimary);
-bool	Model_Sequence_Lock		( ModelHandle_t hModel, LPCSTR psSequenceName, bool bPrimary, bool bOktoShowErrorBox = true);
+bool	Model_Sequence_Lock		( ModelHandle_t hModel, const char * psSequenceName, bool bPrimary, bool bOktoShowErrorBox = true);
 bool	Model_Sequence_UnLock	( ModelHandle_t hModel, bool bPrimary);
 bool	Model_Sequence_IsLocked	( ModelHandle_t hModel, int iSequenceNumber, bool bPrimary);
-LPCSTR	Model_Sequence_GetName	( ModelHandle_t hModel, int iSequenceNumber, bool bUsedForDisplay = false);
-LPCSTR	Model_Sequence_GetName	( ModelContainer_t *pContainer, int iSequenceNumber, bool bUsedForDisplay = false);
-LPCSTR	Model_Sequence_GetLockedName( ModelHandle_t hModel, bool bPrimary);
-int		Model_Sequence_IndexForName(ModelContainer_t *pContainer, LPCSTR psSeqName);
+const char *	Model_Sequence_GetName	( ModelHandle_t hModel, int iSequenceNumber, bool bUsedForDisplay = false);
+const char *	Model_Sequence_GetName	( ModelContainer_t *pContainer, int iSequenceNumber, bool bUsedForDisplay = false);
+const char *	Model_Sequence_GetLockedName( ModelHandle_t hModel, bool bPrimary);
+int		Model_Sequence_IndexForName(ModelContainer_t *pContainer, const char * psSeqName);
 bool	Model_SecondaryAnimLockingActive(ModelHandle_t hModel);
 bool	Model_SecondaryAnimLockingActive(const ModelContainer_t *pContainer);
-LPCSTR  Model_Sequence_GetTreeName(ModelHandle_t hModel, int iSequenceNumber);
+const char *  Model_Sequence_GetTreeName(ModelHandle_t hModel, int iSequenceNumber);
 int		Model_GetG2SurfaceRootOverride	(ModelContainer_t *pContainer);
 int		Model_GetG2SurfaceRootOverride	(ModelHandle_t hModel);
 bool	Model_SetG2SurfaceRootOverride	(ModelContainer_t *pContainer, int iSurfaceNum);
-bool	Model_SetG2SurfaceRootOverride	(ModelContainer_t *pContainer, LPCSTR psSurfaceName);
+bool	Model_SetG2SurfaceRootOverride	(ModelContainer_t *pContainer, const char * psSurfaceName);
 bool	Model_SetG2SurfaceRootOverride	(ModelHandle_t hModel, int iSurfaceNum);
 
 bool	Model_MultiSeq_Add		( ModelHandle_t hModel, int iSequenceNumber, bool bPrimary, bool bActivate = true);

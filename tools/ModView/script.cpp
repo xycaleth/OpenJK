@@ -6,7 +6,6 @@
 
 #include "stdafx.h"
 #include "includes.h"
-#include "ModViewTreeView.h"
 #include "glm_code.h"
 #include "R_Model.h"
 #include "R_Surface.h"
@@ -17,6 +16,7 @@
 #include "GenericParser2.h"
 //
 #include "script.h"
+#include "StringUtils.h"
 
 
 
@@ -25,13 +25,13 @@ CGenericParser2	theParser;
 
 
 
-LPCSTR	Script_GetExtension(void)
+const char *	Script_GetExtension(void)
 {
 	return sSCRIPT_EXTENSION;
 }
 
 
-LPCSTR	Script_GetFilter(bool bStandAlone /* = true */)
+const char *	Script_GetFilter(bool bStandAlone /* = true */)
 {
 	static char sFilterString[1024];
 
@@ -71,7 +71,7 @@ bool CString_ExtractUntil(CString &strSrc, CString &strDst, char cSeperator)
 typedef map<ModelContainer_t*, string>	HandleXref_t;
 										HandleXref_t HandleXRefs;
 
-static CString strHandlesSoFar;		// semicolon-delineated string of all handle names, for quick ifdef check
+static std::string strHandlesSoFar;		// semicolon-delineated string of all handle names, for quick ifdef check
 
 static void Script_Clear()
 {
@@ -82,26 +82,26 @@ static void Script_Clear()
 
 // generates a unique handlename based on the input suggestion...
 //
-static LPCSTR GenerateHandleName(LPCSTR psIdealBaseName)
+static const char * GenerateHandleName(const char * psIdealBaseName)
 {
-	static CString strReturn;
+	static std::string strReturn;
 
 	int iAlternative = 0;
 
 	do
 	{
 		strReturn = psIdealBaseName;
-		strReturn.MakeLower();
+		ToLower(strReturn);
 
 		if (iAlternative++)
 			strReturn += va("_%d",iAlternative);
 	}
-	while (strHandlesSoFar.Find(va(";%s;",(LPCSTR) strReturn)) != -1);	// note ';' at both ends of find() arg
+	while (strHandlesSoFar.find(va(";%s;",strReturn.c_str())) != -1);	// note ';' at both ends of find() arg
 
 	strHandlesSoFar += strReturn;
 	strHandlesSoFar += ";";	// doesn't really matter what this is, as long as each name gets seperated
 
-	return (LPCSTR) strReturn;
+	return strReturn.c_str();
 }
 
 
@@ -157,7 +157,7 @@ static void R_ModelContainer_WriteOptional(ModelContainer_t* pContainer, void *p
 
 		for (int i=0; i<pContainer->SeqMultiLock_Primary.size(); i++)
 		{				
-			LPCSTR psSeqName = Model_Sequence_GetName(pContainer, pContainer->SeqMultiLock_Primary[i]);
+			const char * psSeqName = Model_Sequence_GetName(pContainer, pContainer->SeqMultiLock_Primary[i]);
 
 			if (psSeqName)
 			{			
@@ -180,7 +180,7 @@ static void R_ModelContainer_WriteOptional(ModelContainer_t* pContainer, void *p
 
 		for (int i=0; i<pContainer->SeqMultiLock_Secondary.size(); i++)
 		{				
-			LPCSTR psSeqName = Model_Sequence_GetName(pContainer, pContainer->SeqMultiLock_Secondary[i]);
+			const char * psSeqName = Model_Sequence_GetName(pContainer, pContainer->SeqMultiLock_Secondary[i]);
 
 			if (psSeqName)
 			{			
@@ -227,7 +227,7 @@ static void R_ModelContainer_WriteOptional(ModelContainer_t* pContainer, void *p
 
 		for (int i=0; i<iNumSurfaces; i++)
 		{
-			LPCSTR psSurfaceName = Model_GetSurfaceDifferentFromDefault(pContainer,SURF_ON,i);
+			const char * psSurfaceName = Model_GetSurfaceDifferentFromDefault(pContainer,SURF_ON,i);
 			if (psSurfaceName)
 			{
 				fprintf(fhText, bIsBolt?"\t\t\t":"\t\t");
@@ -250,7 +250,7 @@ static void R_ModelContainer_WriteOptional(ModelContainer_t* pContainer, void *p
 
 		for (int i=0; i<iNumSurfaces; i++)
 		{
-			LPCSTR psSurfaceName = Model_GetSurfaceDifferentFromDefault(pContainer,SURF_OFF,i);
+			const char * psSurfaceName = Model_GetSurfaceDifferentFromDefault(pContainer,SURF_OFF,i);
 			if (psSurfaceName)
 			{
 				fprintf(fhText, bIsBolt?"\t\t\t":"\t\t");
@@ -273,7 +273,7 @@ static void R_ModelContainer_WriteOptional(ModelContainer_t* pContainer, void *p
 
 		for (int i=0; i<iNumSurfaces; i++)
 		{
-			LPCSTR psSurfaceName = Model_GetSurfaceDifferentFromDefault(pContainer,SURF_NO_DESCENDANTS,i);
+			const char * psSurfaceName = Model_GetSurfaceDifferentFromDefault(pContainer,SURF_NO_DESCENDANTS,i);
 			if (psSurfaceName)
 			{
 				fprintf(fhText, bIsBolt?"\t\t\t":"\t\t");
@@ -289,7 +289,7 @@ static void R_ModelContainer_CallBack_WriteBolts(ModelContainer_t* pContainer, v
 {
 	FILE *fhText = (FILE *) pvData;
 	
-	CString strHandleName = GenerateHandleName(Filename_WithoutPath(Filename_WithoutExt(pContainer->sLocalPathName)));
+    std::string strHandleName = GenerateHandleName(Filename_WithoutPath(Filename_WithoutExt(pContainer->sLocalPathName)));
 
 	HandleXRefs[ pContainer ] = strHandleName;	
 
@@ -305,8 +305,8 @@ static void R_ModelContainer_CallBack_WriteBolts(ModelContainer_t* pContainer, v
 
 		*/
 
-		fprintf(fhText, "\t%s\t\t\"%s\"\n",sSCRIPTKEYWORD_NAME, (LPCSTR) strHandleName);
-		fprintf(fhText, "\t%s\t\"%s\"\n",sSCRIPTKEYWORD_MODELFILE, (LPCSTR) pContainer->sLocalPathName);
+		fprintf(fhText, "\t%s\t\t\"%s\"\n",sSCRIPTKEYWORD_NAME, strHandleName.c_str());
+		fprintf(fhText, "\t%s\t\"%s\"\n",sSCRIPTKEYWORD_MODELFILE, (const char *) pContainer->sLocalPathName);
 
 		R_ModelContainer_WriteOptional(pContainer, pvData, false );
 	}
@@ -329,8 +329,8 @@ static void R_ModelContainer_CallBack_WriteBolts(ModelContainer_t* pContainer, v
 
 		fprintf(fhText, "\t%s\n",sSCRIPTKEYWORD_BOLTMODEL);
 		fprintf(fhText, "\t{\n");
-		fprintf(fhText, "\t\t%s\t\"%s\"\n",sSCRIPTKEYWORD_NAME,			(LPCSTR) strHandleName);
-		fprintf(fhText, "\t\t%s\t\"%s\"\n",sSCRIPTKEYWORD_MODELFILE,	(LPCSTR) pContainer->sLocalPathName);		
+		fprintf(fhText, "\t\t%s\t\"%s\"\n",sSCRIPTKEYWORD_NAME,			strHandleName.c_str());
+		fprintf(fhText, "\t\t%s\t\"%s\"\n",sSCRIPTKEYWORD_MODELFILE,	(const char *) pContainer->sLocalPathName);		
 		//
 		// we're bolted to either a bone or a surface (never both), so...
 		//
@@ -358,7 +358,7 @@ static void R_ModelContainer_CallBack_WriteBolts(ModelContainer_t* pContainer, v
 
 
 
-bool Script_Write(LPCSTR psFullPathedFilename)
+bool Script_Write(const char * psFullPathedFilename)
 {
 	FILE *fhText = NULL;
 
@@ -370,7 +370,7 @@ bool Script_Write(LPCSTR psFullPathedFilename)
 
 		if (fhText)
 		{
-			fprintf(fhText,va("%s\n{\n",sSCRIPTKEYWORD_LOADMODEL));
+			fputs (va("%s\n{\n",sSCRIPTKEYWORD_LOADMODEL), fhText);
 
 			R_ModelContainer_Apply(&AppVars.Container, R_ModelContainer_CallBack_WriteBolts, fhText);
 
@@ -400,9 +400,9 @@ bool Script_Write(LPCSTR psFullPathedFilename)
 //
 // return = errmess, else NULL for ok
 //
-static LPCSTR Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, CGPGroup *pParseGroup)
+static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, CGPGroup *pParseGroup)
 {
-	LPCSTR psError = NULL;
+	const char * psError = NULL;
 
 	// I know this code has loads of spurious string constructors, but I don't care. It's nice and readable,
 	//	and adds no user-noticeable overhead to file reading...
@@ -603,9 +603,9 @@ static LPCSTR Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, CGPGro
 }
 
 
-static LPCSTR Script_Parse_BoltModel(CGPGroup *pParseGroup)
+static const char * Script_Parse_BoltModel(CGPGroup *pParseGroup)
 {
-	LPCSTR psError = NULL;
+	const char * psError = NULL;
 
 	do
 	{
@@ -713,9 +713,9 @@ static LPCSTR Script_Parse_BoltModel(CGPGroup *pParseGroup)
 
 
 
-static LPCSTR Script_Parse_LoadModel(CGPGroup *pParseGroup)
+static const char * Script_Parse_LoadModel(CGPGroup *pParseGroup)
 {
-	LPCSTR psError = NULL;
+	const char * psError = NULL;
 
 	do
 	{
@@ -741,7 +741,7 @@ static LPCSTR Script_Parse_LoadModel(CGPGroup *pParseGroup)
 		// read model in... (need to make local version of this to pass, va() gets used too much during load
 		//
 		//char *psFullPathModelName = va("%s%s",gamedir,strModelFile.c_str());
-		char sFullPathModelName[MAX_PATH];
+		char sFullPathModelName[MAX_QPATH];
 		strncpy(sFullPathModelName,va("%s%s",gamedir,strModelFile.c_str()),sizeof(sFullPathModelName)-1);
 		sFullPathModelName[sizeof(sFullPathModelName)-1]='\0';
 
@@ -795,9 +795,9 @@ static LPCSTR Script_Parse_LoadModel(CGPGroup *pParseGroup)
 }
 
 
-bool Script_Read(LPCSTR psFullPathedFilename)
+bool Script_Read(const char * psFullPathedFilename)
 {
-	LPCSTR psError = NULL;
+	const char * psError = NULL;
 	char *psData = NULL;	
 	
 	int iSize = LoadFile(psFullPathedFilename, (void**)&psData);
