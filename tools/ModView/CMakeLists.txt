@@ -9,6 +9,7 @@ set( MODVIEW_HEADER_FILES
 	"./generic_stuff.h"
 	"./genericparser.h"
 	"./GenericParser2.h"
+    "./gl_bits.h"
 	"./glm_code.h"
 	"./GUIHelpers.h"
 	"./includes.h"
@@ -76,6 +77,7 @@ set( MODVIEW_SOURCE_FILES
 	"./generic_stuff.cpp"
 	"./genericparser.cpp"
 	"./GenericParser2.cpp"
+    "./gl_bits.cpp"
 	"./glm_code.cpp"
 	"./GUIHelpers.cpp"
 	"./jpeg_interface.cpp"
@@ -155,6 +157,8 @@ set( CMAKE_PREFIX_PATH
 find_package( Qt5Core REQUIRED )
 find_package( OpenGL REQUIRED )
 set( MODVIEW_LIBRARIES ${OPENGL_LIBRARIES} )
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g" )
+set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g" )
 
 add_executable( ModView ${MODVIEW_SOURCE_FILES} ${MODVIEW_HEADER_FILES} )
 target_link_libraries( ModView ${MODVIEW_LIBRARIES} )

@@ -299,7 +299,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 		}
 
 		// find the next surface
-		surfInfo = (mdxmSurfHierarchy_t *)( (byte *)surfInfo + sizeof (mdxmSurfHierarchy_t) + sizeof (int) * (surfInfo->numChildren));
+		surfInfo = (mdxmSurfHierarchy_t *)( (byte *)surfInfo + sizeof (mdxmSurfHierarchy_t) + sizeof (int) * (surfInfo->numChildren - 1));
   	}
 
 

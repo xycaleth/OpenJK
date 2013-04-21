@@ -26,4 +26,6 @@ private:
     bool panning;
 };
 
+extern int g_iScreenWidth, g_iScreenHeight;
+
 #endif

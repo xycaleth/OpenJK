@@ -25,8 +25,6 @@ static char THIS_FILE[] = __FILE__;
 
 bool DraggingMouse();
 
-int g_iScreenWidth = 0;
-int g_iScreenHeight = 0;
 int g_iViewAreaMouseX = 0;
 int g_iViewAreaMouseY = 0;
 

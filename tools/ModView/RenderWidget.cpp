@@ -17,6 +17,9 @@ const float MOUSE_XPOS_SCALE = 0.1f;
 const float MOUSE_YPOS_SCALE = 0.1f;
 const float MOUSE_ZPOS_SCALE = 0.4f;
 
+int g_iScreenHeight;
+int g_iScreenWidth;
+
 RenderWidget::RenderWidget ( QWidget *parent )
     : QGLWidget (parent)
     , lastX (0)

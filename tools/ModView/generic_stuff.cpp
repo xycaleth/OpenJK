@@ -617,6 +617,7 @@ int LoadFile (const char * psPathedFilename, void **bufferptr, int bReportErrors
 // returns -1 for error
 int SaveFile (const char * psPathedFilename, const void *pBuffer, int iSize)
 {		
+#ifdef USE_MFC
 	extern void CreatePath (const char *path);
 	CreatePath(psPathedFilename);
 	FILE *f = fopen(psPathedFilename,"wb");
@@ -637,6 +638,9 @@ int SaveFile (const char * psPathedFilename, const void *pBuffer, int iSize)
 	ErrorBox(va("Error opening file \"%s\" for writing!",psPathedFilename));
 	
 	return -1;
+#else
+    return iSize;
+#endif
 }
 
 

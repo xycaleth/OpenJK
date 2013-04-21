@@ -50,7 +50,7 @@ static void GLMModel_BuildDefaultGLA()
 			// write out bone hierarchy...
 			//
 			mdxaSkelOffsets_t * pSkelOffsets = (mdxaSkelOffsets_t *) at;
-			at += ((mdxaSkelOffsets_t *)0)->offsets[ pMDXAHeader->numBones ] - 0;
+			at += sizeof (mdxaSkelOffsets_t) + sizeof (int) * (pMDXAHeader->numBones - 1);
 			
 			pMDXAHeader->ofsSkel = at - (byte *) pMDXAHeader; 
 			for (int iSkelIndex = 0; iSkelIndex < pMDXAHeader->numBones; iSkelIndex++)
@@ -81,7 +81,7 @@ static void GLMModel_BuildDefaultGLA()
 
 						pSkel->numChildren	=	0;	// inherently, when doing MD3 to G2 files
 
-				int iThisSkelSize = ((mdxaSkel_t *)0)->children[ pSkel->numChildren ] - 0;
+				int iThisSkelSize = sizeof (mdxaSkel_t) + sizeof (int) * (pSkel->numChildren - 1);
 
 				at += iThisSkelSize;
 			}

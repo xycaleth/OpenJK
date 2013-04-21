@@ -448,6 +448,7 @@ void AppVars_ReadIdeal(void)
 						
 			fclose(fHandle);
 
+#ifdef USE_MFC
 			extern bool Gallery_Active(void);
 			if (Gallery_Active())
 			{
@@ -460,6 +461,7 @@ void AppVars_ReadIdeal(void)
 				WarningBox(va("Ignoring settings file \"%s\" during gallery snapshots",psIdealName));
 				return;
 			}
+#endif
 
 			// now check for certain values...
 			//
@@ -3532,8 +3534,8 @@ static void ModelList_Render_Actual(int iWindowWidth, int iWindowHeight)
  			glRotatef		( AppVars.rotAngleY, 0.0 ,  1.0 , 0.0 );	
 			glRotatef		( AppVars.rotAngleZ, 1.0 ,  0.0 , 0.0 );	
 
-			extern bool gbScrollLockActive;
-			if (gbScrollLockActive)
+			//extern bool gbScrollLockActive;
+			if (/*gbScrollLockActive*/false)
 			{					
 				glTranslatef	(	   AppVars.xPos_SCROLL, AppVars.yPos_SCROLL , AppVars.zPos_SCROLL );
 //				glRotatef		( AppVars.rotAngleX_SCROLL, 1.0 ,  0.0 , 0.0 );
