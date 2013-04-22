@@ -11,6 +11,9 @@
 
 #define CLIENT_WINDOW_TITLE "OpenJK (MP)"
 #define CLIENT_CONSOLE_TITLE "OpenJK Console (MP)"
+#define HOMEPATH_NAME_UNIX ".openjk"
+#define HOMEPATH_NAME_WIN "OpenJK"
+#define HOMEPATH_NAME_MACOSX HOMEPATH_NAME_WIN
 
 //NOTENOTE: Only change this to re-point ICARUS to a new script directory
 #define Q3_SCRIPT_DIR	"scripts"
@@ -204,11 +207,14 @@ float FloatSwap( const float *f );
 #ifdef MACOS_X
 
 	#include <sys/mman.h>
+    #include <unistd.h>
 
 	#define __cdecl
 	#define __declspec(x)
 	#define stricmp strcasecmp
 	#define ID_INLINE /*inline*/ 
+
+    #define OS_STRING "MacOSX"
 
 	#ifdef __ppc__
 		#define CPUSTRING "MacOSX-ppc"
@@ -244,21 +250,25 @@ float FloatSwap( const float *f );
 		return fi;
 	}
 
-    #ifdef __ppc__
-        #define LittleShort(x) ShortSwap(x)
-        #define LittleLong(x) LongSwap(x)
-        #define LittleFloat(x) FloatSwap(&x)
-        #define BigShort
-        #define BigLong
-        #define BigFloat
-    #elif defined __i386__
-        #define LittleShort
-        #define LittleLong
-        #define LittleFloat
-        #define BigShort(x) ShortSwap(x)
-        #define BigLong(x) LongSwap(x)
-        #define BigFloat(x) FloatSwap(&x)
+    #if defined(__i386__)
+        #define ARCH_STRING "i386"
+    #elif defined(__x86_64__)
+        #define idx64
+        #define ARCH_STRING "x86_64"
+    #elif defined(__powerpc64__)
+        #define ARCH_STRING "ppc64"
+    #elif defined(__powerpc__)
+        #define ARCH_STRING "ppc"
     #endif
+
+    #define DLL_EXT ".dylib"
+
+#if BYTE_ORDER == BIG_ENDIAN
+#define Q3_BIG_ENDIAN
+#else
+#define Q3_LITTLE_ENDIAN
+#endif
+
 
 #endif // MACOS_X
 
@@ -286,6 +296,8 @@ float FloatSwap( const float *f );
 	static inline int LittleLong( int l ) { return LongSwap( l ); }
 	#define BigFloat
 	static inline float LittleFloat( const float l ) { return FloatSwap( &l ); }
+
+	#define DLL_EXT ".dylib"
 
 #endif // __MACOS__
 
@@ -1560,7 +1572,9 @@ int Com_Clampi( int min, int max, int value ); //rwwRMG - added
 float Com_Clamp( float min, float max, float value );
 
 char	*COM_SkipPath( char *pathname );
+const char	*COM_GetExtension( const char *name );
 void	COM_StripExtension( const char *in, char *out, int destsize );
+qboolean COM_CompareExtension(const char *in, const char *ext);
 void	COM_DefaultExtension( char *path, int maxSize, const char *extension );
 
 void	COM_BeginParseSession( const char *name );
@@ -1607,6 +1621,7 @@ void SkipRestOfLine ( const char **data );
 void Parse1DMatrix (const char **buf_p, int x, float *m);
 void Parse2DMatrix (const char **buf_p, int y, int x, float *m);
 void Parse3DMatrix (const char **buf_p, int z, int y, int x, float *m);
+int Com_HexStrToInt( const char *str );
 
 int	QDECL Com_sprintf (char *dest, int size, const char *fmt, ...);
 
@@ -1645,6 +1660,8 @@ char	*Q_strrchr( const char* string, int c );
 // buffer size safe library replacements
 void	Q_strncpyz( char *dest, const char *src, int destsize );
 void	Q_strcat( char *dest, int size, const char *src );
+
+const char *Q_stristr( const char *s, const char *find);
 
 // strlen that discounts Quake color sequences
 int Q_PrintStrlen( const char *string );
@@ -1752,6 +1769,11 @@ typedef struct cvar_s {
 	int			modificationCount;	// incremented each time the cvar is changed
 	float		value;				// atof( string )
 	int			integer;			// atoi( string )
+	qboolean	validate;
+	qboolean	integral;
+	float		min;
+	float		max;
+
 	struct cvar_s *next;
 	struct cvar_s *prev;
 	struct cvar_s *hashNext;

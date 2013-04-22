@@ -12,6 +12,10 @@ typedef unsigned int GLuint;
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
 
+#ifndef _WIN32
+#include "qcommon/platform.h"
+#endif
+
 // fast float to int conversion
 #if id386 && !( (defined __linux__ || defined __FreeBSD__ || defined MACOS_X) && (defined __i386__ ) ) // rb010123
 inline long myftol( float f );
@@ -1353,7 +1357,6 @@ void	RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 
 void		RE_BeginFrame( stereoFrame_t stereoFrame );
 void		RE_BeginRegistration( glconfig_t *glconfig );
-void		R_ColorShiftLightingBytes( byte in[4], byte out[4] ); //rwwRMG - added
 void		RE_LoadWorldMap( const char *mapname );
 
 void		RE_SetWorldVisData( const byte *vis );
@@ -1447,6 +1450,7 @@ void		GLimp_Shutdown( void );
 void		GLimp_EndFrame( void );
 
 void		GLimp_LogComment( char *comment );
+void		GLimp_Minimize(void);
 
 void		GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] );
 
@@ -1887,6 +1891,7 @@ void RE_EndFrame( int *frontEndMsec, int *backEndMsec );
 void RE_SaveJPG(char * filename, int quality, int image_width, int image_height, byte *image_buffer, int padding);
 size_t RE_SaveJPGToBuffer(byte *buffer, size_t bufSize, int quality, int image_width, int image_height, byte *image_buffer, int padding);
 void RE_TakeVideoFrame( int width, int height, byte *captureBuffer, byte *encodeBuffer, qboolean motionJpeg );
+int RE_SavePNG( char *filename, byte *buf, size_t width, size_t height, int byteDepth );
 
 /*
 Ghoul2 Insert Start

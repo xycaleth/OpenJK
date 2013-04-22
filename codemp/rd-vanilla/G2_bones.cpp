@@ -461,7 +461,7 @@ qboolean G2_Set_Bone_Angles_Index( boneInfo_v &blist, const int index,
 	blist[index].boneBlendStart = currentTime;
 	blist[index].boneBlendTime = blendTime;
 #if DEBUG_PCJ
-	OutputDebugString(va("PCJ %2d %6d   (%6.2f,%6.2f,%6.2f) %d %d %d %d\n",index,currentTime,angles[0],angles[1],angles[2],yaw,pitch,roll,flags));
+	Com_OPrintf("PCJ %2d %6d   (%6.2f,%6.2f,%6.2f) %d %d %d %d\n",index,currentTime,angles[0],angles[1],angles[2],yaw,pitch,roll,flags);
 #endif
 
 	G2_Generate_Matrix(NULL, blist, index, angles, flags, yaw, pitch, roll);
@@ -496,7 +496,7 @@ qboolean G2_Set_Bone_Angles(CGhoul2Info *ghlInfo, boneInfo_v &blist, const char 
 		blist[index].boneBlendStart = currentTime;
 		blist[index].boneBlendTime = blendTime;
 #if DEBUG_PCJ
-		OutputDebugString(va("%2d %6d   (%6.2f,%6.2f,%6.2f) %d %d %d %d\n",index,currentTime,angles[0],angles[1],angles[2],up,left,forward,flags));
+		Com_OPrintf("%2d %6d   (%6.2f,%6.2f,%6.2f) %d %d %d %d\n",index,currentTime,angles[0],angles[1],angles[2],up,left,forward,flags);
 #endif
 
 		G2_Generate_Matrix(mod_a, blist, index, angles, flags, up, left, forward);
@@ -515,7 +515,7 @@ qboolean G2_Set_Bone_Angles(CGhoul2Info *ghlInfo, boneInfo_v &blist, const char 
 		blist[index].boneBlendStart = currentTime;
 		blist[index].boneBlendTime = blendTime;
 #if DEBUG_PCJ
-		OutputDebugString(va("%2d %6d   (%6.2f,%6.2f,%6.2f) %d %d %d %d\n",index,currentTime,angles[0],angles[1],angles[2],up,left,forward,flags));
+		Com_OPrintf("%2d %6d   (%6.2f,%6.2f,%6.2f) %d %d %d %d\n",index,currentTime,angles[0],angles[1],angles[2],up,left,forward,flags);
 #endif
 
 		G2_Generate_Matrix(mod_a, blist, index, angles, flags, up, left, forward);
@@ -799,7 +799,7 @@ qboolean G2_Set_Bone_Anim_Index(
 				bone.flags
 				);
 		}
-		OutputDebugString(mess);
+		Com_OPrintf("%s",mess);
 	}
 #endif
 
@@ -1648,11 +1648,11 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 	int	index = G2_Find_Bone_Rag(&ghoul2, blist, "model_root");
 	switch (parms->RagPhase)
 	{
-	case CRagDollParams::ERagPhase::RP_START_DEATH_ANIM:
+	case CRagDollParams::RP_START_DEATH_ANIM:
 		ghoul2.mFlags|=GHOUL2_RAG_PENDING;
 		return;  /// not doing anything with this yet
 		break;
-	case CRagDollParams::ERagPhase::RP_END_DEATH_ANIM:
+	case CRagDollParams::RP_END_DEATH_ANIM:
 		ghoul2.mFlags|=GHOUL2_RAG_PENDING|GHOUL2_RAG_DONE;
 		if (broadsword_waitforshot &&
 			broadsword_waitforshot->integer)
@@ -1671,7 +1671,7 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 			}
 		}
 		break;
-	case CRagDollParams::ERagPhase::RP_DEATH_COLLISION:
+	case CRagDollParams::RP_DEATH_COLLISION:
 		if (parms->collisionType)
 		{
 			ghoul2.mFlags|=GHOUL2_RAG_COLLISION_SLIDE;
@@ -1690,7 +1690,7 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 			}
 		}
 		break;
-	case CRagDollParams::ERagPhase::RP_CORPSE_SHOT:
+	case CRagDollParams::RP_CORPSE_SHOT:
 		if (broadsword_kickorigin &&
 			broadsword_kickorigin->integer)
 		{
@@ -1725,14 +1725,14 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 			}
 		}
 		break;
-	case CRagDollParams::ERagPhase::RP_GET_PELVIS_OFFSET:
-		if (parms->RagPhase==CRagDollParams::ERagPhase::RP_GET_PELVIS_OFFSET)
+	case CRagDollParams::RP_GET_PELVIS_OFFSET:
+		if (parms->RagPhase==CRagDollParams::RP_GET_PELVIS_OFFSET)
 		{
 			VectorClear(parms->pelvisAnglesOffset);
 			VectorClear(parms->pelvisPositionOffset);
 		}
 		// intentional lack of a break
-	case CRagDollParams::ERagPhase::RP_SET_PELVIS_OFFSET:
+	case CRagDollParams::RP_SET_PELVIS_OFFSET:
 		if (index>=0&&index<blist.size())
 		{
 			boneInfo_t &bone=blist[index];
@@ -1740,7 +1740,7 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 			{
 				if (bone.flags & BONE_ANGLES_RAGDOLL)
 				{
-					if (parms->RagPhase==CRagDollParams::ERagPhase::RP_GET_PELVIS_OFFSET)
+					if (parms->RagPhase==CRagDollParams::RP_GET_PELVIS_OFFSET)
 					{
 						VectorCopy(bone.anglesOffset,parms->pelvisAnglesOffset);
 						VectorCopy(bone.positionOffset,parms->pelvisPositionOffset);
@@ -1755,7 +1755,7 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 		}
 		return;
 		break;
-	case CRagDollParams::ERagPhase::RP_DISABLE_EFFECTORS:
+	case CRagDollParams::RP_DISABLE_EFFECTORS:
 		// not doing anything with this yet
 		return;
 		break;
@@ -1772,7 +1772,7 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 #if 0
 if (index>=0)
 {
-	OutputDebugString(va("death %d %d\n",blist[index].startFrame,blist[index].endFrame));
+	Com_OPrintf("death %d %d\n",blist[index].startFrame,blist[index].endFrame);
 }
 #endif
 
@@ -2317,7 +2317,7 @@ static bool G2_RagDollSetup(CGhoul2Info &ghoul2,int frameNum,bool resetOrigin,co
 					// this thing was rendered in the past, but wasn't now, although other bones were, lets get rid of it
 //					bone.flags &= ~BONE_ANGLES_RAGDOLL;
 //					bone.RagFlags = 0;
-//OutputDebugString(va("Deleted Effector %d\n",i));
+//Com_OPrintf("Deleted Effector %d\n",i);
 //					continue;
 				}
 				if (rag.size()<bone.boneNumber+1)
@@ -2338,7 +2338,7 @@ static bool G2_RagDollSetup(CGhoul2Info &ghoul2,int frameNum,bool resetOrigin,co
 #if 0
 	if (numRendered<5)  // I think this is a limb
 	{
-//OutputDebugString(va("limb %3d/%3d  (r,N).\n",numRendered,numNotRendered));
+//Com_OPrintf("limb %3d/%3d  (r,N).\n",numRendered,numNotRendered);
 		if (minSurvivingBoneAt<0)
 		{
 			// pelvis is gone, but we have no remaining pcj's
@@ -2556,7 +2556,7 @@ static void G2_RagDoll(CGhoul2Info_v &ghoul2V,int g2Index,CRagDollUpdateParams *
 		worldMaxs[0]=params->position[0]+17;
 		worldMaxs[1]=params->position[1]+17;
 		worldMaxs[2]=params->position[2];
-//OutputDebugString(va("%f \n",worldMins[2]));
+//Com_OPrintf(va("%f \n",worldMins[2]);
 //		params->DebugLine(worldMins,worldMaxs,true);
 #endif
 		G2_RagDollCurrentPosition(ghoul2V,g2Index,frameNum,params->angles,params->position,params->scale);
@@ -2604,7 +2604,7 @@ static void G2_RagDollCurrentPosition(CGhoul2Info_v &ghoul2V,int g2Index,int fra
 {
 	CGhoul2Info &ghoul2=ghoul2V[g2Index];
 	assert(ghoul2.mFileName[0]);
-//OutputDebugString(va("angles %f %f %f\n",angles[0],angles[1],angles[2]));
+//Com_OPrintf("angles %f %f %f\n",angles[0],angles[1],angles[2]);
 	G2_GenerateWorldMatrix(angles,position);
 	G2_ConstructGhoulSkeleton(ghoul2V, frameNum, false, scale);
 

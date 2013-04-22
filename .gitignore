@@ -165,3 +165,9 @@ pip-log.txt
 
 # Ignore qt files
 GeneratedFiles/
+
+#############
+## Unix
+#############
+*.o
+*.so

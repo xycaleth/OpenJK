@@ -49,8 +49,8 @@ extern keyname_t	keynames[MAX_KEYS];
 void Field_Clear( field_t *edit );
 void Field_KeyDownEvent( field_t *edit, int key );
 void Field_CharEvent( field_t *edit, int ch );
-void Field_Draw( field_t *edit, int x, int y, int width, qboolean showCursor );
-void Field_BigDraw( field_t *edit, int x, int y, int width, qboolean showCursor );
+void Field_Draw( field_t *edit, int x, int y, int width, qboolean showCursor, qboolean noColorEscape );
+void Field_BigDraw( field_t *edit, int x, int y, int width, qboolean showCursor, qboolean noColorEscape );
 
 extern	field_t	chatField;
 extern	qboolean	chat_team;
@@ -60,6 +60,7 @@ void Key_WriteBindings( fileHandle_t f );
 void Key_SetBinding( int keynum, const char *binding );
 char *Key_GetBinding( int keynum );
 qboolean Key_IsDown( int keynum );
+int Key_StringToKeynum( char *str );
 qboolean Key_GetOverstrikeMode( void );
 void Key_SetOverstrikeMode( qboolean state );
 void Key_ClearStates( void );

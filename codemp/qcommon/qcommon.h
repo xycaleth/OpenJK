@@ -27,7 +27,6 @@ void MSG_Clear (msg_t *buf);
 void MSG_WriteData (msg_t *buf, const void *data, int length);
 void MSG_Bitstream( msg_t *buf );
 
-
 struct usercmd_s;
 struct entityState_s;
 struct playerState_s;
@@ -343,6 +342,8 @@ then searches for a command or variable that matches the first token.
 
 typedef void (*xcommand_t) (void);
 
+typedef void ( *callbackFunc_t )( const char *s );
+
 void	Cmd_Init (void);
 
 void	Cmd_AddCommand( const char *cmd_name, xcommand_t function );
@@ -354,7 +355,7 @@ void	Cmd_AddCommand( const char *cmd_name, xcommand_t function );
 
 void	Cmd_RemoveCommand( const char *cmd_name );
 
-void	Cmd_CommandCompletion( void(*callback)(const char *s) );
+void	Cmd_CommandCompletion( callbackFunc_t callback );
 // callback with each valid string
 
 int		Cmd_Argc (void);
@@ -453,7 +454,7 @@ void	Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize 
 int	Cvar_Flags(const char *var_name);
 // returns CVAR_NONEXISTENT if cvar doesn't exist or the flags of that particular CVAR.
 
-void	Cvar_CommandCompletion( void(*callback)(const char *s) );
+void	Cvar_CommandCompletion( callbackFunc_t callback );
 // callback with each valid string
 
 void 	Cvar_Reset( const char *var_name );
@@ -478,6 +479,7 @@ char	*Cvar_InfoString_Big( int bit );
 // returns an info string containing all the cvars that have the given bit set
 // in their flags ( CVAR_USERINFO, CVAR_SERVERINFO, CVAR_SYSTEMINFO, etc )
 void	Cvar_InfoStringBuffer( int bit, char *buff, int buffsize );
+void Cvar_CheckRange( cvar_t *cv, float minVal, float maxVal, qboolean shouldBeIntegral );
 
 void	Cvar_Restart(qboolean unsetVM);
 void	Cvar_Restart_f( void );
@@ -684,10 +686,12 @@ extern	cvar_t	*com_sv_running;
 extern	cvar_t	*com_cl_running;
 extern	cvar_t	*com_viewlog;			// 0 = hidden, 1 = visible, 2 = minimized
 extern	cvar_t	*com_version;
-extern	cvar_t	*com_blood;
 extern	cvar_t	*com_buildScript;		// for building release pak files
 extern	cvar_t	*com_journal;
 extern	cvar_t	*com_cameraMode;
+extern	cvar_t	*com_unfocused;
+extern	cvar_t	*com_minimized;
+extern	cvar_t	*com_homepath;
 
 extern	cvar_t	*com_optvehtrace;
 
@@ -939,13 +943,7 @@ void	Sys_Init (void);
 	#define Sys_UnloadLibrary(h) FreeLibrary((HMODULE)h)
 	#define Sys_LoadFunction(h,fn) (void*)GetProcAddress((HMODULE)h,fn)
 	#define Sys_LibraryError() "unknown"
-#else // linux and mac should be fine with this, can use SDL later
-	#include <dlfcn.h>
-	#define Sys_LoadLibrary(f) dlopen(f,RTLD_NOW)
-	#define Sys_UnloadLibrary(h) dlclose(h)
-	#define Sys_LoadFunction(h,fn) dlsym(h,fn)
-	#define Sys_LibraryError() dlerror()
-#endif
+#endif // linux and mac use SDL in SDL_loadlibrary.h
 
 // general development dll loading for virtual machine testing
 void	* QDECL Sys_LoadDll(const char *name, qboolean useSystemLib);
@@ -977,6 +975,7 @@ void	Sys_Print( const char *msg );
 // any game related timing information should come from event timestamps
 int		Sys_Milliseconds (bool baseTime = false);
 int		Sys_Milliseconds2(void);
+void 	Sys_SetEnv(const char *name, const char *value);
 
 #ifndef _WIN32
 extern "C" void	Sys_SnapVector( float *v );

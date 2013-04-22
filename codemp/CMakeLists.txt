@@ -22,13 +22,18 @@ if(BuildMPUI)
 	add_subdirectory("${MPDir}/ui")
 endif(BuildMPUI)
 
+#	 Add Vanilla JKA Renderer Project
+if(BuildMPEngine)
+	add_subdirectory("${MPDir}/rd-vanilla")
+endif(BuildMPEngine)
+
 
 #        Common things between Engine and Dedicated Server
 if(BuildMPEngine OR BuildMPDed)
 
 	#    Botlib
 	# the files could arguably just be put into the engine and dedicated projects without having a library for it.
-	set(MPBotlibDefines "BOTLIB")
+	set(MPBotlibDefines ${SharedDefines} "BOTLIB")
 	set(MPBotlibIncludeDirectories "${MPDir}")
 	set(MPBotlibHeaderFiles
 		"${MPDir}/botlib/aasfile.h"
@@ -137,11 +142,17 @@ if(BuildMPEngine OR BuildMPDed)
 		set(MPEngineAndDedIncludeDirectories ${MPEngineAndDedIncludeDirectories} ${ZLIB_INCLUDE_DIR})
 		set(MPEngineAndDedLibraries ${MPEngineAndDedLibraries} ${ZLIB_LIBRARY})
 	endif(UseInternalZlib)
+
+	if(NOT WIN32)
+		find_package(SDL2 REQUIRED)
+		set(MPEngineAndDedIncludeDirectories ${MPEngineAndDedIncludeDirectories} ${SDL2_INCLUDE_DIR})
+		set(MPEngineAndDedLibraries ${MPEngineAndDedLibraries} ${SDL2_LIBRARY})
+	endif(NOT WIN32)
 	
+	file(GLOB_RECURSE J_SRC "${MPDir}/jpeg-8c/*.c" "${MPDir}/jpeg-8c/*.h")
 	
 	set(MPEngineAndDedCgameFiles
 		"${MPDir}/cgame/cg_public.h"
-		"${MPDir}/cgame/tr_types.h"
 		)
 	source_group("cgame" FILES ${MPEngineAndDedCgameFiles})
 	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedCgameFiles})
@@ -199,6 +210,8 @@ if(BuildMPEngine OR BuildMPDed)
 		"${MPDir}/qcommon/md4.cpp"
 		"${MPDir}/qcommon/MiniHeap.h"
 		"${MPDir}/qcommon/msg.cpp"
+		"${MPDir}/qcommon/matcomp.h"
+		"${MPDir}/qcommon/matcomp.cpp"
 		"${MPDir}/qcommon/net_chan.cpp"
 		"${MPDir}/qcommon/q_math.cpp"
 		"${MPDir}/qcommon/q_shared.cpp"
@@ -216,7 +229,6 @@ if(BuildMPEngine OR BuildMPDed)
 		"${MPDir}/qcommon/vm.cpp"
 		"${MPDir}/qcommon/vm_interpreted.cpp"
 		"${MPDir}/qcommon/vm_local.h"
-		"${MPDir}/qcommon/vm_x86.cpp"
 		"${MPDir}/qcommon/z_memman_pc.cpp"
 		)
 	source_group("common" FILES ${MPEngineAndDedCommonFiles})
@@ -224,13 +236,7 @@ if(BuildMPEngine OR BuildMPDed)
 	
 	set(MPEngineAndDedG2Files
 		"${MPDir}/ghoul2/G2.h"
-		"${MPDir}/ghoul2/G2_API.cpp"
-		"${MPDir}/ghoul2/G2_bolts.cpp"
-		"${MPDir}/ghoul2/G2_bones.cpp"
 		"${MPDir}/ghoul2/G2_gore.h"
-		"${MPDir}/ghoul2/G2_local.h"
-		"${MPDir}/ghoul2/G2_misc.cpp"
-		"${MPDir}/ghoul2/G2_surfaces.cpp"
 		"${MPDir}/ghoul2/ghoul2_shared.h"
 		)
 	source_group("ghoul2" FILES ${MPEngineAndDedG2Files})
@@ -263,27 +269,6 @@ if(BuildMPEngine OR BuildMPDed)
 		)
 	source_group("icarus" FILES ${MPEngineAndDedIcarusFiles})
 	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedIcarusFiles})
-	
-	set(MPEngineAndDedRendererFiles
-		"${MPDir}/renderer/glext.h"
-		"${MPDir}/renderer/matcomp.c"
-		"${MPDir}/renderer/matcomp.h"
-		"${MPDir}/renderer/mdx_format.h"
-		"${MPDir}/renderer/qgl.h"
-		"${MPDir}/renderer/tr_backend.cpp"
-		"${MPDir}/renderer/tr_font.h"
-		"${MPDir}/renderer/tr_ghoul2.cpp"
-		"${MPDir}/renderer/tr_image.cpp"
-		"${MPDir}/renderer/tr_init.cpp"
-		"${MPDir}/renderer/tr_local.h"
-		"${MPDir}/renderer/tr_main.cpp"
-		"${MPDir}/renderer/tr_mesh.cpp"
-		"${MPDir}/renderer/tr_model.cpp"
-		"${MPDir}/renderer/tr_public.h"
-		"${MPDir}/renderer/tr_shader.cpp"
-		)
-	source_group("renderer" FILES ${MPEngineAndDedRendererFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedRendererFiles})
 	
 	set(MPEngineAndDedRmgFiles
 		"${MPDir}/RMG/RM_Area.cpp"
@@ -340,13 +325,6 @@ if(BuildMPEngine OR BuildMPDed)
 	source_group("ui" FILES ${MPEngineAndDedUiFiles})
 	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedUiFiles})
 	
-	set(MPEngineAndDedPngFiles
-		"${MPDir}/png/png.h"
-		"${MPDir}/png/png.cpp"
-		)
-	source_group("png" FILES ${MPEngineAndDedPngFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedPngFiles})
-	
 	# TODO: replace the following with proper library? Update it?
 	set(MPEngineAndDedMinizipFiles
 		"${MPDir}/qcommon/unzip.cpp"
@@ -358,16 +336,25 @@ if(BuildMPEngine OR BuildMPDed)
 	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedMinizipFiles})
 	
 	if(WIN32)
-		set(MPEngineAndDedWin32Files
+		set(MPEngineAndDedAllSortMe
+			${MPEngineAndDedAllSortMe}
 			"${MPDir}/win32/win_local.h"
 			"${MPDir}/win32/win_net.cpp"
 			"${MPDir}/win32/win_shared.cpp"
+			"${MPDir}/qcommon/vm_x86.cpp"
 			)
 		source_group("win32" FILES ${MPEngineAndDedWin32Files})
 		set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedWin32Files})
 	else(WIN32)
-		message("TODO: Non-Win32 support")
+		set(MPEngineAndDedAllSortMe
+			${MPEngineAndDedAllSortMe}
+			"${MPDir}/sys/vm_x86.cpp"
+			"${MPDir}/sys/snapvector.nasm"
+			)
 	endif(WIN32)
+	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedAllSortMe})
+	source_group("SortMe" FILES ${MPEngineAndDedAllSortMe})
+	source_group("jpeg-8c" FILES ${J_SRC})
 	
 endif(BuildMPEngine OR BuildMPDed)
 
@@ -483,34 +470,6 @@ if(BuildMPEngine)
 	source_group("ravl" FILES ${MPEngineRavlFiles})
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineRavlFiles})
 	
-	set(MPEngineRendererFiles
-		"${MPDir}/renderer/tr_animation.cpp"
-		"${MPDir}/renderer/tr_arioche.cpp"
-		"${MPDir}/renderer/tr_bsp.cpp"
-		"${MPDir}/renderer/tr_cmds.cpp"
-		"${MPDir}/renderer/tr_curve.cpp"
-		"${MPDir}/renderer/tr_font.cpp"
-		"${MPDir}/renderer/tr_landscape.h"
-		"${MPDir}/renderer/tr_light.cpp"
-		"${MPDir}/renderer/tr_marks.cpp"
-		"${MPDir}/renderer/tr_noise.cpp"
-		"${MPDir}/renderer/tr_quicksprite.cpp"
-		"${MPDir}/renderer/tr_quicksprite.h"
-		"${MPDir}/renderer/tr_scene.cpp"
-		"${MPDir}/renderer/tr_shade.cpp"
-		"${MPDir}/renderer/tr_shade_calc.cpp"
-		"${MPDir}/renderer/tr_shadows.cpp"
-		"${MPDir}/renderer/tr_sky.cpp"
-		"${MPDir}/renderer/tr_surface.cpp"
-		"${MPDir}/renderer/tr_surfacesprites.cpp"
-		"${MPDir}/renderer/tr_terrain.cpp"
-		"${MPDir}/renderer/tr_world.cpp"
-		"${MPDir}/renderer/tr_WorldEffects.cpp"
-		"${MPDir}/renderer/tr_WorldEffects.h"
-		)
-	source_group("renderer" FILES ${MPEngineRendererFiles})
-	set(MPEngineFiles ${MPEngineFiles} ${MPEngineRendererFiles})
-	
 	set(MPEngineMp3Files
 		"${MPDir}/mp3code/cdct.c"
 		"${MPDir}/mp3code/config.h"
@@ -551,11 +510,8 @@ if(BuildMPEngine)
 			"${MPDir}/win32/glw_win.h"
 			"${MPDir}/win32/icon.ico"
 			"${MPDir}/win32/resource.h"
-			"${MPDir}/win32/win_gamma.cpp"
-			"${MPDir}/win32/win_glimp.cpp"
 			"${MPDir}/win32/win_input.cpp"
 			"${MPDir}/win32/win_main.cpp"
-			"${MPDir}/win32/win_qgl.cpp"
 			"${MPDir}/win32/win_snd.cpp"
 			"${MPDir}/win32/win_syscon.cpp"
 			"${MPDir}/win32/win_wndproc.cpp"
@@ -564,8 +520,22 @@ if(BuildMPEngine)
 		source_group("win32" FILES ${MPEngineWin32Files})
 		set(MPEngineFiles ${MPEngineFiles} ${MPEngineWin32Files})
 	else(WIN32)
-		message("Please add the OS-Specific files for your OS to codemp/CMakeLists.txt")
+		set(MPEngineSortMe
+			${MPEngineSortMe}
+			"${MPDir}/sdl/sdl_input.cpp"
+			"${MPDir}/sdl/sdl_qgl.h"
+			"${MPDir}/sdl/sdl_snd.cpp"
+			"${MPDir}/sys/sys_loadlib.h"
+			"${MPDir}/sys/sys_local.h"
+			"${MPDir}/sys/sys_main.cpp"
+			"${MPDir}/sys/sys_net.cpp"
+			"${MPDir}/sys/sys_unix.cpp"
+			"${MPDir}/sys/unix_local.h"
+			)
 	endif(WIN32)
+
+	set(MPEngineFiles ${MPEngineFiles} ${MPEngineSortMe})
+	source_group("SortMe" FILES ${MPEngineSortMe})
 
 	# todo: windows resources
 
@@ -574,11 +544,13 @@ if(BuildMPEngine)
 	else(WIN32)
 		add_executable(${MPEngine} ${MPEngineFiles})
 	endif(WIN32)
+    install(TARGETS ${MPEngine} RUNTIME DESTINATION ".")
+	set_target_properties(${MPEngine} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "${MPEngineDefines};${ReleaseDefines}")
+	set_target_properties(${MPEngine} PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "${MPEngineDefines};${ReleaseDefines}")
 	set_target_properties(${MPEngine} PROPERTIES COMPILE_DEFINITIONS_RELEASE "${MPEngineDefines};${ReleaseDefines}")
 	set_target_properties(${MPEngine} PROPERTIES COMPILE_DEFINITIONS_DEBUG "${MPEngineDefines};${DebugDefines}")
 	set_target_properties(${MPEngine} PROPERTIES INCLUDE_DIRECTORIES "${MPEngineIncludeDirectories}")
 	target_link_libraries(${MPEngine} ${MPEngineLibraries})
-
 endif(BuildMPEngine)
 
 #        Dedicated Server (Engine) (jampded.exe)
@@ -588,11 +560,55 @@ if(BuildMPDed)
 	set(MPDedIncludeDirectories ${MPEngineAndDedIncludeDirectories})
 	set(MPDedFiles ${MPEngineAndDedFiles})
 	set(MPDedDefines ${MPSharedDefines} "_CONSOLE" "DEDICATED")
+
+	# Dedicated renderer is compiled with the server.
+	set(MPDedicatedRendererFiles
+		"${MPDir}/renderer/mdx_format.h"
+		"${MPDir}/renderer/tr_public.h"
+		"${MPDir}/rd-dedicated/tr_local.h"
+		"${MPDir}/rd-dedicated/G2_API.cpp"
+		"${MPDir}/rd-dedicated/G2_bolts.cpp"
+		"${MPDir}/rd-dedicated/G2_bones.cpp"
+		"${MPDir}/rd-dedicated/G2_misc.cpp"
+		"${MPDir}/rd-dedicated/G2_surfaces.cpp"
+		"${MPDir}/rd-dedicated/tr_backend.cpp"
+		"${MPDir}/rd-dedicated/tr_ghoul2.cpp"
+		"${MPDir}/rd-dedicated/tr_image.cpp"
+		"${MPDir}/rd-dedicated/tr_init.cpp"
+		"${MPDir}/rd-dedicated/tr_main.cpp"
+		"${MPDir}/rd-dedicated/tr_mesh.cpp"
+		"${MPDir}/rd-dedicated/tr_model.cpp"
+		"${MPDir}/rd-dedicated/tr_shader.cpp")
+	source_group("renderer" FILES ${MPDedicatedRendererFiles})
+	set(MPDedFiles ${MPDedFiles} ${MPDedicatedRendererFiles})
+
+	set(MPDedicatedPngFiles
+		"${MPDir}/png/rpng.cpp")
+	source_group("png" FILES ${MPVanillaRendererPngFiles})
+	set(MPDedFiles ${MPDedFiles} ${MPDedicatedPngFiles})
+
+	set(MPDedLibPngFiles
+		"${MPDir}/libpng/png.c"
+		"${MPDir}/libpng/pngerror.c"
+		"${MPDir}/libpng/pngget.c"
+		"${MPDir}/libpng/pngmem.c"
+		"${MPDir}/libpng/pngpread.c"
+		"${MPDir}/libpng/pngread.c"
+		"${MPDir}/libpng/pngrio.c"
+		"${MPDir}/libpng/pngrtran.c"
+		"${MPDir}/libpng/pngrutil.c"
+		"${MPDir}/libpng/pngset.c"
+		"${MPDir}/libpng/pngtrans.c"
+		"${MPDir}/libpng/pngwio.c"
+		"${MPDir}/libpng/pngwrite.c"
+		"${MPDir}/libpng/pngwtran.c"
+		"${MPDir}/libpng/pngwutil.c")
+	source_group("libpng" FILES ${MPDedLibPngFiles})
+	set(MPDedFiles ${MPDedFiles} ${MPDedLibPngFiles})
 	
 	# TODO sort this
 	set(MPDedNullFiles
 		"${MPDir}/null/null_client.cpp"
-		"${MPDir}/null/null_glimp.cpp"
 		"${MPDir}/null/null_input.cpp"
 		"${MPDir}/null/null_renderer.cpp"
 		"${MPDir}/null/null_snddma.cpp"
@@ -607,10 +623,21 @@ if(BuildMPDed)
 		source_group("win32" FILES ${MPDedWin32Files})
 		set(MPDedFiles ${MPDedFiles} ${MPDedWin32Files})
 	else(WIN32)
-		message( "Add your dedicated server files to codemp/CMakeLists.txt please" )
+		set(MPDedSortMe ${MPDedSortMe}
+			"${MPDir}/sys/sys_main.cpp"
+			"${MPDir}/sys/sys_net.cpp"
+			"${MPDir}/sys/sys_unix.cpp"
+			"${MPDir}/sys/unix_local.h"
+			)
+		set(MPDedLibraries ${MPDedLibraries} ${CMAKE_DL_LIBS})
 	endif(WIN32)
+	set(MPDedFiles ${MPDedFiles} ${MPDedSortMe})
+	source_group("SortMe" FILES ${MPDedSortMe})
 	
 	add_executable(${MPDed} ${MPDedFiles})
+	install(TARGETS ${MPDed} RUNTIME DESTINATION ".")
+	set_target_properties(${MPDed} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "${MPDedDefines};${ReleaseDefines}")
+	set_target_properties(${MPDed} PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "${MPDedDefines};${ReleaseDefines}")
 	set_target_properties(${MPDed} PROPERTIES COMPILE_DEFINITIONS_RELEASE "${MPDedDefines};${ReleaseDefines}")
 	set_target_properties(${MPDed} PROPERTIES COMPILE_DEFINITIONS_DEBUG "${MPDedDefines};${DebugDefines}")
 	set_target_properties(${MPDed} PROPERTIES INCLUDE_DIRECTORIES "${MPDedIncludeDirectories}")
