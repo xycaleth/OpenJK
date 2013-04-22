@@ -74,10 +74,19 @@ typedef struct	// simple struct for passing text data to callback functions duri
 TextData_t TextData;
 
 
-
+#ifndef _WIN32
+#include <sys/time.h>
+#endif
 double getDoubleTime (void)
 {
+#ifdef _WIN32
 	return (double)clock() / (double)CLOCKS_PER_SEC;
+#else
+    timeval val;
+    gettimeofday(&val, NULL);
+    
+    return val.tv_sec + 1e-6 * val.tv_usec;
+#endif
 }
 
 
