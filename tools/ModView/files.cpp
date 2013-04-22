@@ -127,10 +127,10 @@ Com_FilterPath
 int Com_FilterPath(char *filter, char *name, int casesensitive)
 {
 	int i;
-	char new_filter[MAX_QPATH];
-	char new_name[MAX_QPATH];
+	char new_filter[MAX_OSPATH];
+	char new_name[MAX_OSPATH];
 
-	for (i = 0; i < MAX_QPATH-1 && filter[i]; i++) {
+	for (i = 0; i < MAX_OSPATH-1 && filter[i]; i++) {
 		if ( filter[i] == '\\' || filter[i] == ':' ) {
 			new_filter[i] = '/';
 		}
@@ -139,7 +139,7 @@ int Com_FilterPath(char *filter, char *name, int casesensitive)
 		}
 	}
 	new_filter[i] = '\0';
-	for (i = 0; i < MAX_QPATH-1 && name[i]; i++) {
+	for (i = 0; i < MAX_OSPATH-1 && name[i]; i++) {
 		if ( name[i] == '\\' || name[i] == ':' ) {
 			new_name[i] = '/';
 		}
@@ -188,7 +188,6 @@ char *CopyString( const char *in ) {
 
 #include <QtCore/QDir>
 char **Sys_ListFiles( const char *directory, const char *extension, char *filter, int *numfiles, qboolean wantsubs ) {
-	char		search[MAX_QPATH];
 	int			nfiles;
 	char		**listCopy;
 	char		*list[MAX_FOUND_FILES];
@@ -202,12 +201,10 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 		extension = "";
 	}
 
-	Com_sprintf( search, sizeof(search), "%s/*%s", directory, extension );
-
 	// search
 	nfiles = 0;
 
-    QDir root (search);
+    QDir root (directory);
     if ( !root.exists() )
     {
         *numfiles = 0;
@@ -217,10 +214,15 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
     QDir::Filters filters = QDir::Files;
     if ( wantsubs )
     {
-        filters |= QDir::Dirs;
+        filters |= QDir::AllDirs;
     }
 
-    QStringList files = root.entryList (filters);
+    QStringList nameFilters;
+    QString starExtension = "*";
+    starExtension += extension;
+    nameFilters.push_back (starExtension);
+
+    QStringList files = root.entryList (nameFilters, filters);
     nfiles = min (files.size(), MAX_FOUND_FILES - 1);
     for ( int i = 0; i < nfiles; i++ )
     {
@@ -232,6 +234,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 		listCopy[i] = list[i];
 	}
 	listCopy[nfiles] = NULL;
+    *numfiles = nfiles;
 
 	return listCopy;
 }

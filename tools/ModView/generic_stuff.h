@@ -53,7 +53,7 @@ bool SendFileToNotepad(const char * psFilename);
 bool SendStringToNotepad(const char * psWhatever, const char * psLocalFileName);
 
 #ifndef WIN32
-#define OutputDebugString
+#define OutputDebugString(x) (void)(x)
 #define APIENTRY
 #endif
 

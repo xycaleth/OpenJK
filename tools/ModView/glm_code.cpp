@@ -129,7 +129,7 @@ static void GLMModel_BuildDefaultGLA()
 			pMDXAHeader->ofsEnd = at - (byte *) pMDXAHeader;		
 		}
 
-		realloc(gpvDefaultGLA, pMDXAHeader->ofsEnd);
+		gpvDefaultGLA = realloc(gpvDefaultGLA, pMDXAHeader->ofsEnd);
 
 /*		FILE *fhHandle = fopen("c:\\default.gla","wb");
 		if (fhHandle)

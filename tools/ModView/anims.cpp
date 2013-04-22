@@ -60,7 +60,7 @@ bool Anims_ReadFile_FRAMES(ModelContainer_t *pContainer, const char * psLocalFil
             std::string str(sLine);
             Trim (str);
             
-            std::remove(str.begin(), str.end(), '"');
+            str.erase (std::remove(str.begin(), str.end(), '"'), str.end());
             Q_strncpyz (sLine, str.c_str(), sizeof(sLine));
 
 			if (strstr(sLine,".xsi"))
@@ -77,7 +77,7 @@ bool Anims_ReadFile_FRAMES(ModelContainer_t *pContainer, const char * psLocalFil
 			{
                 std::string str(&sLine[strlen("startframe")]);
                 
-                std::remove (str.begin(), str.end(), '"');
+                str.erase (std::remove (str.begin(), str.end(), '"'), str.end());
 				Sequence.iStartFrame = atoi(str.c_str());
 
 				bStartFrameRead = true;
@@ -86,7 +86,7 @@ bool Anims_ReadFile_FRAMES(ModelContainer_t *pContainer, const char * psLocalFil
 			if (Q_stricmpn(sLine,"duration",strlen("duration"))==0)
 			{
                 std::string str(&sLine[strlen("duration")]);
-                std::remove (str.begin(), str.end(), '"');
+                str.erase (std::remove (str.begin(), str.end(), '"'), str.end());
 
 				Sequence.iFrameCount = atoi(str.c_str());
 
@@ -96,7 +96,7 @@ bool Anims_ReadFile_FRAMES(ModelContainer_t *pContainer, const char * psLocalFil
 			if (Q_stricmpn(sLine,"fps",strlen("fps"))==0)
 			{
                 std::string str(&sLine[strlen("fps")]);
-                std::remove (str.begin(), str.end(), '"');
+                str.erase (std::remove (str.begin(), str.end(), '"'), str.end());
 
 				Sequence.iFPS = atoi(str.c_str());
 

@@ -34,7 +34,11 @@ typedef enum {
 //
 #ifndef MAX_QPATH
 #define MAX_QPATH 64
+#ifdef _WIN32
 #define MAX_OSPATH MAX_PATH
+#else
+#define MAX_OSPATH PATH_MAX
+#endif
 
 #define MAX_SKIN_FILES 1000	// some high number we'll never reach (probably)
 

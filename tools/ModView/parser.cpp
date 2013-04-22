@@ -101,11 +101,11 @@ bool Parser_Load(const char * psFullPathedFilename, MappedString_t &ParsedAliase
 						//
                         std::string strArg_Left(strPair.substr(0, iLoc));	// real name
                         RightTrim(strArg_Left);
-                        std::remove (strArg_Left.begin(), strArg_Left.end(), '"');
+                        strArg_Left.erase (std::remove (strArg_Left.begin(), strArg_Left.end(), '"'), strArg_Left.end());
 
                         std::string strArg_Right(strPair.substr (iLoc));	// alias name
                         LeftTrim (strArg_Right);
-                        std::remove (strArg_Right.begin(), strArg_Right.end(), '"');
+                        strArg_Right.erase (std::remove (strArg_Right.begin(), strArg_Right.end(), '"'), strArg_Right.end());
 
 						ParsedAliases[strArg_Left.c_str()] = strArg_Right.c_str();
 

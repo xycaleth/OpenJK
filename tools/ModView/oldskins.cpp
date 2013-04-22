@@ -38,9 +38,9 @@ const char * OldSkins_Parse(const char * psSkinName, const char * psText)
 {
 	std::string strText(psText);
 
-    strText = Replace (strText, "\r\n", "\n"); // file was read in binary mode, so account for 0x0A/0x0D pairs
-    std::remove (strText.begin(), strText.end(), '\t');
-    std::remove (strText.begin(), strText.end(), ' ');
+    strText.erase (std::remove (strText.begin(), strText.end(), '\r'), strText.end());
+    strText.erase (std::remove (strText.begin(), strText.end(), '\t'), strText.end());
+    strText.erase (std::remove (strText.begin(), strText.end(), ' '), strText.end());
 
     std::transform (strText.begin(), strText.end(), strText.begin(), tolower);
 	
