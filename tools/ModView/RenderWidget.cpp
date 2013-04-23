@@ -114,8 +114,36 @@ void RenderWidget::mouseMoveEvent ( QMouseEvent *event )
     lastY = y;
 }
 
+void SaveScreenshot ( const std::string& filename, int width, int height )
+{
+    int oldPackAlignment = 0;
+    
+    glGetIntegerv (GL_PACK_ALIGNMENT, &oldPackAlignment);
+    glPixelStorei (GL_PACK_ALIGNMENT, 1);
+    
+    unsigned char *buffer = new unsigned char[width * height * 3];
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+    
+    QImage image (buffer, width, height, width * 3, QImage::Format_RGB888);
+    image.mirrored().save (QString::fromStdString (filename));
+    
+    delete [] buffer;
+    glPixelStorei (GL_PACK_ALIGNMENT, oldPackAlignment);
+}
+
 void RenderWidget::paintGL()
 {
     QSize frameSize (size());
+    if ( AppVars.takeScreenshot )
+    {
+        AppVars.takeScreenshot = false;
+        
+        gbTextInhibit = true;
+        ModelList_Render (frameSize.width(), frameSize.height());
+        gbTextInhibit = false;
+        
+        SaveScreenshot(AppVars.screenshotFileName, frameSize.width(), frameSize.height());
+    }
+    
     ModelList_Render (frameSize.width(), frameSize.height());
 }

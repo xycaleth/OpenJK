@@ -1,15 +1,17 @@
 #include "stdafx.h"
 #include "MainForm.h"
 
+#include <QtCore/QDateTime>
+#include <QtCore/QTimer>
 #include <QtWidgets/QColorDialog>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMessageBox>
-#include <QtCore/QTimer>
 #include "generic_stuff.h"
 #include "model.h"
 #include "SceneTreeItem.h"
 #include "SceneTreeModel.h"
 #include "SceneTreeView.h"
+#include "text.h"
 #include "textures.h"
 
 void StartRenderTimer ( QWidget *parent, RenderWidget *renderWidget )
@@ -248,7 +250,20 @@ void MainForm::OnPrevFrame()
 
 void MainForm::OnScreenshotToFile()
 {
-    
+    if ( Model_Loaded() )
+    {
+        std::string baseName (Filename_WithoutPath (Filename_PathOnly (Model_GetFullPrimaryFilename())));
+        std::string screenshotName = baseName + "_" + QDateTime::currentDateTime().toString ("yyyy-MM-dd_hh-mm-ss").toStdString() + ".png";
+        
+        QString fileToSave = QFileDialog::getSaveFileName (this, QString(), QString::fromStdString (screenshotName), "PNG image (*.png)");
+        
+        if ( !fileToSave.isEmpty() )
+        {
+            AppVars.takeScreenshot = true;
+            AppVars.screenshotFileName = fileToSave.toStdString();
+            ModelList_ForceRedraw();
+        }
+    }
 }
 
 void MainForm::OnScreenshotToClipboard()

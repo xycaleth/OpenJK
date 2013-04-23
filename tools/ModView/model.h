@@ -284,15 +284,14 @@ typedef struct
 
 
 	// other crap...
-	//
-#if !defined(__APPLE__) && !defined(__MACH__)
-	HWND	hWnd;
-#endif
+	//∫
 	bool	bFinished;	// true only at final app shutdown, may be useful for some checks
 	bool	bAllowGLAOverrides;
 	bool	bShowPolysAsDoubleSided;
 	bool	bAlwaysOnTop;
 	bool	bSortSequencesByAlpha;
+    bool    takeScreenshot;
+    std::string screenshotFileName;
 	
 	//  some really tacky stuff...
 	//

@@ -369,6 +369,8 @@ void AppVars_OnceOnlyInit(void)
 	AppVars.hModelLastLoaded	= NULL;
 	AppVars.bAlwaysOnTop		= false;
 	AppVars.bSortSequencesByAlpha = false;
+    AppVars.takeScreenshot = false;
+    AppVars.screenshotFileName = "";
 
 	AppVars.iLOD				=	0;
 	
