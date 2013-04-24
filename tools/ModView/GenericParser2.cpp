@@ -163,23 +163,15 @@ static char *GetToken(char **text, bool allowLineBreaks, bool readUntilEOL = fal
 CTextPool::CTextPool(int initSize) :
 	mNext(0),
 	mSize(initSize),
-	mUsed(0)
+	mUsed(0),
+	mPool(new char[mSize])
 {
-#ifdef _EXE
-	mPool = (char *)Z_Malloc(mSize, TAG_GP2);
-//	mPool = (char *)Z_Malloc(mSize, TAG_TEXTPOOL, qtrue);
-#else
-	mPool = (char *)trap_Z_Malloc(mSize, TAG_GP2);
-#endif
+
 }
 
 CTextPool::~CTextPool(void)
 {
-#ifdef _EXE
-	Z_Free(mPool);
-#else
-	trap_Z_Free(mPool);
-#endif
+    delete [] mPool;
 }
 
 char *CTextPool::AllocText(const char *text, bool addNULL, CTextPool **poolPtr)

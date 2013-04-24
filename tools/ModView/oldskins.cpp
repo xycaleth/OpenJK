@@ -305,7 +305,7 @@ bool OldSkins_ApplyToTree(HTREEITEM hTreeItem_Parent, ModelContainer_t *pContain
 		int iSkinNumber = 0;
 		for (OldSkinSets_t::iterator itSkins = pContainer->OldSkinSets.begin(); itSkins != pContainer->OldSkinSets.end(); ++itSkins, iSkinNumber++)
 		{
-			string strSkinName((*itSkins).first);	// eg "blue"
+			string strSkinName(itSkins->first);	// eg "blue"
 
 			TreeItemData.iItemNumber	= iSkinNumber;
 			TreeItemData.iItemType		= TREEITEMTYPE_OLDSKIN;
@@ -358,17 +358,13 @@ void OldSkins_ApplyDefault(ModelContainer_t *pContainer)
 	OldSkinSets_t::iterator itSkins = pContainer->OldSkinSets.find("default");
 	if (itSkins != pContainer->OldSkinSets.end())
 	{
-		strCurrentSkin = (*itSkins).first;
+		strCurrentSkin = itSkins->first;
 	}
 	else
 	{
 		// just use the first one we have...
 		//
-		for (itSkins = pContainer->OldSkinSets.begin(); itSkins != pContainer->OldSkinSets.end();)
-		{
-			strCurrentSkin = (*itSkins).first;
-			break;
-		}
+        strCurrentSkin = pContainer->OldSkinSets.begin()->first;
 	}
 
 	// apply it, but don't barf if there wasn't one...
@@ -382,17 +378,6 @@ void OldSkins_ApplyDefault(ModelContainer_t *pContainer)
 
 GLuint OldSkins_GetGLBind(ModelContainer_t *pContainer, const char * psSurfaceName)
 {
-/*	debug only, do NOT leave in or massive performance hit!!
-
-	int iSize = pContainer->MaterialBinds.size();
-	for (MaterialBinds_t::iterator it = pContainer->MaterialBinds.begin(); it != pContainer->MaterialBinds.end(); ++it)
-	{
-		string str = (*it).first;
-		GLuint gl  = (*it).second;
-
-		OutputDebugString(va("%s (%d)\n",str.c_str(), gl));
-	}
-*/
 	return pContainer->MaterialBinds[psSurfaceName];
 }
 
@@ -414,8 +399,8 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	
 	for (OldSkinSets_t::iterator itOldSkins = pContainer->OldSkinSets.begin(); itOldSkins != pContainer->OldSkinSets.end(); ++itOldSkins, iThisSkinIndex++)
 	{					
-		string strSkinName				= (*itOldSkins).first;
-		StringPairVector_t &StringPairs = (*itOldSkins).second;
+		string strSkinName				= itOldSkins->first;
+		StringPairVector_t &StringPairs = itOldSkins->second;
 
 		if (iSkinNumber == iThisSkinIndex || iSkinNumber == -1)
 		{
@@ -432,8 +417,8 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 					//					
 					for (OldSkinSets_t::iterator itOldSkins_Other = pContainer->OldSkinSets.begin(); itOldSkins_Other != pContainer->OldSkinSets.end(); ++itOldSkins_Other)
 					{
-						string strSkinName_Other				= (*itOldSkins_Other).first;
-						StringPairVector_t &StringPairs_Other	= (*itOldSkins_Other).second;
+						string strSkinName_Other				= itOldSkins_Other->first;
+						StringPairVector_t &StringPairs_Other	= itOldSkins_Other->second;
 
 						for (iSurface_Other = 0; iSurface_Other < StringPairs_Other.size(); iSurface_Other++)
 						{
@@ -444,6 +429,7 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 								break;
 							}
 						}
+                        
 						if (iSurface_Other == StringPairs_Other.size())
 						{
 							// surface not found in this file...
@@ -552,101 +538,6 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	return bReturn;
 }
 
-
-/*
-#include "sys/timeb.h"
-
-typedef struct
-{
-	char *psName;
-	int iDays;
-} MonthInfo_t;
-
-MonthInfo_t Months[]=
-{
-//	{"January",		31},
-//	{"February",	28},	// fuck the leap years
-//	{"March",		31},
-//	{"April",		30},
-//	{"May",			31},
-//	{"June",		30},
-//	{"July",		31},
-//	{"August",		31},
-//	{"September",	30},
-//	{"October", 	31},
-//	{"November",	30},
-//	{"December",	31}
-	{"Jan",	31},
-	{"Feb",	28},
-	{"Mar",	31},
-	{"Apr",	30},
-	{"May",	31},
-	{"Jun",	30},
-	{"Jul",	31},
-	{"Aug",	31},
-	{"Sep",	30},
-	{"Oct", 31},
-	{"Nov",	30},
-	{"Dec",	31}
-};
-char sCompileDate[] = {__DATE__};
-	
-// returns # days since compile.
-//
-// If return is -ve, then someone's messing with their machine time, or there's an error working it out, so
-//	make your own mind up what to do.
-//
-int DaysSinceCompile(void)
-{
-	int iCompileDay = 0;
-	int iThisDay = 0;
-
-	for (int iPass=0; iPass<2; iPass++)
-	{			
-		char sTestDate[1024];
-		char _month[1024];
-		int _day,_year;		
-
-		if (!iPass){
-			strcpy(sTestDate,sCompileDate);
-		} else {
-			time_t ltime;			
-			_tzset();			
-			time( &ltime );    
-			struct tm *today = localtime(&ltime);
-			strftime(sTestDate,sizeof(sTestDate),"%b %d %Y",today);			
-		}
-
-		sscanf(sTestDate,"%s %d %d",&_month,&_day,&_year);
-
-		int iDay = 0;
-		for (int i=0; i<12; i++)
-		{
-			if (!strnicmp(_month,Months[i].psName,strlen(Months[i].psName)))		
-				break;
-
-			iDay += Months[i].iDays;
-		}
-		if (i==12)
-		{
-			// ERROR: couldn't determine month
-			// 
-			return -1;
-		}
-		iDay += _day;
-		iDay += _year*365;
-
-		if (!iPass){
-			iCompileDay = iDay;
-		} else {
-			iThisDay = iDay;
-		}
-	}
-
-	return iThisDay - iCompileDay;
-}
-
-*/
 ////////////////// eof /////////////////
 
 

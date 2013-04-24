@@ -283,7 +283,6 @@ void ScanAndLoadShaderFiles( void )
 		char *p, *oldp, *token, *hashMem;
 		int shaderTextHashTableSizes[MAX_SHADERTEXT_HASH], hash, size;
 	#endif
-		int numShaders;
 		int i;
 		long sum = 0;
 
@@ -302,12 +301,12 @@ void ScanAndLoadShaderFiles( void )
         buffers.resize (shaderFiles.size());
 
 		// load and parse shader files
-		for ( i = 0; i < numShaders; i++ )
+		for ( i = 0; i < shaderFiles.size(); i++ )
 		{
 			char filename[MAX_QPATH];
 
 			Com_sprintf( filename, sizeof( filename ), "shaders/%s", shaderFiles[i].c_str() );
-			StatusMessage( va("Loading shader %d/%d: \"%s\"...",i+1,numShaders,filename));
+			StatusMessage( va("Loading shader %d/%d: \"%s\"...",i+1,shaderFiles.size(),filename));
 
 			//ri.Printf( PRINT_ALL, "...loading '%s'\n", filename );
 			sum += ri.FS_ReadFile( filename, (void **)&buffers[i] );
@@ -318,10 +317,10 @@ void ScanAndLoadShaderFiles( void )
 		StatusMessage(NULL);
 
 		// build single large buffer
-		s_shaderText = (char *)ri.Hunk_Alloc( sum + numShaders*2 );
+		s_shaderText = (char *)ri.Hunk_Alloc( sum + shaderFiles.size()*2 );
 
 		// free in reverse order, so the temp files are all dumped
-		for ( i = numShaders - 1; i >= 0 ; i-- ) {
+		for ( i = shaderFiles.size() - 1; i >= 0 ; i-- ) {
 			strcat( s_shaderText, "\n" );
 			strcat( s_shaderText, buffers[i] );
 			ri.FS_FreeFile( buffers[i] );

@@ -13,9 +13,6 @@
 #include <malloc.h>
 #include <string.h>
 
-#define trap_Z_Malloc(x, y)		malloc(x)
-#define trap_Z_Free(x)			free(x)
-
 #endif
 
 class CTextPool;
@@ -24,9 +21,9 @@ class CGPObject;
 class CTextPool
 {
 private:
-	char		*mPool;
 	CTextPool	*mNext;
 	int			mSize, mUsed;
+    char		*mPool;
 
 public:
 	CTextPool(int initSize = 10240);

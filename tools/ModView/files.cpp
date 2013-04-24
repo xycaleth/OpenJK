@@ -152,22 +152,6 @@ int Com_FilterPath(char *filter, char *name, int casesensitive)
 }
 
 
-
-void *Z_Malloc(int size)
-{
-	return malloc(size);
-}
-void Z_Free(void *mem)
-{
-	free(mem);
-}
-
-void *S_Malloc(int size)
-{
-	return Z_Malloc(size);
-}
-
-
 /*
 =================================================================================
 
@@ -181,7 +165,7 @@ DIRECTORY SCANNING FUNCTIONS
 char *CopyString( const char *in ) {
 	char	*out;
 	
-	out = (char *)S_Malloc (strlen(in)+1);
+	out = new char[strlen(in)+1];
 	strcpy (out, in);
 	return out;
 }

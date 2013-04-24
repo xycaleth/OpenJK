@@ -6,17 +6,6 @@
 #ifndef COMMON_HEADERS_H
 #define COMMON_HEADERS_H
 
-#include <string.h>
-#include <stdlib.h>
-
-
-#define trap_Z_Malloc(_size, _tag)	malloc(_size)	// dunno if GP2 need calloc or malloc, so...
-#define trap_Z_Free(_mem)			free(_mem)
-
-//#define TAG_GP2 0
-
-
-
 #endif	// #ifndef COMMON_HEADERS_H
 
 /////////////////// eof //////////////

@@ -12,10 +12,6 @@ char*	Com_StringContains(char *str1, char *str2, int casesensitive);
 int		Com_Filter(char *filter, char *name, int casesensitive);
 int		Com_FilterPath(char *filter, char *name, int casesensitive);
 
-void*	Z_Malloc(int size);
-void	Z_Free(void *mem);
-void*	S_Malloc(int size);
-
 char	*CopyString( const char *in );
 
 std::vector<std::string> Sys_ListFiles ( const char *directory, const char *extension, bool wantsubs );
