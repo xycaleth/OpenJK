@@ -142,7 +142,7 @@ void RenderWidget::paintGL()
         ModelList_Render (frameSize.width(), frameSize.height());
         gbTextInhibit = false;
         
-        SaveScreenshot(AppVars.screenshotFileName, frameSize.width(), frameSize.height());
+        SaveScreenshot (AppVars.screenshotFileName, frameSize.width(), frameSize.height());
     }
     
     ModelList_Render (frameSize.width(), frameSize.height());

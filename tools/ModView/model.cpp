@@ -3395,11 +3395,6 @@ static void ModelDraw_InfoText_Header(void)
 	}
 
 	TextData.iTextX = Text_DisplayFlat(va("(LOD: %d)",AppVars.iLOD+1), TextData.iTextX+(2*TEXT_WIDTH), 1*TEXT_DEPTH, 255/2,255,255/2,false);
-/*		Text_DisplayFlat(sString,	g_iScreenWidth-((strlen(sString)+2)*TEXT_WIDTH),
-																 2 *TEXT_DEPTH,
-								255,255,255,
-								false
-					);*/
 
 	TextData.iTextX = Text_DisplayFlat(va("( FOV: %g )",AppVars.dFOV), TextData.iTextX+(2*TEXT_WIDTH),1*TEXT_DEPTH, 255, 255, 255, false);
 
@@ -3509,16 +3504,6 @@ static void ModelDraw_InfoText_Totals(void)
 
 		AppVars.bAtleast1VertWeightDisplayed = false;
 	}
-
-
-/*
-	// temp general test...
-	//
-	Text_DisplayFlat("top left",0,0,255,255,255);
-	Text_DisplayFlat("top right",g_iScreenWidth - (TEXT_WIDTH*strlen("top right")) ,0,255,255,255);
-	Text_DisplayFlat("bottom left",0,g_iScreenHeight - TEXT_DEPTH,255,255,255);
-	Text_DisplayFlat("bottom right",g_iScreenWidth - (TEXT_WIDTH*strlen("bottom right")),g_iScreenHeight - TEXT_DEPTH,255,255,255);
-*/
 }
 
 int giRenderCount=0;	// reset/checked during gallery loop
@@ -3529,31 +3514,17 @@ static void ModelList_Render_Actual(int iWindowWidth, int iWindowHeight)
 		giRenderCount++;
 		bool bCatchError = false;
 
-	//	giTotVertsDrawn = 0;	// stats
-	//	giTotTrisDrawn  = 0;	//
-	//	giTotSurfsDrawn = 0;
-
 		GL_Enter3D( AppVars.dFOV, iWindowWidth, iWindowHeight, AppVars.bWireFrame, false);
 
 		{// CLS, & setup GL stuff...
-			glClearColor((float)1/((float)256/(float)AppVars._R), (float)1/((float)256/(float)AppVars._G), (float)1/((float)256/(float)AppVars._B), 0.0f);
+			glClearColor(AppVars._R / 256.0f, AppVars._G / 256.0f, AppVars._B / 256.0f, 0.0f);
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 			glLoadIdentity	(); 	
-			glTranslatef	(	   AppVars.xPos, AppVars.yPos , AppVars.zPos );
-			glScalef	    (     (float)0.05 , (float)0.05, (float)0.05 );
-			glRotatef		( AppVars.rotAngleX, 1.0 ,  0.0 , 0.0 );
- 			glRotatef		( AppVars.rotAngleY, 0.0 ,  1.0 , 0.0 );	
-			glRotatef		( AppVars.rotAngleZ, 1.0 ,  0.0 , 0.0 );	
-
-			//extern bool gbScrollLockActive;
-			if (/*gbScrollLockActive*/false)
-			{					
-				glTranslatef	(	   AppVars.xPos_SCROLL, AppVars.yPos_SCROLL , AppVars.zPos_SCROLL );
-//				glRotatef		( AppVars.rotAngleX_SCROLL, 1.0 ,  0.0 , 0.0 );
- //				glRotatef		( AppVars.rotAngleY_SCROLL, 0.0 ,  1.0 , 0.0 );	
-//				glRotatef		( AppVars.rotAngleZ_SCROLL, 1.0 ,  0.0 , 0.0 );
-			}
-
+			glTranslatef	(AppVars.xPos, AppVars.yPos , AppVars.zPos );
+			glScalef	    (0.05f, 0.05f, 0.05f);
+			glRotatef		(AppVars.rotAngleX, 1.0f,  0.0f, 0.0f);
+ 			glRotatef		(AppVars.rotAngleY, 0.0f,  1.0f, 0.0f);
+			glRotatef		(AppVars.rotAngleZ, 1.0f,  0.0f, 0.0f);
 
 			if (AppVars.bUseAlpha && !AppVars.bWireFrame)
 			{
@@ -3569,21 +3540,14 @@ static void ModelList_Render_Actual(int iWindowWidth, int iWindowHeight)
 		if (!Model_Loaded())
 			return;
 
-		
 		try
 		{
-			ModelList_AddModelsToDrawList();
-			// call the huge pile of cut-paste renderer code from elsewhere... (fingers crossed)
-			//		
-	//////		####RE_GenerateDrawSurfs();
-	//////		####RE_RenderDrawSurfs();
-	//		RB_GetDrawStats(&giTotVertsDrawn, &giTotTrisDrawn, &giTotSurfsDrawn);		
+			ModelList_AddModelsToDrawList();		
 		}
-
 		catch(const char * psMessage)
 		{
 			Model_Delete();
-			ErrorBox(psMessage);
+			ErrorBox (psMessage);
 			bCatchError = true;
 		}
 
@@ -3592,18 +3556,6 @@ static void ModelList_Render_Actual(int iWindowWidth, int iWindowHeight)
 		if (!bCatchError)
 		{ 
 			glDisable(GL_BLEND);
-
-			// ( functions inhibit-checked internally )
-			//
-	//#####		ModelDraw_OriginLines();
-	//#####		ModelDraw_InfoText();
-		}
-
-		//if (bFinalReturn)
-		{
-	//		static int z=0;
-	//		z++;
-	//		OutputDebugString(va("ModelList_Render: %d\n",z));
 		}
 	}
 }
@@ -3615,35 +3567,6 @@ void ModelList_Render(int iWindowWidth, int iWindowHeight)
 		ModelList_Render_Actual(iWindowWidth, iWindowHeight);
 	gbInRenderer = false;
 }
-
-
-/*
-int Sys_Milliseconds (void)
-{
-	static bool bInitialised = false;
-	static int sys_timeBase;
-
-	int sys_curtime;
-
-	if (!bInitialised)
-	{
-		sys_timeBase = timeGetTime();
-		bInitialised = true;
-	}
-	sys_curtime = timeGetTime() - sys_timeBase;
-
-	return sys_curtime;
-}
-
-float GetFloatTime(void)
-{
-	float fTime  = (float)Sys_Milliseconds() / 1000.0f;	// reduce to game-type seconds
-
-	return fTime;
-}
-*/
-
-
 
 // returns appropriate sequence index else -1 for not frame-not-found-in-sequences...
 //
@@ -3677,24 +3600,6 @@ int Model_MultiSeq_SeqIndexFromFrame(ModelContainer_t *pContainer, int iFrame, b
 // similar to above, but returns the entrynum [ 0..<num entries-1> ] that container the seq index
 int Model_MultiSeq_EntryIndexFromFrame(ModelContainer_t *pContainer, int iFrame, bool bPrimary )
 {
-	// Can't use this method, because sequences can have overlapping ranges unfortunately, 
-	//	so Sequence_DeriveFromFrame() can return wrong indexes if there's more than one covering the same range.
-/*	
-	// find the real sequence index, then verify that it's within our multiseq array...
-	//
-	int iSeqIndex = Sequence_DeriveFromFrame( pContainer, iFrame );
-
-	if (iSeqIndex != -1)
-	{
-		for (int i=0; i<Model_MultiSeq_GetNumEntries(pContainer, bPrimary); i++)
-		{
-			if ( iSeqIndex == Model_MultiSeq_GetEntry(pContainer, i, bPrimary))
-			{
-				return i;	// this sequence is within our multiseq list, so return list index
-			}
-		}
-	}
-*/
 	int iSeqIndex = Model_MultiSeq_GetSeqHint(pContainer, bPrimary);
 
 	for (int i=0; i<Model_MultiSeq_GetNumEntries(pContainer, bPrimary); i++)
