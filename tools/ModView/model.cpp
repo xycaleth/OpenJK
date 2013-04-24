@@ -3030,7 +3030,7 @@ static void R_ModelContainer_CallBack_MeasureDigits(ModelContainer_t *pContainer
 	
 	// attachment string...
 	//
-	sprintf(sTest,Stats_GetAttachmentString(pContainer));
+	Q_strncpyz(sTest, Stats_GetAttachmentString(pContainer), sizeof (sTest));
 	if (pTextData->iAttachedViaCharsNeeded < strlen(sTest))
 		pTextData->iAttachedViaCharsNeeded = strlen(sTest);
 
@@ -3631,12 +3631,7 @@ static int Model_MultiSeq_GetSeqHint(ModelContainer_t *pContainer, bool bPrimary
 }
 
 static void Model_MultiSeq_SetSeqHint(ModelContainer_t *pContainer, bool bPrimary, int iHint)
-{		
-	int iPrev = Model_MultiSeq_GetSeqHint(pContainer, bPrimary);
-	if (iPrev != iHint)
-	{
-		int z=1;
-	}
+{
 	if (bPrimary)
 	{
 		pContainer->iSeqMultiLock_Primary_SeqHint = iHint;
@@ -5353,8 +5348,6 @@ bool Model_Save(const char * psFullPathedFilename)
 
 	for ( l = 0 ; l < pHeader->numLODs ; l++)
 	{
-		int	triCount = 0;
-
 		lodOfsEnd = lod->ofsEnd;
 
 		mdxmLODSurfOffset_t *indexes = (mdxmLODSurfOffset_t *)((char*)lod + sizeof(mdxmLOD_t));

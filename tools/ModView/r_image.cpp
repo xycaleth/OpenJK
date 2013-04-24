@@ -11,15 +11,6 @@
 #include "R_Image.h"
 #include "StringUtils.h"
 
-
-static	image_t* hashTable[FILE_HASH_SIZE];
-
-
-
-
-
-
-
 /*
 ========================================================================
 

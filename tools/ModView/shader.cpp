@@ -278,8 +278,7 @@ void ScanAndLoadShaderFiles( void )
 {
 	if (s_shaderText == NULL && strlen(gamedir) > 0)
 	{
-		char **shaderFiles;
-		char *buffers[MAX_SHADER_FILES];
+        std::vector<char *> buffers;
 	#ifdef SHADERTEXTHASH
 		char *p, *oldp, *token, *hashMem;
 		int shaderTextHashTableSizes[MAX_SHADERTEXT_HASH], hash, size;
@@ -291,34 +290,23 @@ void ScanAndLoadShaderFiles( void )
 		#define sSHADER_DIR va("%sshaders",gamedir)
 
 		// scan for shader files
-		shaderFiles =	//ri.FS_ListFiles( "shaders", ".shader", &numShaders );
-						Sys_ListFiles(	sSHADER_DIR,	// const char *directory, 
-										".shader",	// const char *extension, 
-										NULL,		// char *filter, 
-										&numShaders,// int *numfiles, 
-										qfalse		// qboolean wantsubs 
-										);
+        std::vector<std::string> shaderFiles = Sys_ListFiles (sSHADER_DIR, ".shader", false);
 
-		if ( !shaderFiles || !numShaders )
+		if ( shaderFiles.empty() )
 		{
-			if (!bXMenPathHack)
-			{
-				ri.Printf( PRINT_WARNING, "WARNING: no shader files found in '%s'\n",sSHADER_DIR );
-			}
+            ri.Printf( PRINT_WARNING, "WARNING: no shader files found in '%s'\n", sSHADER_DIR);
 			s_shaderText = CopyString("// blank shader file to avoid re-scanning shaders\n");
 			return;
 		}
 
-		if ( numShaders > MAX_SHADER_FILES ) {
-			numShaders = MAX_SHADER_FILES;
-		}
+        buffers.resize (shaderFiles.size());
 
 		// load and parse shader files
 		for ( i = 0; i < numShaders; i++ )
 		{
 			char filename[MAX_QPATH];
 
-			Com_sprintf( filename, sizeof( filename ), "shaders/%s", shaderFiles[i] );
+			Com_sprintf( filename, sizeof( filename ), "shaders/%s", shaderFiles[i].c_str() );
 			StatusMessage( va("Loading shader %d/%d: \"%s\"...",i+1,numShaders,filename));
 
 			//ri.Printf( PRINT_ALL, "...loading '%s'\n", filename );
@@ -338,10 +326,6 @@ void ScanAndLoadShaderFiles( void )
 			strcat( s_shaderText, buffers[i] );
 			ri.FS_FreeFile( buffers[i] );
 		}
-
-		// free up memory
-		//ri.FS_FreeFileList( shaderFiles );
-		Sys_FreeFileList( shaderFiles );
 
 	#ifdef SHADERTEXTHASH
 		memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));

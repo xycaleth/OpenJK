@@ -127,79 +127,50 @@ static bool OldSkins_Read(const char * psLocalFilename_GLM)
 	{
 		std::string strSkinFileMustContainThisName( Filename_WithoutPath( Filename_WithoutExt( psLocalFilename_GLM )) );	
 		strSkinFileMustContainThisName += "_";	// eg: "turret_canon_"
-		char **ppsSkinFiles;
-		int iSkinFiles;
-
+        
 		// scan for skin files...
 		//
-		ppsSkinFiles =	//ri.FS_ListFiles( "shaders", ".shader", &iSkinFiles );
-						Sys_ListFiles(	psSkinsPath,// const char *directory, 
-										".skin",	// const char *extension, 
-										NULL,		// char *filter, 
-										&iSkinFiles,// int *numfiles, 
-										qfalse		// qboolean wantsubs 
-										);
+        std::vector<std::string> skinFiles = Sys_ListFiles (psSkinsPath, ".skin", false);
 
-		if ( !ppsSkinFiles || !iSkinFiles )
+		if ( skinFiles.empty() )
 		{
 			return false;
 		}
 
-		if ( iSkinFiles > MAX_SKIN_FILES ) 
-		{
-			WarningBox(va("%d skin files found, capping to %d\n\n(tell me if this ever happens -Ste)", iSkinFiles, MAX_SKIN_FILES ));
-
-			iSkinFiles = MAX_SKIN_FILES;
-		}
-
 		// load and parse skin files...
 		//
-		char *buffers[MAX_SKIN_FILES] = {0};
 		long iTotalBytesLoaded = 0;
 		int i = 0;
 
-		for ( i=0; i<iSkinFiles && !psError; i++ )
+		for ( i=0; i<skinFiles.size() && !psError; i++ )
 		{
 			char sFileName[MAX_QPATH];
 
-			string strLocalSkinFileName(ppsSkinFiles[i]);
+			string& strLocalSkinFileName(skinFiles[i]);
 
 			// only look at skins that begin "modelname_skinvariation" for a given "modelname_"
-			if (!Q_stricmpn(strSkinFileMustContainThisName.c_str(),strLocalSkinFileName.c_str(),strSkinFileMustContainThisName.length()))
+			if (skinFiles[i].find (strSkinFileMustContainThisName) == 0)
 			{
 				Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", Filename_PathOnly(psLocalFilename_GLM), strLocalSkinFileName.c_str() );
 				//ri.Printf( PRINT_ALL, "...loading '%s'\n", sFileName );
 
-				iTotalBytesLoaded += ri.FS_ReadFile( sFileName, (void **)&buffers[i] );
+                char *buffer = NULL;
+				iTotalBytesLoaded += ri.FS_ReadFile( sFileName, (void **)&buffer );
 
-				if ( !buffers[i] ) {
+				if ( !buffer ) {
 					ri.Error( ERR_DROP, "Couldn't load %s", sFileName );
 				}
 
-				char *psDataPtr = buffers[i];
-
-				psError = OldSkins_Parse( OldSkins_FilenameToSkinDescription(strLocalSkinFileName).c_str(), psDataPtr);
+				psError = OldSkins_Parse( OldSkins_FilenameToSkinDescription(strLocalSkinFileName).c_str(), buffer);
 				if (psError)
 				{
 					ErrorBox(va("Skins_Read(): Error reading file \"%s\"!\n\n( Skins will be ignored for this model )\n\nError was:\n\n%s",sFileName,psError));
 					OldSkinsFound.clear();
 				}
+                
+                ri.FS_FreeFile (buffer);
 			}
 		}
-
-		// free loaded skin files...
-		//
-		for ( i=0; i<iSkinFiles; i++ )
-		{
-			if (buffers[i])
-			{
-				ri.FS_FreeFile( buffers[i] );
-			}
-		}
-
-		// ... and file list...
-		//		
-		Sys_FreeFileList( ppsSkinFiles );
 	}
 
 	if (psError)

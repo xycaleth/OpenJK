@@ -187,10 +187,9 @@ char *CopyString( const char *in ) {
 }
 
 #include <QtCore/QDir>
-char **Sys_ListFiles( const char *directory, const char *extension, char *filter, int *numfiles, qboolean wantsubs ) {
+std::vector<std::string> Sys_ListFiles( const char *directory, const char *extension, bool wantsubs ) {
 	int			nfiles;
-	char		**listCopy;
-	char		*list[MAX_FOUND_FILES];
+    std::vector<std::string> fileList;
 
 	if ( !extension ) {
 		extension = "";
@@ -207,8 +206,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
     QDir root (directory);
     if ( !root.exists() )
     {
-        *numfiles = 0;
-        return NULL;
+        return fileList;
     }
 
     QDir::Filters filters = QDir::Files;
@@ -224,31 +222,13 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 
     QStringList files = root.entryList (nameFilters, filters);
     nfiles = min (files.size(), MAX_FOUND_FILES - 1);
+    
+    fileList.resize (nfiles);
+    
     for ( int i = 0; i < nfiles; i++ )
     {
-        list[i] = CopyString (files[i].toLatin1());
+        fileList[i] = files[i].toStdString();
     }
 
-	listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ) );
-	for ( int i = 0 ; i < nfiles ; i++ ) {
-		listCopy[i] = list[i];
-	}
-	listCopy[nfiles] = NULL;
-    *numfiles = nfiles;
-
-	return listCopy;
-}
-
-void	Sys_FreeFileList( char **flist ) {
-	int		i;
-
-	if ( !flist ) {
-		return;
-	}
-
-	for ( i = 0 ; flist[i] ; i++ ) {
-		Z_Free( flist[i] );
-	}
-
-	Z_Free( flist );
+	return fileList;
 }

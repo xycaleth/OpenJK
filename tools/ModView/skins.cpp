@@ -365,32 +365,16 @@ static bool Skins_Read(const char * psModelFilename)
 	if (!psSkinsPath.empty())
 	{
 		string strThisModelBaseName(String_ToLower(Filename_WithoutExt(Filename_WithoutPath(psModelFilename))));
-
-		char **ppsSkinFiles;
-		int iSkinFiles;
-
+        
 		// scan for skin files...
 		//
-		ppsSkinFiles =	//ri.FS_ListFiles( "shaders", ".shader", &iSkinFiles );
-						Sys_ListFiles(	va("%s%s",gamedir,psSkinsPath.c_str()),// const char *directory, 
-										".g2skin",	// const char *extension, 
-										NULL,		// char *filter, 
-										&iSkinFiles,// int *numfiles, 
-										qfalse		// qboolean wantsubs 
-										);
+        std::vector<std::string> skinFiles = Sys_ListFiles (va ("%s%s",gamedir,psSkinsPath.c_str()), ".g2skin", false);
 
-		if ( !ppsSkinFiles || !iSkinFiles )
+		if ( skinFiles.empty() )
 		{
 			CurrentSkins.clear();	
 			CurrentSkinsSurfacePrefs.clear();
 			return false;
-		}
-
-		if ( iSkinFiles > MAX_SKIN_FILES ) 
-		{
-			WarningBox(va("%d skin files found, capping to %d\n\n(tell me if this ever happens -Ste)", iSkinFiles, MAX_SKIN_FILES ));
-
-			iSkinFiles = MAX_SKIN_FILES;
 		}
 
 		// load and parse skin files...
@@ -398,21 +382,22 @@ static bool Skins_Read(const char * psModelFilename)
 		// for now, I just scan each file and if it's out of date then I invalidate it's model-prefs info...
 		//
 		extern bool GetFileTime(const char * psFileName, time_t &ft);
-		for ( int i=0; i<iSkinFiles; i++)
+		for ( int i=0; i< skinFiles.size(); i++)
 		{
 			bool bReParseThisFile = false;
 
 			char sFileName[MAX_QPATH];
-			const char * psFileName = ppsSkinFiles[i];
-			Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", psSkinsPath.c_str(), psFileName );
-			psFileName = &sFileName[0];
+			std::string psFileName = skinFiles[i];
+			Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", psSkinsPath.c_str(), psFileName.c_str() );
+            
+			psFileName = sFileName;
 											  
 			// have a go at getting this time/date stamp if not already present...
 			//
 			if (!SkinFileTimeDates[psFileName].bValid)
 			{
 				time_t ft;
-				if (GetFileTime(psFileName, ft))
+				if (GetFileTime(psFileName.c_str(), ft))
 				{
 					SkinFileTimeDates[psFileName].ft = ft;
 					SkinFileTimeDates[psFileName].bValid = true;
@@ -424,7 +409,7 @@ static bool Skins_Read(const char * psModelFilename)
 			if (SkinFileTimeDates[psFileName].bValid)
 			{
 				time_t ft;
-				if (GetFileTime(psFileName, ft))
+				if (GetFileTime(psFileName.c_str(), ft))
 				{
                     double l = difftime(SkinFileTimeDates[psFileName].ft, ft);
 
@@ -451,16 +436,17 @@ static bool Skins_Read(const char * psModelFilename)
 			CurrentSkins.clear();	
 			CurrentSkinsSurfacePrefs.clear();
 
-			char *buffers[MAX_SKIN_FILES]={0};
+            std::vector<char *> buffers;
+            buffers.resize (skinFiles.size());
 //			long iTotalBytesLoaded = 0;
-			for ( int i=0; i<iSkinFiles && !psError; i++ )
+			for ( int i=0; i<skinFiles.size() && !psError; i++ )
 			{
 				char sFileName[MAX_QPATH];
 
-				std::string strThisSkinFile(ppsSkinFiles[i]);
+				std::string strThisSkinFile(skinFiles[i]);
 
 				Com_sprintf( sFileName, sizeof( sFileName ), "%s/%s", psSkinsPath.c_str(), strThisSkinFile.c_str() );
-				StatusMessage( va("Scanning skin %d/%d: \"%s\"...",i+1,iSkinFiles,sFileName));
+				StatusMessage( va("Scanning skin %d/%d: \"%s\"...",i+1,skinFiles.size(),sFileName));
 
 				//ri.Printf( PRINT_ALL, "...loading '%s'\n", sFileName );
 
@@ -546,7 +532,7 @@ _bDiskLoadOccured = true;
 			//
 			// free loaded skin files...
 			//
-			for ( int i=0; i<iSkinFiles; i++ )
+			for ( int i=0; i<skinFiles.size(); i++ )
 			{
 				if (buffers[i])
 				{
@@ -556,7 +542,6 @@ _bDiskLoadOccured = true;
 		}
 
 		StatusMessage(NULL);
-		Sys_FreeFileList( ppsSkinFiles );
 	}
 	else
 	{

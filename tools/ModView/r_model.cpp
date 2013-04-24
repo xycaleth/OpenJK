@@ -242,8 +242,6 @@ void *Crap_HunkAlloc(int size)
 bool bHackToAllowFullPathDuringTestFunc = false;	// leave as false!!!!!!!!
 int Crap_FS_ReadFile( const char *qpath, void **buffer )
 {
-	byte*	buf = NULL;
-
 	if ( !gamedir[0]) {
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization\n" );
 	}
