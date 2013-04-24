@@ -226,9 +226,7 @@ void JPG_ErrorThrow(const char * message)
 void JPG_MessageOut(const char * message)
 {
 //	ri.Printf(PRINT_ALL, "%s\n", message);
-#ifdef WIN32
 	OutputDebugString(va("%s\n", message));
-#endif
 }
 
 void *JPG_Malloc( int iSize )

@@ -25,10 +25,6 @@ char *String_ToUpper(const char * psString);
 char *String_ForwardSlash(const char * psString);
 char *va(const char *format, ...);
 char *scGetTempPath(void);
-const char * InputSaveFileName(const char * psInitialSaveName, const char * psCaption, const char * psInitialPath, const char * psFilter, const char * psExtension);
-const char * InputLoadFileName(const char * psInitialLoadName, const char * psCaption, const char * psInitialDir, const char * psFilter);
-const char * scGetComputerName(void);
-const char * scGetUserName(void);
 
 extern bool gbErrorBox_Inhibit;
 const char * ModView_GetLastError();
@@ -47,8 +43,6 @@ long filesize(FILE *handle);
 int LoadFile (const char * psPathedFilename, void **bufferptr, int bReportErrors = true);
 int SaveFile (const char * psPathedFilename, const void *pBuffer, int iSize);
 
-
-bool TextFile_Read(std::string &strFile, const char * psFullPathedFilename, bool bLoseSlashSlashREMs = true, bool bLoseBlankLines = true);
 bool SendFileToNotepad(const char * psFilename);
 bool SendStringToNotepad(const char * psWhatever, const char * psLocalFileName);
 

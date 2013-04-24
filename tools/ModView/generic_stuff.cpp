@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 
+#include <QtWidgets/QFileDialog>
 #include <algorithm>
 #include "StringUtils.h"
 #include "includes.h"
@@ -27,8 +28,8 @@ bool bQ3RulesApply = true;
 static bool SetQdirFromPath2( const char *path, const char *psBaseDir );
 void SetQdirFromPath( const char *path )
 {
-	char		prevQdir[1024];
-	strcpy(prevQdir,qdir);
+	char prevQdir[1024];
+	strcpy (prevQdir, qdir);
 
 	bXMenPathHack = false;	// MUST be here
 
@@ -370,7 +371,7 @@ char	*va(const char *format, ...)
 }
 
 
-#ifdef WIN32
+#ifdef _WIN32
 // returns a path to somewhere writeable, without trailing backslash...
 //
 // (for extra speed now, only evaluates it on the first call, change this if you like)
@@ -402,87 +403,6 @@ char *scGetTempPath(void)
 	
 }
 #endif
-
-
-// psInitialSaveName can be "" if not bothered
-const char * InputSaveFileName(const char * psInitialSaveName, const char * psCaption, const char * psInitialPath, const char * psFilter, const char * psExtension)
-{
-#ifdef WIN32
-	CFileStatus Filestatus;
-	CFile File;
-	static char name[MAX_PATH];
-
-    std::string strInitialSaveName(psInitialSaveName);
-    // or windows immediately cancels the dialog
-    std::replace (strInitialSaveName.begin(), strInitialSaveName.end(), '/', '\\');
-	
-	CFileDialog FileDlg(FALSE, psExtension,
-						strInitialSaveName,
-						OFN_OVERWRITEPROMPT|OFN_CREATEPROMPT,
-						psFilter,	//TEXT("Map Project Files (*.mpj)|*.lit|Other Map Files (*.smd/*.sc2)|*.sc2;*.smd|FastMap Files (*.fmf)|*.fmf|All Files(*.*)|*.*||"), //Map Object Files|*.sms||"),		 						
-						AfxGetMainWnd()
-						);				   		 
-		
-//	FileDlg.m_ofn.lpstrInitialDir=psInitialPath;		
-//	FileDlg.m_ofn.lpstrTitle=psCaption;
-//	strcpy(name,psInitialSaveName);
-//	FileDlg.m_ofn.lpstrFile=name;
-   	
-	if (FileDlg.DoModal() == IDOK)
-	{
-		static std::string strName;
-        strName = FileDlg.GetPathName();
-        
-		return strName.c_str();
-	}
-		
-#endif
-	return NULL;
-}
-
-
-// "psInitialLoadName" param can be "" if not bothered, "psInitialDir" can be NULL to open to last browse-dir
-//
-// psFilter example:		TEXT("Model files (*.glm)|*.glm|All Files(*.*)|*.*||")	// const char * psFilter
-//
-// there is too much crap in here, and some needless code, fix it sometime... (yeah, right)
-//
-const char * InputLoadFileName(const char * psInitialLoadName, const char * psCaption, const char * psInitialDir, const char * psFilter)
-{
-#ifdef WIN32
-	CFileStatus Filestatus;
-	CFile File;
-	static char name[MAX_PATH];	
-		
-	CFileDialog FileDlg(TRUE, NULL, NULL,
-		 OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST,
-		 //TEXT("Map Project Files (*.mpj)|*.lit|Other Map Files (*.smd/*.sc2)|*.sc2;*.smd|FastMap Files (*.fmf)|*.fmf|All Files(*.*)|*.*||"), //Map Object Files|*.sms||"),
-		 psFilter, //Map Object Files|*.sms||"),		 
-		 AfxGetMainWnd());				   		 
-		
-	static CString strInitialDir;
-	if (psInitialDir)
-		strInitialDir = psInitialDir;
-	strInitialDir.Replace("/","\\");
-
-	FileDlg.m_ofn.lpstrInitialDir = (const char *) strInitialDir;
-	FileDlg.m_ofn.lpstrTitle=psCaption;	// Load Editor Model";  
-
-	CString strInitialLoadName(psInitialLoadName);
-			strInitialLoadName.Replace("/","\\");
-	strcpy(name,(const char *)strInitialLoadName);
-	FileDlg.m_ofn.lpstrFile=name;
-		
-   	if (FileDlg.DoModal() == IDOK)
-	{
-		return name;
-	}
-	
-#endif
-	return NULL;
-}
-
-
 
 // these MUST all be MB_TASKMODAL boxes now!!
 //
@@ -650,7 +570,7 @@ int SaveFile (const char * psPathedFilename, const void *pBuffer, int iSize)
 const char * SystemErrorString(unsigned int dwError)
 {
 	static char sString[4096];
-#ifdef WIN32
+#ifdef _WIN32
 	LPVOID lpMsgBuf=0;
 
 	FormatMessage( 
@@ -677,99 +597,9 @@ void SystemErrorBox(unsigned int dwError)
 	ErrorBox( SystemErrorString(dwError) );
 }
 
-
-
-const char * scGetComputerName(void)
-{
-    static char cTempBuffer[128];	// well ott for laziness
-#ifdef WIN32
-    unsigned int dwTempBufferSize;
-    static int i=0;
-
-    if (!i++)
-    	{
-    	dwTempBufferSize = (sizeof (cTempBuffer))-1;
-    	strcpy(cTempBuffer,"");
-    	if (!GetComputerName(cTempBuffer, &dwTempBufferSize))
-			strcpy(cTempBuffer,"Unknown");	// error retrieving host computer name
-    	}
-#endif
-    return cTempBuffer;
-}
-
-const char * scGetUserName(void)
-{
-	static char cTempBuffer[128];
-#ifdef WIN32
-    unsigned int dwTempBufferSize;
-    static int i=0;
-
-    if (!i++)
-   	{
-    	dwTempBufferSize = (sizeof (cTempBuffer))-1;
-    	strcpy(cTempBuffer,"");
-    	if (!GetUserName(cTempBuffer, &dwTempBufferSize))
-			strcpy(cTempBuffer,"Unknown");	// error retrieving host computer name
-   	}
-#endif
-    
-    return cTempBuffer;
-}
-
-
-
-
-bool TextFile_Read(std::string &strFile, const char * psFullPathedFilename, bool bLoseSlashSlashREMs /* = true */, bool bLoseBlankLines /* = true */)
-{
-	FILE *fhTextFile = fopen(psFullPathedFilename,"rt");
-	if (fhTextFile)
-	{
-		char sLine[32768];	// sod it, should be enough for one line.
-		char *psLine;		
-
-		strFile.clear();
-
-		while ((psLine = fgets( sLine, sizeof(sLine), fhTextFile ))!=NULL)
-		{
-			if (bLoseSlashSlashREMs && !strncmp(psLine,"//",2))
-			{
-				// do nothing
-			}
-			else
-			{
-				// lose any whitespace to either side
-				std::string strTemp(psLine);
-				Trim (strTemp);
-				strTemp+="\n";	// restore the CR that got trimmed off by TrimRight()
-
-				if (bLoseBlankLines && (strTemp.empty() || strTemp[0] =='\n'))
-				{
-					// do nothing
-				}
-				else
-				{
-					strFile += strTemp;
-				}
-			}
-		}
-		fclose(fhTextFile);
-	}
-	// DT EDIT
-	/*
-	else
-	{
-		ErrorBox( va("Couldn't open file: %s\n", psFullPathedFilename));
-		return false;
-	}
-	*/
-	return !!fhTextFile;
-}
-
-
-
 bool SendFileToNotepad(const char * psFilename)
 {
-#ifdef WIN32
+#ifdef _WIN32
 	bool bReturn = false;
 
 	char sExecString[MAX_QPATH];
@@ -801,7 +631,7 @@ bool SendFileToNotepad(const char * psFilename)
 //
 bool SendStringToNotepad(const char * psWhatever, const char * psLocalFileName)
 {
-#ifdef WIN32
+#ifdef _WIN32
 	bool bReturn = false;
 
 	const char * psOutputFileName = va("%s\\%s",scGetTempPath(),psLocalFileName);

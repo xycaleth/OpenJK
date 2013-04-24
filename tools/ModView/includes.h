@@ -8,6 +8,9 @@
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
 #else
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
+#include <Windows.h>
 #include <gl/gl.h>
 #include <gl/glu.h>
 #endif

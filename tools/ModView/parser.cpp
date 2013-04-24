@@ -1,6 +1,8 @@
 // Filename:-	parser.cpp
 //
 #include "stdafx.h"
+
+#include <algorithm>
 #include "includes.h"
 #include "stl.h"
 //
