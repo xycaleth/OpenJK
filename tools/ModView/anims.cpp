@@ -7,15 +7,10 @@
 #include "stdafx.h"
 
 #include <algorithm>
-#include "StringUtils.h"
-#include "includes.h"
-#include "r_common.h"
-//
-#include "sequence.h"
-//
 #include "anims.h"
-
-
+#include "r_common.h"
+#include "sequence.h"
+#include "StringUtils.h"
 
 bool Anims_ReadFile_FRAMES(ModelContainer_t *pContainer, const char * psLocalFilename_GLA)
 {

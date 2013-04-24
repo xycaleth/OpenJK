@@ -85,7 +85,7 @@ static inline word SquashFloat(float f)
 	f+= 2.0f;	// range 0..4
 	f*= 16383.0f;
 
-	int iVal = f;
+	int iVal = static_cast<int>(f);
 	assert(iVal <= 65535);
 	return (word) iVal&65535;
 }
@@ -463,9 +463,9 @@ void QuatSlerpCompTo3x4(	float fLerp0_1,
 
 	// lerp the xlat...
 	//
-	fDestMat[0][3] = (fLerp0_1 * tx0) + ((1.0 - fLerp0_1) * tx1);
-	fDestMat[1][3] = (fLerp0_1 * ty0) + ((1.0 - fLerp0_1) * ty1);
-	fDestMat[2][3] = (fLerp0_1 * tz0) + ((1.0 - fLerp0_1) * tz1);
+	fDestMat[0][3] = (fLerp0_1 * tx0) + ((1.0f - fLerp0_1) * tx1);
+	fDestMat[1][3] = (fLerp0_1 * ty0) + ((1.0f - fLerp0_1) * ty1);
+	fDestMat[2][3] = (fLerp0_1 * tz0) + ((1.0f - fLerp0_1) * tz1);
 }
 
 

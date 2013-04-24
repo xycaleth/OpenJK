@@ -82,7 +82,6 @@ bool			GLMModel_SurfaceIsTag(ModelHandle_t hModel, int iSurfaceindex );
 bool			GLMModel_SurfaceIsON(ModelHandle_t hModel, int iSurfaceIndex );
 const char *			GLMModel_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex );
 const char *			GLMModel_GetSurfaceShaderName( ModelHandle_t hModel, int iSurfaceIndex );
-const char *			GLMModel_GetBoneName( ModelHandle_t hModel, int iBoneIndex );
 //bool		  R_GLMModel_Tree_ReEvalSurfaceText(ModelHandle_t hModel, HTREEITEM hTreeItem = NULL, bool bDeadFromHereOn = false);
 bool			GLMModel_Surface_Off( ModelHandle_t hModel, int iSurfaceIndex );
 bool			GLMModel_Surface_On( ModelHandle_t hModel, int iSurfaceIndex );

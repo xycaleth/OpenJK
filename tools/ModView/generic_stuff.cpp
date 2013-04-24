@@ -2,13 +2,12 @@
 //
 
 #include "stdafx.h"
-
-#include <QtWidgets/QFileDialog>
-#include <algorithm>
-#include "StringUtils.h"
-#include "includes.h"
-//
 #include "generic_stuff.h"
+
+#include <algorithm>
+#include <string>
+#include "includes.h"
+#include "StringUtils.h"
 
 
 #define BASEDIRNAME			"base" 

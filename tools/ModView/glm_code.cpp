@@ -216,7 +216,7 @@ const char * GLMModel_GetSurfaceShaderName( ModelHandle_t hModel, int iSurfaceIn
 //
 // return basic info on the supplied model arg...
 //
-const char * GLMModel_GetBoneName( ModelHandle_t hModel, int iBoneIndex )
+static const char * GLMModel_GetBoneName( ModelHandle_t hModel, int iBoneIndex )
 {
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
 	mdxaHeader_t	*pMDXAHeader	= (mdxaHeader_t	*) RE_GetModelData(pMDXMHeader->animIndex);

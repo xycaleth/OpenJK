@@ -2,11 +2,11 @@
 //
 
 #include "stdafx.h"
-#include <string>
-#include "includes.h"
-//
 #include "gl_bits.h"
 
+#include <sstream>
+#include <string>
+#include "includes.h"
 
 int g_iAssertCounter = 0;	// just used for debug-outs
 
@@ -15,22 +15,16 @@ std::string csGLRenderer;
 std::string csGLVersion;
 std::string csGLExtensions;
 
-
-const char * GL_GetInfo(void)
+std::string GL_GetInfo()
 {
-	static std::string string;
+    std::ostringstream ss;
 
-	string = va("\nGL_VENDOR:   %s\n", csGLVendor.c_str());
-	string+= va("GL_RENDERER:   %s\n", csGLRenderer.c_str());
-	string+= va("GL_VERSION:    %s\n", csGLVersion.c_str());
-	string+= va("GL_EXTENSIONS: %s\n", csGLExtensions.c_str());
+	ss << "\nGL_VENDOR:\t" << csGLVendor << '\n';
+	ss << "GL_RENDERER:\t" << csGLRenderer << '\n';
+	ss << "GL_VERSION:\t" << csGLVersion << '\n';
+	ss << "GL_EXTENSIONS:\t" << csGLExtensions << '\n';
 
-/*	CString strExtensionList(csGLExtensions);
-			strExtensionList.Replace(" ","\t");
-	string+= va("GL_EXTENSIONS:\n%s\n", strExtensionList);//csGLExtensions);
-*/
-
-	return string.c_str();
+	return ss.str();
 }
 
 void GL_CacheDriverInfo()
