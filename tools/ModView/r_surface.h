@@ -6,6 +6,8 @@
 #ifndef R_SURFACE_H
 #define	R_SURFACE_H
 
+#include "mdx_format.h"
+#include "model.h"
 
 void GetWeightColour(int iNumWeights, unsigned char &r, unsigned char &g, unsigned char &b);
 

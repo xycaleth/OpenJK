@@ -57,27 +57,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CommArea.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GetString.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MainFrm.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ModView.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ModViewDoc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ModViewTreeView.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ModViewView.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="R_GLM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -96,12 +75,6 @@
     <ClCompile Include="R_Surface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SOF2NPCViewer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Splash.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="StdAfx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -112,12 +85,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="anims.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="clipboard.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="drag.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="generic_stuff.cpp">
@@ -160,9 +127,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="skins.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="wintalk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="jpeg6\jcomapi.c">
@@ -315,27 +279,6 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="ReadMe.txt" />
-    <CustomBuild Include="CommArea.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="GetString.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="MainFrm.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="ModView.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="ModViewDoc.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="ModViewTreeView.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="ModViewView.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="R_Common.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
@@ -360,12 +303,6 @@
     <CustomBuild Include="Resource.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="SOF2NPCViewer.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Splash.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="StdAfx.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
@@ -373,12 +310,6 @@
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="anims.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="clipboard.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="drag.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="generic_stuff.h">
@@ -442,12 +373,6 @@
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="textures.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="todo.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="wintalk.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="res\ModView.ico">

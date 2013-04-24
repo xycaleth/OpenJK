@@ -104,15 +104,16 @@ void SurfaceSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
     visitor->Visit (GetModel(), surface, surfaceIndex);
 }
 
-SkinSceneTreeItem::SkinSceneTreeItem ( const std::string& skinName, ModelHandle_t model, SceneTreeItem *parent )
+SkinSceneTreeItem::SkinSceneTreeItem ( const std::string& skinName, int skinIndex, ModelHandle_t model, SceneTreeItem *parent )
     : SceneTreeItem (QString::fromStdString (skinName), model, parent)
     , skinName (skinName)
+    , skinIndex (skinIndex)
 {
 }
 
 void SkinSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
 {
-    visitor->Visit (GetModel(), skinName.c_str());
+    visitor->Visit (GetModel(), skinName.c_str(), skinIndex);
 }
 
 BoneSceneTreeItem::BoneSceneTreeItem ( const mdxaSkel_t *bone, int boneIndex, ModelHandle_t model, SceneTreeItem *parent )

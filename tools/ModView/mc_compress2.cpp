@@ -2,8 +2,8 @@
 //
 //
 #include <math.h>
-#ifdef WIN32
-#include <windows.h>
+#ifdef _WIN32
+#include <Windows.h>
 #endif
 
 #include "mc_compress2.h"
@@ -30,59 +30,13 @@ typedef unsigned short word;
 static const float gfEpsilon = 1e-03f;
 #define DATA(f0,f1,f2) {f0,f1,f2}
 
-/*static vec3_t v3VecTable[]=
-{
-};
-*/			    
-struct v3Struct_t
-{
-	float f[3];
-
-	bool operator < (const v3Struct_t& _X) const {return (memcmp(f,_X.f,sizeof(f))<0);}
-};
-
-#pragma warning ( disable : 4786)
 #include <map>
 #include <string>
-#pragma warning ( disable : 4786)
+
 using namespace std;
-typedef map<v3Struct_t,int> Table_t;
-Table_t Table;
 
 typedef map <string, float> Thing_t;
-							Thing_t Thing;
-void crap(void)
-{
-#ifdef WIN32
-	OutputDebugString(va("Table size %d\n",Thing.size()));
-	for (Thing_t::iterator it = Thing.begin(); it!=Thing.end(); ++it)
-	{
-		const string *str = &((*it).first);
-		float f   = (*it).second;
-
-		OutputDebugString(va("(%s) %f\n",str->c_str(),f));
-	}
-#endif
-/*	OutputDebugString(va("Table size %d\n",Table.size()));
-	int iHighestUsageCount = 0;
-
-	int iEntry=0;
-	for (Table_t::iterator it = Table.begin(); it!= Table.end(); ++it)
-	{
-		v3Struct_t v3 = (*it).first;
-		//OutputDebugString(va("(%d) %f %f %f\n",iEntry,v3.f[0],v3.f[1],v3.f[2]));
-		int iUsage = (*it).second;
-		if (iUsage > iHighestUsageCount)
-		{
-			iHighestUsageCount = iUsage;
-		}
-		iEntry++;
-	}
-
-	OutputDebugString(va("Highest usage count = %d\n",iHighestUsageCount));
-	*/
-}
-
+Thing_t Thing;
 
 inline float ACos (float fValue)
 {
@@ -131,7 +85,7 @@ static inline word SquashFloat(float f)
 	f+= 2.0f;	// range 0..4
 	f*= 16383.0f;
 
-	int iVal = f;
+	int iVal = static_cast<int>(f);
 	assert(iVal <= 65535);
 	return (word) iVal&65535;
 }
@@ -509,9 +463,9 @@ void QuatSlerpCompTo3x4(	float fLerp0_1,
 
 	// lerp the xlat...
 	//
-	fDestMat[0][3] = (fLerp0_1 * tx0) + ((1.0 - fLerp0_1) * tx1);
-	fDestMat[1][3] = (fLerp0_1 * ty0) + ((1.0 - fLerp0_1) * ty1);
-	fDestMat[2][3] = (fLerp0_1 * tz0) + ((1.0 - fLerp0_1) * tz1);
+	fDestMat[0][3] = (fLerp0_1 * tx0) + ((1.0f - fLerp0_1) * tx1);
+	fDestMat[1][3] = (fLerp0_1 * ty0) + ((1.0f - fLerp0_1) * ty1);
+	fDestMat[2][3] = (fLerp0_1 * tz0) + ((1.0f - fLerp0_1) * tz1);
 }
 
 

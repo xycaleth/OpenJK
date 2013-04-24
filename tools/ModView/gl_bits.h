@@ -4,7 +4,7 @@
 #ifndef GL_BITS_H
 #define GL_BITS_H
 
-
+#include <string>
 
 //HGLRC	GL_GenerateRC	(HDC hDC, bool bDoubleBuffer = true);
 //GLuint	GL_BindImage	(CImage *image);
@@ -13,7 +13,7 @@ void	GL_Enter2D		(int iWindowWidth, int iWindowDepth, bool bCLS = true);
 void	GL_Exit2D		(void);
 int		GL_GetCorrectedDim		(int iDim);
 char*	GL_GetCorrectedDimString(int iDim);
-const char *	GL_GetInfo(void);
+std::string GL_GetInfo();
 void    GL_CacheDriverInfo();
 
 

@@ -156,9 +156,10 @@ void AddSequencesToTree ( SceneTreeItem *root, const ModelContainer_t& container
 
 void AddSkinsToTree ( SceneTreeItem *root, const ModelContainer& container, const OldSkinSets_t& skins )
 {
-    for ( OldSkinSets_t::const_iterator skin = skins.begin(); skin != skins.end(); skin++ )
+    int skinIndex = 0;
+    for ( OldSkinSets_t::const_iterator skin = skins.begin(); skin != skins.end(); skin++, skinIndex++ )
     {
-        root->AddChild (new SkinSceneTreeItem (skin->first, container.hModel, root));
+        root->AddChild (new SkinSceneTreeItem (skin->first, skinIndex, container.hModel, root));
     }
 }
 
