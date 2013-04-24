@@ -9,7 +9,7 @@
 
 
 bool WinTalk_HandleMessages(void);
-bool WinTalk_IssueCommand(LPCSTR psCommand, byte *pbData = NULL, int iDataSize = 0, LPCSTR *ppsResultPassback = NULL, byte **ppbDataPassback = NULL, int *piDataSizePassback = NULL);
+bool WinTalk_IssueCommand(const char * psCommand, byte *pbData = NULL, int iDataSize = 0, const char * *ppsResultPassback = NULL, byte **ppbDataPassback = NULL, int *piDataSizePassback = NULL);
 
 
 

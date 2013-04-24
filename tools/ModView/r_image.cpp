@@ -9,6 +9,7 @@
 #include "png/png.h"
 //
 #include "R_Image.h"
+#include "StringUtils.h"
 
 
 static	image_t* hashTable[FILE_HASH_SIZE];
@@ -281,7 +282,7 @@ typedef struct
 #pragma pack(pop)
 
 */
-bool TGA_Write(LPCSTR psFullPathedFilename, byte *pPixels, int iWidth, int iHeight, int iPlanes)
+bool TGA_Write(const char * psFullPathedFilename, byte *pPixels, int iWidth, int iHeight, int iPlanes)
 {
 	byte		*pbBuffer = NULL;
 	int			iPixelBytes			= (iPlanes == 24) ? 3:4;
@@ -1171,7 +1172,7 @@ void R_LoadImage( const char *name, byte **pic, int *width, int *height )
 {
 	// only attempt load if not the special case...
 	//
-	if (stricmp(name,"[NoMaterial]"))	
+	if (Q_stricmp(name,"[NoMaterial]"))
 	{
 		// thanks, Jake...  <sigh>
 		//

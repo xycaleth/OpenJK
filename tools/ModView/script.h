@@ -41,10 +41,10 @@
 
 
 
-LPCSTR	Script_GetExtension(void);
-LPCSTR	Script_GetFilter(bool bStandAlone = true );
-bool	Script_Write(LPCSTR psFullPathedFilename);
-bool	Script_Read	(LPCSTR psFullPathedFilename);
+const char *	Script_GetExtension(void);
+const char *	Script_GetFilter(bool bStandAlone = true );
+bool	Script_Write(const char * psFullPathedFilename);
+bool	Script_Read	(const char * psFullPathedFilename);
 
 
 #endif	// #ifndef SCRIPT_H

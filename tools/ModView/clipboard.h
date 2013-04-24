@@ -5,12 +5,12 @@
 #define CLIPBOARD_H
 
 
-BOOL Clipboard_SendString(LPCSTR psString);
-BOOL ClipBoard_SendDIB(LPVOID pvData, int iBytes);
+bool Clipboard_SendString(const char * psString);
+bool ClipBoard_SendDIB(void * pvData, int iBytes);
 
 // other stuff that's not actually clipboard, but is called only in conjunction with it anyway...
 //
-bool ScreenShot(LPCSTR psFilename = NULL, LPCSTR psCopyrightMessage = NULL, int iWidth = g_iScreenWidth, int iHeight = g_iScreenHeight);
+bool ScreenShot(const char * psFilename = NULL, const char * psCopyrightMessage = NULL, int iWidth = g_iScreenWidth, int iHeight = g_iScreenHeight);
 bool BMP_GetMemDIB(void *&pvAddress, int &iBytes);
 void BMP_Free(void);
 

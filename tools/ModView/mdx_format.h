@@ -271,7 +271,7 @@ typedef struct {
 																		//  5-bits each (iG2_BITS_PER_BONEREF) for boneweights
 							// effectively a packed int, each bone weight converted from 0..1 float to 0..255 int...
 							//  promote each entry to float and multiply by fG2_BONEWEIGHT_RECIPROCAL_MULT to convert.
-							byte			BoneWeightings[iMAX_G2_BONEWEIGHTS_PER_VERT];	// 4
+							unsigned char	BoneWeightings[iMAX_G2_BONEWEIGHTS_PER_VERT];	// 4
 
 						} mdxmVertex_t;
 

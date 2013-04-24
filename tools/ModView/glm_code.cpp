@@ -12,6 +12,7 @@
 #include "parser.h"
 #include "shader.h"
 #include "skins.h"
+#include "StringUtils.h"
 #include "textures.h"	// for some stats stuff
 //
 #include "glm_code.h"
@@ -49,7 +50,7 @@ static void GLMModel_BuildDefaultGLA()
 			// write out bone hierarchy...
 			//
 			mdxaSkelOffsets_t * pSkelOffsets = (mdxaSkelOffsets_t *) at;
-			at += (int)( &((mdxaSkelOffsets_t *)0)->offsets[ pMDXAHeader->numBones ] );
+			at += sizeof (mdxaSkelOffsets_t) + sizeof (int) * (pMDXAHeader->numBones - 1);
 			
 			pMDXAHeader->ofsSkel = at - (byte *) pMDXAHeader; 
 			for (int iSkelIndex = 0; iSkelIndex < pMDXAHeader->numBones; iSkelIndex++)
@@ -66,9 +67,11 @@ static void GLMModel_BuildDefaultGLA()
 
 				static const mdxaBone_t IdentityBone = 
 				{				
-					1.0f, 0.0f, 0.0f, 0.0f,
-					0.0f, 1.0f, 0.0f, 0.0f,
-					0.0f, 0.0f, 1.0f, 0.0f
+					{
+                        { 1.0f, 0.0f, 0.0f, 0.0f },
+                        { 0.0f, 1.0f, 0.0f, 0.0f },
+                        { 0.0f, 0.0f, 1.0f, 0.0f }
+                    }
 				};
 				
 				// base and inverse of an identity matrix are the same, so...
@@ -78,7 +81,7 @@ static void GLMModel_BuildDefaultGLA()
 
 						pSkel->numChildren	=	0;	// inherently, when doing MD3 to G2 files
 
-				int iThisSkelSize = (int)( &((mdxaSkel_t *)0)->children[ pSkel->numChildren ] );
+				int iThisSkelSize = sizeof (mdxaSkel_t) + sizeof (int) * (pSkel->numChildren - 1);
 
 				at += iThisSkelSize;
 			}
@@ -126,7 +129,7 @@ static void GLMModel_BuildDefaultGLA()
 			pMDXAHeader->ofsEnd = at - (byte *) pMDXAHeader;		
 		}
 
-		realloc(gpvDefaultGLA, pMDXAHeader->ofsEnd);
+		gpvDefaultGLA = realloc(gpvDefaultGLA, pMDXAHeader->ofsEnd);
 
 /*		FILE *fhHandle = fopen("c:\\default.gla","wb");
 		if (fhHandle)
@@ -173,7 +176,7 @@ void GLMModel_DeleteExtra(void)
 //	pMDXMHeader = NULL;	// do NOT free this, dup ptr only
 }
 
-LPCSTR GLMModel_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex )
+const char * GLMModel_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex )
 {
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
 
@@ -190,7 +193,7 @@ LPCSTR GLMModel_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex )
 }
 
 
-LPCSTR GLMModel_GetSurfaceShaderName( ModelHandle_t hModel, int iSurfaceIndex )
+const char * GLMModel_GetSurfaceShaderName( ModelHandle_t hModel, int iSurfaceIndex )
 {
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
 
@@ -213,7 +216,7 @@ LPCSTR GLMModel_GetSurfaceShaderName( ModelHandle_t hModel, int iSurfaceIndex )
 //
 // return basic info on the supplied model arg...
 //
-static LPCSTR GLMModel_GetBoneName( ModelHandle_t hModel, int iBoneIndex )
+const char * GLMModel_GetBoneName( ModelHandle_t hModel, int iBoneIndex )
 {
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
 	mdxaHeader_t	*pMDXAHeader	= (mdxaHeader_t	*) RE_GetModelData(pMDXMHeader->animIndex);
@@ -230,7 +233,7 @@ static LPCSTR GLMModel_GetBoneName( ModelHandle_t hModel, int iBoneIndex )
 	return "GLMModel_GetBoneName(): Bad bone index";
 }
 
-LPCSTR GLMModel_BoneInfo( ModelHandle_t hModel, int iBoneIndex )
+const char * GLMModel_BoneInfo( ModelHandle_t hModel, int iBoneIndex )
 {
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
 	mdxaHeader_t	*pMDXAHeader	= (mdxaHeader_t	*) RE_GetModelData(pMDXMHeader->animIndex);
@@ -306,7 +309,7 @@ LPCSTR GLMModel_BoneInfo( ModelHandle_t hModel, int iBoneIndex )
 						}
 						else
 						{
-							LPCSTR psSurfaceName = GLMModel_GetSurfaceName( hModel, iSurface );
+							const char * psSurfaceName = GLMModel_GetSurfaceName( hModel, iSurface );
 	
 							if (iUsingCount>40)	// arb
 							{
@@ -350,7 +353,7 @@ LPCSTR GLMModel_BoneInfo( ModelHandle_t hModel, int iBoneIndex )
 bool GLMModel_SurfaceContainsBoneReference(ModelHandle_t hModel, int iLODNumber, int iSurfaceNumber, int iBoneNumber)
 {
 	mdxmHeader_t			*pMDXMHeader		= (mdxmHeader_t	*) RE_GetModelData(hModel);
-	mdxmHierarchyOffsets_t	*pHierarchyOffsets	= (mdxmHierarchyOffsets_t *) ((byte *) pMDXMHeader + sizeof(*pMDXMHeader));
+
 //	mdxmSurfHierarchy_t		*pSurfHierarchy		= (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[iSurfaceNumber]);
 
 //	if (iLODNumber >= pMDXMHeader->numLODs)
@@ -393,7 +396,7 @@ bool GLMModel_SurfaceIsTag(ModelHandle_t hModel, int iSurfaceIndex )
 
 bool GLMModel_SurfaceIsON(ModelHandle_t hModel, int iSurfaceIndex )
 {
-	LPCSTR psSurfaceName = GLMModel_GetSurfaceName(hModel, iSurfaceIndex);
+	const char * psSurfaceName = GLMModel_GetSurfaceName(hModel, iSurfaceIndex);
 
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 	if (!pContainer)
@@ -408,12 +411,12 @@ bool GLMModel_SurfaceIsON(ModelHandle_t hModel, int iSurfaceIndex )
 }
 
 
-LPCSTR vtos(vec3_t v3)
+const char * vtos(vec3_t v3)
 {
 	return va("%.3f %.3f %.3f",v3[0],v3[1],v3[2]);
 }
 
-static LPCSTR v2tos(vec2_t v2)
+static const char * v2tos(vec2_t v2)
 {
 	return va("%.3f %.3f",v2[0],v2[1]);
 }
@@ -421,10 +424,10 @@ static LPCSTR v2tos(vec2_t v2)
 
 // generate info suitable for sending to Notepad (can be a BIG string)...
 //
-LPCSTR GLMModel_SurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex )
+const char * GLMModel_SurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex )
 {
-	static CString	str;
-					str = "";
+	static std::string str;
+    str = "";
 
 	mdxmHeader_t			*pMDXMHeader		= (mdxmHeader_t	*) RE_GetModelData(hModel);
 	mdxmHierarchyOffsets_t	*pHierarchyOffsets	= (mdxmHierarchyOffsets_t *) ((byte *) pMDXMHeader + sizeof(*pMDXMHeader));
@@ -490,12 +493,13 @@ LPCSTR GLMModel_SurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex )
 				if (iOtherVert != iVert)
 				{
 #define VectorEqual(a,b)		(fabs((a)[0]-(b)[0])<0.001f && fabs((a)[1]-(b)[1])<0.001f && fabs((a)[2]-(b)[2])<0.001f)
+#define Vector2Equal(a,b)		(fabs((a)[0]-(b)[0])<0.001f && fabs((a)[1]-(b)[1])<0.001f)
 
 					if (VectorEqual(pVert->vertCoords,pOtherVert->vertCoords)
 						&&
 						VectorEqual(pVert->normal,pOtherVert->normal)
 						&&
-						!VectorEqual(pVertTexCoords[iVert].texCoords, pVertTexCoords[iOtherVert].texCoords)
+						!Vector2Equal(pVertTexCoords[iVert].texCoords, pVertTexCoords[iOtherVert].texCoords)
 						)
 					{
 						str += va("Vert %d and %d have same coords\n",iVert,iOtherVert);
@@ -516,12 +520,12 @@ LPCSTR GLMModel_SurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex )
 	}
 	
 	StatusMessage(NULL);
-	return (LPCSTR) str;//str.c_str();
+	return str.c_str();//str.c_str();
 }
 
 
 
-LPCSTR GLMModel_SurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool bShortVersionForTag )
+const char * GLMModel_SurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool bShortVersionForTag )
 {	
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
 //	mdxaHeader_t	*pMDXAHeader	= (mdxaHeader_t	*) RE_GetModelData(pMDXMHeader->animIndex);
@@ -643,18 +647,18 @@ else
 
 // provides common functionality to save duping logic...
 //
-static LPCSTR GLMModel_CreateSurfaceName( LPCSTR psSurfaceName, bool bOnOff)
+static const char * GLMModel_CreateSurfaceName( const char * psSurfaceName, bool bOnOff)
 {
-	static CString string;
+	static std::string string;
 	
 	string = psSurfaceName;	// do NOT use in constructor form since this is a static (that got me first time... :-)
 
 	if (!bOnOff)
 	{
-		string.Insert(0, "//////// ");
+		string.insert(0, "//////// ");
 	}
 
-	return (LPCSTR) string;
+	return string.c_str();
 }
 
 void R_GLM_SurfaceRecursiveApply (
@@ -786,7 +790,7 @@ static int GLMModel_GetUniqueShaderCount( ModelHandle_t hModel )
 
 	return stringSet.size();
 }
-static LPCSTR GLMModel_GetUniqueShader(int iShader)
+static const char * GLMModel_GetUniqueShader(int iShader)
 {
 	assert(iShader < stringSet.size());
 	
@@ -804,7 +808,7 @@ static LPCSTR GLMModel_GetUniqueShader(int iShader)
 //
 // return basic info on the supplied model arg...
 //
-static LPCSTR GLMModel_Info( ModelHandle_t hModel )
+static const char * GLMModel_Info( ModelHandle_t hModel )
 {
 	// I should really try-catch these, but for now...
 	//
@@ -833,8 +837,8 @@ static LPCSTR GLMModel_Info( ModelHandle_t hModel )
 		if (GLMModel_SurfaceIsTag(hModel, i))
 			iNumTagSurfaces++;
 
-		LPCSTR psSurfaceName = GLMModel_GetSurfaceName( hModel, i);
-		if (!stricmp("_off",&psSurfaceName[strlen(psSurfaceName)-4]))
+		const char * psSurfaceName = GLMModel_GetSurfaceName( hModel, i);
+		if (!Q_stricmp("_off",&psSurfaceName[strlen(psSurfaceName)-4]))
 			iNumOFFSurfaces++;
 	}
 
@@ -885,14 +889,14 @@ static LPCSTR GLMModel_Info( ModelHandle_t hModel )
 		{
 			bool bFound = false;
 
-			LPCSTR	psShaderName		= GLMModel_GetUniqueShader( iUniqueShader );
-			LPCSTR	psLocalTexturePath	= R_FindShader( psShaderName );
+			const char *	psShaderName		= GLMModel_GetUniqueShader( iUniqueShader );
+			const char *	psLocalTexturePath	= R_FindShader( psShaderName );
 		
 			if (psLocalTexturePath && strlen(psLocalTexturePath))
 			{
 				TextureHandle_t hTexture		= TextureHandle_ForName( psLocalTexturePath );
 				GLuint			uiBind			= (hTexture == -1)?0:Texture_GetGLBind( hTexture );
-				bFound = (uiBind||!stricmp(psShaderName,"[NoMaterial]"));			
+				bFound = (uiBind||!Q_stricmp(psShaderName,"[NoMaterial]"));
 			}
 			str += va("     %s%s\n",String_EnsureMinLength(psShaderName[0]?psShaderName:"<blank>",16/*arb*/),(!bFound)?"\t(Not Found)":"");
 		}
@@ -952,7 +956,7 @@ bool R_GLMModel_Tree_ReEvalSurfaceText(ModelHandle_t hModel, HTREEITEM hTreeItem
 				{
 					// it's a surface, so re-eval its text...
 					//
-					LPCSTR psSurfaceName = GLMModel_GetSurfaceName( hModel, TreeItemData.iItemNumber );
+					const char * psSurfaceName = GLMModel_GetSurfaceName( hModel, TreeItemData.iItemNumber );
 
 					// a little harmless optimisation here...
 					//
@@ -992,7 +996,7 @@ bool R_GLMModel_Tree_ReEvalSurfaceText(ModelHandle_t hModel, HTREEITEM hTreeItem
 // return is success/fail (but it's an optional file, so return bool is just FYI really)
 //    (note that partial failures still count as successes, as long as at least one file succeeds)
 //
-static bool GLMModel_ReadSkinFiles(ModelContainer_t *pContainer, LPCSTR psLocalFilename)
+static bool GLMModel_ReadSkinFiles(ModelContainer_t *pContainer, const char * psLocalFilename)
 {
 	// check for optional .g2skin files... (SOF2-type)
 	//
@@ -1014,7 +1018,7 @@ static bool GLMModel_ReadSkinFiles(ModelContainer_t *pContainer, LPCSTR psLocalF
 // return = true if some sequences created (because of having found a valid animation file, 
 //	either "<modelname>.frames" (SOF2) or "animation.cfg" (CHC)...
 //
-static bool GLMModel_ReadSequenceInfo(ModelContainer_t *pContainer, LPCSTR psLocalFilename_GLA)
+static bool GLMModel_ReadSequenceInfo(ModelContainer_t *pContainer, const char * psLocalFilename_GLA)
 {
 	// try a CHC-style "animation.cfg" file...
 	//
@@ -1036,14 +1040,14 @@ static bool GLMModel_ReadSequenceInfo(ModelContainer_t *pContainer, LPCSTR psLoc
 //
 // this MUST be called after Jake's code has finished, since I read from his tables...
 //
-bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename)
+bool GLMModel_Parse(struct ModelContainer *pContainer, const char * psLocalFilename)
 {
 	bool bReturn = false;
 
 	ModelHandle_t hModel = pContainer->hModel;
 
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
-	mdxaHeader_t	*pMDXAHeader	= (mdxaHeader_t	*) RE_GetModelData(pMDXMHeader->animIndex);
+	//mdxaHeader_t	*pMDXAHeader	= (mdxaHeader_t	*) RE_GetModelData(pMDXMHeader->animIndex);
 
 	if (pMDXMHeader->ident == MDXM_IDENT)
 	{
@@ -1083,12 +1087,12 @@ bool GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename)
 				}
 //				else
 //				{
-//					ErrorBox(va("Unable to find corresponding animation file: \"%s\"!",(LPCSTR)strGLAFilename));
+//					ErrorBox(va("Unable to find corresponding animation file: \"%s\"!",(const char *)strGLAFilename));
 //				}
 			}
 //			else
 //			{
-//				ErrorBox(va("Unable to find corresponding GLA file \"%s\"!",(LPCSTR)strGLAFilename));
+//				ErrorBox(va("Unable to find corresponding GLA file \"%s\"!",(const char *)strGLAFilename));
 //			}
 		}
 		else
@@ -1136,7 +1140,7 @@ SurfaceOnOff_t GLMModel_Surface_GetStatus( ModelHandle_t hModel, int iSurfaceInd
 	
 	if (pContainer)
 	{
-		LPCSTR psSurfaceName = GLMModel_GetSurfaceName( hModel, iSurfaceIndex );
+		const char * psSurfaceName = GLMModel_GetSurfaceName( hModel, iSurfaceIndex );
 		
 		return trap_G2_IsSurfaceOff(hModel, pContainer->slist, psSurfaceName);
 	}
@@ -1151,7 +1155,7 @@ bool GLMModel_Surface_SetStatus( ModelHandle_t hModel, int iSurfaceIndex, Surfac
 
 	if (pContainer)
 	{
-		LPCSTR psSurfaceName = GLMModel_GetSurfaceName( hModel, iSurfaceIndex );
+		const char * psSurfaceName = GLMModel_GetSurfaceName( hModel, iSurfaceIndex );
 
 		if (trap_G2_SetSurfaceOnOff (hModel, pContainer->slist, psSurfaceName, eStatus, iSurfaceIndex))
 		{
@@ -1256,7 +1260,7 @@ static void CUTDOWN_G2_TransformBone ( int newFrame, int parent, int child, mdxa
 	mdxaSkelOffsets_t *offsets;
 	int				i;//, boneListIndex;
 	mdxBone4_t		outMatrix, inMatrix, in2Matrix;
-	int				angleOverride = 0;
+	//int				angleOverride = 0;
 
 	// decide where the transformed bone is going
 
@@ -1331,7 +1335,7 @@ static void CUTDOWN_G2_RecurseSurfaces( ModelHandle_t hModel, ModelContainer_t *
 			// whip through and actually transform each vertex
 			//		
 			mdxmVertex_t *v = (mdxmVertex_t *) ((byte *)pSurface + pSurface->ofsVerts);
-			mdxmVertexTexCoord_t *pTexCoords = (mdxmVertexTexCoord_t *) &v[pSurface->numVerts];
+			//mdxmVertexTexCoord_t *pTexCoords = (mdxmVertexTexCoord_t *) &v[pSurface->numVerts];
 			for ( int j=0; j<pSurface->numVerts; j++ )
 			{
 				vec3_t			tempVert;
@@ -1443,7 +1447,7 @@ int GLMModel_EnsureGenerated_VertEdgeInfo(ModelHandle_t hModel, int iLOD, Surfac
 		//
 		// First, get various model pointers ready...
 		//		
-		mdxmHierarchyOffsets_t	*pHierarchyOffsets	= (mdxmHierarchyOffsets_t *) ((byte *) pMDXMHeader + sizeof(*pMDXMHeader));
+		//mdxmHierarchyOffsets_t	*pHierarchyOffsets	= (mdxmHierarchyOffsets_t *) ((byte *) pMDXMHeader + sizeof(*pMDXMHeader));
 	//	mdxmSurfHierarchy_t		*pSurfHierarchy		= (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[iSurfaceNumber]);
 
 		mdxmLOD_t *pLOD = (mdxmLOD_t *)((byte *)pMDXMHeader + pMDXMHeader->ofsLODs);
@@ -1458,10 +1462,6 @@ int GLMModel_EnsureGenerated_VertEdgeInfo(ModelHandle_t hModel, int iLOD, Surfac
 		//		
 		for (int iSurface = 0; iSurface<pMDXMHeader->numSurfaces; iSurface++)
 		{
-			if (iSurface == 59)
-			{
-				int z=1;
-			}
 			mdxmSurface_t	*pSurface	= (mdxmSurface_t  *) ((byte *) pLODSurfOffset +  pLODSurfOffset->offsets[iSurface]);
 			mdxmTriangle_t	*pTriangles	= (mdxmTriangle_t *) ((byte *) pSurface + pSurface->ofsTriangles);
 

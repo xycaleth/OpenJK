@@ -10,6 +10,7 @@
 #include "files.h"
 //
 #include "shader.h"
+#include "StringUtils.h"
 
 shaderCommands_t tess;
 
@@ -496,9 +497,9 @@ textures/sfx/dclogo
 	//	END
 }
 */
-static bool CheckForFilenameArg(LPCSTR &psSearchPos, LPCSTR psKeyword)
+static bool CheckForFilenameArg(const char * &psSearchPos, const char * psKeyword)
 {
-	LPCSTR psSearchResult = strstr(psSearchPos,psKeyword);
+	const char * psSearchResult = strstr(psSearchPos,psKeyword);
 
 	if (psSearchResult && isspace(psSearchResult[strlen(psKeyword)]))
 	{
@@ -535,7 +536,7 @@ static bool CheckForFilenameArg(LPCSTR &psSearchPos, LPCSTR psKeyword)
 //  else check for a clampmap
 //  else just return NULL, signifying that I'm stumped...
 //
-LPCSTR Shader_ExtractSuitableFilename(LPCSTR psShaderText)
+const char * Shader_ExtractSuitableFilename(const char * psShaderText)
 {
 	char *psShaderTextEnd = (char*)psShaderText;
 	SkipBracedSection (&psShaderTextEnd);
@@ -549,10 +550,10 @@ LPCSTR Shader_ExtractSuitableFilename(LPCSTR psShaderText)
 	strncpy(psThisShader,psShaderText,iShaderChars);
 	psThisShader[iShaderChars]='\0';
 
-	LPCSTR psAnswer = NULL;
+	const char * psAnswer = NULL;
 	
 	char *psShaderSearchTry = psShaderSearch;
-	if (CheckForFilenameArg((LPCSTR&)psShaderSearchTry, "qer_editorimage"))
+	if (CheckForFilenameArg((const char *&)psShaderSearchTry, "qer_editorimage"))
 	{
 		psAnswer = psShaderSearchTry;
 	}
@@ -563,7 +564,7 @@ LPCSTR Shader_ExtractSuitableFilename(LPCSTR psShaderText)
 	psShaderSearchTry = psShaderSearch;
 	while (psShaderSearchTry && !psAnswer)
 	{
-		if (CheckForFilenameArg((LPCSTR&)psShaderSearchTry, "map"))
+		if (CheckForFilenameArg((const char *&)psShaderSearchTry, "map"))
 		{
 			psAnswer = psShaderSearchTry;
 		}
@@ -575,7 +576,7 @@ LPCSTR Shader_ExtractSuitableFilename(LPCSTR psShaderText)
 
 		while (psShaderSearchTry && !psAnswer)
 		{
-			if (CheckForFilenameArg((LPCSTR&)psShaderSearchTry, "clampmap"))
+			if (CheckForFilenameArg((const char *&)psShaderSearchTry, "clampmap"))
 			{
 				psAnswer = psShaderSearchTry;
 			}
@@ -629,7 +630,7 @@ const char *R_FindShader( const char *psLocalMaterialName)
 	}
 */
 	COM_StripExtension( psLocalMaterialName, strippedName );
-	strlwr(strippedName);
+	ToLower(strippedName);
 
 	ShadersFoundAndFilesPicked_t::iterator it = ShadersFoundAndFilesPicked.find(strippedName);
 	if (it != ShadersFoundAndFilesPicked.end())
@@ -692,7 +693,7 @@ const char *R_FindShader( const char *psLocalMaterialName)
 		sh = FinishShader();
 		return sh;
 */
-		LPCSTR psReturnName = Shader_ExtractSuitableFilename(shaderText);
+		const char * psReturnName = Shader_ExtractSuitableFilename(shaderText);
 		if (psReturnName)
 		{
 			psLocalMaterialName = psReturnName;

@@ -21,7 +21,7 @@ bool gbTextInhibit = false;
 void Text_EnsureCreated(void);	
 
 
-BYTE byChars[]=
+byte byChars[]=
 {
 	0,0,0,0,0,0,0,0
 	,24,24,24,24,24,0,24,0
@@ -122,7 +122,7 @@ BYTE byChars[]=
 };
 
 GLuint gFontOffset;
-BOOL bTextCreated=FALSE;
+bool bTextCreated=false;
 #define TOTALFONTENTRIES 128	// enough for all 7-bit ascii range
 
 // This should be called once at program start, but only after OpenGL is up and running (and in context)...
@@ -131,7 +131,7 @@ BOOL bTextCreated=FALSE;
 //
 void Text_EnsureCreated(void)
 {
-	static bool bFlipped = FALSE;
+	static bool bFlipped = false;
 
 	if (!bTextCreated)
 	{
@@ -150,7 +150,7 @@ void Text_EnsureCreated(void)
 											byChars[i+(7-j)] = b;
 				}// for (int j=0; j<4; j++)
 			}// for (int i=0; i<sizeof(byChars); i+=TEXT_DEPTH)
-			bFlipped = TRUE;
+			bFlipped = true;
 		}// if (!bFlipped)
 
 		// make a raster Font for OpenGL...
@@ -166,7 +166,7 @@ void Text_EnsureCreated(void)
 			glBitmap(TEXT_WIDTH, TEXT_DEPTH,0.0,0.0,TEXT_WIDTH,0.0,&byChars[i*TEXT_DEPTH]);
 			glEndList();
 		}
-		bTextCreated=TRUE;
+		bTextCreated=true;
 	}// if (!bTextCreated)
 	
 }// void Text_EnsureCreated(void)
@@ -185,7 +185,7 @@ void Text_Destroy(void)
 	if (bTextCreated)
 	{
 		glDeleteLists(gFontOffset,TOTALFONTENTRIES);
-		bTextCreated = FALSE;
+		bTextCreated = false;
 	}
 }
 
@@ -195,7 +195,7 @@ void Text_Destroy(void)
 
 // Displays a text string at a 3d world point...
 //
-void Text_Display(LPCSTR psString, vec3_t v3DPos, byte r, byte g, byte b)
+void Text_Display(const char * psString, vec3_t v3DPos, byte r, byte g, byte b)
 {
 	if (!gbTextInhibit)
 	{
@@ -234,7 +234,7 @@ void Text_Display(LPCSTR psString, vec3_t v3DPos, byte r, byte g, byte b)
 //
 // return value is a convenient xpos for next xpos along after this strlen...
 //
-int Text_DisplayFlat(LPCSTR psString, int x, int y, byte r, byte g, byte b, bool bResizeStringIfNecessary /* = false */)
+int Text_DisplayFlat(const char * psString, int x, int y, byte r, byte g, byte b, bool bResizeStringIfNecessary /* = false */)
 {
 	int iRetVal = x;
 

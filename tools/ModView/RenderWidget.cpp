@@ -3,7 +3,11 @@
 
 #include <QtGui/QMouseEvent>
 #include <QtGui/QKeyEvent>
+#if defined(__APPLE__) && defined(__MACH__)
+#include <OpenGL/gl.h>
+#else
 #include <gl/GL.h>
+#endif
 #include "model.h"
 #include "text.h"
 #include "textures.h"
@@ -12,6 +16,9 @@ const float MOUSE_ROT_SCALE = 0.5f;
 const float MOUSE_XPOS_SCALE = 0.1f;
 const float MOUSE_YPOS_SCALE = 0.1f;
 const float MOUSE_ZPOS_SCALE = 0.4f;
+
+int g_iScreenHeight;
+int g_iScreenWidth;
 
 RenderWidget::RenderWidget ( QWidget *parent )
     : QGLWidget (parent)

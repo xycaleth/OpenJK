@@ -4,6 +4,7 @@
 #include "includes.h"
 #include "stl.h"
 //
+#include "StringUtils.h"
 #include "parser.h"
 
 
@@ -27,7 +28,7 @@ Alias
 // 
 // return = success / fail...
 //
-bool Parser_Load(LPCSTR psFullPathedFilename, MappedString_t &ParsedAliases)
+bool Parser_Load(const char * psFullPathedFilename, MappedString_t &ParsedAliases)
 {
 	bool bReturn = false;
 
@@ -45,11 +46,10 @@ bool Parser_Load(LPCSTR psFullPathedFilename, MappedString_t &ParsedAliases)
 			sLine[sizeof(sLine)-1]='\0';
 
 			// :-)
-			CString str(sLine);
-					str.TrimLeft();
-					str.TrimRight();
+            std::string str(sLine);
+            Trim (str);
 
-			strcpy(sLine,str);
+			strcpy(sLine,str.c_str());
 
 			if (!bSkippingBlock)
 			{
@@ -57,7 +57,7 @@ bool Parser_Load(LPCSTR psFullPathedFilename, MappedString_t &ParsedAliases)
 				{
 					if (strlen(sLine))	// found any kind of header?
 					{
-						if (!stricmp(sLine,"Alias"))
+						if (!Q_stricmp(sLine,"Alias"))
 						{							
 							bParsingBlock = true;						
 						}
@@ -72,10 +72,10 @@ bool Parser_Load(LPCSTR psFullPathedFilename, MappedString_t &ParsedAliases)
 				}
 				else
 				{
-					if (!stricmp(sLine,"{"))
+					if (!Q_stricmp(sLine,"{"))
 						continue;
 
-					if (!stricmp(sLine,"}"))
+					if (!Q_stricmp(sLine,"}"))
 					{
 						bParsingBlock = false;
 						continue;
@@ -87,27 +87,27 @@ bool Parser_Load(LPCSTR psFullPathedFilename, MappedString_t &ParsedAliases)
 						//
 						// first, find the whitespace that seperates them...
 						//
-						CString strPair(sLine);
-						int iLoc = strPair.FindOneOf(" \t");
-						if (iLoc == -1)
+                        std::string strPair(sLine);
+						unsigned int iLoc = strPair.find_first_of(" \t");
+						if (iLoc == std::string::npos)
 						{
 							assert(0);
-							ErrorBox(va("Parser_Load(): Couldn't find whitespace-seperator in line:\n\n\"%s\"\n\n( File: \"%s\" )",(LPCSTR) strPair,psFullPathedFilename));
+							ErrorBox(va("Parser_Load(): Couldn't find whitespace-seperator in line:\n\n\"%s\"\n\n( File: \"%s\" )", strPair.c_str(), psFullPathedFilename));
 							bReturn = false;
 							break;
 						}
 
 						// stl & MFC rule!...
 						//
-						CString strArg_Left(strPair.Left(iLoc));	// real name
-								strArg_Left.TrimRight();
-								strArg_Left.Replace("\"","");
+                        std::string strArg_Left(strPair.substr(0, iLoc));	// real name
+                        RightTrim(strArg_Left);
+                        strArg_Left.erase (std::remove (strArg_Left.begin(), strArg_Left.end(), '"'), strArg_Left.end());
 
-						CString strArg_Right(strPair.Mid (iLoc));	// alias name
-								strArg_Right.TrimLeft();
-								strArg_Right.Replace("\"","");
+                        std::string strArg_Right(strPair.substr (iLoc));	// alias name
+                        LeftTrim (strArg_Right);
+                        strArg_Right.erase (std::remove (strArg_Right.begin(), strArg_Right.end(), '"'), strArg_Right.end());
 
-						ParsedAliases[(LPCSTR)strArg_Left] = (LPCSTR)strArg_Right;
+						ParsedAliases[strArg_Left.c_str()] = strArg_Right.c_str();
 
 						bReturn = true;
 						continue;
@@ -118,7 +118,7 @@ bool Parser_Load(LPCSTR psFullPathedFilename, MappedString_t &ParsedAliases)
 			{
 				// skip to close brace...
 				//
-				if (stricmp(sLine,"}"))
+				if (Q_stricmp(sLine,"}"))
 					continue;
 
 				bSkippingBlock = false;

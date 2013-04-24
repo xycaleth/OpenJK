@@ -84,7 +84,7 @@ typedef struct shader_s {
 
 
 
-typedef byte color4ub_t[4];
+typedef unsigned char color4ub_t[4];
 
 
 typedef unsigned int glIndex_t;

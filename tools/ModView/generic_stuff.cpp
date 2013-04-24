@@ -6,7 +6,6 @@
 #include <algorithm>
 #include "StringUtils.h"
 #include "includes.h"
-#include "MainFrm.h"
 //
 #include "generic_stuff.h"
 
@@ -46,14 +45,14 @@ void SetQdirFromPath( const char *path )
 		}
 	}		
 
-	if (stricmp(prevQdir,qdir))
+	if (Q_stricmp(prevQdir,qdir))
 	{
 		extern void Media_Delete(void);
 		Media_Delete();
 	}
 }
 
-static bool SetQdirFromPath2( const char *path, const char *psBaseDir )
+static bool SetQdirFromPath2( const char *path2, const char *psBaseDir )
 {
 //	static bool bDone = false;
 	
@@ -62,8 +61,9 @@ static bool SetQdirFromPath2( const char *path, const char *psBaseDir )
 //		bDone = true;
 
 		char	temp[1024];
-		strcpy(temp,path);
-		path = temp;
+        char    path[1024];
+		strcpy(temp,path2);
+		strcpy(path,temp);
 		const char	*c;
 		const char *sep;
 		int		len, count;
@@ -75,7 +75,7 @@ static bool SetQdirFromPath2( const char *path, const char *psBaseDir )
 //			path = temp;
 //		}
 		
-		_strlwr((char*)path);
+		ToLower(path);
 		
 		// search for "base" in path from the RIGHT hand side (and must have a [back]slash just before it)
 		
@@ -84,7 +84,7 @@ static bool SetQdirFromPath2( const char *path, const char *psBaseDir )
 		{
 			int i;
 			
-			if (!strnicmp (c, psBaseDir, len)
+			if (!Q_stricmpn (c, psBaseDir, len)
 				&& 
 				(*(c-1) == '/' || *(c-1) == '\\')	// would be more efficient to do this first, but only checking after a strncasecmp ok ensures no invalid pointer-1 access
 				)
@@ -164,7 +164,7 @@ void Filename_RemoveQUAKEBASE( std::string& string )
 
 
 
-bool FileExists (LPCSTR psFilename)
+bool FileExists (const char * psFilename)
 {
 	FILE *handle = fopen(psFilename, "r");
 	if (!handle)
@@ -175,7 +175,7 @@ bool FileExists (LPCSTR psFilename)
 	return true;
 }
 
-long FileLen( LPCSTR psFilename)
+long FileLen( const char * psFilename)
 {
 	FILE *handle = fopen(psFilename, "r");
 	if (!handle)
@@ -194,11 +194,11 @@ long FileLen( LPCSTR psFilename)
 
 // returns actual filename only, no path
 //
-char *Filename_WithoutPath(LPCSTR psFilename)
+char *Filename_WithoutPath(const char * psFilename)
 {
-	static char sString[MAX_PATH];
+	static char sString[MAX_QPATH];
 /*
-	LPCSTR p = strrchr(psFilename,'\\');
+	const char * p = strrchr(psFilename,'\\');
 
   	if (!p++)
 	{
@@ -210,7 +210,7 @@ char *Filename_WithoutPath(LPCSTR psFilename)
 	strcpy(sString,p);
 */
 
-	LPCSTR psCopyPos = psFilename;
+	const char * psCopyPos = psFilename;
 	
 	while (*psFilename)
 	{
@@ -228,9 +228,9 @@ char *Filename_WithoutPath(LPCSTR psFilename)
 
 // returns (eg) "\dir\name" for "\dir\name.bmp"
 //
-char *Filename_WithoutExt(LPCSTR psFilename)
+char *Filename_WithoutExt(const char * psFilename)
 {
-	static char sString[MAX_PATH];
+	static char sString[MAX_QPATH];
 
 	strcpy(sString,psFilename);
 
@@ -253,9 +253,9 @@ char *Filename_WithoutExt(LPCSTR psFilename)
 
 // loses anything after the path (if any), (eg) "\dir\name.bmp" becomes "\dir"
 //
-char *Filename_PathOnly(LPCSTR psFilename)
+char *Filename_PathOnly(const char * psFilename)
 {
-	static char sString[MAX_PATH];
+	static char sString[MAX_QPATH];
 
 	strcpy(sString,psFilename);	
 	
@@ -278,10 +278,10 @@ char *Filename_PathOnly(LPCSTR psFilename)
 
 // returns filename's extension only (including '.'), else returns original string if no '.' in it...
 //
-char *Filename_ExtOnly(LPCSTR psFilename)
+char *Filename_ExtOnly(const char * psFilename)
 {
-	static char sString[MAX_PATH];
-	LPCSTR p = strrchr(psFilename,'.');
+	static char sString[MAX_QPATH];
+	const char * p = strrchr(psFilename,'.');
 
 	if (!p)
 		p=psFilename;
@@ -295,7 +295,7 @@ char *Filename_ExtOnly(LPCSTR psFilename)
 
 // used when sending output to a text file etc, keeps columns nice and neat...
 //
-char *String_EnsureMinLength(LPCSTR psString, int iMinLength)
+char *String_EnsureMinLength(const char * psString, int iMinLength)
 {
 	static char	sString[8][1024];
 	static int i=0;
@@ -306,7 +306,7 @@ char *String_EnsureMinLength(LPCSTR psString, int iMinLength)
 
 	// a bit slow and lazy, but who cares?...
 	//
-	while (strlen(sString[i])<(UINT)iMinLength)
+	while (strlen(sString[i])<(unsigned int)iMinLength)
 		strcat(sString[i]," ");
 
 	return sString[i];
@@ -316,29 +316,30 @@ char *String_EnsureMinLength(LPCSTR psString, int iMinLength)
 
 // similar to strlwr, but (crucially) doesn't touch original...
 //
-char *String_ToLower(LPCSTR psString)
+char *String_ToLower(const char * psString)
 {
-	static char sString[MAX_PATH];
+	static char sString[MAX_QPATH];
 
 	strcpy(sString,psString);
-	return strlwr(sString);	
+    
+	return ToLower(sString);	
 
 }
 
 // similar to strupr, but (crucially) doesn't touch original...
 //
-char *String_ToUpper(LPCSTR psString)
+char *String_ToUpper(const char * psString)
 {
-	static char sString[MAX_PATH];
+	static char sString[MAX_QPATH];
 
 	strcpy(sString,psString);
-	return strupr(sString);	
+	return ToUpper(sString);
 
 }
 
-char *String_ForwardSlash(LPCSTR psString)
+char *String_ForwardSlash(const char * psString)
 {
-	static char sString[MAX_PATH];
+	static char sString[MAX_QPATH];
 
 	strcpy(sString,psString);
 
@@ -347,11 +348,11 @@ char *String_ForwardSlash(LPCSTR psString)
 	{
 		*p = '/';
 	}
-
-	return strlwr(sString);	
+    
+	return ToLower(sString);
 }
 
-char	*va(char *format, ...)
+char	*va(const char *format, ...)
 {
 	va_list		argptr;
 	static char		string[16][16384];		// important to have a good depth to this. 16 is nice
@@ -361,7 +362,7 @@ char	*va(char *format, ...)
 	
 	va_start (argptr, format);
 //	vsprintf (string[index], format,argptr);
-	_vsnprintf(string[index], sizeof(string[0]), format, argptr);
+	vsnprintf(string[index], sizeof(string[0]), format, argptr);
 	va_end (argptr);
 	string[index][sizeof(string[0])-1] = '\0';
 
@@ -369,14 +370,15 @@ char	*va(char *format, ...)
 }
 
 
+#ifdef WIN32
 // returns a path to somewhere writeable, without trailing backslash...
 //
 // (for extra speed now, only evaluates it on the first call, change this if you like)
 //
 char *scGetTempPath(void)
-{	
-	static char sBuffer[MAX_PATH];
-	DWORD dwReturnedSize;
+{
+	static char sBuffer[MAX_QPATH];
+	unsigned int dwReturnedSize;
 	static int i=0;
 	
 	if (!i++)
@@ -399,17 +401,20 @@ char *scGetTempPath(void)
 	return sBuffer;
 	
 }
+#endif
 
 
 // psInitialSaveName can be "" if not bothered
-LPCSTR InputSaveFileName(LPCSTR psInitialSaveName, LPCSTR psCaption, LPCSTR psInitialPath, LPCSTR psFilter, LPCSTR psExtension)
+const char * InputSaveFileName(const char * psInitialSaveName, const char * psCaption, const char * psInitialPath, const char * psFilter, const char * psExtension)
 {
+#ifdef WIN32
 	CFileStatus Filestatus;
 	CFile File;
 	static char name[MAX_PATH];
 
-	CString strInitialSaveName(psInitialSaveName);
-			strInitialSaveName.Replace("/","\\");	// or windows immediately cancels the dialog
+    std::string strInitialSaveName(psInitialSaveName);
+    // or windows immediately cancels the dialog
+    std::replace (strInitialSaveName.begin(), strInitialSaveName.end(), '/', '\\');
 	
 	CFileDialog FileDlg(FALSE, psExtension,
 						strInitialSaveName,
@@ -425,23 +430,26 @@ LPCSTR InputSaveFileName(LPCSTR psInitialSaveName, LPCSTR psCaption, LPCSTR psIn
    	
 	if (FileDlg.DoModal() == IDOK)
 	{
-		static CString	strName;
-						strName = FileDlg.GetPathName();
-		return strName;
+		static std::string strName;
+        strName = FileDlg.GetPathName();
+        
+		return strName.c_str();
 	}
 		
-	return NULL;	
+#endif
+	return NULL;
 }
 
 
 // "psInitialLoadName" param can be "" if not bothered, "psInitialDir" can be NULL to open to last browse-dir
 //
-// psFilter example:		TEXT("Model files (*.glm)|*.glm|All Files(*.*)|*.*||")	// LPCSTR psFilter
+// psFilter example:		TEXT("Model files (*.glm)|*.glm|All Files(*.*)|*.*||")	// const char * psFilter
 //
 // there is too much crap in here, and some needless code, fix it sometime... (yeah, right)
 //
-LPCSTR InputLoadFileName(LPCSTR psInitialLoadName, LPCSTR psCaption, LPCSTR psInitialDir, LPCSTR psFilter)
+const char * InputLoadFileName(const char * psInitialLoadName, const char * psCaption, const char * psInitialDir, const char * psFilter)
 {
+#ifdef WIN32
 	CFileStatus Filestatus;
 	CFile File;
 	static char name[MAX_PATH];	
@@ -457,12 +465,12 @@ LPCSTR InputLoadFileName(LPCSTR psInitialLoadName, LPCSTR psCaption, LPCSTR psIn
 		strInitialDir = psInitialDir;
 	strInitialDir.Replace("/","\\");
 
-	FileDlg.m_ofn.lpstrInitialDir = (LPCSTR) strInitialDir;
+	FileDlg.m_ofn.lpstrInitialDir = (const char *) strInitialDir;
 	FileDlg.m_ofn.lpstrTitle=psCaption;	// Load Editor Model";  
 
 	CString strInitialLoadName(psInitialLoadName);
 			strInitialLoadName.Replace("/","\\");
-	strcpy(name,(LPCSTR)strInitialLoadName);
+	strcpy(name,(const char *)strInitialLoadName);
 	FileDlg.m_ofn.lpstrFile=name;
 		
    	if (FileDlg.DoModal() == IDOK)
@@ -470,6 +478,7 @@ LPCSTR InputLoadFileName(LPCSTR psInitialLoadName, LPCSTR psCaption, LPCSTR psIn
 		return name;
 	}
 	
+#endif
 	return NULL;
 }
 
@@ -479,16 +488,16 @@ LPCSTR InputLoadFileName(LPCSTR psInitialLoadName, LPCSTR psCaption, LPCSTR psIn
 //
 bool gbErrorBox_Inhibit = false;	// Keith wanted to be able to remote-deactivate these...
 string strLastError;
-LPCSTR ModView_GetLastError()		// function for him to be able to interrogate if he's disabled the error boxes
+const char * ModView_GetLastError()		// function for him to be able to interrogate if he's disabled the error boxes
 {
 	return strLastError.c_str();
 }
 
 
 extern bool Gallery_Active();
-extern void Gallery_AddError	(LPCSTR psText);
-extern void Gallery_AddInfo		(LPCSTR psText);
-extern void Gallery_AddWarning	(LPCSTR psText);
+extern void Gallery_AddError	(const char * psText);
+extern void Gallery_AddInfo		(const char * psText);
+extern void Gallery_AddWarning	(const char * psText);
 
 void ErrorBox(const char *sString)
 {
@@ -547,7 +556,7 @@ bool GetYesNo(const char *psQuery)
     return false;
 }
 
-void StatusMessage(LPCSTR psString)	// param can be NULL to indicate fallback to "ready" or whatever you want
+void StatusMessage(const char * psString)	// param can be NULL to indicate fallback to "ready" or whatever you want
 {
 	/*CMainFrame* pMainFrame = (CMainFrame*) AfxGetMainWnd();
 	if (pMainFrame)
@@ -573,7 +582,7 @@ long filesize(FILE *handle)
 
 
 // returns -1 for error
-int LoadFile (LPCSTR psPathedFilename, void **bufferptr, int bReportErrors)
+int LoadFile (const char * psPathedFilename, void **bufferptr, int bReportErrors)
 {
 	FILE	*f;
 	int    length;
@@ -606,8 +615,9 @@ int LoadFile (LPCSTR psPathedFilename, void **bufferptr, int bReportErrors)
 
 
 // returns -1 for error
-int SaveFile (LPCSTR psPathedFilename, const void *pBuffer, int iSize)
+int SaveFile (const char * psPathedFilename, const void *pBuffer, int iSize)
 {		
+#ifdef USE_MFC
 	extern void CreatePath (const char *path);
 	CreatePath(psPathedFilename);
 	FILE *f = fopen(psPathedFilename,"wb");
@@ -628,16 +638,19 @@ int SaveFile (LPCSTR psPathedFilename, const void *pBuffer, int iSize)
 	ErrorBox(va("Error opening file \"%s\" for writing!",psPathedFilename));
 	
 	return -1;
+#else
+    return iSize;
+#endif
 }
 
 
 
 // this'll return a string of up to the first 4095 chars of a system error message...
 //
-LPCSTR SystemErrorString(DWORD dwError)
+const char * SystemErrorString(unsigned int dwError)
 {
 	static char sString[4096];
-
+#ifdef WIN32
 	LPVOID lpMsgBuf=0;
 
 	FormatMessage( 
@@ -651,25 +664,26 @@ LPCSTR SystemErrorString(DWORD dwError)
 	);		
 
 	ZEROMEM(sString);
-	strncpy(sString,(LPCSTR) lpMsgBuf,sizeof(sString)-1);
+	strncpy(sString,(const char *) lpMsgBuf,sizeof(sString)-1);
 
 	LocalFree( lpMsgBuf ); 
-
+#endif
 	return sString;
 }
 
 
-void SystemErrorBox(DWORD dwError)
+void SystemErrorBox(unsigned int dwError)
 {
 	ErrorBox( SystemErrorString(dwError) );
 }
 
 
 
-LPCSTR scGetComputerName(void)
+const char * scGetComputerName(void)
 {
     static char cTempBuffer[128];	// well ott for laziness
-    DWORD dwTempBufferSize;
+#ifdef WIN32
+    unsigned int dwTempBufferSize;
     static int i=0;
 
     if (!i++)
@@ -679,14 +693,15 @@ LPCSTR scGetComputerName(void)
     	if (!GetComputerName(cTempBuffer, &dwTempBufferSize))
 			strcpy(cTempBuffer,"Unknown");	// error retrieving host computer name
     	}
-
-    return &cTempBuffer[0];
+#endif
+    return cTempBuffer;
 }
 
-LPCSTR scGetUserName(void)
+const char * scGetUserName(void)
 {
 	static char cTempBuffer[128];
-    DWORD dwTempBufferSize;
+#ifdef WIN32
+    unsigned int dwTempBufferSize;
     static int i=0;
 
     if (!i++)
@@ -696,14 +711,15 @@ LPCSTR scGetUserName(void)
     	if (!GetUserName(cTempBuffer, &dwTempBufferSize))
 			strcpy(cTempBuffer,"Unknown");	// error retrieving host computer name
    	}
-
-    return &cTempBuffer[0];
+#endif
+    
+    return cTempBuffer;
 }
 
 
 
 
-bool TextFile_Read(std::string &strFile, LPCSTR psFullPathedFilename, bool bLoseSlashSlashREMs /* = true */, bool bLoseBlankLines /* = true */)
+bool TextFile_Read(std::string &strFile, const char * psFullPathedFilename, bool bLoseSlashSlashREMs /* = true */, bool bLoseBlankLines /* = true */)
 {
 	FILE *fhTextFile = fopen(psFullPathedFilename,"rt");
 	if (fhTextFile)
@@ -751,15 +767,16 @@ bool TextFile_Read(std::string &strFile, LPCSTR psFullPathedFilename, bool bLose
 
 
 
-bool SendFileToNotepad(LPCSTR psFilename)
+bool SendFileToNotepad(const char * psFilename)
 {
+#ifdef WIN32
 	bool bReturn = false;
 
-	char sExecString[MAX_PATH];
+	char sExecString[MAX_QPATH];
 
 	sprintf(sExecString,"notepad %s",psFilename);
 
-	if (WinExec(sExecString,	//  LPCSTR lpCmdLine,  // address of command line
+	if (WinExec(sExecString,	//  const char * lpCmdLine,  // address of command line
 				SW_SHOWNORMAL	//  UINT uCmdShow      // window style for new application
 				)
 		>31	// don't ask me, Windoze just uses >31 as OK in this call.
@@ -775,20 +792,24 @@ bool SendFileToNotepad(LPCSTR psFilename)
 	}
 
 	return bReturn;
+#else
+    return true;
+#endif
 }
 
 // creates as temp file, then spawns notepad with it...
 //
-bool SendStringToNotepad(LPCSTR psWhatever, LPCSTR psLocalFileName)
+bool SendStringToNotepad(const char * psWhatever, const char * psLocalFileName)
 {
+#ifdef WIN32
 	bool bReturn = false;
 
-	LPCSTR psOutputFileName = va("%s\\%s",scGetTempPath(),psLocalFileName);
+	const char * psOutputFileName = va("%s\\%s",scGetTempPath(),psLocalFileName);
 
 	FILE *handle = fopen(psOutputFileName,"wt");
 	if (handle)
 	{
-		fprintf(handle,psWhatever);
+		fputs(psWhatever, handle);
 		fclose(handle);
 
 		bReturn = SendFileToNotepad(psOutputFileName);
@@ -799,6 +820,9 @@ bool SendStringToNotepad(LPCSTR psWhatever, LPCSTR psLocalFileName)
 	}
 
 	return bReturn;
+#else
+    return true;
+#endif
 }
 
 

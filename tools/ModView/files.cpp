@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 #include "includes.h"
-#include <io.h>
+//#include <io.h>
 #include "R_Common.h"
 //#include "R_Image.h"
 //
@@ -127,10 +127,10 @@ Com_FilterPath
 int Com_FilterPath(char *filter, char *name, int casesensitive)
 {
 	int i;
-	char new_filter[MAX_QPATH];
-	char new_name[MAX_QPATH];
+	char new_filter[MAX_OSPATH];
+	char new_name[MAX_OSPATH];
 
-	for (i = 0; i < MAX_QPATH-1 && filter[i]; i++) {
+	for (i = 0; i < MAX_OSPATH-1 && filter[i]; i++) {
 		if ( filter[i] == '\\' || filter[i] == ':' ) {
 			new_filter[i] = '/';
 		}
@@ -139,7 +139,7 @@ int Com_FilterPath(char *filter, char *name, int casesensitive)
 		}
 	}
 	new_filter[i] = '\0';
-	for (i = 0; i < MAX_QPATH-1 && name[i]; i++) {
+	for (i = 0; i < MAX_OSPATH-1 && name[i]; i++) {
 		if ( name[i] == '\\' || name[i] == ':' ) {
 			new_name[i] = '/';
 		}
@@ -186,134 +186,55 @@ char *CopyString( const char *in ) {
 	return out;
 }
 
-
-void Sys_ListFilteredFiles( const char *basedir, char *subdirs, char *filter, char **flist, int *numfiles ) {
-	char		search[MAX_OSPATH], newsubdirs[MAX_OSPATH];
-	char		filename[MAX_OSPATH];
-	int			findhandle;
-	struct _finddata_t findinfo;
-
-	if ( *numfiles >= MAX_FOUND_FILES - 1 ) {
-		return;
-	}
-
-	if (strlen(subdirs)) {
-		Com_sprintf( search, sizeof(search), "%s\\%s\\*", basedir, subdirs );
-	}
-	else {
-		Com_sprintf( search, sizeof(search), "%s\\*", basedir );
-	}
-
-	findhandle = _findfirst (search, &findinfo);
-	if (findhandle == -1) {
-		return;
-	}
-
-	do {
-		if (findinfo.attrib & _A_SUBDIR) {
-			if (Q_stricmp(findinfo.name, ".") && Q_stricmp(findinfo.name, "..")) {
-				if (strlen(subdirs)) {
-					Com_sprintf( newsubdirs, sizeof(newsubdirs), "%s\\%s", subdirs, findinfo.name);
-				}
-				else {
-					Com_sprintf( newsubdirs, sizeof(newsubdirs), "%s", findinfo.name);
-				}
-				Sys_ListFilteredFiles( basedir, newsubdirs, filter, flist, numfiles );
-			}
-		}
-		if ( *numfiles >= MAX_FOUND_FILES - 1 ) {
-			break;
-		}
-		Com_sprintf( filename, sizeof(filename), "%s\\%s", subdirs, findinfo.name );
-		if (!Com_FilterPath( filter, filename, qfalse ))
-			continue;
-		flist[ *numfiles ] = CopyString( filename );
-		(*numfiles)++;
-	} while ( _findnext (findhandle, &findinfo) != -1 );
-
-	_findclose (findhandle);
-}
-
-
+#include <QtCore/QDir>
 char **Sys_ListFiles( const char *directory, const char *extension, char *filter, int *numfiles, qboolean wantsubs ) {
-	char		search[MAX_OSPATH];
 	int			nfiles;
 	char		**listCopy;
 	char		*list[MAX_FOUND_FILES];
-	struct _finddata_t findinfo;
-	int			findhandle;
-	int			flag;
-	int			i;
 
-	if (filter) {
-
-		nfiles = 0;
-		Sys_ListFilteredFiles( directory, "", filter, list, &nfiles );
-
-		list[ nfiles ] = 0;
-		*numfiles = nfiles;
-
-		if (!nfiles)
-			return NULL;
-
-		listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ) );
-		for ( i = 0 ; i < nfiles ; i++ ) {
-			listCopy[i] = list[i];
-		}
-		listCopy[i] = NULL;
-
-		return listCopy;
-	}
-
-	if ( !extension) {
+	if ( !extension ) {
 		extension = "";
 	}
 
 	// passing a slash as extension will find directories
 	if ( extension[0] == '/' && extension[1] == 0 ) {
 		extension = "";
-		flag = 0;
-	} else {
-		flag = _A_SUBDIR;
 	}
-
-	Com_sprintf( search, sizeof(search), "%s\\*%s", directory, extension );
 
 	// search
 	nfiles = 0;
 
-	findhandle = _findfirst (search, &findinfo);
-	if (findhandle == -1) {
-		*numfiles = 0;
-		return NULL;
-	}
+    QDir root (directory);
+    if ( !root.exists() )
+    {
+        *numfiles = 0;
+        return NULL;
+    }
 
-	do {
-		if ( (!wantsubs && flag ^ ( findinfo.attrib & _A_SUBDIR )) || (wantsubs && findinfo.attrib & _A_SUBDIR) ) {
-			if ( nfiles == MAX_FOUND_FILES - 1 ) {
-				break;
-			}
-			list[ nfiles ] = CopyString( findinfo.name );
-			nfiles++;
-		}
-	} while ( _findnext (findhandle, &findinfo) != -1 );
+    QDir::Filters filters = QDir::Files;
+    if ( wantsubs )
+    {
+        filters |= QDir::AllDirs;
+    }
 
-	list[ nfiles ] = 0;
+    QStringList nameFilters;
+    QString starExtension = "*";
+    starExtension += extension;
+    nameFilters.push_back (starExtension);
 
-	_findclose (findhandle);
-
-	// return a copy of the list
-	*numfiles = nfiles;
-
-	if ( !nfiles ) {
-		return NULL;
-	}
+    QStringList files = root.entryList (nameFilters, filters);
+    nfiles = min (files.size(), MAX_FOUND_FILES - 1);
+    for ( int i = 0; i < nfiles; i++ )
+    {
+        list[i] = CopyString (files[i].toLatin1());
+    }
 
 	listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ) );
-	for ( i = 0 ; i < nfiles ; i++ ) {
+	for ( int i = 0 ; i < nfiles ; i++ ) {
 		listCopy[i] = list[i];
 	}
-	listCopy[i] = NULL;
+	listCopy[nfiles] = NULL;
+    *numfiles = nfiles;
 
 	return listCopy;
 }
@@ -331,5 +252,3 @@ void	Sys_FreeFileList( char **flist ) {
 
 	Z_Free( flist );
 }
-
-

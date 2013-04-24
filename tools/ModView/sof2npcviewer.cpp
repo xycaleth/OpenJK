@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include "includes.h"
-#include "modview.h"
 #include "files.h"
 #include "GUIHelpers.h"
 #include "r_common.h"
@@ -40,12 +39,12 @@ bool gbDoingGallery = false;
 CString gstrGalleryOutputDir;
 CString gstrGallerySequenceToLock;
 CString *gpFeedback = NULL;
-LPCSTR gpsGameDir = NULL;
+const char * gpsGameDir = NULL;
 /////////////////////////////////////////////////////////////////////////////
 // CSOF2NPCViewer dialog
 
 
-CSOF2NPCViewer::CSOF2NPCViewer(bool bSOF2Mode, CString *pFeedback, LPCSTR psGameDir, CWnd* pParent /*=NULL*/)
+CSOF2NPCViewer::CSOF2NPCViewer(bool bSOF2Mode, CString *pFeedback, const char * psGameDir, CWnd* pParent /*=NULL*/)
 	: CDialog(CSOF2NPCViewer::IDD, pParent)
 {
 	//{{AFX_DATA_INIT(CSOF2NPCViewer)
@@ -812,7 +811,7 @@ static void BOT_ScanSkins(BOTFile_t &Bot, set <string> &SkinVariants)
 
 			if (!strnicmp(strThisFile,"model_",6))
 			{
-				string s = (LPCSTR)(strThisFile.Mid(6));
+				string s = (const char *)(strThisFile.Mid(6));
 				SkinVariants.insert(s);
 			}
 		}
@@ -899,7 +898,7 @@ void CSOF2NPCViewer::BOT_ScanFiles(bool bForceRefresh)
 							}
 
 							Bot.strName = str;
-							//OutputDebugString(va("Bot name: \"%s\"\n",(LPCSTR) str));
+							//OutputDebugString(va("Bot name: \"%s\"\n",(const char *) str));
 						}
 						else
 						if (!strnicmp(strLine.c_str(),"model",5))
@@ -909,7 +908,7 @@ void CSOF2NPCViewer::BOT_ScanFiles(bool bForceRefresh)
 							str = Replace (str, "\"", "");
 
 							Bot.strModel = str;
-							//OutputDebugString(va("Bot model: \"%s\"\n",(LPCSTR) str));
+							//OutputDebugString(va("Bot model: \"%s\"\n",(const char *) str));
 						}
 						else
 						if (!strnicmp(strLine.c_str(),"color1",6))
@@ -1069,7 +1068,7 @@ typedef map<string, NPC_DataLookup_t>	ListBoxLookups_t;
 
 // subroutined so that the ModView Script generator can generate a 100%-compatible string for doing a data lookup...
 //
-static LPCSTR NPC_CreateListEntry(LPCSTR psTemplateName, LPCSTR psSkinName)
+static const char * NPC_CreateListEntry(const char * psTemplateName, const char * psSkinName)
 {
 #define MIN_NAME_LEN 40
 	static string strListEntry;
@@ -1130,7 +1129,7 @@ void CSOF2NPCViewer::NPC_FillList()
 
 // turns a listbox caption into data ptrs...
 //
-static bool NPC_DataLookup(LPCSTR psCaption, NPCFile_t &NPCFile, NPC_CharacterTemplate_t &Template, NPC_Skin_t &Skin)
+static bool NPC_DataLookup(const char * psCaption, NPCFile_t &NPCFile, NPC_CharacterTemplate_t &Template, NPC_Skin_t &Skin)
 {
 	ListBoxLookups_t::iterator it = ListBoxLookups.find(psCaption);
 	if (it != ListBoxLookups.end())
@@ -1185,7 +1184,7 @@ void CSOF2NPCViewer::OnSelchangeListNpcs()
 			CStatic *pStatic = (CStatic *)GetDlgItem(IDC_STATIC_COMMENT);
 			if (pStatic)
 			{
-				LPCSTR psStaticText = NULL;
+				const char * psStaticText = NULL;
 				if (m_bSOF2Mode)
 				{
 					// SOF2...
@@ -1202,7 +1201,7 @@ void CSOF2NPCViewer::OnSelchangeListNpcs()
 				{
 					// JK2...
 					//
-					BOTFiles_t::iterator itBotFile = TheBOTFiles.find( (LPCSTR) strCaption);
+					BOTFiles_t::iterator itBotFile = TheBOTFiles.find( (const char *) strCaption);
 					if (itBotFile != TheBOTFiles.end())
 					{
 //						psStaticText = va("( Comment: \"%s\"     Model: \"%s\" )",(*itBotFile).second.strComment.c_str(), (*itBotFile).second.strModel.c_str());
@@ -1232,7 +1231,7 @@ void NPC_CreateModViewScript_ParseInventory(CString &strCaptionForErrorPrinting,
 	NPC_INV_Items_t &Items = Inventory.Items;
 	for (int iItem = 0; iItem < Items.size(); iItem++)
 	{	
-		LPCSTR psName = Items[iItem].strName.c_str();
+		const char * psName = Items[iItem].strName.c_str();
 
 		string strBoltPoint = Items[iItem].strBoltPoint.c_str();
 		string strBoltModel;
@@ -1249,7 +1248,7 @@ void NPC_CreateModViewScript_ParseInventory(CString &strCaptionForErrorPrinting,
 		}
 		else
 		{
-			WarningBox(va("Unable to find item entry \"%s\"\n\nCharacter: \"%s\"\n\n( Try hitting 'Refresh', and if still missing, tell Joe K )",psName,(LPCSTR)strCaptionForErrorPrinting));
+			WarningBox(va("Unable to find item entry \"%s\"\n\nCharacter: \"%s\"\n\n( Try hitting 'Refresh', and if still missing, tell Joe K )",psName,(const char *)strCaptionForErrorPrinting));
 		}
 
 		if (!strBoltPoint.empty() && !strBoltModel.empty())
@@ -1292,7 +1291,7 @@ void NPC_CreateModViewScript_ParseInventory(CString &strCaptionForErrorPrinting,
 		}
 		else
 		{				
-			WarningBox(va("Unable to find weapon entry \"%s\"\n\nCharacter: \"%s\"\n\n( Try hitting 'Refresh', and if still missing, tell Joe )",strName.c_str(),(LPCSTR)strCaptionForErrorPrinting));
+			WarningBox(va("Unable to find weapon entry \"%s\"\n\nCharacter: \"%s\"\n\n( Try hitting 'Refresh', and if still missing, tell Joe )",strName.c_str(),(const char *)strCaptionForErrorPrinting));
 		}
 
 		if (!strBoltPoint.empty() && !strBoltModel.empty())
@@ -1569,7 +1568,7 @@ void CSOF2NPCViewer::OnDblclkListNpcs()
 			{
 				// JK2...
 				//
-				BOTFiles_t::iterator itBotFile = TheBOTFiles.find( (LPCSTR) strCaption );
+				BOTFiles_t::iterator itBotFile = TheBOTFiles.find( (const char *) strCaption );
 				if (itBotFile != TheBOTFiles.end())
 				{
 					BOTFile_t &Bot = (*itBotFile).second;
@@ -1655,11 +1654,11 @@ void Gallery_Done(void)
 {
 	gbDoingGallery = false;
 }
-LPCSTR Gallery_GetOutputDir(void)
+const char * Gallery_GetOutputDir(void)
 {
 	return gstrGalleryOutputDir;
 }
-LPCSTR Gallery_GetSeqToLock(void)
+const char * Gallery_GetSeqToLock(void)
 {
 	return gstrGallerySequenceToLock;
 }
@@ -1721,11 +1720,11 @@ void CSOF2NPCViewer::OnGallery()
 
 					gstrGallerySequenceToLock = m_bSOF2Mode ? "idle01" : "BOTH_STAND1";
 
-					LPCSTR psSeqLockName = Model_Sequence_GetLockedName( hModel, true);					
+					const char * psSeqLockName = Model_Sequence_GetLockedName( hModel, true);					
 
 					if (psSeqLockName)
 					{
-						if (GetYesNo(va("Currently-loaded model is locked to sequence \"%s\", use this for all models?\n\n( 'NO' will lock to \"%s\" instead )",psSeqLockName,(LPCSTR) gstrGallerySequenceToLock)))
+						if (GetYesNo(va("Currently-loaded model is locked to sequence \"%s\", use this for all models?\n\n( 'NO' will lock to \"%s\" instead )",psSeqLockName,(const char *) gstrGallerySequenceToLock)))
 						{
 							gstrGallerySequenceToLock = psSeqLockName;
 						}
@@ -1755,7 +1754,7 @@ void CSOF2NPCViewer::OnGallery()
 
 							if (NPC_CreateModViewScript(strCaption, strScript, NPCFile, Template, Skin))
 							{
-								AllScripts[ (LPCSTR)strCaption ] = strScript;
+								AllScripts[ (const char *)strCaption ] = strScript;
 							}
 						}
 					}
@@ -1763,7 +1762,7 @@ void CSOF2NPCViewer::OnGallery()
 					{
 						// JK2...
 						//
-						BOTFiles_t::iterator itBotFile = TheBOTFiles.find( (LPCSTR) strCaption );
+						BOTFiles_t::iterator itBotFile = TheBOTFiles.find( (const char *) strCaption );
 						if (itBotFile != TheBOTFiles.end())
 						{
 							BOTFile_t &Bot = (*itBotFile).second;
@@ -1790,14 +1789,14 @@ void CSOF2NPCViewer::OnGallery()
 
 								if (BOT_CreateModViewScript(strCaption, strScript, Bot, SkinVariants))
 								{
-									CString strEntryName( (LPCSTR)strCaption );
+									CString strEntryName( (const char *)strCaption );
 
 									if (!strThisSkinVariant.IsEmpty())
 									{
-										strEntryName += va("_%s",(LPCSTR)strThisSkinVariant);
+										strEntryName += va("_%s",(const char *)strThisSkinVariant);
 									}
 
-									AllScripts[ (LPCSTR) strEntryName ] = strScript;
+									AllScripts[ (const char *) strEntryName ] = strScript;
 								}
 							}
 							while (!SkinVariants.empty());
@@ -1889,7 +1888,7 @@ void CSOF2NPCViewer::OnButtonGenerateList()
 				strCaption = strCaption.Left( iLoc );
 			}
 
-			strEntries.insert( (LPCSTR) strCaption );
+			strEntries.insert( (const char *) strCaption );
 		}
 
 		CString strOutput;

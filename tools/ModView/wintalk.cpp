@@ -5,20 +5,20 @@
 #include "stdafx.h"
 #include "includes.h"
 //#include <winbase.h>
-#include "CommArea.h"
+#include "commarea.h"
 //
 #include "wintalk.h"
 
 
-extern bool Document_ModelLoadPrimary(LPCSTR psFilename);
+extern bool Document_ModelLoadPrimary(const char * psFilename);
 
 
-static LPCSTR FindWhitespace(LPCSTR psString)
+static const char * FindWhitespace(const char * psString)
 {
 	while (*psString && !isspace(*psString)) psString++;
 	return psString;
 }
-static LPCSTR SkipWhitespace(LPCSTR psString)
+static const char * SkipWhitespace(const char * psString)
 {
 	while (isspace(*psString)) psString++;
 	return psString;
@@ -33,7 +33,7 @@ static void TrimFirstSpace(char *psString)
 // 
 // return TRUE = app exit requested
 //
-static bool HandleCommands(LPCSTR psString, byte *pbCommandData, int iCommandDataSize)
+static bool HandleCommands(const char * psString, byte *pbCommandData, int iCommandDataSize)
 {
 	static bool bAppExitWanted = false;
 
@@ -44,7 +44,7 @@ static bool HandleCommands(LPCSTR psString, byte *pbCommandData, int iCommandDat
 #define NEXT_ARG		SkipWhitespace(FindWhitespace(psArg))
 #define READ_ARG(_arg,_destbuffer)  {strncpy(_destbuffer,_arg,sizeof(_destbuffer)-1);_destbuffer[sizeof(_destbuffer)-1]='\0';TrimFirstSpace(_destbuffer);}
 
-	LPCSTR psArg = psString;
+	const char * psArg = psString;
 		
 	IF_ARG("model_loadprimary")
 	{
@@ -226,7 +226,7 @@ static bool HandleCommands(LPCSTR psString, byte *pbCommandData, int iCommandDat
 
 		int iSequenceNum = atoi(psArg);
 
-		LPCSTR psString = Model_GetSequenceString(hModel, iSequenceNum);
+		const char * psString = Model_GetSequenceString(hModel, iSequenceNum);
 
 		if (psString)
 		{
@@ -467,7 +467,7 @@ static bool HandleCommands(LPCSTR psString, byte *pbCommandData, int iCommandDat
 		psArg = NEXT_ARG;
 
 		HTREEITEM	hTreeItem	= (HTREEITEM) atoi(psArg);
-		LPCSTR		psText		= ModelTree_GetItemText(hTreeItem,true);
+		const char *		psText		= ModelTree_GetItemText(hTreeItem,true);
 
 		CommArea_CommandAck(psText);
 	}
@@ -477,7 +477,7 @@ static bool HandleCommands(LPCSTR psString, byte *pbCommandData, int iCommandDat
 		psArg = NEXT_ARG;
 
 		HTREEITEM	hTreeItem	= (HTREEITEM) atoi(psArg);
-		LPCSTR		psText		= ModelTree_GetItemText(hTreeItem);
+		const char *		psText		= ModelTree_GetItemText(hTreeItem);
 
 		CommArea_CommandAck(psText);
 	}
@@ -567,7 +567,7 @@ bool WinTalk_HandleMessages(void)
 
 			byte	*pbCommandData = NULL;
 			int		iCommandDataSize;
-			LPCSTR	psString;
+			const char *	psString;
 			
 			if ((psString = CommArea_IsCommandWaiting( &pbCommandData, &iCommandDataSize )) != NULL)
 			{
@@ -591,10 +591,10 @@ bool WinTalk_HandleMessages(void)
 
 // return is success/fail
 //
-bool WinTalk_IssueCommand(	LPCSTR psCommand, 
+bool WinTalk_IssueCommand(	const char * psCommand, 
 							byte *pbData,				// optional extra command data (current max = 64k)
 							int iDataSize,				// sizeof above
-							LPCSTR *ppsResultPassback,	// optional result passback if expecting an answer string
+							const char * *ppsResultPassback,	// optional result passback if expecting an answer string
 							byte **ppbDataPassback,		// optional data passback if expecting a data result
 							int *piDataSizePassback		// optional size of above if you need it supplying
 							)
@@ -615,7 +615,7 @@ bool WinTalk_IssueCommand(	LPCSTR psCommand,
 		//
 		while (1)
 		{
-			LPCSTR psReply;
+			const char * psReply;
 
 			if ((psReply = CommArea_IsAckWaiting(ppbDataPassback,piDataSizePassback)) != NULL)
 			{

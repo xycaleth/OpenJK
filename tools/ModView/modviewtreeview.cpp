@@ -182,7 +182,7 @@ BOOL CModViewTreeView::PreCreateWindow(CREATESTRUCT& cs)
 }
 
 
-BOOL CModViewTreeView::Create(LPCTSTR lpszClassName, LPCTSTR lpszWindowName, DWORD dwStyle, const RECT& rect, CWnd* pParentWnd, UINT nID, CCreateContext* pContext) 
+BOOL CModViewTreeView::Create(LPCTSTR lpszClassName, LPCTSTR lpszWindowName, unsigned int dwStyle, const RECT& rect, CWnd* pParentWnd, UINT nID, CCreateContext* pContext) 
 {
 	// TODO: Add your specialized code here and/or call the base class
 	
@@ -503,7 +503,7 @@ static void SetTreeItemSurfaceState( HTREEITEM hTreeItem, bool bOnOff, bool bDef
 			TreeItemData.iItemType	== TREEITEMTYPE_GLM_TAGSURFACE
 		)
 	{
-		LPCSTR psSurfaceName = GLMModel_GetSurfaceName( TreeItemData.iModelHandle, TreeItemData.iItemNumber );
+		const char * psSurfaceName = GLMModel_GetSurfaceName( TreeItemData.iModelHandle, TreeItemData.iItemNumber );
 
 		bool bSurfaceNameIncludesOFF = !stricmp("_off", &psSurfaceName[strlen(psSurfaceName)-4]);
 
@@ -704,12 +704,12 @@ void CModViewTreeView::OnTreeBonesExpandall()
 void CModViewTreeView::OnGlmBonebolt() 
 {
 //	OutputDebugString("on command\n");
-	LPCSTR psCaption = va("Bolt model to bonebolt-point '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, true ));	// bBoltIsBone
+	const char * psCaption = va("Bolt model to bonebolt-point '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, true ));	// bBoltIsBone
 
-	LPCSTR psFullPathedFilename = InputLoadFileName("",				// LPCSTR psInitialLoadName, 
-													psCaption,		// LPCSTR psCaption,
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// LPCSTR psInitialDir,
-													Model_GetSupportedTypesFilter()			// LPCSTR psFilter
+	const char * psFullPathedFilename = InputLoadFileName("",				// const char * psInitialLoadName, 
+													psCaption,		// const char * psCaption,
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// const char * psInitialDir,
+													Model_GetSupportedTypesFilter()			// const char * psFilter
 													);
 
 	if (psFullPathedFilename)
@@ -721,12 +721,12 @@ void CModViewTreeView::OnGlmBonebolt()
 void CModViewTreeView::OnGlmtagsurfaceAddbolt() 
 {
 //	OutputDebugString("on command\n");
-	LPCSTR psCaption = va("Bolt additional model to surface-tag '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, false ));	// bBoltIsBone
+	const char * psCaption = va("Bolt additional model to surface-tag '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, false ));	// bBoltIsBone
 
-	LPCSTR psFullPathedFilename = InputLoadFileName("",				// LPCSTR psInitialLoadName, 
-													psCaption,		// LPCSTR psCaption,
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// LPCSTR psInitialDir,
-													Model_GetSupportedTypesFilter()			// LPCSTR psFilter
+	const char * psFullPathedFilename = InputLoadFileName("",				// const char * psInitialLoadName, 
+													psCaption,		// const char * psCaption,
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// const char * psInitialDir,
+													Model_GetSupportedTypesFilter()			// const char * psFilter
 													);
 
 	if (psFullPathedFilename)
@@ -738,12 +738,12 @@ void CModViewTreeView::OnGlmtagsurfaceAddbolt()
 
 void CModViewTreeView::OnSurfaceAddbolt() 
 {
-	LPCSTR psCaption = va("Bolt additional model to surface-tag '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, false ));	// bBoltIsBone
+	const char * psCaption = va("Bolt additional model to surface-tag '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, false ));	// bBoltIsBone
 
-	LPCSTR psFullPathedFilename = InputLoadFileName("",				// LPCSTR psInitialLoadName, 
-													psCaption,		// LPCSTR psCaption,
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// LPCSTR psInitialDir,
-													Model_GetSupportedTypesFilter()			// LPCSTR psFilter
+	const char * psFullPathedFilename = InputLoadFileName("",				// const char * psInitialLoadName, 
+													psCaption,		// const char * psCaption,
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// const char * psInitialDir,
+													Model_GetSupportedTypesFilter()			// const char * psFilter
 													);
 
 	if (psFullPathedFilename)
@@ -757,12 +757,12 @@ void CModViewTreeView::OnSurfaceAddbolt()
 void CModViewTreeView::OnGlmAddbonebolt() 
 {
 //	OutputDebugString("on command\n");
-	LPCSTR psCaption = va("Bolt additional model to bonebolt-point '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, true ));	// bBoltIsBone
+	const char * psCaption = va("Bolt additional model to bonebolt-point '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, true ));	// bBoltIsBone
 
-	LPCSTR psFullPathedFilename = InputLoadFileName("",				// LPCSTR psInitialLoadName, 
-													psCaption,		// LPCSTR psCaption,
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// LPCSTR psInitialDir,
-													Model_GetSupportedTypesFilter()			// LPCSTR psFilter
+	const char * psFullPathedFilename = InputLoadFileName("",				// const char * psInitialLoadName, 
+													psCaption,		// const char * psCaption,
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// const char * psInitialDir,
+													Model_GetSupportedTypesFilter()			// const char * psFilter
 													);
 
 	if (psFullPathedFilename)
@@ -794,7 +794,7 @@ void CModViewTreeView::OnGlmsurfaceInfo()
 		if (GetYesNo( strInfo.c_str() ))
 		{
 			CWaitCursor wait;
-			LPCSTR psInfoString = Model_GLMSurfaceVertInfo( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber );
+			const char * psInfoString = Model_GLMSurfaceVertInfo( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber );
 
             // Commented out string_removeoccurences cause it needs rewriting
 			SendStringToNotepad(psInfoString, va("%s_%s_vertinfo.txt",Filename_WithoutPath(Filename_WithoutExt(Model_GetFilename(gTreeItemData.iModelHandle))),/*String_RemoveOccurences*/(Model_GetSurfaceName(gTreeItemData.iModelHandle,gTreeItemData.iItemNumber),"*")));
@@ -865,12 +865,12 @@ void CModViewTreeView::OnGlmtagsurfaceInfo()
 void CModViewTreeView::OnGlmtagsurfaceBolt() 
 {
 //	OutputDebugString("on command\n");
-	LPCSTR psCaption = va("Bolt model to surface-tag '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, false ));	// bBoltIsBone
+	const char * psCaption = va("Bolt model to surface-tag '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, false ));	// bBoltIsBone
 
-	LPCSTR psFullPathedFilename = InputLoadFileName("",				// LPCSTR psInitialLoadName, 
-													psCaption,		// LPCSTR psCaption,
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// LPCSTR psInitialDir,
-													Model_GetSupportedTypesFilter()			// LPCSTR psFilter
+	const char * psFullPathedFilename = InputLoadFileName("",				// const char * psInitialLoadName, 
+													psCaption,		// const char * psCaption,
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// const char * psInitialDir,
+													Model_GetSupportedTypesFilter()			// const char * psFilter
 													);
 
 	if (psFullPathedFilename)
@@ -935,12 +935,12 @@ void CModViewTreeView::OnTreeSurfacesAlldefaultoffDefault()
 //
 void CModViewTreeView::OnSurfaceBolt() 
 {
-	LPCSTR psCaption = va("Bolt model to surface-tag '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, false ));	// bBoltIsBone
+	const char * psCaption = va("Bolt model to surface-tag '%s'",Model_GetBoltName( gTreeItemData.iModelHandle, gTreeItemData.iItemNumber, false ));	// bBoltIsBone
 
-	LPCSTR psFullPathedFilename = InputLoadFileName("",				// LPCSTR psInitialLoadName, 
-													psCaption,		// LPCSTR psCaption,
-													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// LPCSTR psInitialDir,
-													Model_GetSupportedTypesFilter()			// LPCSTR psFilter
+	const char * psFullPathedFilename = InputLoadFileName("",				// const char * psInitialLoadName, 
+													psCaption,		// const char * psCaption,
+													Filename_PathOnly(Model_GetFullPrimaryFilename()),	//	"S:\\baseq3\\models\\test\\bonehier",	// const char * psInitialDir,
+													Model_GetSupportedTypesFilter()			// const char * psFilter
 													);
 
 	if (psFullPathedFilename)
@@ -1240,7 +1240,7 @@ void CModViewTreeView::OnFindNext()
 
 void CModViewTreeView::OnSurfacesFind() 
 {
-	LPCSTR psSearch = GetString("Enter Surface name to search for...\n\n( Case insensitive, partial strings ok )");
+	const char * psSearch = GetString("Enter Surface name to search for...\n\n( Case insensitive, partial strings ok )");
 
 	if (psSearch)
 	{
@@ -1261,7 +1261,7 @@ void CModViewTreeView::OnSurfacesFind()
 
 void CModViewTreeView::OnBonesFind() 
 {
-	LPCSTR psSearch = GetString("Enter Bone name to search for...\n\n( Case insensitive, partial strings ok )");
+	const char * psSearch = GetString("Enter Bone name to search for...\n\n( Case insensitive, partial strings ok )");
 
 	if (psSearch)
 	{
@@ -1283,7 +1283,7 @@ void CModViewTreeView::OnBonesFind()
 
 // returns NULL if CANCEL, else input string
 //
-LPCSTR GetString(LPCSTR psPrompt, LPCSTR psDefault /*=NULL*/, bool bLowerCaseTheResult /*= true*/)
+const char * GetString(const char * psPrompt, const char * psDefault /*=NULL*/, bool bLowerCaseTheResult /*= true*/)
 {
 	static CString strReturn;
 
@@ -1296,7 +1296,7 @@ LPCSTR GetString(LPCSTR psPrompt, LPCSTR psDefault /*=NULL*/, bool bLowerCaseThe
 		if (bLowerCaseTheResult)
 			strReturn.MakeLower();
 
-		return (LPCSTR)strReturn;
+		return (const char *)strReturn;
 	}
 
 	return NULL;
@@ -1306,7 +1306,7 @@ LPCSTR GetString(LPCSTR psPrompt, LPCSTR psDefault /*=NULL*/, bool bLowerCaseThe
 
 void CModViewTreeView::OnModelFindany() 
 {
-	LPCSTR psSearch = GetString("Enter TreeItemText to search for...\n\n( Case insensitive, partial strings ok )");
+	const char * psSearch = GetString("Enter TreeItemText to search for...\n\n( Case insensitive, partial strings ok )");
 
 	if (psSearch)
 	{
@@ -1334,7 +1334,7 @@ static void ReEvalSequenceText( HTREEITEM hTreeItem )
 
 	if (TreeItemData.iItemType == TREEITEMTYPE_SEQUENCE)
 	{
-		LPCSTR psNewText = Model_Sequence_GetTreeName(TreeItemData.iModelHandle, TreeItemData.iItemNumber);
+		const char * psNewText = Model_Sequence_GetTreeName(TreeItemData.iModelHandle, TreeItemData.iItemNumber);
 
 		gModViewTreeViewhandle->GetTreeCtrl().SetItemText( hTreeItem, psNewText );
 	}

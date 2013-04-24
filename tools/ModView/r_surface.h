@@ -7,7 +7,7 @@
 #define	R_SURFACE_H
 
 
-void GetWeightColour(int iNumWeights, byte &r, byte &g, byte &b);
+void GetWeightColour(int iNumWeights, unsigned char &r, unsigned char &g, unsigned char &b);
 
 
 void RB_CheckOverflow( int verts, int indexes );

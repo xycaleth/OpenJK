@@ -14,7 +14,7 @@ class CGetString : public CDialog
 {
 // Construction
 public:
-	CGetString(LPCSTR pPrompt, CString *pFeedback, LPCSTR psDefault = NULL, CWnd* pParent = NULL);
+	CGetString(const char * pPrompt, CString *pFeedback, const char * psDefault = NULL, CWnd* pParent = NULL);
 
 // Dialog Data
 	//{{AFX_DATA(CGetString)
@@ -34,8 +34,8 @@ public:
 protected:
 
 	CString *m_pFeedback;
-	LPCSTR	 m_pPrompt;
-	LPCSTR	 m_pDefault;
+	const char *	 m_pPrompt;
+	const char *	 m_pDefault;
 
 	// Generated message map functions
 	//{{AFX_MSG(CGetString)

@@ -71,18 +71,18 @@ typedef struct
 ////////////////////////////////////////////////
 
 
-bool			GLMModel_Parse(struct ModelContainer *pContainer, LPCSTR psLocalFilename);
+bool			GLMModel_Parse(struct ModelContainer *pContainer, const char * psLocalFilename);
 SurfaceOnOff_t	GLMModel_Surface_GetStatus( ModelHandle_t hModel, int iSurfaceIndex );
 void			GLMModel_DeleteExtra(void);
 bool			GLMModel_SurfaceContainsBoneReference(ModelHandle_t hModel, int iLODNumber, int iSurfaceNumber, int iBoneNumber);
-LPCSTR			GLMModel_BoneInfo( ModelHandle_t hModel, int iBoneIndex );
-LPCSTR			GLMModel_SurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex );
-LPCSTR			GLMModel_SurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool bShortVersionForTag );
+const char *			GLMModel_BoneInfo( ModelHandle_t hModel, int iBoneIndex );
+const char *			GLMModel_SurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex );
+const char *			GLMModel_SurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool bShortVersionForTag );
 bool			GLMModel_SurfaceIsTag(ModelHandle_t hModel, int iSurfaceindex );
 bool			GLMModel_SurfaceIsON(ModelHandle_t hModel, int iSurfaceIndex );
-LPCSTR			GLMModel_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex );
-LPCSTR			GLMModel_GetSurfaceShaderName( ModelHandle_t hModel, int iSurfaceIndex );
-LPCSTR			GLMModel_GetBoneName( ModelHandle_t hModel, int iBoneIndex );
+const char *			GLMModel_GetSurfaceName( ModelHandle_t hModel, int iSurfaceIndex );
+const char *			GLMModel_GetSurfaceShaderName( ModelHandle_t hModel, int iSurfaceIndex );
+const char *			GLMModel_GetBoneName( ModelHandle_t hModel, int iBoneIndex );
 //bool		  R_GLMModel_Tree_ReEvalSurfaceText(ModelHandle_t hModel, HTREEITEM hTreeItem = NULL, bool bDeadFromHereOn = false);
 bool			GLMModel_Surface_Off( ModelHandle_t hModel, int iSurfaceIndex );
 bool			GLMModel_Surface_On( ModelHandle_t hModel, int iSurfaceIndex );

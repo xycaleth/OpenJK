@@ -4,10 +4,8 @@
 //
 #include "stdafx.h"
 #include <assert.h>
-#include "commtestDoc.h"
-#include "commtestview.h"
 //#include <winbase.h>
-#include "../tools/modview/CommArea.h"
+#include "commarea.h"
 //
 #include "../tools/modview/wintalk.h"
 

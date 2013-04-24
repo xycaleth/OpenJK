@@ -4,6 +4,8 @@
 //
 //
 #include "stdafx.h"
+#include <QtCore/QDateTime>
+#include <QtCore/QFileInfo>
 #include "includes.h"
 #include "R_Image.h"
 #include "stl.h"
@@ -14,7 +16,7 @@
 
 //#include "gl_bits.h"
 
-static LPCSTR BackSlash(LPCSTR psFilename)
+static const char * BackSlash(const char * psFilename)
 {
 	static char sTemp[1024];
 
@@ -29,9 +31,9 @@ static LPCSTR BackSlash(LPCSTR psFilename)
 
 
 
-bool GetFileTime(LPCSTR psFileName, FILETIME &ft)
+bool GetFileTime(const char * psFileName, time_t &ft)
 {
-	LPCSTR psNewName = psFileName;
+	const char * psNewName = psFileName;
 	
 	if (psFileName[1] != ':')
 	{
@@ -45,15 +47,26 @@ bool GetFileTime(LPCSTR psFileName, FILETIME &ft)
 		psNewName = va("%s%s",gamedir,psFileName);
 	}
 
-	bool bSuccess = false;
+    QFileInfo fileInfo (psNewName);
+    if ( !fileInfo.exists() )
+    {
+        return false;
+    }
+
+    QDateTime filetime = fileInfo.lastModified();
+    ft = filetime.toTime_t();
+
+    return true;
+#if 0
+    bool bSuccess = false;
 	HANDLE hFile = INVALID_HANDLE_VALUE;	
 
 	hFile = CreateFile(	BackSlash(psNewName),	// LPCTSTR lpFileName,          // pointer to name of the file
-						GENERIC_READ,			// DWORD dwDesiredAccess,       // access (read-write) mode
-						FILE_SHARE_READ,		// DWORD dwShareMode,           // share mode
+						GENERIC_READ,			// unsigned int dwDesiredAccess,       // access (read-write) mode
+						FILE_SHARE_READ,		// unsigned int dwShareMode,           // share mode
 						NULL,					// LPSECURITY_ATTRIBUTES lpSecurityAttributes,	// pointer to security attributes
-						OPEN_EXISTING,			// DWORD dwCreationDisposition,  // how to create
-						FILE_FLAG_SEQUENTIAL_SCAN,// DWORD dwFlagsAndAttributes,   // file attributes
+						OPEN_EXISTING,			// unsigned int dwCreationDisposition,  // how to create
+						FILE_FLAG_SEQUENTIAL_SCAN,// unsigned int dwFlagsAndAttributes,   // file attributes
 						NULL					// HANDLE hTemplateFile          // handle to file with attributes to 
 						);
 
@@ -73,6 +86,7 @@ bool GetFileTime(LPCSTR psFileName, FILETIME &ft)
 	}
 
 	return bSuccess;
+#endif
 }
 
 
@@ -187,7 +201,7 @@ static TextureHandle_t TextureList_GetNewHandle(void)
 
 // returns -1 for error...
 //
-TextureHandle_t TextureHandle_ForName(LPCSTR psLocalTexturePath)
+TextureHandle_t TextureHandle_ForName(const char * psLocalTexturePath)
 {
 	string strTextureName = String_ToLower(Filename_WithoutExt(psLocalTexturePath));
 	TextureListByName_t::iterator it = TextureListByNames.find(strTextureName);
@@ -838,8 +852,6 @@ int TextureList_GetMip(void)
 }
 void TextureList_ReMip(int iMIPLevel)
 {
-	//CWaitCursor wait;
-
 	r_picmip->integer = iMIPLevel;
 
 //	OutputDebugString(va("Setting picmip to %d\n",iMIPLevel));
@@ -904,8 +916,6 @@ void TextureList_ReMip(int iMIPLevel)
 
 void TextureList_Refresh(void)
 {
-	CWaitCursor wait;
-
 	for (TextureList_t::iterator it = TheTextures.begin(); it != TheTextures.end(); ++it)
 	{
 		Texture_t *pTexture = &((*it).second);
@@ -921,12 +931,12 @@ void TextureList_Refresh(void)
 
 			if (pTexture->bFTValid)
 			{
-				FILETIME ft;
+				time_t ft;
 				if (GetFileTime(str.c_str(), ft))
 				{
-					LONG l = CompareFileTime( &pTexture->ft, &ft);
+                    double l = difftime (pTexture->ft, ft);
 
-					bRefresh = (l<0);
+					bRefresh = (l<0.0);
 				}
 			}
 
@@ -954,7 +964,6 @@ void TextureList_Refresh(void)
 				else
 				{
 					pTexture->gluiBind = 0;
-					wait.Restore();
 				}
 			}
 		}
@@ -970,7 +979,7 @@ void TextureList_Refresh(void)
 //
 // Note: repeatedly asking for a missing textures will still disk-search at the moment, but who cares?
 //
-static TextureHandle_t Texture_Load_Actual( LPCSTR psLocalTexturePath)
+static TextureHandle_t Texture_Load_Actual( const char * psLocalTexturePath)
 {
 	TextureList_EnsureOneBad();
 
@@ -1049,7 +1058,7 @@ static TextureHandle_t Texture_Load_Actual( LPCSTR psLocalTexturePath)
 	return thNewHandle;
 }
 
-TextureHandle_t Texture_Load( LPCSTR psLocalTexturePath, bool bInhibitStatus /* = false */ )
+TextureHandle_t Texture_Load( const char * psLocalTexturePath, bool bInhibitStatus /* = false */ )
 {
 	if (!bInhibitStatus)
 	{

@@ -4,8 +4,14 @@
 #ifndef INCLUDES_H
 #define INCLUDES_H
 
-#include <gl\gl.h>
-#include <gl\glu.h>
+#if defined(__APPLE__) && defined(__MACH__)
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#else
+#include <gl/gl.h>
+#include <gl/glu.h>
+#endif
+
 #include <assert.h>
 #include <math.h>
 
@@ -28,7 +34,11 @@ typedef enum {
 //
 #ifndef MAX_QPATH
 #define MAX_QPATH 64
+#ifdef _WIN32
 #define MAX_OSPATH MAX_PATH
+#else
+#define MAX_OSPATH PATH_MAX
+#endif
 
 #define MAX_SKIN_FILES 1000	// some high number we'll never reach (probably)
 

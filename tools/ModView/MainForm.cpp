@@ -16,7 +16,6 @@ void StartRenderTimer ( QWidget *parent, RenderWidget *renderWidget )
 {
     QTimer *fpsTimer = new QTimer (parent);
     fpsTimer->setInterval (10);
-    fpsTimer->setTimerType (Qt::PreciseTimer);
     QObject::connect (fpsTimer, SIGNAL (timeout()), parent, SLOT (OnUpdateAnimation()));
     fpsTimer->start();
 }

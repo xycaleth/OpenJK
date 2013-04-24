@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include <assert.h>
 #include <math.h>
+#include <string.h>
 #include <stdio.h>
 //
 #include "MatComp.h"

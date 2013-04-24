@@ -8,8 +8,6 @@ endif(NOT InOpenJK)
 set(MPCGameIncludeDirectories "${MPDir}")
 if(WIN32)
 	set(MPCGameLibraries "odbc32" "odbccp32") # what are these even?
-else(WIN32)
-	message("codemp/cgame/CMakeLists.txt might need some libraries to link properly on your platform.")
 endif(WIN32)
 set(MPCGameDefines ${MPSharedDefines} "CGAME" "MISSIONPACK" )
 set(MPCGameGameFiles
@@ -81,7 +79,6 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_xcvar.h"
 	"${MPDir}/cgame/fx_local.h"
 	"${MPDir}/cgame/holocronicons.h"
-	"${MPDir}/cgame/tr_types.h"
 	)
 source_group("cgame" FILES ${MPCGameCgameFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameCgameFiles})
@@ -106,6 +103,12 @@ set(MPCGameUiFiles
 source_group("ui" FILES ${MPCGameUiFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameUiFiles})
 
+set(MPCGameRendererFiles
+	"${MPDir}/renderer/tr_types.h"
+	)
+source_group("renderer" FILES ${MPCGameRendererFiles})
+set(MPCGameFiles ${MPCGameFiles} ${MPCGameRendererFiles})
+
 set(MPCGameGFiles
 	"${MPDir}/ghoul2/G2.h"
 	)
@@ -113,6 +116,19 @@ source_group("ghoul2" FILES ${MPCGameG2Files})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameG2Files})
 
 add_library(${MPCGame} SHARED ${MPCGameFiles})
+
+if(NOT WIN32)
+	# remove "lib" prefix for .so/.dylib files
+	set_target_properties(${MPCGame} PROPERTIES PREFIX "")
+endif(NOT WIN32)
+
+if(WIN32)
+	install(TARGETS ${MPCGame} RUNTIME DESTINATION "OpenJK")
+else(WIN32)
+	install(TARGETS ${MPCGame} LIBRARY DESTINATION "OpenJK")
+endif(WIN32)
+set_target_properties(${MPCGame} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "${MPCGameDefines};${ReleaseDefines}")
+set_target_properties(${MPCGame} PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "${MPCGameDefines};${ReleaseDefines}")
 set_target_properties(${MPCGame} PROPERTIES COMPILE_DEFINITIONS_RELEASE "${MPCGameDefines};${ReleaseDefines}")
 set_target_properties(${MPCGame} PROPERTIES COMPILE_DEFINITIONS_DEBUG "${MPCGameDefines};${DebugDefines}")
 set_target_properties(${MPCGame} PROPERTIES INCLUDE_DIRECTORIES "${MPCGameIncludeDirectories}")

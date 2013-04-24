@@ -15,7 +15,7 @@ static char THIS_FILE[] = __FILE__;
 // CGetString dialog
 
 
-CGetString::CGetString(LPCSTR psPrompt, CString *pFeedback, LPCSTR psDefault /* = NULL */, CWnd* pParent /*=NULL*/)
+CGetString::CGetString(const char * psPrompt, CString *pFeedback, const char * psDefault /* = NULL */, CWnd* pParent /*=NULL*/)
 	: CDialog(CGetString::IDD, pParent)
 {
 	//{{AFX_DATA_INIT(CGetString)

@@ -25,8 +25,6 @@ static char THIS_FILE[] = __FILE__;
 
 bool DraggingMouse();
 
-int g_iScreenWidth = 0;
-int g_iScreenHeight = 0;
 int g_iViewAreaMouseX = 0;
 int g_iViewAreaMouseY = 0;
 
@@ -142,7 +140,7 @@ CModViewDoc* CModViewView::GetDocument() // non-debug version is inline
 // CModViewView message handlers
 
 
-BOOL CModViewView::Create(LPCTSTR lpszClassName, LPCTSTR lpszWindowName, DWORD dwStyle, const RECT& rect, CWnd* pParentWnd, UINT nID, CCreateContext* pContext) 
+BOOL CModViewView::Create(LPCTSTR lpszClassName, LPCTSTR lpszWindowName, unsigned int dwStyle, const RECT& rect, CWnd* pParentWnd, UINT nID, CCreateContext* pContext) 
 {
 	m_hRC = 0;	// rendering context
 	m_hDC = 0;	// device context
@@ -165,7 +163,7 @@ int CModViewView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	m_TimerHandle_Update100FPS = SetTimer(	th_100FPS,	// UINT nIDEvent, 
 											10,				// UINT nElapse, (in milliseconds)
-											NULL				// void (CALLBACK EXPORT* lpfnTimer)(HWND, UINT, UINT, DWORD) 
+											NULL				// void (CALLBACK EXPORT* lpfnTimer)(HWND, UINT, UINT, unsigned int) 
 										);
 
 	if (!m_TimerHandle_Update100FPS)
@@ -278,15 +276,15 @@ CString strGalleryErrors;
 CString strGalleryWarnings;
 CString strGalleryInfo;
 
-void Gallery_AddError(LPCSTR psText)
+void Gallery_AddError(const char * psText)
 {
 	strGalleryErrors += psText;
 }
-void Gallery_AddInfo(LPCSTR psText)
+void Gallery_AddInfo(const char * psText)
 {
 	strGalleryInfo += psText;
 }
-void Gallery_AddWarning(LPCSTR psText)
+void Gallery_AddWarning(const char * psText)
 {
 	strGalleryWarnings += psText;
 }
@@ -359,16 +357,16 @@ void CModViewView::OnTimer(UINT nIDEvent)
 					{
 						giGalleryItemsRemaining = iRemainingPlusOne-1;
 						StatusMessage( va("( Gallery: %d remaining )", giGalleryItemsRemaining) );
-						OutputDebugString(va("\"%s\" (script len %d)\n",(LPCSTR)strCaption,strScript.GetLength()));
+						OutputDebugString(va("\"%s\" (script len %d)\n",(const char *)strCaption,strScript.GetLength()));
 
 						strScript += "\n";			
 
 						string strOutputFileName( va("%s\\%s",scGetTempPath(),"temp.mvs") );
 							
-						int iReturn = SaveFile(strOutputFileName.c_str(),(LPCSTR)strScript, strScript.GetLength());
+						int iReturn = SaveFile(strOutputFileName.c_str(),(const char *)strScript, strScript.GetLength());
 						if (iReturn != -1)
 						{
-							extern bool Document_ModelLoadPrimary(LPCSTR psFilename);
+							extern bool Document_ModelLoadPrimary(const char * psFilename);
 							if (Document_ModelLoadPrimary(strOutputFileName.c_str()))
 							{
 								if (Model_Loaded())
@@ -558,7 +556,7 @@ BOOL CModViewView::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 
 
 typedef unsigned int MBChar_t;
-MBChar_t *UTF8AsciiToMBC(LPCSTR psSource)
+MBChar_t *UTF8AsciiToMBC(const char * psSource)
 {		
 	static vector <MBChar_t>	Out;
 								Out.clear();
