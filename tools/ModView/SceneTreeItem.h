@@ -68,12 +68,13 @@ private:
 class SkinSceneTreeItem : public SceneTreeItem
 {
 public:
-    SkinSceneTreeItem ( const std::string& skinName, ModelHandle_t model, SceneTreeItem *parent = 0 );
+    SkinSceneTreeItem ( const std::string& skinName, int skinIndex, ModelHandle_t model, SceneTreeItem *parent = 0 );
 
     void Accept ( ISceneTreeItemVisitor *visitor );
 
 private:
     std::string skinName;
+    int skinIndex;
 };
 
 class BoneSceneTreeItem : public SceneTreeItem

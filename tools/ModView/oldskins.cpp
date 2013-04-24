@@ -490,7 +490,6 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 
 	// now process the unique list we've just built...
 	//
-	CWaitCursor wait;
 	string strFoundList;
 	string strNotFoundList;
 	int iUniqueIndex = 0;
