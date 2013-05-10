@@ -215,7 +215,7 @@ NPC_ReactionTime
 //FIXME use grandom in here
 int NPC_ReactionTime ( void ) 
 {
-	return 200 * ( 6 - NPCInfo->stats.reactions );
+	return 200 * ( 6 - NPCS.NPCInfo->stats.reactions );
 }
 
 //
@@ -227,7 +227,7 @@ extern qboolean BG_ParseLiteral( const char **data, const char *string );
 //
 // NPC parameters file : scripts/NPCs.cfg
 //
-#define MAX_NPC_DATA_SIZE 0x20000
+#define MAX_NPC_DATA_SIZE 0x40000
 char	NPCParms[MAX_NPC_DATA_SIZE];
 char	NPCFile[MAX_QPATH];
 

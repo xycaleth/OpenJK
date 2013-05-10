@@ -22,7 +22,7 @@ This file is part of Jedi Academy.
 
 #include "g_local.h"
 #include "g_functions.h"
-#include "..\cgame\cg_local.h"
+#include "../cgame/cg_local.h"
 #include "Q3_Interface.h"
 #include "wp_saber.h"
 #include "g_vehicles.h"
@@ -5455,22 +5455,6 @@ extern cvar_t	*g_skippingcin;
 	}
 
 	VectorCopy( client->ps.origin, oldOrigin );
-
-#ifdef _XBOX
-	// if we're an npc then set the waterlevel
-	// based on the entity structure
-	// otherwise, zero it
-	if(ent->s.number != 0)
-	{
-		pm.waterlevel = ent->waterlevel;
-		pm.watertype = ent->watertype;
-	}
-	else
-	{
-		pm.waterlevel = 0;
-		pm.watertype = 0;
-	}
-#endif
 
 	// perform a pmove
 	Pmove( &pm );

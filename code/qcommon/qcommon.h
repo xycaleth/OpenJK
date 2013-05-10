@@ -21,7 +21,7 @@ This file is part of Jedi Academy.
 #define __QCOMMON_H__
 
 #include "stringed_ingame.h"
-#include "../../codeJK2/qcommon/stripPublic.h"
+#include "../../codeJK2/qcommon/strippublic.h"
 #include "../qcommon/cm_public.h"
 
 
@@ -539,6 +539,10 @@ extern	cvar_t	*com_cl_running;
 extern	cvar_t	*com_viewlog;			// 0 = hidden, 1 = visible, 2 = minimized
 extern	cvar_t	*com_version;
 
+#ifndef __NO_JK2
+extern	cvar_t	*com_jk2;
+#endif
+
 // both client and server must agree to pause
 extern	cvar_t	*cl_paused;
 extern	cvar_t	*sv_paused;
@@ -556,7 +560,6 @@ extern	int		com_frameTime;
 extern	int		com_frameMsec;
 
 extern	qboolean	com_errorEntered;
-
 
 #ifndef _XBOX
 extern	fileHandle_t	com_journalFile;
@@ -764,6 +767,9 @@ void	Sys_Log( const char *file, const void *buffer, int size, bool flush );
 // Sys_Milliseconds should only be used for profiling purposes,
 // any game related timing information should come from event timestamps
 int		Sys_Milliseconds (void);
+#ifndef _WIN32
+void 	Sys_SetEnv(const char *name, const char *value);
+#endif
 
 
 // the system console is shown when a dedicated server is running

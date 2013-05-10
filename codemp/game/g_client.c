@@ -164,7 +164,7 @@ Targets will be fired when someone spawns in on them.
 void SP_info_player_siegeteam1(gentity_t *ent) {
 	int soff = 0;
 
-	if (g_gametype.integer != GT_SIEGE)
+	if (level.gametype != GT_SIEGE)
 	{ //turn into a DM spawn if not in siege game mode
 		ent->classname = "info_player_deathmatch";
 		SP_info_player_deathmatch( ent );
@@ -200,7 +200,7 @@ Targets will be fired when someone spawns in on them.
 void SP_info_player_siegeteam2(gentity_t *ent) {
 	int soff = 0;
 
-	if (g_gametype.integer != GT_SIEGE)
+	if (level.gametype != GT_SIEGE)
 	{ //turn into a DM spawn if not in siege game mode
 		ent->classname = "info_player_deathmatch";
 		SP_info_player_deathmatch( ent );
@@ -475,7 +475,7 @@ gentity_t *gJMSaberEnt = NULL;
 */
 void SP_info_jedimaster_start(gentity_t *ent)
 {
-	if (g_gametype.integer != GT_JEDIMASTER)
+	if (level.gametype != GT_JEDIMASTER)
 	{
 		gJMSaberEnt = NULL;
 		G_FreeEntity(ent);
@@ -663,7 +663,7 @@ gentity_t *SelectRandomFurthestSpawnPoint ( vec3_t avoidPoint, vec3_t origin, ve
 	spot = NULL;
 
 	//in Team DM, look for a team start spot first, if any
-	if ( g_gametype.integer == GT_TEAM 
+	if ( level.gametype == GT_TEAM 
 		&& team != TEAM_FREE 
 		&& team != TEAM_SPECTATOR )
 	{
@@ -1167,7 +1167,7 @@ void SiegeRespawn(gentity_t *ent);
 void respawn( gentity_t *ent ) {
 	MaintainBodyQueue(ent);
 
-	if (gEscaping || g_gametype.integer == GT_POWERDUEL)
+	if (gEscaping || level.gametype == GT_POWERDUEL)
 	{
 		ent->client->sess.sessionTeam = TEAM_SPECTATOR;
 		ent->client->sess.spectatorState = SPECTATOR_FREE;
@@ -1182,7 +1182,7 @@ void respawn( gentity_t *ent ) {
 
 	trap_UnlinkEntity (ent);
 
-	if (g_gametype.integer == GT_SIEGE)
+	if (level.gametype == GT_SIEGE)
 	{
 		if (g_siegeRespawn.integer)
 		{
@@ -1234,7 +1234,7 @@ TeamCount
 Returns number of players on a team
 ================
 */
-team_t TeamCount( int ignoreClientNum, int team ) {
+int TeamCount( int ignoreClientNum, team_t team ) {
 	int		i;
 	int		count = 0;
 
@@ -1248,7 +1248,7 @@ team_t TeamCount( int ignoreClientNum, int team ) {
 		if ( level.clients[i].sess.sessionTeam == team ) {
 			count++;
 		}
-		else if (g_gametype.integer == GT_SIEGE &&
+		else if (level.gametype == GT_SIEGE &&
             level.clients[i].sess.siegeDesiredTeam == team)
 		{
 			count++;
@@ -1356,7 +1356,7 @@ static void ClientCleanName( const char *in, char *out, int outSize )
 		}
 		else if ( outpos > 0 && out[outpos-1] == Q_COLOR_ESCAPE )
 		{
-			if ( Q_IsColorString( &out[outpos-1] ) )
+			if ( Q_IsColorStringExt( &out[outpos-1] ) )
 			{
 				colorlessLen--;
 				
@@ -1493,7 +1493,7 @@ void *g2SaberInstance = NULL;
 
 qboolean BG_IsValidCharacterModel(const char *modelName, const char *skinName);
 qboolean BG_ValidateSkinForTeam( const char *modelName, char *skinName, int team, float *colors );
-void BG_GetVehicleModelName(char *modelname);
+void BG_GetVehicleModelName(char *modelname, int len);
 
 void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 {
@@ -1504,6 +1504,15 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 #endif
 	char		GLAName[MAX_QPATH];
 	vec3_t	tempVec = {0,0,0};
+
+	if (strlen(modelname) >= MAX_QPATH )
+	{
+		Com_Error( ERR_FATAL, "SetupGameGhoul2Model(%s): modelname exceeds MAX_QPATH.\n", modelname );
+	}
+	if (skinName && strlen(skinName) >= MAX_QPATH )
+	{
+		Com_Error( ERR_FATAL, "SetupGameGhoul2Model(%s): skinName exceeds MAX_QPATH.\n", skinName );
+	}
 
 	// First things first.  If this is a ghoul2 model, then let's make sure we demolish this first.
 	if (ent->ghoul2 && trap_G2_HaveWeGhoul2Models(ent->ghoul2))
@@ -1544,8 +1553,8 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 			// If this is a vehicle, get it's model name.
 			if ( ent->client->NPC_class == CLASS_VEHICLE )
 			{
-				strcpy(vehicleName, modelname);
-				BG_GetVehicleModelName(modelname);
+				Q_strncpyz( vehicleName, modelname, sizeof( vehicleName ) );
+				BG_GetVehicleModelName(modelname, strlen( modelname ));
 				strcpy(truncModelName, modelname);
 				skin[0] = 0;
 				if ( ent->m_pVehicle
@@ -1595,7 +1604,7 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 						strcpy(skin, "default");
 					}
 
-					if ( g_gametype.integer >= GT_TEAM && g_gametype.integer != GT_SIEGE && !g_jediVmerc.integer )
+					if ( level.gametype >= GT_TEAM && level.gametype != GT_SIEGE && !g_jediVmerc.integer )
 					{
 						//JAC: Also adjust customRGBA for team colors.
 						float colorOverride[3];
@@ -1614,14 +1623,14 @@ void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
 
 						//BG_ValidateSkinForTeam( truncModelName, skin, ent->client->sess.sessionTeam, NULL );
 					}
-					else if (g_gametype.integer == GT_SIEGE)
+					else if (level.gametype == GT_SIEGE)
 					{ //force skin for class if appropriate
 						if (ent->client->siegeClass != -1)
 						{
 							siegeClass_t *scl = &bgSiegeClasses[ent->client->siegeClass];
 							if (scl->forcedSkin[0])
 							{
-								strcpy(skin, scl->forcedSkin);
+								Q_strncpyz( skin, scl->forcedSkin, sizeof( skin ) );
 							}
 						}
 					}
@@ -1882,36 +1891,75 @@ qboolean G_SetSaber(gentity_t *ent, int saberNum, char *saberName, qboolean sieg
 void G_ValidateSiegeClassForTeam(gentity_t *ent, int team);
 
 typedef struct userinfoValidate_s {
-	const char		*field;
-	const char		*fieldClean;
-	unsigned int	minCount;
-	unsigned int	maxCount;
+	const char		*field, *fieldClean;
+	unsigned int	minCount, maxCount;
 } userinfoValidate_t;
 
+#define UIF( x, _min, _max ) { STRING(\\) #x STRING(\\), STRING( x ), _min, _max }
 static userinfoValidate_t userinfoFields[] = {
-	{ "\\cl_guid\\",			"cl_guid",			0, 0 }, // not allowed, q3fill protection
-	{ "\\cl_punkbuster\\",		"cl_punkbuster",	0, 0 }, // not allowed, q3fill protection
-	{ "\\ip\\",					"ip",				0, 1 }, // engine adds this at the end
-	{ "\\name\\",				"name",				1, 1 },
-	{ "\\rate\\",				"rate",				1, 1 },
-	{ "\\snaps\\",				"snaps",			1, 1 },
-	{ "\\model\\",				"model",			1, 1 },
-	{ "\\forcepowers\\",		"forcepowers",		1, 1 },
-	{ "\\color1\\",				"color1",			1, 1 },
-	{ "\\color2\\",				"color2",			1, 1 },
-	{ "\\handicap\\",			"handicap",			1, 1 },
-	{ "\\sex\\",				"sex",				0, 1 },
-	{ "\\cg_predictItems\\",	"cg_predictItems",	1, 1 },
-	{ "\\saber1\\",				"saber1",			1, 1 },
-	{ "\\saber2\\",				"saber2",			1, 1 },
-	{ "\\char_color_red\\",		"char_color_red",	1, 1 },
-	{ "\\char_color_green\\",	"char_color_green",	1, 1 },
-	{ "\\char_color_blue\\",	"char_color_blue",	1, 1 },
-	{ "\\teamtask\\",			"teamtask",			1, 1 },
-	{ "\\password\\",			"password",			0, 1 }, // optional
-	{ "\\teamoverlay\\",		"teamoverlay",		0, 1 }, // only registered in cgame, not sent when connecting
+	UIF( cl_guid,			0, 0 ), // not allowed, q3fill protection
+	UIF( cl_punkbuster,		0, 0 ), // not allowed, q3fill protection
+	UIF( ip,				0, 1 ), // engine adds this at the end
+	UIF( name,				1, 1 ),
+	UIF( rate,				1, 1 ),
+	UIF( snaps,				1, 1 ),
+	UIF( model,				1, 1 ),
+	UIF( forcepowers,		1, 1 ),
+	UIF( color1,			1, 1 ),
+	UIF( color2,			1, 1 ),
+	UIF( handicap,			1, 1 ),
+	UIF( sex,				0, 1 ),
+	UIF( cg_predictItems,	1, 1 ),
+	UIF( saber1,			1, 1 ),
+	UIF( saber2,			1, 1 ),
+	UIF( char_color_red,	1, 1 ),
+	UIF( char_color_green,	1, 1 ),
+	UIF( char_color_blue,	1, 1 ),
+	UIF( teamtask,			1, 1 ),
+	UIF( password,			0, 1 ), // optional
+	UIF( teamoverlay,		0, 1 ), // only registered in cgame, not sent when connecting
 };
 static size_t numUserinfoFields = ARRAY_LEN( userinfoFields );
+
+static const char *userinfoValidateExtra[USERINFO_VALIDATION_MAX] = {
+	"Size",					// USERINFO_VALIDATION_SIZE
+	"# of slashes",			// USERINFO_VALIDATION_SLASH
+	"Extended ascii",		// USERINFO_VALIDATION_EXTASCII
+	"Control characters",	// USERINFO_VALIDATION_CONTROLCHARS
+};
+
+void Svcmd_ToggleUserinfoValidation_f( void ) {
+	if ( trap_Argc() == 1 ) {
+		int i=0;
+		for ( i=0; i<numUserinfoFields; i++ ) {
+			if ( (g_userinfoValidate.integer & (1<<i)) )	G_Printf( "%2d [X] %s\n", i, userinfoFields[i].fieldClean );
+			else											G_Printf( "%2d [ ] %s\n", i, userinfoFields[i].fieldClean );
+		}
+		for ( ; i<numUserinfoFields+USERINFO_VALIDATION_MAX; i++ ) {
+			if ( (g_userinfoValidate.integer & (1<<i)) )	G_Printf( "%2d [X] %s\n", i, userinfoValidateExtra[i-numUserinfoFields] );
+			else											G_Printf( "%2d [ ] %s\n", i, userinfoValidateExtra[i-numUserinfoFields] );
+		}
+		return;
+	}
+	else {
+		char arg[8]={0};
+		int index;
+
+		trap_Argv( 1, arg, sizeof( arg ) );
+		index = atoi( arg );
+
+		if ( index < 0 || index > numUserinfoFields+USERINFO_VALIDATION_MAX-1 ) {
+			Com_Printf( "ToggleUserinfoValidation: Invalid range: %i [0, %i]\n", index, numUserinfoFields+USERINFO_VALIDATION_MAX-1 );
+			return;
+		}
+
+		trap_Cvar_Set( "g_userinfoValidate", va( "%i", (1<<index) ^ g_userinfoValidate.integer ) );
+		trap_Cvar_Update( &g_userinfoValidate );
+
+		if ( index < numUserinfoFields )	Com_Printf( "%s %s\n", userinfoFields[index].fieldClean,				((g_userinfoValidate.integer & (1<<index)) ? "Validated" : "Ignored") );
+		else								Com_Printf( "%s %s\n", userinfoValidateExtra[index-numUserinfoFields],	((g_userinfoValidate.integer & (1<<index)) ? "Validated" : "Ignored") );
+	}
+}
 
 char *G_ValidateUserinfo( const char *userinfo )
 {
@@ -1943,7 +1991,7 @@ char *G_ValidateUserinfo( const char *userinfo )
 			if ( userinfo[i] == '\\' )
 				count++;
 		}
-		if ( count%2 != 0 )
+		if ( (count&1) ) // odd
 			return "Bad number of slashes";
 	}
 
@@ -2069,7 +2117,7 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	Q_strncpyz( forcePowers, Info_ValueForKey( userinfo, "forcepowers" ), sizeof( forcePowers ) );
 
 	//JAC: update our customRGBA for team colors. 
-	if ( g_gametype.integer >= GT_TEAM && g_gametype.integer != GT_SIEGE && !g_jediVmerc.integer )
+	if ( level.gametype >= GT_TEAM && level.gametype != GT_SIEGE && !g_jediVmerc.integer )
 	{
 		char skin[MAX_QPATH] = {0};
 		vec3_t colorOverride = {0.0f};
@@ -2082,7 +2130,7 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	}
 
 	// bots set their team a few frames later
-	if ( g_gametype.integer >= GT_TEAM && g_entities[clientNum].r.svFlags & SVF_BOT )
+	if ( level.gametype >= GT_TEAM && g_entities[clientNum].r.svFlags & SVF_BOT )
 	{
 		s = Info_ValueForKey( userinfo, "team" );
 		if ( !Q_stricmp( s, "red" ) || !Q_stricmp( s, "r" ) )
@@ -2099,7 +2147,7 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	team = client->sess.sessionTeam;
 
 	//Set the siege class
-	if ( g_gametype.integer == GT_SIEGE )
+	if ( level.gametype == GT_SIEGE )
 	{
 		Q_strncpyz( className, client->sess.siegeClass, sizeof( className ) );
 
@@ -2162,7 +2210,7 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	}
 
 	// set max health
-	if ( g_gametype.integer == GT_SIEGE && client->siegeClass != -1 )
+	if ( level.gametype == GT_SIEGE && client->siegeClass != -1 )
 	{
 		siegeClass_t *scl = &bgSiegeClasses[client->siegeClass];
 		maxHealth = 100;
@@ -2182,7 +2230,7 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 		client->pers.maxHealth = 100;
 	client->ps.stats[STAT_MAX_HEALTH] = client->pers.maxHealth;
 
-	if ( g_gametype.integer >= GT_TEAM )
+	if ( level.gametype >= GT_TEAM )
 		client->pers.teamInfo = qtrue;
 	else
 	{
@@ -2221,17 +2269,17 @@ qboolean ClientUserinfoChanged( int clientNum ) {
 	Q_strcat( buf, sizeof( buf ), va( "hc\\%i\\", client->pers.maxHealth ) );
 	if ( ent->r.svFlags & SVF_BOT )
 		Q_strcat( buf, sizeof( buf ), va( "skill\\%s\\", Info_ValueForKey( userinfo, "skill" ) ) );
-	if ( g_gametype.integer == GT_DUEL || g_gametype.integer == GT_POWERDUEL ) {
+	if ( level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL ) {
 		Q_strcat( buf, sizeof( buf ), va( "w\\%i\\", client->sess.wins ) );
 		Q_strcat( buf, sizeof( buf ), va( "l\\%i\\", client->sess.losses ) );
 	}
-	if ( g_gametype.integer == GT_POWERDUEL )
+	if ( level.gametype == GT_POWERDUEL )
 		Q_strcat( buf, sizeof( buf ), va( "dt\\%i\\", client->sess.duelTeam ) );
-	if ( g_gametype.integer >= GT_TEAM ) {
+	if ( level.gametype >= GT_TEAM ) {
 	//	Q_strcat( buf, sizeof( buf ), va( "tt\\%d\\", teamTask ) );
 		Q_strcat( buf, sizeof( buf ), va( "tl\\%d\\", teamLeader ) );
 	}
-	if ( g_gametype.integer == GT_SIEGE ) {
+	if ( level.gametype == GT_SIEGE ) {
 		Q_strcat( buf, sizeof( buf ), va( "siegeclass\\%s\\", className ) );
 		Q_strcat( buf, sizeof( buf ), va( "sdt\\%i\\", className ) );
 	}
@@ -2389,7 +2437,7 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 	}
 	G_ReadSessionData( client );
 
-	if (g_gametype.integer == GT_SIEGE &&
+	if (level.gametype == GT_SIEGE &&
 		(firstTime || level.newSession))
 	{ //if this is the first time then auto-assign a desired siege team and show briefing for that team
 		client->sess.siegeDesiredTeam = 0;//PickTeam(ent->s.number);
@@ -2400,7 +2448,7 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 	}
 
 
-	if (g_gametype.integer == GT_SIEGE && client->sess.sessionTeam != TEAM_SPECTATOR)
+	if (level.gametype == GT_SIEGE && client->sess.sessionTeam != TEAM_SPECTATOR)
 	{
 		if (firstTime || level.newSession)
 		{ //start as spec
@@ -2408,7 +2456,7 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 			client->sess.sessionTeam = TEAM_SPECTATOR;
 		}
 	}
-	else if (g_gametype.integer == GT_POWERDUEL && client->sess.sessionTeam != TEAM_SPECTATOR)
+	else if (level.gametype == GT_POWERDUEL && client->sess.sessionTeam != TEAM_SPECTATOR)
 	{
 		client->sess.sessionTeam = TEAM_SPECTATOR;
 	}
@@ -2443,7 +2491,7 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 		trap_SendServerCommand( -1, va("print \"%s" S_COLOR_WHITE " %s\n\"", client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLCONNECT")) );
 	}
 
-	if ( g_gametype.integer >= GT_TEAM &&
+	if ( level.gametype >= GT_TEAM &&
 		client->sess.sessionTeam != TEAM_SPECTATOR ) {
 		BroadcastTeamChange( client, -1 );
 	}
@@ -2490,7 +2538,7 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 
 	ent = g_entities + clientNum;
 
-	if ((ent->r.svFlags & SVF_BOT) && g_gametype.integer >= GT_TEAM)
+	if ((ent->r.svFlags & SVF_BOT) && level.gametype >= GT_TEAM)
 	{
 		if (allowTeamReset)
 		{
@@ -2600,11 +2648,11 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	if ( ent->ghoul2 && ent->client )
 		ent->client->renderInfo.lastG2 = NULL; //update the renderinfo bolts next update.
 
-	if ( g_gametype.integer == GT_POWERDUEL && client->sess.sessionTeam != TEAM_SPECTATOR && client->sess.duelTeam == DUELTEAM_FREE )
+	if ( level.gametype == GT_POWERDUEL && client->sess.sessionTeam != TEAM_SPECTATOR && client->sess.duelTeam == DUELTEAM_FREE )
 		SetTeam( ent, "s" );
 	else
 	{
-		if ( g_gametype.integer == GT_SIEGE && (!gSiegeRoundBegun || gSiegeRoundEnded) )
+		if ( level.gametype == GT_SIEGE && (!gSiegeRoundBegun || gSiegeRoundEnded) )
 			SetTeamQuick( ent, TEAM_SPECTATOR, qfalse );
         
 		// locate ent at a spawn point
@@ -2616,7 +2664,7 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 		tent = G_TempEntity( ent->client->ps.origin, EV_PLAYER_TELEPORT_IN );
 		tent->s.clientNum = ent->s.clientNum;
 
-		if ( g_gametype.integer != GT_DUEL || g_gametype.integer == GT_POWERDUEL ) {
+		if ( level.gametype != GT_DUEL || level.gametype == GT_POWERDUEL ) {
 			trap_SendServerCommand( -1, va("print \"%s" S_COLOR_WHITE " %s\n\"", client->pers.netname, G_GetStringEdString("MP_SVGAME", "PLENTER")) );
 		}
 	}
@@ -3040,10 +3088,10 @@ void ClientSpawn(gentity_t *ent) {
 			ent->client->ps.fd.saberAnimLevelBase = ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = ent->client->sess.saberLevel;
 
 			// limit our saber style to our force points allocated to saber offense
-			if ( g_gametype.integer != GT_SIEGE && ent->client->ps.fd.saberAnimLevel > ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] )
+			if ( level.gametype != GT_SIEGE && ent->client->ps.fd.saberAnimLevel > ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] )
 				ent->client->ps.fd.saberAnimLevelBase = ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = ent->client->sess.saberLevel = ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE];
 		}
-		if ( g_gametype.integer != GT_SIEGE )
+		if ( level.gametype != GT_SIEGE )
 		{// let's just make sure the styles we chose are cool
 			if ( !WP_SaberStyleValidForSaber( &ent->client->saber[0], &ent->client->saber[1], ent->client->ps.saberHolstered, ent->client->ps.fd.saberAnimLevel ) )
 			{
@@ -3067,7 +3115,7 @@ void ClientSpawn(gentity_t *ent) {
 		ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = ent->client->sess.saberLevel;
 
 		// limit our saber style to our force points allocated to saber offense
-		if ( g_gametype.integer != GT_SIEGE && ent->client->ps.fd.saberAnimLevel > ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] )
+		if ( level.gametype != GT_SIEGE && ent->client->ps.fd.saberAnimLevel > ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE] )
 			ent->client->ps.fd.saberAnimLevel = ent->client->ps.fd.saberDrawAnimLevel = ent->client->sess.saberLevel = ent->client->ps.fd.forcePowerLevel[FP_SABER_OFFENSE];
 	}
 
@@ -3077,14 +3125,14 @@ void ClientSpawn(gentity_t *ent) {
 	if ( client->sess.sessionTeam == TEAM_SPECTATOR ) {
 		spawnPoint = SelectSpectatorSpawnPoint ( 
 						spawn_origin, spawn_angles);
-	} else if (g_gametype.integer == GT_CTF || g_gametype.integer == GT_CTY) {
+	} else if (level.gametype == GT_CTF || level.gametype == GT_CTY) {
 		// all base oriented team games use the CTF spawn points
 		spawnPoint = SelectCTFSpawnPoint ( 
 						client->sess.sessionTeam, 
 						client->pers.teamState.state, 
 						spawn_origin, spawn_angles);
 	}
-	else if (g_gametype.integer == GT_SIEGE)
+	else if (level.gametype == GT_SIEGE)
 	{
 		spawnPoint = SelectSiegeSpawnPoint (
 						client->siegeClass,
@@ -3094,11 +3142,11 @@ void ClientSpawn(gentity_t *ent) {
 	}
 	else {
 		do {
-			if (g_gametype.integer == GT_POWERDUEL)
+			if (level.gametype == GT_POWERDUEL)
 			{
 				spawnPoint = SelectDuelSpawnPoint(client->sess.duelTeam, client->ps.origin, spawn_origin, spawn_angles);
 			}
-			else if (g_gametype.integer == GT_DUEL)
+			else if (level.gametype == GT_DUEL)
 			{	// duel 
 				spawnPoint = SelectDuelSpawnPoint(DUELTEAM_SINGLE, client->ps.origin, spawn_origin, spawn_angles);
 			}
@@ -3181,7 +3229,7 @@ void ClientSpawn(gentity_t *ent) {
 	client->ps.customRGBA[3]=255;
 
 	//JAC: update our customRGBA for team colors. 
-	if ( g_gametype.integer >= GT_TEAM && g_gametype.integer != GT_SIEGE && !g_jediVmerc.integer )
+	if ( level.gametype >= GT_TEAM && level.gametype != GT_SIEGE && !g_jediVmerc.integer )
 	{
 		char skin[MAX_QPATH] = {0}, model[MAX_QPATH] = {0};
 		vec3_t colorOverride = {0.0f};
@@ -3233,7 +3281,7 @@ void ClientSpawn(gentity_t *ent) {
 	client->airOutTime = level.time + 12000;
 
 	// set max health
-	if (g_gametype.integer == GT_SIEGE && client->siegeClass != -1)
+	if (level.gametype == GT_SIEGE && client->siegeClass != -1)
 	{
 		siegeClass_t *scl = &bgSiegeClasses[client->siegeClass];
 		maxHealth = 100;
@@ -3245,7 +3293,7 @@ void ClientSpawn(gentity_t *ent) {
 	}
 	else
 	{
-		maxHealth = atoi( Info_ValueForKey( userinfo, "handicap" ) );
+		maxHealth = Com_Clampi( 1, 100, atoi( Info_ValueForKey( userinfo, "handicap" ) ) );
 	}
 	client->pers.maxHealth = maxHealth;//atoi( Info_ValueForKey( userinfo, "handicap" ) );
 	if ( client->pers.maxHealth < 1 || client->pers.maxHealth > maxHealth ) {
@@ -3278,7 +3326,7 @@ void ClientSpawn(gentity_t *ent) {
 	//give default weapons
 	client->ps.stats[STAT_WEAPONS] = ( 1 << WP_NONE );
 
-	if (g_gametype.integer == GT_DUEL || g_gametype.integer == GT_POWERDUEL)
+	if (level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL)
 	{
 		wDisable = g_duelWeaponDisable.integer;
 	}
@@ -3289,17 +3337,17 @@ void ClientSpawn(gentity_t *ent) {
 
 
 
-	if ( g_gametype.integer != GT_HOLOCRON 
-		&& g_gametype.integer != GT_JEDIMASTER 
+	if ( level.gametype != GT_HOLOCRON 
+		&& level.gametype != GT_JEDIMASTER 
 		&& !HasSetSaberOnly()
 		&& !AllForceDisabled( g_forcePowerDisable.integer )
 		&& g_jediVmerc.integer )
 	{
-		if ( g_gametype.integer >= GT_TEAM && (client->sess.sessionTeam == TEAM_BLUE || client->sess.sessionTeam == TEAM_RED) )
+		if ( level.gametype >= GT_TEAM && (client->sess.sessionTeam == TEAM_BLUE || client->sess.sessionTeam == TEAM_RED) )
 		{//In Team games, force one side to be merc and other to be jedi
 			if ( level.numPlayingClients > 0 )
 			{//already someone in the game
-				int		i, forceTeam = TEAM_SPECTATOR;
+				int forceTeam = TEAM_SPECTATOR;
 				for ( i = 0 ; i < level.maxclients ; i++ ) 
 				{
 					if ( level.clients[i].pers.connected == CON_DISCONNECTED ) {
@@ -3368,7 +3416,7 @@ void ClientSpawn(gentity_t *ent) {
 	else
 	{//jediVmerc is incompatible with this gametype, turn it off!
 		trap_Cvar_Set( "g_jediVmerc", "0" );
-		if (g_gametype.integer == GT_HOLOCRON)
+		if (level.gametype == GT_HOLOCRON)
 		{
 			//always get free saber level 1 in holocron
 			client->ps.stats[STAT_WEAPONS] |= ( 1 << WP_SABER );	//these are precached in g_items, ClearRegisteredItems()
@@ -3385,19 +3433,19 @@ void ClientSpawn(gentity_t *ent) {
 			}
 		}
 
-		if (g_gametype.integer != GT_SIEGE)
+		if (level.gametype != GT_SIEGE)
 		{
 			if (!wDisable || !(wDisable & (1 << WP_BRYAR_PISTOL)))
 			{
 				client->ps.stats[STAT_WEAPONS] |= ( 1 << WP_BRYAR_PISTOL );
 			}
-			else if (g_gametype.integer == GT_JEDIMASTER)
+			else if (level.gametype == GT_JEDIMASTER)
 			{
 				client->ps.stats[STAT_WEAPONS] |= ( 1 << WP_BRYAR_PISTOL );
 			}
 		}
 
-		if (g_gametype.integer == GT_JEDIMASTER)
+		if (level.gametype == GT_JEDIMASTER)
 		{
 			client->ps.stats[STAT_WEAPONS] &= ~(1 << WP_SABER);
 			client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE);
@@ -3422,7 +3470,7 @@ void ClientSpawn(gentity_t *ent) {
 	client->ps.stats[STAT_HOLDABLE_ITEM] = BG_GetItemIndexByTag(HI_BINOCULARS, IT_HOLDABLE);
 	*/
 
-	if (g_gametype.integer == GT_SIEGE && client->siegeClass != -1 &&
+	if (level.gametype == GT_SIEGE && client->siegeClass != -1 &&
 		client->sess.sessionTeam != TEAM_SPECTATOR)
 	{ //well then, we will use a custom weaponset for our class
 		int m = 0;
@@ -3457,7 +3505,7 @@ void ClientSpawn(gentity_t *ent) {
 
 				if (m >= WP_BRYAR_PISTOL)
 				{ //Max his ammo out for all the weapons he has.
-					if ( g_gametype.integer == GT_SIEGE 
+					if ( level.gametype == GT_SIEGE 
 						&& m == WP_ROCKET_LAUNCHER )
 					{//don't give full ammo!
 						//FIXME: extern this and check it when getting ammo from supplier, pickups or ammo stations!
@@ -3473,7 +3521,7 @@ void ClientSpawn(gentity_t *ent) {
 					}
 					else
 					{
-						if ( g_gametype.integer == GT_SIEGE 
+						if ( level.gametype == GT_SIEGE 
 							&& client->siegeClass != -1
 							&& (bgSiegeClasses[client->siegeClass].classflags & (1<<CFL_EXTRA_AMMO)) )
 						{//double ammo
@@ -3491,7 +3539,7 @@ void ClientSpawn(gentity_t *ent) {
 		}
 	}
 
-	if (g_gametype.integer == GT_SIEGE &&
+	if (level.gametype == GT_SIEGE &&
 		client->siegeClass != -1 &&
 		client->sess.sessionTeam != TEAM_SPECTATOR)
 	{ //use class-specified inventory
@@ -3504,7 +3552,7 @@ void ClientSpawn(gentity_t *ent) {
 		client->ps.stats[STAT_HOLDABLE_ITEM] = 0;
 	}
 
-	if (g_gametype.integer == GT_SIEGE &&
+	if (level.gametype == GT_SIEGE &&
 		client->siegeClass != -1 &&
 		bgSiegeClasses[client->siegeClass].powerups &&
 		client->sess.sessionTeam != TEAM_SPECTATOR)
@@ -3538,7 +3586,7 @@ void ClientSpawn(gentity_t *ent) {
 //	client->ps.ammo[AMMO_ROCKETS] = ammoData[AMMO_ROCKETS].max;
 /*
 	client->ps.stats[STAT_WEAPONS] = ( 1 << WP_BRYAR_PISTOL);
-	if ( g_gametype.integer == GT_TEAM ) {
+	if ( level.gametype == GT_TEAM ) {
 		client->ps.ammo[WP_BRYAR_PISTOL] = 50;
 	} else {
 		client->ps.ammo[WP_BRYAR_PISTOL] = 100;
@@ -3570,15 +3618,15 @@ void ClientSpawn(gentity_t *ent) {
 	WP_SpawnInitForcePowers( ent );
 
 	// health will count down towards max_health
-	if (g_gametype.integer == GT_SIEGE &&
+	if (level.gametype == GT_SIEGE &&
 		client->siegeClass != -1 &&
 		bgSiegeClasses[client->siegeClass].starthealth)
 	{ //class specifies a start health, so use it
 		ent->health = client->ps.stats[STAT_HEALTH] = bgSiegeClasses[client->siegeClass].starthealth;
 	}
-	else if ( g_gametype.integer == GT_DUEL || g_gametype.integer == GT_POWERDUEL )
+	else if ( level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL )
 	{//only start with 100 health in Duel
-		if ( g_gametype.integer == GT_POWERDUEL && client->sess.duelTeam == DUELTEAM_LONE )
+		if ( level.gametype == GT_POWERDUEL && client->sess.duelTeam == DUELTEAM_LONE )
 		{
 			if ( duel_fraglimit.integer )
 			{
@@ -3610,13 +3658,13 @@ void ClientSpawn(gentity_t *ent) {
 	}
 
 	// Start with a small amount of armor as well.
-	if (g_gametype.integer == GT_SIEGE &&
+	if (level.gametype == GT_SIEGE &&
 		client->siegeClass != -1 /*&&
 		bgSiegeClasses[client->siegeClass].startarmor*/)
 	{ //class specifies a start armor amount, so use it
 		client->ps.stats[STAT_ARMOR] = bgSiegeClasses[client->siegeClass].startarmor;
 	}
-	else if ( g_gametype.integer == GT_DUEL || g_gametype.integer == GT_POWERDUEL )
+	else if ( level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL )
 	{//no armor in duel
 		client->ps.stats[STAT_ARMOR] = 0;
 	}
@@ -3691,7 +3739,7 @@ void ClientSpawn(gentity_t *ent) {
 	}
 
 	//set teams for NPCs to recognize
-	if (g_gametype.integer == GT_SIEGE)
+	if (level.gametype == GT_SIEGE)
 	{ //Imperial (team1) team is allied with "enemy" NPCs in this mode
 		if (client->sess.sessionTeam == SIEGETEAM_TEAM1)
 		{
@@ -3712,7 +3760,7 @@ void ClientSpawn(gentity_t *ent) {
 
 	/*
 	//scaling for the power duel opponent
-	if (g_gametype.integer == GT_POWERDUEL &&
+	if (level.gametype == GT_POWERDUEL &&
 		client->sess.duelTeam == DUELTEAM_LONE)
 	{
 		client->ps.iModelScale = 125;
@@ -3766,6 +3814,46 @@ server system housekeeping.
 ============
 */
 extern void G_LeaveVehicle( gentity_t* ent, qboolean ConCheck );
+
+void G_ClearVote( gentity_t *ent ) {
+	if ( level.voteTime ) {
+		if ( ent->client->mGameFlags & PSG_VOTED ) {
+			if ( ent->client->pers.vote == 1 ) {
+				level.voteYes--;
+				trap_SetConfigstring( CS_VOTE_YES, va( "%i", level.voteYes ) );
+			}
+			else if ( ent->client->pers.vote == 2 ) {
+				level.voteNo--;
+				trap_SetConfigstring( CS_VOTE_NO, va( "%i", level.voteNo ) );
+			}
+		}
+		ent->client->mGameFlags &= ~(PSG_VOTED);
+		ent->client->pers.vote = 0;
+	}
+}
+void G_ClearTeamVote( gentity_t *ent, int team ) {
+	int voteteam;
+
+		 if ( team == TEAM_RED )	voteteam = 0;
+	else if ( team == TEAM_BLUE )	voteteam = 1;
+	else							return;
+
+	if ( level.teamVoteTime[voteteam] ) {
+		if ( ent->client->mGameFlags & PSG_TEAMVOTED ) {
+			if ( ent->client->pers.teamvote == 1 ) {
+				level.teamVoteYes[voteteam]--;
+				trap_SetConfigstring( CS_TEAMVOTE_YES, va( "%i", level.teamVoteYes[voteteam] ) );
+			}
+			else if ( ent->client->pers.teamvote == 2 ) {
+				level.teamVoteNo[voteteam]--;
+				trap_SetConfigstring( CS_TEAMVOTE_NO, va( "%i", level.teamVoteNo[voteteam] ) );
+			}
+		}
+		ent->client->mGameFlags &= ~(PSG_TEAMVOTED);
+		ent->client->pers.teamvote = 0;
+	}
+}
+
 void ClientDisconnect( int clientNum ) {
 	gentity_t	*ent;
 	gentity_t	*tent;
@@ -3842,7 +3930,7 @@ void ClientDisconnect( int clientNum ) {
 	G_LogPrintf( "ClientDisconnect: %i\n", clientNum );
 
 	// if we are playing in tourney mode, give a win to the other player and clear his frags for this round
-	if ( (g_gametype.integer == GT_DUEL )
+	if ( (level.gametype == GT_DUEL )
 		&& !level.intermissiontime
 		&& !level.warmupTime ) {
 		if ( level.sortedClients[1] == clientNum ) {
@@ -3870,6 +3958,9 @@ void ClientDisconnect( int clientNum ) {
 		}
 		i++;
 	}
+
+	G_ClearVote( ent );
+	G_ClearTeamVote( ent, ent->client->sess.sessionTeam );
 
 	trap_UnlinkEntity (ent);
 	ent->s.modelindex = 0;

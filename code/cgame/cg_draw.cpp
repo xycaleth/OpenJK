@@ -24,8 +24,8 @@ This file is part of Jedi Academy.
 
 //#include "cg_local.h"
 #include "cg_media.h"
-#include "..\game\objectives.h"
-#include "..\game\g_vehicles.h"
+#include "../game/objectives.h"
+#include "../game/g_vehicles.h"
 
 #ifdef _XBOX
 #include "../client/fffx.h"
@@ -1653,6 +1653,8 @@ static void CG_DrawBatteryCharge( void )
 CG_DrawHUD
 ================
 */
+extern void *cgi_UI_GetMenuByName( const char *menu );
+extern void cgi_UI_Menu_Paint( void *menu, qboolean force );
 static void CG_DrawHUD( centity_t *cent )
 {
 	int value;
@@ -1661,6 +1663,8 @@ static void CG_DrawHUD( centity_t *cent )
 	// Draw the lower left section of the HUD
 	if (cgi_UI_GetMenuInfo("lefthud",&sectionXPos,&sectionYPos,&sectionWidth,&sectionHeight))
 	{
+		// Draw all the HUD elements --eez
+		cgi_UI_Menu_Paint( cgi_UI_GetMenuByName( "lefthud" ), qtrue );
 
 		// Draw armor & health values
 		if ( cg_drawStatus.integer == 2 ) 
@@ -1699,6 +1703,9 @@ static void CG_DrawHUD( centity_t *cent )
 	// Draw the lower right section of the HUD
 	if (cgi_UI_GetMenuInfo("righthud",&sectionXPos,&sectionYPos,&sectionWidth,&sectionHeight))
 	{
+		// Draw all the HUD elements --eez
+		cgi_UI_Menu_Paint( cgi_UI_GetMenuByName( "righthud" ), qtrue );
+
 		// Draw armor & health values
 		if ( cg_drawStatus.integer == 2 ) 
 		{

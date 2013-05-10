@@ -498,24 +498,10 @@ static ulong needout(z_stream *z, inflate_blocks_state_t *s, ulong bytesToEnd)
 
 inline byte *qcopy(byte *dst, byte *src, int count)
 {
-	byte 	*retval;
-	_asm
-	{
-		push ecx  
-		push esi
-		push edi
+    while(count--) 
+        *dst++ = *src++;
 
-		mov edi, [dst]
-		mov esi, [src]
-		mov ecx, [count]
-		rep movsb
-
-		mov [retval], edi
-		pop edi
-		pop esi
-		pop ecx
-	}
-	return(retval);
+    return dst;
 }
 
 inline ulong get_remaining(inflate_blocks_state_t *s)
@@ -748,6 +734,7 @@ static void inflate_codes(z_stream *z, inflate_blocks_state_t *s)
 		{			  
 		// x: set up for LEN
 		case START:
+#ifndef __linux__ //TODO: replace zlib32 with zlib so this isn't needed
 			if((bytesToEnd >= 258) && (z->avail_in >= 10))
 			{
 				z->error = inflate_fast(inflate_mask[infCodes->lbits], inflate_mask[infCodes->dbits], infCodes->ltree, infCodes->dtree, s, z);
@@ -758,6 +745,7 @@ static void inflate_codes(z_stream *z, inflate_blocks_state_t *s)
 					break;
 				}
 			}
+#endif
 			infCodes->code.need = infCodes->lbits;
 			infCodes->code.tree = infCodes->ltree;
 			infCodes->mode = LEN;

@@ -19,6 +19,10 @@ This file is part of Jedi Academy.
 // this line must stay at top so the whole PCH thing works...
 #include "cg_headers.h"
 
+#ifndef _WIN32
+#define syscall Q_syscall
+#endif
+
 //#include "cg_local.h"
 
 // this file is only included when building a dll
@@ -30,6 +34,8 @@ static int (*syscall)( int arg, ... ) = (int (*)( int, ...))-1;
 
 #ifdef _XBOX
 void cg_dllEntry( int (*syscallptr)( int arg,... ) ) {
+#elif !defined(_WIN32)
+extern "C" void dllEntry( int (*syscallptr)( int arg,... ) ) {
 #else
 void dllEntry( int (*syscallptr)( int arg,... ) ) {
 #endif
@@ -586,4 +592,19 @@ int cgi_SP_GetStringTextString(const char *text, char *buffer, int bufferLength)
 int cgi_EndGame(void)
 {
 	return syscall( CG_SENDCONSOLECOMMAND, "cam_disable; disconnect\n" );//; cinematic outcast
+}
+
+/*
+OpenJK Add
+Since the modules are incompatible, might as well break base compat even further amirite?
+*/
+
+void *cgi_UI_GetMenuByName( const char *menu )
+{
+	return (void *)syscall( CG_OPENJK_GETMENU_BYNAME, menu );
+}
+
+void cgi_UI_Menu_Paint( void *menu, qboolean force )
+{
+	syscall( CG_OPENJK_MENU_PAINT, menu, force );
 }

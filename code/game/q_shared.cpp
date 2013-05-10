@@ -614,6 +614,45 @@ void Parse3DMatrix ( const char **buf_p, int z, int y, int x, float *m) {
 	COM_MatchToken( buf_p, ")" );
 }
 
+/*
+ ===================
+ Com_HexStrToInt
+ ===================
+ */
+int Com_HexStrToInt( const char *str )
+{
+	if ( !str || !str[ 0 ] )
+		return -1;
+	
+	// check for hex code
+	if( str[ 0 ] == '0' && str[ 1 ] == 'x' )
+	{
+		int i, n = 0;
+		
+		for( i = 2; i < strlen( str ); i++ )
+		{
+			char digit;
+			
+			n *= 16;
+			
+			digit = tolower( str[ i ] );
+			
+			if( digit >= '0' && digit <= '9' )
+				digit -= '0';
+			else if( digit >= 'a' && digit <= 'f' )
+				digit = digit - 'a' + 10;
+			else
+				return -1;
+			
+			n += digit;
+		}
+		
+		return n;
+	}
+	
+	return -1;
+}
+
 
 /*
 ============================================================================
@@ -698,7 +737,7 @@ void Q_strncpyz( char *dest, const char *src, int destsize, qboolean bBarfIfTooL
 	strncpy( dest, src, destsize-1 );
     dest[destsize-1] = 0;
 }
-/*                 
+#ifndef _WIN32           
 int Q_stricmpn (const char *s1, const char *s2, int n) {
 	int		c1, c2;
 	
@@ -745,8 +784,6 @@ int Q_strncmp (const char *s1, const char *s2, int n) {
 	return 0;		// strings are equal
 }
 
-
-
 char *Q_strlwr( char *s1 ) {
     char	*s;
 
@@ -768,7 +805,7 @@ char *Q_strupr( char *s1 ) {
 	}
     return s1;
 }
-*/
+#endif
 
 // never goes past bounds or leaves without a terminating 0
 void Q_strcat( char *dest, int size, const char *src ) {
@@ -785,6 +822,37 @@ void Q_strcat( char *dest, int size, const char *src ) {
 	Q_strncpyz( dest + l1, src, size - l1 );
 }
 
+/*
+* Find the first occurrence of find in s.
+*/
+const char *Q_stristr( const char *s, const char *find )
+{
+  char c, sc;
+  size_t len;
+
+  if ((c = *find++) != 0)
+  {
+    if (c >= 'a' && c <= 'z')
+    {
+      c -= ('a' - 'A');
+    }
+    len = strlen(find);
+    do
+    {
+      do
+      {
+        if ((sc = *s++) == 0)
+          return NULL;
+        if (sc >= 'a' && sc <= 'z')
+        {
+          sc -= ('a' - 'A');
+        }
+      } while (sc != c);
+    } while (Q_stricmpn(s, find, len) != 0);
+    s--;
+  }
+  return s;
+}
 
 int Q_PrintStrlen( const char *string ) {
 	int			len;

@@ -43,6 +43,8 @@ extern stringID_table_t animTable [MAX_ANIMATIONS+1];
 
 #include "../qcommon/stv_version.h"
 
+#include "../game/q_shared.h"
+
 #ifdef _XBOX
 #include <xtl.h>
 #define filepathlength 120
@@ -600,8 +602,8 @@ void Text_PaintWithCursor(float x, float y, float scale, vec4_t color, const cha
 	// now print the cursor as well...
 	//
 	char sTemp[1024];
-	int iCopyCount = min(strlen(text), cursorPos);
-		iCopyCount = min(iCopyCount,sizeof(sTemp));
+	int iCopyCount = min((int)strlen(text), cursorPos);
+		iCopyCount = min(iCopyCount,(int)sizeof(sTemp));
 
 	// copy text into temp buffer for pixel measure...
 	//
@@ -645,7 +647,7 @@ const char *UI_FeederItemText(float feederID, int index, int column, qhandle_t *
 	{
 #ifndef __NO_JK2
 		// FIXME
-		if(Cvar_VariableIntegerValue("com_jk2"))
+		if(com_jk2 && com_jk2->integer)
 			return NULL;
 #endif
 		return SE_GetLanguageName( index );
@@ -1010,7 +1012,7 @@ static qboolean UI_RunMenuScript ( const char **args )
 			else
 			{
 #ifndef __NO_JK2
-				if( Cvar_VariableIntegerValue("com_jk2") )
+				if( com_jk2 && com_jk2->integer )
 				{
 					ui.Cmd_ExecuteText( EXEC_APPEND, "map kejim_post\n" );
 				}
@@ -2527,12 +2529,12 @@ void _UI_Init( qboolean inGameLoad )
 {
 	// Get the list of possible languages
 #ifndef __NO_JK2
-	if(!Cvar_VariableIntegerValue("com_jk2"))
+	if(com_jk2 && !com_jk2->integer)
 #endif
 	uiInfo.languageCount = SE_GetNumLanguages();	// this does a dir scan, so use carefully
 
 	#ifndef __NO_JK2
-	if(Cvar_VariableIntegerValue("com_jk2"))
+	if(com_jk2 && com_jk2->integer)
 	{
 		// sod it, parse every menu strip file until we find a gap in the sequence...
 		//
@@ -3664,7 +3666,7 @@ static void UI_DrawKeyBindStatus(rectDef_t *rect, float scale, vec4_t color, int
 	if (Display_KeyBindPending()) 
 	{
 #ifndef __NO_JK2
-		if( Cvar_VariableIntegerValue("com_jk2") )
+		if( com_jk2 && com_jk2->integer )
 			Text_Paint(rect->x, rect->y, scale, color, ui.SP_GetStringTextString("MENUS_WAITINGFORKEY"), 0, textStyle, iFontIndex);
 		else
 #endif

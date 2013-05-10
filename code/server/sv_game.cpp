@@ -27,15 +27,15 @@ This file is part of Jedi Academy.
 #include "../qcommon/cm_local.h"
 
 #include "server.h"
-#include "..\client\vmachine.h"
-#include "..\client\client.h"
-#include "..\renderer\tr_local.h"
-#include "..\renderer\tr_WorldEffects.h"
+#include "../client/vmachine.h"
+#include "../client/client.h"
+#include "../renderer/tr_local.h"
+#include "../renderer/tr_WorldEffects.h"
 /*
 Ghoul2 Insert Start
 */
 #if !defined(G2_H_INC)
-	#include "..\ghoul2\G2.h"
+	#include "../ghoul2/G2.h"
 #endif
 
 /*
@@ -324,7 +324,7 @@ SV_AdjustAreaPortalState
 ========================
 */
 void SV_AdjustAreaPortalState( gentity_t *ent, qboolean open ) {
-	if ( !(ent->contents&CONTENTS_OPAQUE) )	{
+	if ( !com_jk2->integer && !(ent->contents&CONTENTS_OPAQUE) )	{ //FIXME?: When running the jk2 dll CONTENTS_OPAQUE is not always set correctly, leading to issues. This works around it.
 #ifndef FINAL_BUILD
 //		Com_Printf( "INFO: entity number %d not opaque: not affecting area portal!\n", ent->s.number );
 #endif

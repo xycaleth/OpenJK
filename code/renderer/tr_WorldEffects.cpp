@@ -32,7 +32,6 @@ This file is part of Jedi Academy.
 ////////////////////////////////////////////////////////////////////////////////////////
 // Externs & Fwd Decl.
 ////////////////////////////////////////////////////////////////////////////////////////
-extern qboolean		ParseVector( const char **text, int count, float *v );
 extern void			SetViewportAndScissor( void );
 
 
@@ -746,7 +745,7 @@ public:
 			//---------------------------------------------------------------------
 			if (!mWeatherZones.size())
 			{
-				Com_Printf("WARNING: No Weather Zones Encountered");
+				Com_Printf("WARNING: No Weather Zones Encountered\n");
 				AddWeatherZone(tr.world->bmodels[0].bounds[0], tr.world->bmodels[0].bounds[1]);
 			}
 
@@ -1297,10 +1296,10 @@ public:
 		// Compute Camera
 		//----------------
 		{
-			mCameraPosition	= backEnd.viewParms.or.origin;
-			mCameraForward	= backEnd.viewParms.or.axis[0];
-			mCameraLeft		= backEnd.viewParms.or.axis[1];
-			mCameraDown		= backEnd.viewParms.or.axis[2];
+			mCameraPosition	= backEnd.viewParms.ori.origin;
+			mCameraForward	= backEnd.viewParms.ori.axis[0];
+			mCameraLeft		= backEnd.viewParms.ori.axis[1];
+			mCameraDown		= backEnd.viewParms.ori.axis[2];
 
 			if (mRotationChangeNext!=-1)
 			{
@@ -1575,8 +1574,13 @@ public:
 			qglEnable(GL_POINT_SPRITE_NV);
 
 			qglPointSize(mWidth);
+#ifdef WIN32
 			qglPointParameterfEXT( GL_POINT_SIZE_MIN_EXT, 4.0f );
 			qglPointParameterfEXT( GL_POINT_SIZE_MAX_EXT, 2047.0f );
+#else
+			qglPointParameterfEXT( GL_POINT_SIZE_MIN, 4.0f );
+			qglPointParameterfEXT( GL_POINT_SIZE_MAX, 2047.0f );
+#endif
 
 			qglTexEnvi(GL_POINT_SPRITE_NV, GL_COORD_REPLACE_NV, GL_TRUE);
 		}
@@ -1837,6 +1841,45 @@ void R_WorldEffect_f(void)
 	}
 }
 
+/*
+==================
+WE_ParseVector
+Imported from MP/Ensiform's fixes --eez
+==================
+*/
+
+qboolean WE_ParseVector( const char **text, int count, float *v ) {
+	char	*token;
+	int		i;
+	// FIXME: spaces are currently required after parens, should change parseext...
+	COM_BeginParseSession();
+	token = COM_ParseExt( text, qfalse );
+	if ( strcmp( token, "(" ) ) {
+		Com_Printf ("^3WARNING: missing parenthesis in weather effect\n" );
+		COM_EndParseSession();
+		return qfalse;
+	}
+
+	for ( i = 0 ; i < count ; i++ ) {
+		token = COM_ParseExt( text, qfalse );
+		if ( !token[0] ) {
+			Com_Printf ("^3WARNING: missing vector element in weather effect\n" );
+			COM_EndParseSession();
+			return qfalse;
+		}
+		v[i] = atof( token );
+	}
+
+	token = COM_ParseExt( text, qfalse );
+	COM_EndParseSession();
+	if ( strcmp( token, ")" ) ) {
+		Com_Printf ("^3WARNING: missing parenthesis in weather effect\n" );
+		return qfalse;
+	}
+	return qtrue;
+}
+
+
 void R_WorldEffectCommand(const char *command)
 {
 	if ( !command )
@@ -1883,7 +1926,7 @@ void R_WorldEffectCommand(const char *command)
 	{
 		vec3_t	mins;
 		vec3_t	maxs;
-		if (ParseVector(&command, 3, mins) && ParseVector(&command, 3, maxs))
+		if (WE_ParseVector(&command, 3, mins) && WE_ParseVector(&command, 3, maxs))
 		{
 			mOutside.AddWeatherZone(mins, maxs);
 		}
@@ -1913,7 +1956,7 @@ void R_WorldEffectCommand(const char *command)
 		}
 		CWindZone& nWind = mWindZones.push_back();
 		nWind.Initialize();
-		if (!ParseVector(&command, 3, nWind.mCurrentVelocity.v))
+		if (!WE_ParseVector(&command, 3, nWind.mCurrentVelocity.v))
 		{
 			nWind.mCurrentVelocity.Clear();
 			nWind.mCurrentVelocity[1] = 800.0f;
@@ -1962,7 +2005,7 @@ void R_WorldEffectCommand(const char *command)
 		nWind.mGlobal = false;
 
 		// Read Mins
-		if (!ParseVector(&command, 3, nWind.mRBounds.mMins.v))
+		if (!WE_ParseVector(&command, 3, nWind.mRBounds.mMins.v))
 		{
 			assert("Wind Zone: Unable To Parse Mins Vector!"==0);
 			mWindZones.pop_back();
@@ -1971,7 +2014,7 @@ void R_WorldEffectCommand(const char *command)
 		}
 
 		// Read Maxs
-		if (!ParseVector(&command, 3, nWind.mRBounds.mMaxs.v))
+		if (!WE_ParseVector(&command, 3, nWind.mRBounds.mMaxs.v))
 		{
 			assert("Wind Zone: Unable To Parse Maxs Vector!"==0);
 			mWindZones.pop_back();
@@ -1980,7 +2023,7 @@ void R_WorldEffectCommand(const char *command)
 		}
 
 		// Read Velocity
-		if (!ParseVector(&command, 3, nWind.mCurrentVelocity.v))
+		if (!WE_ParseVector(&command, 3, nWind.mCurrentVelocity.v))
 		{
 			nWind.mCurrentVelocity.Clear();
 			nWind.mCurrentVelocity[1] = 800.0f;
