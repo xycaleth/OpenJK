@@ -25,6 +25,7 @@ endif(BuildMPUI)
 #	 Add Vanilla JKA Renderer Project
 if(BuildMPEngine)
 	add_subdirectory("${MPDir}/rd-vanilla")
+	add_subdirectory("${MPDir}/rd-strawberry-proto")
 endif(BuildMPEngine)
 
 

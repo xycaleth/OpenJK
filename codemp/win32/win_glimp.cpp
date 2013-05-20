@@ -1095,6 +1095,22 @@ static void GLW_InitTextureCompression( void )
 	}
 }
 
+static void GLW_GetOpenGLVersion ( const char *versionString, int& majorVersion, int& minorVersion )
+{
+    majorVersion = minorVersion = 0;
+
+    char *v = NULL;
+
+    majorVersion = strtol (versionString, &v, 10);
+    if ( v != NULL )
+    {
+        // Skip dot
+        v++;
+
+        minorVersion = strtol (v, &v, 10);
+    }
+}
+
 /*
 ** GLW_InitExtensions
 */
@@ -1518,6 +1534,83 @@ static void GLW_InitExtensions( void )
 		g_bDynamicGlowSupported = false;
 		ri.Cvar_Set( "r_DynamicGlow","0" );
 	}
+
+#ifdef RD_STRAWBERRY
+    int majorVersion, minorVersion;
+    GLW_GetOpenGLVersion (glConfig.version_string, majorVersion, minorVersion);
+
+    if (majorVersion >= 2 && minorVersion >= 1) {
+        // Buffer objects
+        qglBindBuffer = (PFNGLBINDBUFFERPROC)qwglGetProcAddress ("glBindBuffer");
+        qglDeleteBuffers = (PFNGLDELETEBUFFERSPROC)qwglGetProcAddress ("glDeleteBuffers");
+        qglGenBuffers = (PFNGLGENBUFFERSPROC)qwglGetProcAddress ("glGenBuffers");
+        qglBufferData = (PFNGLBUFFERDATAPROC)qwglGetProcAddress ("glBufferData");
+        qglBufferSubData = (PFNGLBUFFERSUBDATAPROC)qwglGetProcAddress ("glBufferSubData");
+
+        if ( !qglBindBuffer || !qglDeleteBuffers || !qglGenBuffers || !qglBufferData || !qglBufferSubData )
+        {
+            ri.Printf (PRINT_ALL, "...GL_ARB_vertex_buffer_object failed\n");
+        }
+    }
+
+    if (majorVersion >= 3 && minorVersion >= 0) {
+        qglCreateShader = (PFNGLCREATESHADERPROC)qwglGetProcAddress("glCreateShader");
+        qglShaderSource = (PFNGLSHADERSOURCEPROC)qwglGetProcAddress("glShaderSource");
+        qglCompileShader = (PFNGLCOMPILESHADERPROC)qwglGetProcAddress("glCompileShader");
+        qglDeleteShader = (PFNGLDELETESHADERPROC)qwglGetProcAddress("glDeleteShader");
+
+        qglCreateProgram = (PFNGLCREATEPROGRAMPROC)qwglGetProcAddress("glCreateProgram");
+        qglAttachShader = (PFNGLATTACHSHADERPROC)qwglGetProcAddress("glAttachShader");
+        qglDetachShader = (PFNGLDETACHSHADERPROC)qwglGetProcAddress("glDetachShader");
+        qglLinkProgram = (PFNGLLINKPROGRAMPROC)qwglGetProcAddress("glLinkProgram");
+        qglUseProgram = (PFNGLUSEPROGRAMPROC)qwglGetProcAddress("glUseProgram");
+        qglDeleteProgram = (PFNGLDELETEPROGRAMPROC)qwglGetProcAddress("glDeleteProgram");
+        qglValidateProgram = (PFNGLVALIDATEPROGRAMPROC)qwglGetProcAddress("glValidateProgram");
+        qglGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)qwglGetProcAddress("glGetAttribLocation");
+        qglBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)qwglGetProcAddress("glBindAttribLocation");
+        qglGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)qwglGetProcAddress("glGetUniformLocation");
+        qglUniform1i = (PFNGLUNIFORM1I)qwglGetProcAddress("glUniform1i");
+        qglUniform2i = (PFNGLUNIFORM2I)qwglGetProcAddress("glUniform2i");
+        qglUniform3i = (PFNGLUNIFORM3I)qwglGetProcAddress("glUniform3i");
+        qglUniform4i = (PFNGLUNIFORM4I)qwglGetProcAddress("glUniform4i");
+        qglUniform1f = (PFNGLUNIFORM1F)qwglGetProcAddress("glUniform1f");
+        qglUniform2f = (PFNGLUNIFORM2F)qwglGetProcAddress("glUniform2f");
+        qglUniform3f = (PFNGLUNIFORM3F)qwglGetProcAddress("glUniform3f");
+        qglUniform4f = (PFNGLUNIFORM4F)qwglGetProcAddress("glUniform4f");
+        qglUniform1iv = (PFNGLUNIFORM1IV)qwglGetProcAddress("glUniform1iv");
+        qglUniform2iv = (PFNGLUNIFORM2IV)qwglGetProcAddress("glUniform2iv");
+        qglUniform3iv = (PFNGLUNIFORM3IV)qwglGetProcAddress("glUniform3iv");
+        qglUniform4iv = (PFNGLUNIFORM4IV)qwglGetProcAddress("glUniform4iv");
+        qglUniform1fv = (PFNGLUNIFORM1FV)qwglGetProcAddress("glUniform1fv");
+        qglUniform2fv = (PFNGLUNIFORM2FV)qwglGetProcAddress("glUniform2fv");
+        qglUniform3fv = (PFNGLUNIFORM3FV)qwglGetProcAddress("glUniform3fv");
+        qglUniform4fv = (PFNGLUNIFORM4FV)qwglGetProcAddress("glUniform4fv");
+        qglUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FV)qwglGetProcAddress("glUniformMatrix4fv");
+
+        // Declare vertex array functions
+        qglVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)qwglGetProcAddress("glVertexAttribPointer");
+        qglVertexAttribIPointer = (PFNGLVERTEXATTRIBIPOINTERPROC)qwglGetProcAddress("glVertexAttribIPointer");
+        qglEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)qwglGetProcAddress("glEnableVertexAttribArray");
+        qglDisableVertexAttribArray = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)qwglGetProcAddress("glDisableVertexAttribArray");
+        qglGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)qwglGetProcAddress("glGenVertexArrays");
+        qglDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)qwglGetProcAddress("glDeleteVertexArrays");
+        qglBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)qwglGetProcAddress("glBindVertexArray");
+
+        if ( !qglCreateShader || !qglShaderSource || !qglCompileShader || !qglDeleteShader ||
+            !qglCreateProgram || !qglAttachShader || !qglDetachShader || !qglLinkProgram ||
+            !qglUseProgram || !qglDeleteProgram || !qglValidateProgram || !qglGetAttribLocation ||
+            !qglBindAttribLocation || !qglBindAttribLocation || !qglGetUniformLocation || !qglUniformMatrix4fv ||
+            !qglUniform1i || !qglUniform2i || !qglUniform3i || !qglUniform4i ||
+            !qglUniform1f || !qglUniform2f || !qglUniform3f || !qglUniform4f ||
+            !qglUniform1iv || !qglUniform2iv || !qglUniform3iv || !qglUniform4iv ||
+            !qglUniform1fv || !qglUniform2fv || !qglUniform3fv || !qglUniform4fv ||
+            !qglVertexAttribPointer || !qglVertexAttribIPointer || !qglEnableVertexAttribArray || !qglDisableVertexAttribArray ||
+            !qglGenVertexArrays || !qglDeleteVertexArrays || !qglBindVertexArray )
+        {
+            ri.Printf (PRINT_ALL, "...vertex arrays failed\n");
+        }
+    }
+#endif
 }
 
 /*
