@@ -294,6 +294,9 @@ extern PFNGLBUFFERSUBDATAPROC qglBufferSubData;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Vertex array definitions
 /***********************************************************************************************************/
+#define GL_FRAGMENT_SHADER 0x8B30
+#define GL_VERTEX_SHADER 0x8B31
+
 typedef GLvoid (APIENTRY *PFNGLVERTEXATTRIBPOINTERPROC) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
 typedef GLvoid (APIENTRY *PFNGLVERTEXATTRIBIPOINTERPROC) (GLuint index, GLint size, GLenum type, GLsizei stride, const GLvoid *pointer);
 typedef GLvoid (APIENTRY *PFNGLENABLEVERTEXATTRIBARRAYPROC) (GLuint index);
@@ -317,27 +320,16 @@ extern PFNGLBINDVERTEXARRAYPROC qglBindVertexArray;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Shader objects definitions
 /***********************************************************************************************************/
-#define GL_ARRAY_BUFFER 0x8892
-#define GL_ELEMENT_ARRAY_BUFFER 0x8893
-
-#define GL_READ_ONLY 0x88B8
-#define GL_WRITE_ONLY 0x88B9
-#define GL_READ_WRITE 0x88BA
-
-#define GL_STREAM_DRAW 0x88E0
-#define GL_STREAM_READ 0x88E1
-#define GL_STREAM_COPY 0x88E2
-#define GL_STATIC_DRAW 0x88E4
-#define GL_STATIC_READ 0x88E5
-#define GL_STATIC_COPY 0x88E6
-#define GL_DYNAMIC_DRAW 0x88E8
-#define GL_DYNAMIC_READ 0x88E9
-#define GL_DYNAMIC_COPY 0x88EA
+#define GL_COMPILE_STATUS 0x8B81
+#define GL_LINK_STATUS 0x8B82
+#define GL_INFO_LOG_LENGTH 0x8B84
 
 typedef GLuint (APIENTRY *PFNGLCREATESHADERPROC) (GLenum type);
 typedef GLvoid (APIENTRY *PFNGLSHADERSOURCEPROC) (GLuint shader, GLsizei count, const char **string, const GLint *length);
 typedef GLvoid (APIENTRY *PFNGLCOMPILESHADERPROC) (GLuint shader);
 typedef GLvoid (APIENTRY *PFNGLDELETESHADERPROC) (GLuint shader);
+typedef GLvoid (APIENTRY *PFNGLGETSHADERIVPROC) (GLuint shader, GLenum pname, GLint *params);
+typedef GLvoid (APIENTRY *PFNGLGETSHADERINFOLOGPROC) (GLuint shader, GLsizei bufSize, GLsizei *length, char *infoLog);
 
 typedef GLuint (APIENTRY *PFNGLCREATEPROGRAMPROC) (GLvoid);
 typedef GLvoid (APIENTRY *PFNGLATTACHSHADERPROC) (GLuint program, GLuint shader);
@@ -345,6 +337,8 @@ typedef GLvoid (APIENTRY *PFNGLDETACHSHADERPROC) (GLuint program, GLuint shader)
 typedef GLvoid (APIENTRY *PFNGLLINKPROGRAMPROC) (GLuint program);
 typedef GLvoid (APIENTRY *PFNGLUSEPROGRAMPROC) (GLuint program);
 typedef GLvoid (APIENTRY *PFNGLDELETEPROGRAMPROC) (GLuint program);
+typedef GLvoid (APIENTRY *PFNGLGETPROGRAMIVPROC) (GLuint program, GLenum pname, GLint *params);
+typedef GLvoid (APIENTRY *PFNGLGETPROGRAMINFOLOGPROC) (GLuint program, GLsizei bufSize, GLsizei *length, char *infoLog);
 
 typedef GLint (APIENTRY *PFNGLGETATTRIBLOCATIONPROC) (GLuint program, const char *name);
 typedef GLvoid (APIENTRY *PFNGLBINDATTRIBLOCATIONPROC) (GLuint program, GLuint index, const char *name);
@@ -375,6 +369,8 @@ extern PFNGLCREATESHADERPROC qglCreateShader;
 extern PFNGLSHADERSOURCEPROC qglShaderSource;
 extern PFNGLCOMPILESHADERPROC qglCompileShader;
 extern PFNGLDELETESHADERPROC qglDeleteShader;
+extern PFNGLGETSHADERIVPROC qglGetShaderiv;
+extern PFNGLGETSHADERINFOLOGPROC qglGetShaderInfoLog;
 
 extern PFNGLCREATEPROGRAMPROC qglCreateProgram;
 extern PFNGLATTACHSHADERPROC qglAttachShader;
@@ -383,6 +379,8 @@ extern PFNGLLINKPROGRAMPROC qglLinkProgram;
 extern PFNGLUSEPROGRAMPROC qglUseProgram;
 extern PFNGLDELETEPROGRAMPROC qglDeleteProgram;
 extern PFNGLVALIDATEPROGRAMPROC qglValidateProgram;
+extern PFNGLGETPROGRAMIVPROC qglGetProgramiv;
+extern PFNGLGETPROGRAMINFOLOGPROC qglGetProgramInfoLog;
 
 extern PFNGLGETATTRIBLOCATIONPROC qglGetAttribLocation;
 extern PFNGLBINDATTRIBLOCATIONPROC qglBindAttribLocation;

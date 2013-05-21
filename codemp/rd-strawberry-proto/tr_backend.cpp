@@ -1575,7 +1575,10 @@ const void	*RB_DrawSurfs( const void *data ) {
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
 
+    qglUseProgram (tr.shakeProgram);
+    qglUniform1f (tr.loc, backEnd.refdef.time * 0.001f);
 	RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+    qglUseProgram (0);
 
 	// Dynamic Glow/Flares:
 	/*

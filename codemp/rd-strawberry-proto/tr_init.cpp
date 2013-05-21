@@ -288,6 +288,8 @@ PFNGLCREATESHADERPROC qglCreateShader = NULL;
 PFNGLSHADERSOURCEPROC qglShaderSource = NULL;
 PFNGLCOMPILESHADERPROC qglCompileShader = NULL;
 PFNGLDELETESHADERPROC qglDeleteShader = NULL;
+PFNGLGETSHADERIVPROC qglGetShaderiv = NULL;
+PFNGLGETSHADERINFOLOGPROC qglGetShaderInfoLog = NULL;
 
 PFNGLCREATEPROGRAMPROC qglCreateProgram = NULL;
 PFNGLATTACHSHADERPROC qglAttachShader = NULL;
@@ -296,6 +298,9 @@ PFNGLLINKPROGRAMPROC qglLinkProgram = NULL;
 PFNGLUSEPROGRAMPROC qglUseProgram = NULL;
 PFNGLDELETEPROGRAMPROC qglDeleteProgram = NULL;
 PFNGLVALIDATEPROGRAMPROC qglValidateProgram = NULL;
+PFNGLGETPROGRAMIVPROC qglGetProgramiv = NULL;
+PFNGLGETPROGRAMINFOLOGPROC qglGetProgramInfoLog = NULL;
+
 PFNGLGETATTRIBLOCATIONPROC qglGetAttribLocation = NULL;
 PFNGLBINDATTRIBLOCATIONPROC qglBindAttribLocation = NULL;
 PFNGLGETUNIFORMLOCATIONPROC qglGetUniformLocation = NULL;
@@ -1331,6 +1336,73 @@ Ghoul2 Insert End
 
 }
 
+static const char *woop = "#version 150\n\
+uniform float u_Time;\n\
+void main() {\n\
+    vec4 p = gl_Vertex;\n\
+    p.xyz *= sin(u_Time) * 0.001 + 1.0;\n\
+    gl_Position = gl_ModelViewProjectionMatrix * p;\n\
+    gl_TexCoord[0] = gl_MultiTexCoord0;\n\
+    gl_TexCoord[1] = gl_MultiTexCoord1;\n\
+    gl_TexCoord[2] = gl_MultiTexCoord2;\n\
+    gl_TexCoord[3] = gl_MultiTexCoord3;\n\
+}";
+
+static const char *woop2 = "#version 150\n\
+uniform sampler2D diffuse;\n\
+uniform sampler2D lightmap;\n\
+void main() {\n\
+    gl_FragColor = texture2D (diffuse, gl_TexCoord[0].st) * texture2D (lightmap, gl_TexCoord[1].st);\n\
+}";
+
+static void R_InitTemporaryShakeProgram()
+{
+    tr.vertexShader = qglCreateShader (GL_VERTEX_SHADER);
+    qglShaderSource (tr.vertexShader, 1, &woop, NULL);
+    qglCompileShader (tr.vertexShader);
+
+    GLint status;
+    qglGetShaderiv (tr.vertexShader, GL_COMPILE_STATUS, &status);
+    if ( status == GL_FALSE )
+    {
+        char log[1024];
+        qglGetShaderInfoLog (tr.vertexShader, 1024, NULL, log);
+
+        ri.Printf (PRINT_ALL, "%s\n", log);
+    }
+
+    tr.fragmentShader = qglCreateShader (GL_FRAGMENT_SHADER);
+    qglShaderSource (tr.fragmentShader, 1, &woop2, NULL);
+    qglCompileShader (tr.fragmentShader);
+    qglGetShaderiv (tr.fragmentShader, GL_COMPILE_STATUS, &status);
+    if ( status == GL_FALSE )
+    {
+        char log[1024];
+        qglGetShaderInfoLog (tr.fragmentShader, 1024, NULL, log);
+
+        ri.Printf (PRINT_ALL, "%s\n", log);
+    }
+
+    tr.shakeProgram = qglCreateProgram();
+    qglAttachShader (tr.shakeProgram, tr.vertexShader);
+    qglAttachShader (tr.shakeProgram, tr.fragmentShader);
+    qglLinkProgram (tr.shakeProgram);
+    qglGetProgramiv (tr.shakeProgram, GL_LINK_STATUS, &status);
+    if ( status == GL_FALSE )
+    {
+        char log[1024];
+        qglGetProgramInfoLog (tr.shakeProgram, 1024, NULL, log);
+
+        ri.Printf (PRINT_ALL, "%s\n", log);
+    }
+
+    qglUseProgram (tr.shakeProgram);
+    tr.loc = qglGetUniformLocation (tr.shakeProgram, "u_Time");
+    GLint lightmap = qglGetUniformLocation (tr.shakeProgram, "lightmap");
+    qglUniform1i (lightmap, 1);
+    qglUseProgram (0);
+}
+
 
 /*
 ===============
@@ -1425,6 +1497,8 @@ void R_Init( void ) {
 
 	R_InitWorldEffects();
 
+    R_InitTemporaryShakeProgram();
+
 	int	err = qglGetError();
 	if ( err != GL_NO_ERROR )
 		Com_Printf ( "glGetError() = 0x%x\n", err);
@@ -1437,7 +1511,15 @@ void R_Init( void ) {
 RE_Shutdown
 ===============
 */
-void RE_Shutdown( qboolean destroyWindow ) {	
+void RE_Shutdown( qboolean destroyWindow ) {
+    qglDeleteShader (tr.vertexShader);
+    qglDeleteShader (tr.fragmentShader);
+    qglDeleteProgram (tr.shakeProgram);
+
+    if ( qglGetError() != GL_NO_ERROR )
+    {
+        ri.Printf (PRINT_ALL, "wut\n");
+    }
 
 //	Com_Printf ("RE_Shutdown( %i )\n", destroyWindow );
 

@@ -1558,6 +1558,8 @@ static void GLW_InitExtensions( void )
         qglShaderSource = (PFNGLSHADERSOURCEPROC)qwglGetProcAddress("glShaderSource");
         qglCompileShader = (PFNGLCOMPILESHADERPROC)qwglGetProcAddress("glCompileShader");
         qglDeleteShader = (PFNGLDELETESHADERPROC)qwglGetProcAddress("glDeleteShader");
+        qglGetShaderiv = (PFNGLGETSHADERIVPROC)qwglGetProcAddress("glGetShaderiv");
+        qglGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)qwglGetProcAddress("glGetShaderInfoLog");
 
         qglCreateProgram = (PFNGLCREATEPROGRAMPROC)qwglGetProcAddress("glCreateProgram");
         qglAttachShader = (PFNGLATTACHSHADERPROC)qwglGetProcAddress("glAttachShader");
@@ -1566,6 +1568,9 @@ static void GLW_InitExtensions( void )
         qglUseProgram = (PFNGLUSEPROGRAMPROC)qwglGetProcAddress("glUseProgram");
         qglDeleteProgram = (PFNGLDELETEPROGRAMPROC)qwglGetProcAddress("glDeleteProgram");
         qglValidateProgram = (PFNGLVALIDATEPROGRAMPROC)qwglGetProcAddress("glValidateProgram");
+        qglGetProgramiv = (PFNGLGETPROGRAMIVPROC)qwglGetProcAddress("glGetProgramiv");
+        qglGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)qwglGetProcAddress("glGetProgramInfoLog");
+
         qglGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)qwglGetProcAddress("glGetAttribLocation");
         qglBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)qwglGetProcAddress("glBindAttribLocation");
         qglGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)qwglGetProcAddress("glGetUniformLocation");
@@ -1596,12 +1601,12 @@ static void GLW_InitExtensions( void )
         qglDeleteVertexArrays = (PFNGLDELETEVERTEXARRAYSPROC)qwglGetProcAddress("glDeleteVertexArrays");
         qglBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)qwglGetProcAddress("glBindVertexArray");
 
-        if ( !qglCreateShader || !qglShaderSource || !qglCompileShader || !qglDeleteShader ||
-            !qglCreateProgram || !qglAttachShader || !qglDetachShader || !qglLinkProgram ||
+        if ( !qglCreateShader || !qglShaderSource || !qglCompileShader || !qglDeleteShader || !qglGetShaderiv ||
+            !qglCreateProgram || !qglAttachShader || !qglDetachShader || !qglLinkProgram || !qglGetProgramiv ||
             !qglUseProgram || !qglDeleteProgram || !qglValidateProgram || !qglGetAttribLocation ||
             !qglBindAttribLocation || !qglBindAttribLocation || !qglGetUniformLocation || !qglUniformMatrix4fv ||
-            !qglUniform1i || !qglUniform2i || !qglUniform3i || !qglUniform4i ||
-            !qglUniform1f || !qglUniform2f || !qglUniform3f || !qglUniform4f ||
+            !qglUniform1i || !qglUniform2i || !qglUniform3i || !qglUniform4i || !qglGetShaderInfoLog ||
+            !qglUniform1f || !qglUniform2f || !qglUniform3f || !qglUniform4f || !qglGetProgramInfoLog ||
             !qglUniform1iv || !qglUniform2iv || !qglUniform3iv || !qglUniform4iv ||
             !qglUniform1fv || !qglUniform2fv || !qglUniform3fv || !qglUniform4fv ||
             !qglVertexAttribPointer || !qglVertexAttribIPointer || !qglEnableVertexAttribArray || !qglDisableVertexAttribArray ||

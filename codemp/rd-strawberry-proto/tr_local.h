@@ -1095,6 +1095,12 @@ typedef struct {
 
 	srfTerrain_t			landScape; //rwwRMG - added
 
+    // Temporary vertex shader to shake the world
+    GLint loc;
+    GLint fragmentShader;
+    GLint vertexShader;
+    GLint shakeProgram;
+
 #ifdef _WIN32
 	WinVars_t *wv;
 #endif
