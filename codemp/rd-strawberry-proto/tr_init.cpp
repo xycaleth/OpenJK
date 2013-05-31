@@ -1339,9 +1339,7 @@ Ghoul2 Insert End
 static const char *woop = "#version 150\n\
 uniform float u_Time;\n\
 void main() {\n\
-    vec4 p = gl_Vertex;\n\
-    p.xyz *= sin(u_Time) * 0.001 + 1.0;\n\
-    gl_Position = gl_ModelViewProjectionMatrix * p;\n\
+    gl_Position = ftransform();\n\
     gl_TexCoord[0] = gl_MultiTexCoord0;\n\
     gl_TexCoord[1] = gl_MultiTexCoord1;\n\
     gl_TexCoord[2] = gl_MultiTexCoord2;\n\
