@@ -572,7 +572,7 @@ void CG_Printf( const char *msg, ... ) {
 	char		text[1024];
 
 	va_start (argptr, msg);
-	vsprintf (text, msg, argptr);
+	Q_vsnprintf (text, sizeof(text), msg, argptr);
 	va_end (argptr);
 
 	cgi_Printf( text );
@@ -583,7 +583,7 @@ void CG_Error( const char *msg, ... ) {
 	char		text[1024];
 
 	va_start (argptr, msg);
-	vsprintf (text, msg, argptr);
+	Q_vsnprintf (text, sizeof(text), msg, argptr);
 	va_end (argptr);
 
 	cgi_Error( text );
@@ -2225,6 +2225,7 @@ void CG_Init( int serverCommandSequence ) {
 	cgi_AddCommand ("saberColor");
 	cgi_AddCommand ("saber");
 	cgi_AddCommand ("saberblade");
+	cgi_AddCommand ("setForceAll");
 
 	cgi_AddCommand ("runscript");
 
