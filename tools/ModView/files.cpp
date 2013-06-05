@@ -211,7 +211,7 @@ std::vector<std::string> Sys_ListFiles( const char *directory, const char *exten
     
     for ( int i = 0; i < nfiles; i++ )
     {
-        fileList[i] = files[i].toStdString();
+        fileList[i] = files[i].toLatin1().constData();
     }
 
 	return fileList;
