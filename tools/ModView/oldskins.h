@@ -6,8 +6,8 @@
 #define OLDSKINS_H
 
 
-typedef vector< pair<string,string> > StringPairVector_t;
-typedef map<string,StringPairVector_t> OldSkinSets_t;	// map key = (eg) "blue", string-pairs
+typedef std::vector<std::pair<std::string, std::string> > StringPairVector_t;
+typedef std::map<std::string,StringPairVector_t> OldSkinSets_t;	// map key = (eg) "blue", string-pairs
 
 
 bool OldSkins_FilesExist( const char * psLocalFilename_GLM );

@@ -98,7 +98,7 @@ typedef struct
 	int integer;
 } cvar_t;
 
-typedef list < void* > ptrArray_t;
+typedef std::list < void* > ptrArray_t;
 ptrArray_t CvarList;
 static cvar_t *InitCvar(int iInitialValue)
 {
@@ -188,9 +188,9 @@ void FakeCvars_Shutdown(void)
 // TODO:  need API for texture deletion, particularly upon qdir change (so we don't end up with textures from other
 //	games just because they share the same local pathname)
 
-typedef map <TextureHandle_t,Texture_t>	TextureList_t;
+typedef std::map <TextureHandle_t,Texture_t>	TextureList_t;
 										TextureList_t TheTextures;
-typedef map <string, TextureHandle_t>	TextureListByName_t;
+typedef std::map <std::string, TextureHandle_t>	TextureListByName_t;
 										TextureListByName_t TextureListByNames;
 TextureHandle_t thNextHandle = 0;
 
@@ -203,7 +203,7 @@ static TextureHandle_t TextureList_GetNewHandle(void)
 //
 TextureHandle_t TextureHandle_ForName(const char * psLocalTexturePath)
 {
-	string strTextureName = String_ToLower(Filename_WithoutExt(psLocalTexturePath));
+	std::string strTextureName = String_ToLower(Filename_WithoutExt(psLocalTexturePath));
 	TextureListByName_t::iterator it = TextureListByNames.find(strTextureName);
 	if (it != TextureListByNames.end())
 	{
@@ -924,7 +924,7 @@ void TextureList_Refresh(void)
 		{
 			SAFEFREE(pTexture->pPixels);
 
-			string str = va("%s%s",pTexture->sName, pTexture->sExt);
+			std::string str = va("%s%s",pTexture->sName, pTexture->sExt);
 			StatusMessage(va("Refreshing \"%s\"...",str.c_str()));
 
 			bool bRefresh = true;
@@ -991,7 +991,7 @@ static TextureHandle_t Texture_Load_Actual( const char * psLocalTexturePath)
 
 	// check for any cached versions...
 	//
-	string strTextureName = String_ToLower(Filename_WithoutExt(psLocalTexturePath));
+	std::string strTextureName = String_ToLower(Filename_WithoutExt(psLocalTexturePath));
 	TextureHandle_t hTexture = TextureHandle_ForName(strTextureName.c_str());
 	if (hTexture != -1)
 	{

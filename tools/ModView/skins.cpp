@@ -25,7 +25,7 @@
 #include "stl.h"
 SkinSets_t				CurrentSkins;
 SkinSetsSurfacePrefs_t	CurrentSkinsSurfacePrefs;
-typedef map <string, map<string, int> >	G2SkinModelPrefs_t;		// <skinfile name, <modelname, junk>>  to see if a file contains a model's name
+typedef std::map <std::string, std::map<std::string, int> >	G2SkinModelPrefs_t;		// <skinfile name, <modelname, junk>>  to see if a file contains a model's name
 										G2SkinModelPrefs_t G2SkinModelPrefs;
 
 
@@ -154,7 +154,7 @@ material
 #define sSKINKEYWORD_SURFACES_OFF			"surfaces_off"
 #define sSKINKEYWORD_SURFACES_OFFNOCHILDREN	"surfaces_offnochildren"
 
-static const char * Skins_Parse(string strThisSkinFileName, CGPGroup *pFileGroup, CGPGroup *pParseGroup_Prefs)
+static const char * Skins_Parse(std::string strThisSkinFileName, CGPGroup *pFileGroup, CGPGroup *pParseGroup_Prefs)
 {
 	const char * psError = NULL;
 
@@ -176,8 +176,8 @@ static const char * Skins_Parse(string strThisSkinFileName, CGPGroup *pFileGroup
 			CGPValue *pValue = pSurfaceParseGroup->GetPairs();
 			while (pValue)
 			{			
-//				string str1 = (*it).first;	// junk, eg "name1"
-				string str2 = pValue->GetTopValue();
+//				std::string str1 = (*it).first;	// junk, eg "name1"
+				std::string str2 = pValue->GetTopValue();
 				
 				switch (iSurfaceOnOffType)
 				{
@@ -197,11 +197,11 @@ static const char * Skins_Parse(string strThisSkinFileName, CGPGroup *pFileGroup
 	int iMaterialDeclarationIndex = 0;
 	for (CGPGroup *pMaterialGroup = pFileGroup->GetSubGroups(); pMaterialGroup; pMaterialGroup = pMaterialGroup->GetNext(), iMaterialDeclarationIndex++)
 	{
-		string strKeyWord = pMaterialGroup->GetName();
+		std::string strKeyWord = pMaterialGroup->GetName();
 
 		if (strKeyWord == sSKINKEYWORD_MATERIAL)
 		{
-			string strMaterialName(pMaterialGroup->FindPairValue(sSKINKEYWORD_NAME,""));
+			std::string strMaterialName(pMaterialGroup->FindPairValue(sSKINKEYWORD_NAME,""));
 
 			if (strMaterialName == "")
 			{
@@ -218,7 +218,7 @@ static const char * Skins_Parse(string strThisSkinFileName, CGPGroup *pFileGroup
 
 				if (strKeyWord == sSKINKEYWORD_GROUP)
 				{
-					string strEthnicGroupName(pEthnicGroup->FindPairValue(sSKINKEYWORD_NAME,""));
+					std::string strEthnicGroupName(pEthnicGroup->FindPairValue(sSKINKEYWORD_NAME,""));
 
 					if (strEthnicGroupName == "")
 					{
@@ -231,13 +231,13 @@ static const char * Skins_Parse(string strThisSkinFileName, CGPGroup *pFileGroup
 					int iAlternateShaderIndex = 0;
 					for (CGPValue *pValue = pEthnicGroup->GetPairs(); pValue; pValue = pValue->GetNext())
 					{
-						string strField(pValue->GetName());
+						std::string strField(pValue->GetName());
 
 						if (strField != sSKINKEYWORD_NAME)
 						{
 							// ... then it should be a shader...
 							//
-							string strShader(pValue->GetTopValue());
+							std::string strShader(pValue->GetTopValue());
 
 							CurrentSkins[strThisSkinFileName][strEthnicGroupName][strMaterialName].push_back(strShader);
 						}
@@ -288,7 +288,7 @@ std::string Skins_ModelNameToSkinPath(const std::string& psModelFilename)
 // (params should both be const, but GP1 has crap proto args)
 //
 static bool Skins_ParseThisFile(CGenericParser2 &SkinParser,
-								/*const*/char *psSkinFileData, string &strThisModelBaseName,
+								/*const*/char *psSkinFileData, std::string &strThisModelBaseName,
 								CGPGroup	*&pFileGroup, CGPGroup *&pParseGroup_Prefs,
 								const char * psSkinFileName, G2SkinModelPrefs_t &G2SkinModelPrefs
 								)
@@ -317,8 +317,8 @@ static bool Skins_ParseThisFile(CGenericParser2 &SkinParser,
 					//
 					for (CGPValue *pValue = pParseGroup_ModelsUsing->GetPairs(); pValue; pValue = pValue->GetNext())
 					{			
-						string str1 = pValue->GetName();
-						string str2 = pValue->GetTopValue();
+						std::string str1 = pValue->GetName();
+						std::string str2 = pValue->GetTopValue();
 
 						if (str2 == strThisModelBaseName)
 						{
@@ -352,7 +352,7 @@ typedef struct FT_s
 		bValid = false;
 	}
 } FT_t;
-typedef map <string,FT_t> SkinFileTimeDates_t;
+typedef std::map <std::string,FT_t> SkinFileTimeDates_t;
 static SkinFileTimeDates_t SkinFileTimeDates;
 
 // returns true if at least one set of skin data was read, else false...
@@ -364,7 +364,7 @@ static bool Skins_Read(const char * psModelFilename)
 
 	if (!psSkinsPath.empty())
 	{
-		string strThisModelBaseName(String_ToLower(Filename_WithoutExt(Filename_WithoutPath(psModelFilename))));
+		std::string strThisModelBaseName(String_ToLower(Filename_WithoutExt(Filename_WithoutPath(psModelFilename))));
         
 		// scan for skin files...
 		//
@@ -382,7 +382,7 @@ static bool Skins_Read(const char * psModelFilename)
 		// for now, I just scan each file and if it's out of date then I invalidate it's model-prefs info...
 		//
 		extern bool GetFileTime(const char * psFileName, time_t &ft);
-		for ( int i=0; i< skinFiles.size(); i++)
+		for ( std::size_t i=0; i< skinFiles.size(); i++)
 		{
 			bool bReParseThisFile = false;
 
@@ -439,7 +439,7 @@ static bool Skins_Read(const char * psModelFilename)
             std::vector<char *> buffers;
             buffers.resize (skinFiles.size());
 //			long iTotalBytesLoaded = 0;
-			for ( int i=0; i<skinFiles.size() && !psError; i++ )
+			for ( std::size_t i=0; i<skinFiles.size() && !psError; i++ )
 			{
 				char sFileName[MAX_QPATH];
 
@@ -476,7 +476,7 @@ _bDiskLoadOccured = true;
 				//
 				if (G2SkinModelPrefs[sFileName].size())
 				{
-					map<string, int>::iterator it = G2SkinModelPrefs[sFileName].find( strThisModelBaseName );
+					std::map<std::string, int>::iterator it = G2SkinModelPrefs[sFileName].find( strThisModelBaseName );
 					if (it != G2SkinModelPrefs[sFileName].end())
 					{
 						// this skin file contains this entry, so just check that we can setup the parse groups ok...
@@ -532,7 +532,7 @@ _bDiskLoadOccured = true;
 			//
 			// free loaded skin files...
 			//
-			for ( int i=0; i<skinFiles.size(); i++ )
+			for ( std::size_t i=0; i<skinFiles.size(); i++ )
 			{
 				if (buffers[i])
 				{
@@ -568,7 +568,7 @@ bool Skins_FilesExist(const char * psModelFilename)
 
 
 
-static void Skins_ApplyVariant(ModelContainer_t *pContainer, SkinSet_t::iterator itEthnic, ShadersForMaterial_t::iterator itMaterialShaders, string strMaterialName, int iVariant)
+static void Skins_ApplyVariant(ModelContainer_t *pContainer, SkinSet_t::iterator itEthnic, ShadersForMaterial_t::iterator itMaterialShaders, std::string strMaterialName, int iVariant)
 {
 	if (itMaterialShaders != (*itEthnic).second.end())
 	{
@@ -598,9 +598,9 @@ static void Skins_SetSurfacePrefs(ModelContainer_t *pContainer, StringVector_t &
 {
 	bool bFailureOccured = false;
 
-	for (int i=0; i<SurfaceNames.size() && !bFailureOccured; i++)
+	for (std::size_t i=0; i<SurfaceNames.size() && !bFailureOccured; i++)
 	{
-		string strSurfaceName = SurfaceNames[i];
+		std::string strSurfaceName = SurfaceNames[i];
 
 		if (!Model_GLMSurface_SetStatus( pContainer->hModel, strSurfaceName.c_str(), eStatus))
 			bFailureOccured = true;
@@ -610,9 +610,9 @@ static void Skins_SetSurfacePrefs(ModelContainer_t *pContainer, StringVector_t &
 // this fills in a modelcontainer's "MaterialBinds" and "MaterialShaders" fields (registering textures etc)
 //	based on the skinset pointed at by pContainer->SkinSets and strSkinFile
 //
-bool Skins_ApplySkinFile(ModelContainer_t *pContainer, string strSkinFile, string strEthnic, 
+bool Skins_ApplySkinFile(ModelContainer_t *pContainer, const std::string& strSkinFile, const std::string& strEthnic, 
 						 bool bApplySurfacePrefs, bool bDefaultSurfaces,
-						 string strMaterial, int iVariant)	// optional params, else "" and -1
+						 std::string strMaterial, int iVariant)	// optional params, else "" and -1
 {
 	bool bReturn = true;
 
@@ -678,7 +678,7 @@ bool Skins_ApplySkinFile(ModelContainer_t *pContainer, string strSkinFile, strin
 		if (itEthnic == (*itSkins).second.end())
 		{				
 			itEthnic = (*itSkins).second.begin();
-			string strNewEthnic = (*itEthnic).first;
+			std::string strNewEthnic = (*itEthnic).first;
 			pContainer->strCurrentSkinEthnic= strNewEthnic;
 		}
 
@@ -719,11 +719,11 @@ void Skins_ApplyDefault(ModelContainer_t *pContainer)
 {
 	for (SkinSets_t::iterator itSkins = pContainer->SkinSets.begin(); itSkins != pContainer->SkinSets.end(); ++itSkins)
 	{
-		string strCurrentSkinFile = (*itSkins).first;
+		std::string strCurrentSkinFile = (*itSkins).first;
 
 		for (SkinSet_t::iterator itEthnic = (*itSkins).second.begin(); itEthnic != (*itSkins).second.end(); ++itEthnic)
 		{
-			string strCurrentEthnic = (*itEthnic).first;	// eg "white"
+			std::string strCurrentEthnic = (*itEthnic).first;	// eg "white"
 
 			Skins_ApplySkinFile(pContainer, strCurrentSkinFile, strCurrentEthnic, true, true);
 			return;	// :-)
@@ -747,25 +747,25 @@ bool Skins_Read(const char * psModelFilename, ModelContainer_t *pContainer)
 }
 
 
-typedef map <string, StringVector_t> EthnicMaterials_t;
-typedef map < string, EthnicMaterials_t > SkinFileMaterialsMissing_t;	// [skinfile][ethnic][missing materials]
+typedef std::map <std::string, StringVector_t> EthnicMaterials_t;
+typedef std::map <std::string, EthnicMaterials_t > SkinFileMaterialsMissing_t;	// [skinfile][ethnic][missing materials]
 static void SkinSet_Validate_BuildList(StringSet_t &strUniqueSkinShaders, SkinSets_t::iterator itSkins, StringSet_t &MaterialsPresentInModel, SkinFileMaterialsMissing_t &SkinFileMaterialsMissing)
 {	
-	string strSkinName((*itSkins).first);	// eg "thug1"
+	std::string strSkinName((*itSkins).first);	// eg "thug1"
 
 	// race variants...
 	//
 	for (SkinSet_t::iterator itEthnic = (*itSkins).second.begin(); itEthnic != (*itSkins).second.end(); ++itEthnic)
 	{
-		string strEthnicName((*itEthnic).first);	// eg "white"
+		std::string strEthnicName((*itEthnic).first);	// eg "white"
 
-		map <string, int> MaterialsDefinedInThisEthnicVariant;
+		std::map <std::string, int> MaterialsDefinedInThisEthnicVariant;
 
 		// materials...
 		//			
 		for (ShadersForMaterial_t::iterator itMaterial = (*itEthnic).second.begin(); itMaterial != (*itEthnic).second.end(); ++itMaterial)
 		{
-			string strMaterialName((*itMaterial).first);	// eg "face"
+			std::string strMaterialName((*itMaterial).first);	// eg "face"
 
 			// keep a note of all materials defined in this file...
 			//
@@ -773,12 +773,12 @@ static void SkinSet_Validate_BuildList(StringSet_t &strUniqueSkinShaders, SkinSe
 
 			// available shader variants for this material...
 			//
-			for (int iShaderVariantIndex=0; iShaderVariantIndex<(*itMaterial).second.size(); iShaderVariantIndex++)
+			for (std::size_t iShaderVariantIndex=0; iShaderVariantIndex<itMaterial->second.size(); iShaderVariantIndex++)
 			{
-				string strShaderVariantName((*itMaterial).second[iShaderVariantIndex]);	// eg "models/characters/average_sleeves/face"
+				std::string strShaderVariantName(itMaterial->second[iShaderVariantIndex]);	// eg "models/characters/average_sleeves/face"
 
 				strUniqueSkinShaders.insert(strUniqueSkinShaders.end(),strShaderVariantName);
-			}			
+			}
 		}
 
 		// now scan through the materials defined in this ethnic variant, and see if there were any materials 
@@ -786,7 +786,7 @@ static void SkinSet_Validate_BuildList(StringSet_t &strUniqueSkinShaders, SkinSe
 		//
 		for (StringSet_t::iterator itMaterialsReferenced = MaterialsPresentInModel.begin(); itMaterialsReferenced != MaterialsPresentInModel.end(); ++itMaterialsReferenced)
 		{
-			string strModelMaterial = (*itMaterialsReferenced);
+			std::string strModelMaterial = (*itMaterialsReferenced);
 
 			if (!strModelMaterial.empty() && Q_stricmp(strModelMaterial.c_str(),"[NoMaterial]"))
 			{
@@ -872,12 +872,12 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 
 	// now process the unique list we've just built...
 	//
-	string strFoundList;
-	string strNotFoundList;
+	std::string strFoundList;
+	std::string strNotFoundList;
 	int iUniqueIndex = 0;
 	for (StringSet_t::iterator it = UniqueSkinShaders.begin(); it != UniqueSkinShaders.end(); ++it, iUniqueIndex++)
 	{			
-		string strShader(*it);
+		std::string strShader(*it);
 
 		StatusMessage(va("Processing shader %d/%d: \"%s\"\n",iUniqueIndex,UniqueSkinShaders.size(),strShader.c_str()));
 
@@ -913,7 +913,7 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	{
 		for (SkinFileMaterialsMissing_t::iterator itSkinFileMaterialsMissing = SkinFileMaterialsMissing.begin(); itSkinFileMaterialsMissing != SkinFileMaterialsMissing.end(); ++itSkinFileMaterialsMissing)
 		{
-			string strSkinFileName((*itSkinFileMaterialsMissing).first);
+			std::string strSkinFileName((*itSkinFileMaterialsMissing).first);
 
 			if (iSkinNumber == -1)
 			{
@@ -922,7 +922,7 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 																					 
 			for (EthnicMaterials_t::iterator itSkinFile = (*itSkinFileMaterialsMissing).second.begin(); itSkinFile != (*itSkinFileMaterialsMissing).second.end(); ++itSkinFile)
 			{
-				string strEthnicFileName((*itSkinFile).first);
+				std::string strEthnicFileName((*itSkinFile).first);
 
 				strModelMaterialsMissing += va("Ethnic \"%s\":   ",strEthnicFileName.c_str());
 
@@ -930,7 +930,7 @@ bool Skins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 
 				for (int iMaterial = 0; iMaterial != MaterialStrings.size(); ++iMaterial)
 				{
-					string strMaterial(MaterialStrings[iMaterial]);
+					std::string strMaterial(MaterialStrings[iMaterial]);
 
 					strModelMaterialsMissing += va("%s\"%s\"",(iMaterial==0)?"":", ",strMaterial.c_str());
 				}

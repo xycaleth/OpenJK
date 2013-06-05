@@ -924,11 +924,11 @@ qboolean G2_Set_Bone_Anim(const qhandle_t model, boneInfo_t *blist, const char *
 		blist[index].startFrame = startFrame;
 		blist[index].animSpeed = animSpeed;
 		// start up the animation:)
-		blist[index].newFrame = startFrame;
+		blist[index].newFrame = static_cast<float>(startFrame);
 		// if we weren't previously animating, set the current frame to the same as the new frame so interpolation doesn't freak out
 		if (!(blist[index].flags & (BONE_ANIM_OVERRIDE | BONE_ANIM_OVERRIDE_LOOP)))
 		{
-			blist[index].currentFrame = startFrame;
+			blist[index].currentFrame = static_cast<float>(startFrame);
 		}
 		blist[index].flags |= flags;
 		return qtrue;
@@ -945,12 +945,12 @@ qboolean G2_Set_Bone_Anim(const qhandle_t model, boneInfo_t *blist, const char *
 		blist[index].startFrame = startFrame;
 		blist[index].animSpeed = animSpeed;
 		// start up the animation:)
-		blist[index].newFrame = startFrame;
+		blist[index].newFrame = static_cast<float>(startFrame);
 
 		// if we weren't previously animating, set the current frame to the same as the new frame so interpolation doesn't freak out
 		if (!(blist[index].flags & (BONE_ANIM_OVERRIDE | BONE_ANIM_OVERRIDE_LOOP)))
 		{
-			blist[index].currentFrame = startFrame;
+			blist[index].currentFrame = static_cast<float>(startFrame);
 		}
 		blist[index].flags |= flags;
 		return qtrue;
@@ -1059,12 +1059,12 @@ void G2_Animate_Bone_List(boneInfo_t *blist, float timeoffset)
 						if ((blist[i].animSpeed) > 0.0f)
 						{
 							// loop it
-							blist[i].newFrame = blist[i].startFrame;
+							blist[i].newFrame = static_cast<float>(blist[i].startFrame);
 						}
 						else
 						{
 							// loop it
-							blist[i].newFrame = blist[i].endFrame;
+							blist[i].newFrame = static_cast<float>(blist[i].endFrame);
 						}
 						// we've changed anims, the bone interpolater needs to know this. Activate the flag
 						blist[i].flags |= BONE_ANIM_NEW_ANIM;
@@ -1345,7 +1345,7 @@ void G2_TransformBone (mdxaBone_t *pModViewFeedback_BoneList, bool *pModViewFeed
    			for ( j = 0 ; j < 12 ; j++ ) 
   			{
   				((float *)&tbone[2])[j] = backlerp * ((float *)&tbone[0])[j]
-  					+ (1.0 - backlerp) * ((float *)&tbone[1])[j];
+  					+ (1.0f - backlerp) * ((float *)&tbone[1])[j];
   			}
   		}
   		else
@@ -1353,7 +1353,7 @@ void G2_TransformBone (mdxaBone_t *pModViewFeedback_BoneList, bool *pModViewFeed
   			for ( j = 0 ; j < 12 ; j++ ) 
   			{
    				((float *)&bonePtr[child])[j] = backlerp * ((float *)&tbone[0])[j]
-   					+ (1.0 - backlerp) * ((float *)&tbone[1])[j];
+   					+ (1.0f - backlerp) * ((float *)&tbone[1])[j];
   			}
   		}
 	}

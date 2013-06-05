@@ -98,7 +98,7 @@ const char * OldSkins_Parse(const char * psSkinName, const char * psText)
 
 // converts stuff like "<path>/stormtrooper_blue.skin" to "blue"...
 //
-std::string OldSkins_FilenameToSkinDescription(string strLocalSkinFileName)
+std::string OldSkins_FilenameToSkinDescription(std::string strLocalSkinFileName)
 {
 	std::string strSkinName(Filename_WithoutPath(Filename_WithoutExt(strLocalSkinFileName.c_str())));
 
@@ -140,13 +140,11 @@ static bool OldSkins_Read(const char * psLocalFilename_GLM)
 		// load and parse skin files...
 		//
 		long iTotalBytesLoaded = 0;
-		int i = 0;
-
-		for ( i=0; i<skinFiles.size() && !psError; i++ )
+		for ( std::size_t i=0; i<skinFiles.size() && !psError; i++ )
 		{
 			char sFileName[MAX_QPATH];
 
-			string& strLocalSkinFileName(skinFiles[i]);
+			std::string& strLocalSkinFileName(skinFiles[i]);
 
 			// only look at skins that begin "modelname_skinvariation" for a given "modelname_"
 			if (skinFiles[i].find (strSkinFileMustContainThisName) == 0)
@@ -254,7 +252,7 @@ bool OldSkins_Apply( ModelContainer_t *pContainer, const char * psSkinName )
 	{
 		StringPairVector_t &StringPairs = (*itOldSkins).second;
 
-		for (int iSkinEntry = 0; iSkinEntry < StringPairs.size(); iSkinEntry++)
+		for (std::size_t iSkinEntry = 0; iSkinEntry < StringPairs.size(); iSkinEntry++)
 		{
 			const char * psMaterialName = StringPairs[iSkinEntry].first.c_str();
 			const char * psShaderName   = StringPairs[iSkinEntry].second.c_str();
@@ -351,7 +349,7 @@ bool OldSkins_ApplyToTree(HTREEITEM hTreeItem_Parent, ModelContainer_t *pContain
 //
 void OldSkins_ApplyDefault(ModelContainer_t *pContainer)
 {
-	string strCurrentSkin;
+	std::string strCurrentSkin;
 
 	// look for one called "default" first...
 	//
@@ -387,7 +385,7 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	bool bReturn = true;	
 	bool bPREV_bReportImageLoadErrors = g_bReportImageLoadErrors;
 										g_bReportImageLoadErrors = false;
-	int iSurface_Other = 0;
+	std::size_t iSurface_Other = 0;
 
 	// build up a list of shaders used...
 	//	
@@ -399,15 +397,15 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 	
 	for (OldSkinSets_t::iterator itOldSkins = pContainer->OldSkinSets.begin(); itOldSkins != pContainer->OldSkinSets.end(); ++itOldSkins, iThisSkinIndex++)
 	{					
-		string strSkinName				= itOldSkins->first;
+		std::string strSkinName				= itOldSkins->first;
 		StringPairVector_t &StringPairs = itOldSkins->second;
 
 		if (iSkinNumber == iThisSkinIndex || iSkinNumber == -1)
 		{
-			for (int iSurface = 0; iSurface < StringPairs.size(); iSurface++)
+			for (std::size_t iSurface = 0; iSurface < StringPairs.size(); iSurface++)
 			{
-				string strSurface(StringPairs[iSurface].first);
-				string strTGAName(StringPairs[iSurface].second);
+				std::string strSurface(StringPairs[iSurface].first);
+				std::string strTGAName(StringPairs[iSurface].second);
 
 				UniqueSkinShaders.insert(UniqueSkinShaders.end(),strTGAName);
 
@@ -417,12 +415,12 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 					//					
 					for (OldSkinSets_t::iterator itOldSkins_Other = pContainer->OldSkinSets.begin(); itOldSkins_Other != pContainer->OldSkinSets.end(); ++itOldSkins_Other)
 					{
-						string strSkinName_Other				= itOldSkins_Other->first;
+						std::string strSkinName_Other				= itOldSkins_Other->first;
 						StringPairVector_t &StringPairs_Other	= itOldSkins_Other->second;
 
 						for (iSurface_Other = 0; iSurface_Other < StringPairs_Other.size(); iSurface_Other++)
 						{
-							string strSurface_Other(StringPairs_Other[iSurface_Other].first);							
+							std::string strSurface_Other(StringPairs_Other[iSurface_Other].first);							
 
 							if (strSurface_Other == strSurface)
 							{
@@ -445,12 +443,12 @@ bool OldSkins_Validate( ModelContainer_t *pContainer, int iSkinNumber )
 
 	// now process the unique list we've just built...
 	//
-	string strFoundList;
-	string strNotFoundList;
+	std::string strFoundList;
+	std::string strNotFoundList;
 	int iUniqueIndex = 0;
 	for (StringSet_t::iterator it = UniqueSkinShaders.begin(); it != UniqueSkinShaders.end(); ++it, iUniqueIndex++)
 	{			
-		string strShader(*it);
+		std::string strShader(*it);
 
 		StatusMessage(va("Processing shader %d/%d: \"%s\"\n",iUniqueIndex,UniqueSkinShaders.size(),strShader.c_str()));
 

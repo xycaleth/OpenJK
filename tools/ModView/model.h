@@ -61,9 +61,9 @@ typedef enum
 struct ModelContainer;
 typedef struct ModelContainer ModelContainer_t;
 
-typedef vector <bool> VertIsEdge_t;
-typedef map <int, VertIsEdge_t> SurfaceEdgeVertBools_t;
-typedef map <int, SurfaceEdgeVertBools_t> SurfaceEdgeInfoPerLOD_t;
+typedef std::vector <bool> VertIsEdge_t;
+typedef std::map <int, VertIsEdge_t> SurfaceEdgeVertBools_t;
+typedef std::map <int, SurfaceEdgeVertBools_t> SurfaceEdgeInfoPerLOD_t;
 
 #include "glm_code.h"
 
@@ -81,7 +81,7 @@ typedef struct
 	bool	bIsDefault;			// only true if no anim/enum file found
 } Sequence_t;
 
-typedef vector <Sequence_t> SequenceList_t;
+typedef std::vector <Sequence_t> SequenceList_t;
 
 #include "skins.h"
 #include "oldskins.h"
@@ -114,14 +114,14 @@ typedef struct // currently destroyed within ModelContainer_Clear(), allocated (
 //	vector < MyGLMatrix_t >	MatricesPerFrame;	// why the fuck doesn't this work?  Dammit.
 	MyGLMatrix_t			*pMatrices;
 */
-	string						sAttachName;
-	vector <MyGLMatrix_t>		vMatricesPerFrame;	// why the fuck doesn't this work?  Dammit.
-	vector <ModelContainer_t>	vBoltedContainers;
+	std::string						sAttachName;
+	std::vector <MyGLMatrix_t>		vMatricesPerFrame;	// why the fuck doesn't this work?  Dammit.
+	std::vector <ModelContainer_t>	vBoltedContainers;
 
 } BoltPoint_t;
 
-typedef map <string, string> MappedString_t;
-typedef map <string, GLuint> MaterialBinds_t;
+typedef std::map <std::string, std::string> MappedString_t;
+typedef std::map <std::string, GLuint> MaterialBinds_t;
 struct ModelContainer
 {
 	ModelHandle_t	hModel;
@@ -149,14 +149,14 @@ struct ModelContainer
 	ModelContainer_t *pBoneBolt_ParentContainer;	// NULL if root model, else parent we're bolted to
 	int				iBoneBolt_ParentBoltIndex;			// index of which bolt point on parent we're bolted to
 	int				iBoneBolt_MaxBoltPoints;					// currently will always be MAX_BOLTS, but may change on a per-model basis
-	vector <BoltPoint_t> tBoneBolt_BoltPoints;
+	std::vector <BoltPoint_t> tBoneBolt_BoltPoints;
 	//
 	// surface bolts...
 	//
 	ModelContainer_t *pSurfaceBolt_ParentContainer;	// NULL if root model, else parent we're bolted to
 	int				iSurfaceBolt_ParentBoltIndex;			// index of which bolt point on parent we're bolted to
 	int				iSurfaceBolt_MaxBoltPoints;					// currently will always be MAX_BOLTS, but may change on a per-model basis
-	vector <BoltPoint_t> tSurfaceBolt_BoltPoints;
+	std::vector <BoltPoint_t> tSurfaceBolt_BoltPoints;
 	
 	// stuff for viewer info / control etc for this model...
 	//
@@ -173,16 +173,16 @@ struct ModelContainer
 	bool			bSeqMultiLock_Secondary_Active;
 	int				iSeqMultiLock_Primary_SeqHint;	// slightly odd usage, and self-correcting if illegal
 	int				iSeqMultiLock_Secondary_SeqHint;//
-	vector <int>	SeqMultiLock_Primary;
-	vector <int>	SeqMultiLock_Secondary;
+	std::vector <int>	SeqMultiLock_Primary;
+	std::vector <int>	SeqMultiLock_Secondary;
 	SkinSets_t		SkinSets;		// SOF2-format skins
 	SkinSetsSurfacePrefs_t SkinSetsSurfacePrefs;	// SOF2-format skin surface hints
 	OldSkinSets_t	OldSkinSets;	// CHC-format skins
 
 	SurfaceEdgeInfoPerLOD_t SurfaceEdgeInfoPerLOD;	// used only when crack-viewing
 
-	string			strCurrentSkinFile;		// used for both SOF and CHC skins
-	string			strCurrentSkinEthnic;	// only for SOF2 skins
+	std::string			strCurrentSkinFile;		// used for both SOF and CHC skins
+	std::string			strCurrentSkinEthnic;	// only for SOF2 skins
 	MaterialBinds_t	MaterialBinds;		// constructed whenever skin details are changed, used for fast-lookup
 	MappedString_t	MaterialShaders;	// " "	
 	//
@@ -327,8 +327,8 @@ bool	Model_Save(const char * psFullPathedFilename);
 bool	Model_LoadBoltOn(const char * psFullPathedFilename, ModelHandle_t hModel, int iBoltIndex, bool bBoltIsBone, bool bBoltReplacesAllExisting);
 bool	Model_LoadBoltOn(const char * psFullPathedFilename, ModelHandle_t hModel, const char * psBoltName, bool bBoltIsBone, bool bBoltReplacesAllExisting);
 int		Model_GetNumBoneAliases(ModelHandle_t hModel);
-bool	Model_GetBoneAliasPair(ModelHandle_t hModel, int iAliasIndex, string &strRealName,string &strAliasName);
-bool	ModelContainer_GetBoneAliasPair(ModelContainer_t *pContainer, int iAliasIndex, string &strRealName,string &strAliasName);
+bool	Model_GetBoneAliasPair(ModelHandle_t hModel, int iAliasIndex, std::string &strRealName,std::string &strAliasName);
+bool	ModelContainer_GetBoneAliasPair(ModelContainer_t *pContainer, int iAliasIndex, std::string &strRealName, std::string &strAliasName);
 int		Model_GetNumSequences(ModelHandle_t hModel);					// remote helper func only
 const char *	Model_GetSequenceString(ModelHandle_t hModel, int iSequenceNum);// remote helper func only
 bool	Model_SetSecondaryAnimStart(ModelHandle_t hModel, int iBoneNum);

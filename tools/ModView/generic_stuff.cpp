@@ -406,7 +406,7 @@ char *scGetTempPath(void)
 // these MUST all be MB_TASKMODAL boxes now!!
 //
 bool gbErrorBox_Inhibit = false;	// Keith wanted to be able to remote-deactivate these...
-string strLastError;
+std::string strLastError;
 const char * ModView_GetLastError()		// function for him to be able to interrogate if he's disabled the error boxes
 {
 	return strLastError.c_str();

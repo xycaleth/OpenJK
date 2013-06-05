@@ -3,7 +3,6 @@
 
 #ifndef SKINS_H
 #define SKINS_H
-#include "disablewarnings.h"
 
 /*
 class CAlternativeMaterial
@@ -24,17 +23,17 @@ typedef struct
 
 } SurfaceOnOffPrefs_t;
 
-typedef vector<string/*CAlternativeMaterial*/> AlternativeShaders_t;		// each string = shader name
-typedef map<string,AlternativeShaders_t> ShadersForMaterial_t;	// map key = (eg) "face", entry = alternative shader list
-typedef map<string,ShadersForMaterial_t> SkinSet_t;				// map key = (eg) "white",entry = body component
-typedef map<string,SkinSet_t> SkinSets_t;						// map key = (eg) "thug",entry = skin set
+typedef std::vector<std::string/*CAlternativeMaterial*/> AlternativeShaders_t;		// each string = shader name
+typedef std::map<std::string,AlternativeShaders_t> ShadersForMaterial_t;	// map key = (eg) "face", entry = alternative shader list
+typedef std::map<std::string,ShadersForMaterial_t> SkinSet_t;				// map key = (eg) "white",entry = body component
+typedef std::map<std::string,SkinSet_t> SkinSets_t;						// map key = (eg) "thug",entry = skin set
 
-typedef map<string,SurfaceOnOffPrefs_t> SkinSetsSurfacePrefs_t;
+typedef std::map<std::string,SurfaceOnOffPrefs_t> SkinSetsSurfacePrefs_t;
 
 bool Skins_ApplyEthnic	( ModelContainer_t *pContainer, const char * psSkin, const char * psEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces);
 bool Skins_ApplySkinShaderVariant(ModelContainer_t *pContainer, const char * psSkin, const char * psEthnic, const char * psMaterial, int iVariant );
 bool Skins_Validate		( ModelContainer_t *pContainer, int iSkinNumber );
-bool Skins_ApplySkinFile(ModelContainer_t *pContainer, string strSkinFile, string strEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces, string strMaterial = "", int iVariant = -1);
+bool Skins_ApplySkinFile(ModelContainer_t *pContainer, const std::string& strSkinFile, const std::string& strEthnic, bool bApplySurfacePrefs, bool bDefaultSurfaces, const std::string strMaterial = "", int iVariant = -1);
 bool Skins_FilesExist	(const char * psModelFilename);
 bool Skins_Read			(const char * psModelFilename, ModelContainer_t *pContainer);
 //bool Skins_ApplyToTree	(HTREEITEM hTreeItem_Parent, ModelContainer_t *pContainer);

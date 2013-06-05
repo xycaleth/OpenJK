@@ -244,7 +244,7 @@ const char * GLMModel_BoneInfo( ModelHandle_t hModel, int iBoneIndex )
 		mdxaSkelOffsets_t *pSkelOffsets = (mdxaSkelOffsets_t *) ((byte *)pMDXAHeader + sizeof(*pMDXAHeader));
 		mdxaSkel_t		  *pSkelEntry	= (mdxaSkel_t *) ((byte *) pSkelOffsets + pSkelOffsets->offsets[ iBoneIndex ] );
 
-		static string str;
+		static std::string str;
 
 		str = va("Bone %d/%d:  %s\n\n", iBoneIndex, pMDXAHeader->numBones, pSkelEntry->name );
 		str+= va("    ->parentIndex:\t%d\n",pSkelEntry->parent );
@@ -291,13 +291,13 @@ const char * GLMModel_BoneInfo( ModelHandle_t hModel, int iBoneIndex )
 		// 2 passes, one to count, second to build string. count logic affects string display for infobox size reasons...
 		//
 		int iUsingCount=0;
-		string strSurfacesUsing;
+		std::string strSurfacesUsing;
 		for (int iPass=0; iPass<2; iPass++)	
 		{
 			strSurfacesUsing="";
 			for (int iLOD = 0; iLOD < pMDXMHeader->numLODs; iLOD++)
 			{
-				string strSurfacesUsingItThisLOD;
+				std::string strSurfacesUsingItThisLOD;
 				
 				for (int iSurface = 0; iSurface < pMDXMHeader->numSurfaces; iSurface++)
 				{
@@ -535,7 +535,7 @@ const char * GLMModel_SurfaceInfo( ModelHandle_t hModel, int iSurfaceIndex, bool
 
 	assert ( iSurfaceIndex < pMDXMHeader->numSurfaces );
 
-	static string str;
+	static std::string str;
 
 	str = va("%sSurface %d/%d:  '%s'\n\n", (pSurfHierarchy->flags & G2SURFACEFLAG_ISBOLT)?"Tag-":"",iSurfaceIndex, pMDXMHeader->numSurfaces, pSurfHierarchy->name );
 
@@ -769,7 +769,7 @@ static int GLMModel_GetNumLODs( ModelHandle_t hModel )
 
 // these next 2 functions are closely related, the GetCount function fills in public data which the other reads on query
 //
-set <string> stringSet;
+std::set <std::string> stringSet;
 static int GLMModel_GetUniqueShaderCount( ModelHandle_t hModel )
 {	
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
@@ -783,7 +783,7 @@ static int GLMModel_GetUniqueShaderCount( ModelHandle_t hModel )
 	{
 		mdxmSurfHierarchy_t	*pSurfHierarchy = (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[iSurfaceIndex]);
 
-		string strShader(pSurfHierarchy->shader);
+		std::string strShader(pSurfHierarchy->shader);
 
 		stringSet.insert(stringSet.end(),strShader);
 	}
@@ -792,12 +792,12 @@ static int GLMModel_GetUniqueShaderCount( ModelHandle_t hModel )
 }
 static const char * GLMModel_GetUniqueShader(int iShader)
 {
-	assert(iShader < stringSet.size());
+	assert(static_cast<unsigned>(iShader) < stringSet.size());
 	
-	for (set <string>::iterator it = stringSet.begin(); it != stringSet.end(); ++it)
+	for (std::set <std::string>::iterator it = stringSet.begin(); it != stringSet.end(); ++it)
 	{
 		if (!iShader--)
-			return (*it).c_str();
+			return it->c_str();
 	}	
 
 	return "(Error)";	// should never get here
@@ -815,7 +815,7 @@ static const char * GLMModel_Info( ModelHandle_t hModel )
 	mdxmHeader_t	*pMDXMHeader	= (mdxmHeader_t	*) RE_GetModelData(hModel);
 	mdxaHeader_t	*pMDXAHeader	= (mdxaHeader_t	*) RE_GetModelData(pMDXMHeader->animIndex);
 
-	static string str;
+	static std::string str;
 
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle( hModel );
 
@@ -1479,8 +1479,8 @@ int GLMModel_EnsureGenerated_VertEdgeInfo(ModelHandle_t hModel, int iLOD, Surfac
 			{
 				// build up tris-using-this-vert list...
 				//
-				vector <mdxmTriangle_t *> vTrisUsing;
-				set	   <int>			  stOtherVertsUsed;
+				std::vector <mdxmTriangle_t *> vTrisUsing;
+				std::set	   <int>			  stOtherVertsUsed;
 
 				for (int iTrisUsing=0; iTrisUsing<pSurface->numTriangles; iTrisUsing++)
 				{
@@ -1509,14 +1509,14 @@ int GLMModel_EnsureGenerated_VertEdgeInfo(ModelHandle_t hModel, int iLOD, Surfac
 				//	two triangles only...
 				//
 				bool bThisVertIsInternal = true;
-				for (set <int>::iterator it = stOtherVertsUsed.begin(); bThisVertIsInternal && it != stOtherVertsUsed.end(); ++it)
+				for (std::set <int>::iterator it = stOtherVertsUsed.begin(); bThisVertIsInternal && it != stOtherVertsUsed.end(); ++it)
 				{
 					int iScanVert = (*it);
 
 					if (iScanVert != iThisVert)
 					{
 						int iTrisUsingThisScanVert = 0;
-						for (int iScanTri = 0; iScanTri < vTrisUsing.size(); iScanTri++)
+						for (std::size_t iScanTri = 0; iScanTri < vTrisUsing.size(); iScanTri++)
 						{
 							mdxmTriangle_t *pScanTri = vTrisUsing[iScanTri];
 

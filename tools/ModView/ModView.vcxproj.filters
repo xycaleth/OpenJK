@@ -471,9 +471,6 @@
     <CustomBuild Include="common_headers.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="disablewarnings.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="files.h">
       <Filter>Header Files</Filter>
     </CustomBuild>

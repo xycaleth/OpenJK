@@ -105,7 +105,7 @@ void RenderWidget::mouseMoveEvent ( QMouseEvent *event )
     if ( buttonsDown & Qt::RightButton )
     {
         AppVars.zPos += ((float)(y - lastY) / 10.0f) * MOUSE_ZPOS_SCALE;
-        AppVars.zPos = min (max (AppVars.zPos, -1000.0f), 1000.0f);
+        AppVars.zPos = std::min (std::max (AppVars.zPos, -1000.0f), 1000.0f);
 
         ModelList_ForceRedraw();
     }

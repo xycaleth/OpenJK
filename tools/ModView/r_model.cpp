@@ -477,7 +477,7 @@ typedef struct
 	byte *pData;
 	int iSize;
 } CachedBin_t;
-typedef map <string, CachedBin_t>	CachedModelBins_t;
+typedef std::map <std::string, CachedBin_t>	CachedModelBins_t;
 									CachedModelBins_t CachedModelBins;
 void RE_ModelBinCache_DeleteAll()
 {
@@ -906,7 +906,6 @@ R_LoadMD4
 =================
 */
 qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
-	int					i, j, k;
 	md4Header_t			*pinmodel, *md4;
     md4Frame_t			*frame;
 	md4LOD_t			*lod;
@@ -952,26 +951,26 @@ qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
     
 	// swap all the frames
 	frameSize = sizeof(md4Frame_t) + sizeof(int) * (md4->numBones - 1);
-    for ( i = 0 ; i < md4->numFrames ; i++, frame++) {
+    for ( int i = 0 ; i < md4->numFrames ; i++, frame++) {
 	    frame = (md4Frame_t *) ( (byte *)md4 + md4->ofsFrames + i * frameSize );
     	frame->radius = LF( frame->radius );
-        for ( j = 0 ; j < 3 ; j++ ) {
+        for ( int j = 0 ; j < 3 ; j++ ) {
             frame->bounds[0][j] = LF( frame->bounds[0][j] );
             frame->bounds[1][j] = LF( frame->bounds[1][j] );
 	    	frame->localOrigin[j] = LF( frame->localOrigin[j] );
         }
-		for ( j = 0 ; j < md4->numBones * sizeof( md4Bone_t ) / 4 ; j++ ) {
+		for ( std::size_t j = 0 ; j < md4->numBones * sizeof( md4Bone_t ) / 4 ; j++ ) {
 			((float *)frame->bones)[j] = LF( ((float *)frame->bones)[j] );
 		}
 	}
 
 	// swap all the LOD's
 	lod = (md4LOD_t *) ( (byte *)md4 + md4->ofsLODs );
-	for ( i = 0 ; i < md4->numLODs ; i++) {
+	for ( int i = 0 ; i < md4->numLODs ; i++) {
 
 		// swap all the surfaces
 		surf = (md4Surface_t *) ( (byte *)lod + lod->ofsSurfaces );
-		for ( i = 0 ; i < lod->numSurfaces ; i++) {
+		for ( int i = 0 ; i < lod->numSurfaces ; i++) {
 			LL(surf->ident);
 			LL(surf->numTriangles);
 			LL(surf->ofsTriangles);
@@ -993,7 +992,7 @@ qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
 
 			// swap all the triangles
 			tri = (md4Triangle_t *) ( (byte *)surf + surf->ofsTriangles );
-			for ( j = 0 ; j < surf->numTriangles ; j++, tri++ ) {
+			for ( int  j = 0 ; j < surf->numTriangles ; j++, tri++ ) {
 				LL(tri->indexes[0]);
 				LL(tri->indexes[1]);
 				LL(tri->indexes[2]);
@@ -1001,7 +1000,7 @@ qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
 
 			// swap all the vertexes
 			v = (md4Vertex_t *) ( (byte *)surf + surf->ofsVerts );
-			for ( j = 0 ; j < surf->numVerts ; j++ ) {
+			for ( int j = 0 ; j < surf->numVerts ; j++ ) {
 				v->normal[0] = LF( v->normal[0] );
 				v->normal[1] = LF( v->normal[1] );
 				v->normal[2] = LF( v->normal[2] );
@@ -1011,7 +1010,7 @@ qboolean R_LoadMD4( model_t *mod, void *buffer, const char *mod_name ) {
 
 				v->numWeights = LL( v->numWeights );
 
-				for ( k = 0 ; k < v->numWeights ; k++ ) {
+				for ( int k = 0 ; k < v->numWeights ; k++ ) {
 					v->weights[k].boneIndex = LL( v->weights[k].boneIndex );
 					v->weights[k].boneWeight = LF( v->weights[k].boneWeight );
 				   v->weights[k].offset[0] = LF( v->weights[k].offset[0] );

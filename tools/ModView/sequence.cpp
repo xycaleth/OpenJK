@@ -61,7 +61,7 @@ bool Sequence_FrameIsWithin(Sequence_t *pSequence, int iFrame)
 //
 int Sequence_GetIndex( Sequence_t *pSequenceToFind, ModelContainer_t *pContainer )
 {
-	for (int i=0; i<pContainer->SequenceList.size(); i++)
+	for (std::size_t i=0; i<pContainer->SequenceList.size(); i++)
 	{
 		Sequence_t *pSequence = &pContainer->SequenceList[i];
 
@@ -79,7 +79,7 @@ int Sequence_GetIndex( Sequence_t *pSequenceToFind, ModelContainer_t *pContainer
 //
 int Sequence_DeriveFromFrame( ModelContainer_t *pContainer, int iFrame )
 {
-	for (int i=0; i<pContainer->SequenceList.size(); i++)
+	for (std::size_t i=0; i<pContainer->SequenceList.size(); i++)
 	{
 		Sequence_t *pSequence = &pContainer->SequenceList[i];
 
@@ -94,7 +94,7 @@ int Sequence_DeriveFromFrame( ModelContainer_t *pContainer, int iFrame )
 
 Sequence_t* Sequence_DeriveFromFrame( int iFrame, ModelContainer_t *pContainer )
 {	
-	for (int i=0; i<pContainer->SequenceList.size(); i++)
+	for (std::size_t i=0; i<pContainer->SequenceList.size(); i++)
 	{
 		Sequence_t *pSequence = &pContainer->SequenceList[i];
 
@@ -111,7 +111,7 @@ int Sequence_ReturnLongestSequenceNameLength(ModelContainer_t *pContainer)
 {
 	int iLongestStrlen = 0;
 
-	for (int i=0; i<pContainer->SequenceList.size(); i++)
+	for (std::size_t i=0; i<pContainer->SequenceList.size(); i++)
 	{
 		Sequence_t *pSequence = &pContainer->SequenceList[i];
 

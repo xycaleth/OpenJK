@@ -131,7 +131,7 @@ static void R_ModelContainer_Apply_Actual(ModelContainer_t* pContainer, void (*p
 	{
 		BoltPoint_t	*pBoltPoint = &pContainer->tBoneBolt_BoltPoints[ iBoltPoint ];
 
-		for (int iBoltOn = 0; iBoltOn < pBoltPoint->vBoltedContainers.size(); iBoltOn++)
+		for (std::size_t iBoltOn = 0; iBoltOn < pBoltPoint->vBoltedContainers.size(); iBoltOn++)
 		{				
 			R_ModelContainer_Apply(&pBoltPoint->vBoltedContainers[ iBoltOn ], pFunction, pvData);
 		}
@@ -143,7 +143,7 @@ static void R_ModelContainer_Apply_Actual(ModelContainer_t* pContainer, void (*p
 	{
 		BoltPoint_t	*pBoltPoint = &pContainer->tSurfaceBolt_BoltPoints[ iBoltPoint ];
 
-		for (int iBoltOn = 0; iBoltOn < pBoltPoint->vBoltedContainers.size(); iBoltOn++)
+		for (std::size_t iBoltOn = 0; iBoltOn < pBoltPoint->vBoltedContainers.size(); iBoltOn++)
 		{
 			R_ModelContainer_Apply(&pBoltPoint->vBoltedContainers[ iBoltOn ], pFunction, pvData);
 		}
@@ -515,7 +515,7 @@ void AppVars_ReadIdeal(void)
 #define CHECKDOUBLE(blah)								\
 				if (Q_stricmp (strThis.c_str(), #blah) == 0)	\
 				{										\
-					AppVars.blah = atof(strValue.c_str());		\
+					AppVars.blah = static_cast<float>(atof(strValue.c_str()));		\
 					continue;							\
 				}
 
@@ -1381,12 +1381,12 @@ bool Model_DeleteBoltOn(ModelContainer_t *pContainer, int iBoltPointToDelete, bo
 {		
 	bool bReturn = false;
 
-	vector <BoltPoint_t> &vBoltPoints	= bBoltIsBone ? pContainer->tBoneBolt_BoltPoints : pContainer->tSurfaceBolt_BoltPoints;
+	std::vector <BoltPoint_t> &vBoltPoints	= bBoltIsBone ? pContainer->tBoneBolt_BoltPoints : pContainer->tSurfaceBolt_BoltPoints;
 	int					 &iMaxBoltPoints= bBoltIsBone ? pContainer->iBoneBolt_MaxBoltPoints : pContainer->iSurfaceBolt_MaxBoltPoints;	
 
 	if (iBoltPointToDelete < (bBoltIsBone ? pContainer->iBoneBolt_MaxBoltPoints : pContainer->iSurfaceBolt_MaxBoltPoints))
 	{
-		if (iBoltPointToDelete < (bBoltIsBone ? pContainer->tBoneBolt_BoltPoints.size() : pContainer->tSurfaceBolt_BoltPoints.size()))
+		if (static_cast<std::size_t>(iBoltPointToDelete) < (bBoltIsBone ? pContainer->tBoneBolt_BoltPoints.size() : pContainer->tSurfaceBolt_BoltPoints.size()))
 		{
 			BoltPoint_t *pBoltOn = bBoltIsBone ?	&pContainer->tBoneBolt_BoltPoints	[iBoltPointToDelete] :
 													&pContainer->tSurfaceBolt_BoltPoints[iBoltPointToDelete];
@@ -1466,13 +1466,13 @@ bool Model_DeleteBoltOn(ModelContainer_t *pContainer, int iBoltPointToDelete, bo
 //
 static int Model_GetBoltOnNumber(ModelContainer_t *pContainer, ModelContainer_t *pParentContainer, int iParentBoltIndex, bool bBoltIsBone)
 {
-	vector <BoltPoint_t> &vParentBoltPoints = bBoltIsBone ? pParentContainer->tBoneBolt_BoltPoints : pParentContainer->tSurfaceBolt_BoltPoints;
+	std::vector <BoltPoint_t> &vParentBoltPoints = bBoltIsBone ? pParentContainer->tBoneBolt_BoltPoints : pParentContainer->tSurfaceBolt_BoltPoints;
 
-	if (iParentBoltIndex < vParentBoltPoints.size())
+	if (static_cast<std::size_t>(iParentBoltIndex) < vParentBoltPoints.size())
 	{
 		BoltPoint_t *pBoltOn = &vParentBoltPoints[ iParentBoltIndex ];
 
-		for (int iBoltOn = 0; iBoltOn < pBoltOn->vBoltedContainers.size(); iBoltOn++)
+		for (std::size_t iBoltOn = 0; iBoltOn < pBoltOn->vBoltedContainers.size(); iBoltOn++)
 		{
 			if ( pContainer == &pBoltOn->vBoltedContainers[ iBoltOn ] )
 				return iBoltOn;
@@ -1652,7 +1652,7 @@ static bool _Actual_Model_LoadBoltOn(const char * psFullPathedFilename, ModelHan
 				pContainer->tSurfaceBolt_BoltPoints[iBoltIndex].vBoltedContainers.push_back(*pContainer_BoltOn);
 			}
 
-			vector <ModelContainer_t> &vBoltedContainers =	bBoltIsBone ?
+			std::vector <ModelContainer_t> &vBoltedContainers =	bBoltIsBone ?
 															pContainer->tBoneBolt_BoltPoints	[ iBoltIndex ].vBoltedContainers
 															:
 															pContainer->tSurfaceBolt_BoltPoints	[ iBoltIndex ].vBoltedContainers;
@@ -1899,11 +1899,11 @@ int Model_GetBoltIndex( ModelContainer_t *pContainer, const char * psBoltName, b
 			{
 				for (MappedString_t::iterator it = pContainer->Aliases.begin(); it != pContainer->Aliases.end(); ++it)
 				{
-					string strAliasName = (*it).second;
+					std::string strAliasName = (*it).second;
 
 					if (!Q_stricmp(strAliasName.c_str(), psBoltName))
 					{
-						string strRealName = (*it).first;
+						std::string strRealName = (*it).first;
 						bAlreadyHere = true;
 						int iAnswer = Model_GetBoltIndex( pContainer, strRealName.c_str(), bBoltIsBone );
 						bAlreadyHere = false;
@@ -2287,7 +2287,7 @@ static void ModelDraw_BoundingBox( ModelContainer_t *pContainer, bool bDrawingFo
 			VectorSet(v3Corners[6],v3Maxs[0],v3Maxs[1],v3Mins[2]);
 			VectorSet(v3Corners[7],v3Mins[0],v3Maxs[1],v3Mins[2]);
 
-			glColor3f(0.8,0.8,0.8);//1,1,1);
+			glColor3f(0.8f,0.8f,0.8f);//1,1,1);
 	/*				glBegin(GL_LINE_LOOP);
 			{
 				glVertex3fv(v3Corners[0]);
@@ -2381,19 +2381,19 @@ static void ModelDraw_BoundingBox( ModelContainer_t *pContainer, bool bDrawingFo
 			// X...
 			//
 			VectorAdd	(v3Corners[0],v3Corners[1],v3Pos);
-			VectorScale	(v3Pos,0.5,v3Pos);
+			VectorScale	(v3Pos,0.5f,v3Pos);
 			Text_Display(va(" X = %.3f",fXDim),v3Pos,255,128,128);	// ruler-pink
 			//
 			// Y...
 			//
 			VectorAdd	(v3Corners[7],v3Corners[0],v3Pos);
-			VectorScale	(v3Pos,0.5,v3Pos);
+			VectorScale	(v3Pos,0.5f,v3Pos);
 			Text_Display(va(" Y = %.3f",fYDim),v3Pos,255,128,128);
 			//
 			// Z...
 			//
 			VectorAdd	(v3Corners[1],v3Corners[2],v3Pos);
-			VectorScale	(v3Pos,0.5,v3Pos);
+			VectorScale	(v3Pos,0.5f,v3Pos);
 			Text_Display(va(" Z = %.3f",fZDim),v3Pos,255,128,128);
 		}
 		glPopAttrib();
@@ -2408,7 +2408,7 @@ static void ModelDraw_OriginLines(bool bDrawingForOriginalContainer)
 		{
 			// draw origin lines...
 			//
-		#define ORIGIN_LINE_RADIUS 20
+		#define ORIGIN_LINE_RADIUS 20.0f
 			static vec3_t v3X		= { ORIGIN_LINE_RADIUS,0,0};
 			static vec3_t v3XNeg	= {-ORIGIN_LINE_RADIUS,0,0};
 
@@ -2461,14 +2461,14 @@ static void ModelDraw_OriginLines(bool bDrawingForOriginalContainer)
 				glDisable(GL_BLEND);
 				glBegin(GL_LINES);
 				{
-		#define iRULER_HEIGHT (ORIGIN_LINE_RADIUS*8)
+		#define iRULER_HEIGHT static_cast<float>((ORIGIN_LINE_RADIUS)*8)
 					glVertex3f(-ORIGIN_LINE_RADIUS, 0,  iRULER_HEIGHT/2);
 					glVertex3f(-ORIGIN_LINE_RADIUS, 0, -iRULER_HEIGHT/2);
 
 					for (int i=0; i<iRULER_HEIGHT; i++)
 					{
-						glVertex3f(-ORIGIN_LINE_RADIUS,		0,  i-(iRULER_HEIGHT/2));
-						glVertex3f( 0,						0,  i-(iRULER_HEIGHT/2));
+						glVertex3f(-ORIGIN_LINE_RADIUS,		0.0f,  i-(iRULER_HEIGHT/2));
+						glVertex3f( 0.0f,						0.0f,  i-(iRULER_HEIGHT/2));
 					}
 				}
 				glEnd();
@@ -2499,7 +2499,7 @@ typedef struct
 	float matrix[16];
 } GLMatrix_t;
 
-typedef vector <GLMatrix_t>	PreRenderedMatrixPtrs_t;
+typedef std::vector <GLMatrix_t>	PreRenderedMatrixPtrs_t;
 							PreRenderedMatrixPtrs_t PreRenderedMatrixPtrs;
 
 void PreRenderedMatrixPtrs_glMultiply(void)
@@ -2716,9 +2716,9 @@ static void DrawTagOrigin(bool bHilitAsPure, const char * psTagText /* can be NU
 {
  	// draw origin lines...
 	//						
-	#define TAGHIGHLIGHT_LINE_LEN		(bHilitAsPure ? 20 : 10)	// spot the retro fit... ;-)
+	#define TAGHIGHLIGHT_LINE_LEN		(bHilitAsPure ? 20.0f : 10.0f)	// spot the retro fit... ;-)
 	#define TAGHIGHLIGHT_TEXT_COLOUR	 bHilitAsPure?255:150, 0,bHilitAsPure?255:150	// ""
-	#define TAGHIGHLIGHT_TEXT_DISTANCE (bHilitAsPure ? 20 : 10)	// spot the retro fit... ;-)
+	#define TAGHIGHLIGHT_TEXT_DISTANCE (bHilitAsPure ? 20.0f : 10.0f)	// spot the retro fit... ;-)
 
 	/*static */vec3_t v3X		= { TAGHIGHLIGHT_LINE_LEN,0,0};
 	/*static */vec3_t v3XNeg	= {-TAGHIGHLIGHT_LINE_LEN,0,0};
@@ -2736,35 +2736,35 @@ static void DrawTagOrigin(bool bHilitAsPure, const char * psTagText /* can be NU
 
 		if (AppVars.bShowOriginsAsRGB)
 		{
-			glLineWidth(bHilitAsPure?4:2);
+			glLineWidth(bHilitAsPure?4.0f:2.0f);
 			{
 				// X (red)...
 				//
-				glColor3f( (bHilitAsPure?1.0f:0.8f), 0, 0);
+				glColor3f( (bHilitAsPure?1.0f:0.8f), 0.0f, 0.0f);
 				glBegin(GL_LINES);
 				{
 					glVertex3fv(v3X);
-					glVertex3f (0,0,0);
+					glVertex3f (0.0f,0.0f,0.0f);
 				}
 				glEnd();
 
 				// Y (green)...
 				//
-				glColor3f( 0, (bHilitAsPure?1.0f:0.8f), 0);
+				glColor3f( 0.0f, (bHilitAsPure?1.0f:0.8f), 0.0f);
 				glBegin(GL_LINES);
 				{
 					glVertex3fv(v3Y);
-					glVertex3f (0,0,0);
+					glVertex3f (0.0f,0.0f,0.0f);
 				}
 				glEnd();
 
 				// Z (blue)...
 				//
-				glColor3f( 0, 0, (bHilitAsPure?1.0f:0.8f));
+				glColor3f( 0.0f, 0.0f, (bHilitAsPure?1.0f:0.8f));
 				glBegin(GL_LINES);
 				{
 					glVertex3fv(v3Z);
-					glVertex3f (0,0,0);
+					glVertex3f (0.0f,0.0f,0.0f);
 				}
 				glEnd();
 			}
@@ -2772,7 +2772,7 @@ static void DrawTagOrigin(bool bHilitAsPure, const char * psTagText /* can be NU
 		}
 		else
 		{
-			glColor3f(0,bHilitAsPure?1:0.8,0);
+			glColor3f(0.0f,bHilitAsPure?1.0f:0.8f,0.0f);
 			glBegin(GL_LINES);
 			{
 				glVertex3fv(v3X);
@@ -3024,14 +3024,14 @@ static void R_ModelContainer_CallBack_MeasureDigits(ModelContainer_t *pContainer
 	// frames readout...
 	//
 	sprintf(sTest,"%d",pContainer->iNumFrames);
-	if (pTextData->iFrameDigitsNeeded < strlen(sTest))
+	if (static_cast<std::size_t>(pTextData->iFrameDigitsNeeded) < strlen(sTest))
 		pTextData->iFrameDigitsNeeded = strlen(sTest);
 
 	
 	// attachment string...
 	//
 	Q_strncpyz(sTest, Stats_GetAttachmentString(pContainer), sizeof (sTest));
-	if (pTextData->iAttachedViaCharsNeeded < strlen(sTest))
+	if (static_cast<std::size_t>(pTextData->iAttachedViaCharsNeeded) < strlen(sTest))
 		pTextData->iAttachedViaCharsNeeded = strlen(sTest);
 
 	// "(Secondary Anim)" goes in same place as attachment string, but on line below (if present),
@@ -3040,7 +3040,7 @@ static void R_ModelContainer_CallBack_MeasureDigits(ModelContainer_t *pContainer
 	if (AppVars.iTotalContainers>1)	// because I don't bother printing the header if there's only one model
 	{
 		sprintf(sTest,sSECONDARY_ANIM_STATS_STRING);
-		if (pTextData->iAttachedViaCharsNeeded < strlen(sTest))
+		if (static_cast<std::size_t>(pTextData->iAttachedViaCharsNeeded) < strlen(sTest))
 			pTextData->iAttachedViaCharsNeeded = strlen(sTest);
 	}
 
@@ -3878,7 +3878,7 @@ int ModelContainer_EnsureFrameLegal(ModelContainer_t *pContainer, int iFrame, bo
 								// yes, so adopt first frame of this this seq...
 								//
 								iSeqIndex = Model_MultiSeq_GetEntry(pContainer,i,bPrimary);
-								if (iSeqIndex < pContainer->SequenceList.size())
+								if (static_cast<std::size_t>(iSeqIndex) < pContainer->SequenceList.size())
 								{
 									if (bLegaliseToStart)
 										return pContainer->SequenceList[iSeqIndex].iStartFrame;
@@ -4223,7 +4223,7 @@ const char * Model_Sequence_GetName(ModelHandle_t hModel, int iSequenceNumber, b
 //
 const char * Model_Sequence_GetName(ModelContainer_t *pContainer, int iSequenceNumber, bool bUsedForDisplay /* = false */)
 {
-	if (iSequenceNumber < pContainer->SequenceList.size())
+	if (static_cast<std::size_t>(iSequenceNumber) < pContainer->SequenceList.size())
 	{
 		return Sequence_GetName(&pContainer->SequenceList[iSequenceNumber], bUsedForDisplay);
 	}
@@ -4239,7 +4239,7 @@ const char * Model_Sequence_GetName(ModelContainer_t *pContainer, int iSequenceN
 //
 int Model_Sequence_IndexForName(ModelContainer_t *pContainer, const char * psSeqName)
 {
-	for (int iSeq=0; iSeq<pContainer->SequenceList.size(); iSeq++)
+	for (std::size_t iSeq=0; iSeq<pContainer->SequenceList.size(); iSeq++)
 	{
 		if (!Q_stricmp(pContainer->SequenceList[iSeq].sName, psSeqName))
 			return iSeq;
@@ -4260,7 +4260,7 @@ const char * Model_Sequence_GetTreeName(ModelHandle_t hModel, int iSequenceNumbe
 
 	if (pContainer)
 	{		
-		if (iSequenceNumber < pContainer->SequenceList.size())
+		if (static_cast<std::size_t>(iSequenceNumber) < pContainer->SequenceList.size())
 		{				
 			return Sequence_CreateTreeName(&pContainer->SequenceList[iSequenceNumber]);
 		}
@@ -4302,7 +4302,7 @@ bool Model_Sequence_Lock( ModelContainer_t *pContainer, int iSequenceNumber, boo
 
     if (pContainer)
 	{		
-		if (iSequenceNumber < pContainer->SequenceList.size())
+		if (static_cast<std::size_t>(iSequenceNumber) < pContainer->SequenceList.size())
 		{
 			if (bPrimary)
 				pContainer->iSequenceLockNumber_Primary = iSequenceNumber;
@@ -4499,7 +4499,7 @@ int Model_GetNumBoneAliases(ModelHandle_t hModel)
 //	any more to this then the indexes are invalidated. ie, only call during an interrogate loop, and don't
 //	store the indexes anywhere!
 //
-bool Model_GetBoneAliasPair(ModelHandle_t hModel, int iAliasIndex, string &strRealName,string &strAliasName)
+bool Model_GetBoneAliasPair(ModelHandle_t hModel, int iAliasIndex, std::string &strRealName, std::string &strAliasName)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
 
@@ -4517,7 +4517,7 @@ bool Model_GetBoneAliasPair(ModelHandle_t hModel, int iAliasIndex, string &strRe
 //	any more to this then the indexes are invalidated. ie, only call during an interrogate loop, and don't
 //	store the indexes anywhere!
 //
-bool ModelContainer_GetBoneAliasPair(ModelContainer_t *pContainer, int iAliasIndex, string &strRealName, string &strAliasName)
+bool ModelContainer_GetBoneAliasPair(ModelContainer_t *pContainer, int iAliasIndex, std::string &strRealName, std::string &strAliasName)
 {
 	int iLocalAliasIndex = iAliasIndex;
 
@@ -4562,7 +4562,7 @@ const char * Model_GetSequenceString(ModelHandle_t hModel, int iSequenceNum)
 {
 	ModelContainer_t *pContainer = ModelContainer_FindFromModelHandle(hModel);
 
-	if (pContainer && iSequenceNum < pContainer->SequenceList.size())
+	if (pContainer && static_cast<std::size_t>(iSequenceNum) < pContainer->SequenceList.size())
 	{
 		return Sequence_ReturnRemoteQueryString(&pContainer->SequenceList[iSequenceNum]);
 	}
@@ -4686,8 +4686,8 @@ int ModelContainer_BoneIndexFromName(ModelContainer_t *pContainer, const char * 
 		int iAliases = Model_GetNumBoneAliases(pContainer->hModel);
 		for (int i=0; i<iAliases; i++)
 		{
-			string strBoneNameReal;
-			string strBoneNameAlias;
+			std::string strBoneNameReal;
+			std::string strBoneNameAlias;
 
 			if (ModelContainer_GetBoneAliasPair(pContainer, i, strBoneNameReal, strBoneNameAlias))
 			{
@@ -4863,7 +4863,7 @@ bool Model_MultiSeq_Add(ModelHandle_t hModel, int iSequenceNumber, bool bPrimary
 	
 	if (pContainer)
 	{
-		if (iSequenceNumber<pContainer->SequenceList.size())
+		if (static_cast<std::size_t>(iSequenceNumber) < pContainer->SequenceList.size())
 		{
 			if (!Model_MultiSeq_AlreadyContains(pContainer, iSequenceNumber, bPrimary))
 			{
@@ -5018,12 +5018,12 @@ int Model_MultiSeq_GetEntry(ModelContainer_t *pContainer, int iEntry, bool bPrim
 {
 	if (bPrimary)
 	{
-		if (iEntry < pContainer->SeqMultiLock_Primary.size())
+		if (static_cast<std::size_t>(iEntry) < pContainer->SeqMultiLock_Primary.size())
 			return pContainer->SeqMultiLock_Primary[iEntry];
 	}
 	else
 	{
-		if (iEntry < pContainer->SeqMultiLock_Secondary.size())
+		if (static_cast<std::size_t>(iEntry) < pContainer->SeqMultiLock_Secondary.size())
 			return pContainer->SeqMultiLock_Secondary[iEntry];
 	}
 
@@ -5126,14 +5126,14 @@ void Model_MultiSeq_Delete( ModelHandle_t hModel, int iSeqIndex, bool bPrimary)
 			{
 				if (bPrimary)
 				{
-					if (pContainer->SeqMultiLock_Primary.size() > i)
+					if (pContainer->SeqMultiLock_Primary.size() > static_cast<std::size_t>(i))
 					{
 						pContainer->SeqMultiLock_Primary.erase(pContainer->SeqMultiLock_Primary.begin() + i);
 					}
 				}
 				else
 				{
-					if (pContainer->SeqMultiLock_Secondary.size() > i)
+					if (pContainer->SeqMultiLock_Secondary.size() > static_cast<std::size_t>(i))
 					{
 						pContainer->SeqMultiLock_Secondary.erase(pContainer->SeqMultiLock_Secondary.begin() + i);
 					}

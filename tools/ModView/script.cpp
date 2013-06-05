@@ -68,7 +68,7 @@ bool CString_ExtractUntil(CString &strSrc, CString &strDst, char cSeperator)
 }
 */
 
-typedef map<ModelContainer_t*, string>	HandleXref_t;
+typedef std::map<ModelContainer_t*, std::string>	HandleXref_t;
 										HandleXref_t HandleXRefs;
 
 static std::string strHandlesSoFar;		// semicolon-delineated string of all handle names, for quick ifdef check
@@ -155,7 +155,7 @@ static void R_ModelContainer_WriteOptional(ModelContainer_t* pContainer, void *p
 		fprintf(fhText, bIsBolt?"\t\t":"\t");
 		fprintf(fhText, "{\n");
 
-		for (int i=0; i<pContainer->SeqMultiLock_Primary.size(); i++)
+		for (std::size_t i=0; i<pContainer->SeqMultiLock_Primary.size(); i++)
 		{				
 			const char * psSeqName = Model_Sequence_GetName(pContainer, pContainer->SeqMultiLock_Primary[i]);
 
@@ -178,7 +178,7 @@ static void R_ModelContainer_WriteOptional(ModelContainer_t* pContainer, void *p
 		fprintf(fhText, bIsBolt?"\t\t":"\t");
 		fprintf(fhText, "{\n");
 
-		for (int i=0; i<pContainer->SeqMultiLock_Secondary.size(); i++)
+		for (std::size_t i=0; i<pContainer->SeqMultiLock_Secondary.size(); i++)
 		{				
 			const char * psSeqName = Model_Sequence_GetName(pContainer, pContainer->SeqMultiLock_Secondary[i]);
 
@@ -409,7 +409,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 	//
 	do
 	{
-		string strSurfaceName = pParseGroup->FindPairValue(sSCRIPTKEYWORD_SURFACENAME_ROOTOVERRIDE, "");
+		std::string strSurfaceName = pParseGroup->FindPairValue(sSCRIPTKEYWORD_SURFACENAME_ROOTOVERRIDE, "");
 		if (strSurfaceName.length())
 		{
 			if (!Model_SetG2SurfaceRootOverride	(pContainer, strSurfaceName.c_str()))
@@ -420,7 +420,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 
 		// name of secondary anim start bone MUST be written out before iSequenceLockNumber_Secondary, or reading won't work...
 		//
-		string strBoneName = pParseGroup->FindPairValue(sSCRIPTKEYWORD_BONENAME_SECONDARYSTART, "");
+		std::string strBoneName = pParseGroup->FindPairValue(sSCRIPTKEYWORD_BONENAME_SECONDARYSTART, "");
 		if (strBoneName.length())
 		{
 			if (!Model_SetSecondaryAnimStart(pContainer->hModel, strBoneName.c_str()))
@@ -432,7 +432,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 
 		// "locksequence"...?
 		//
-		string strSequence = pParseGroup->FindPairValue(sSCRIPTKEYWORD_LOCKSEQUENCE, "");
+		std::string strSequence = pParseGroup->FindPairValue(sSCRIPTKEYWORD_LOCKSEQUENCE, "");
 		if (strSequence.length())
 		{				
 			if (!Model_Sequence_Lock(pContainer->hModel,strSequence.c_str(),true))	// errors displayed internally
@@ -457,10 +457,10 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 
 		// "skinfile"...?
 		//
-		string strSkinFile = pParseGroup->FindPairValue(sSCRIPTKEYWORD_SKINFILE, "");
+		std::string strSkinFile = pParseGroup->FindPairValue(sSCRIPTKEYWORD_SKINFILE, "");
 		if (strSkinFile.length())
 		{
-			string strEthnic = pParseGroup->FindPairValue(sSCRIPTKEYWORD_ETHNIC, "");
+			std::string strEthnic = pParseGroup->FindPairValue(sSCRIPTKEYWORD_ETHNIC, "");
 			if (strEthnic.length())
 			{
 				if (!Skins_ApplyEthnic( pContainer, strSkinFile.c_str(), strEthnic.c_str(),false/*findmeste true*/,true))
@@ -473,7 +473,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 
 		// "oldskinfile"...?
 		//
-		string strOldSkinFile = pParseGroup->FindPairValue(sSCRIPTKEYWORD_OLDSKINFILE, "");
+		std::string strOldSkinFile = pParseGroup->FindPairValue(sSCRIPTKEYWORD_OLDSKINFILE, "");
 		if (strOldSkinFile.length())
 		{
 			if (!OldSkins_Apply( pContainer, strOldSkinFile.c_str() ))
@@ -485,8 +485,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 
 		// multisequence primary and secondary locking...
 		//
-		string 
-		strLock = pParseGroup->FindPairValue(sSCRIPTKEYWORD_MULTISEQ_PRIMARYLOCK, "");
+		std::string strLock = pParseGroup->FindPairValue(sSCRIPTKEYWORD_MULTISEQ_PRIMARYLOCK, "");
 		if (strLock.length())
 		{
 			Model_MultiSeq_SetActive(pContainer->hModel, true, true);
@@ -500,15 +499,14 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 
 		// multisequence primary and secondary lists...
 		//
-		CGPGroup* 
-		pSubGroup = pParseGroup->FindSubGroup(sSCRIPTKEYWORD_MULTISEQ_PRIMARYLIST);
+		CGPGroup* pSubGroup = pParseGroup->FindSubGroup(sSCRIPTKEYWORD_MULTISEQ_PRIMARYLIST);
 		if (pSubGroup)
 		{
 			CGPValue *pValue = pSubGroup->GetPairs();
 			while (pValue)
 			{			
 				// string strJunk = (*it).first;	// eg 'name0'
-				string strSequence = pValue->GetTopValue();
+				std::string strSequence = pValue->GetTopValue();
 
 				int iSeqNum = Model_Sequence_IndexForName(pContainer, strSequence.c_str());
 				if (iSeqNum != -1)
@@ -526,7 +524,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 			while (pValue)
 			{
 				// string strJunk = (*it).first;	// eg 'name0'
-				string strSequence = pValue->GetTopValue();
+				std::string strSequence = pValue->GetTopValue();
 
 				int iSeqNum = Model_Sequence_IndexForName(pContainer, strSequence.c_str());
 				if (iSeqNum != -1)
@@ -547,7 +545,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 			while (pValue)
 			{			
 				// string strJunk = (*it).first;	// eg 'name0'
-				string strSurface = pValue->GetTopValue();
+				std::string strSurface = pValue->GetTopValue();
 
 				Model_GLMSurface_SetStatus( pContainer->hModel, strSurface.c_str(), SURF_ON);
 
@@ -562,7 +560,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 			while (pValue)
 			{			
 				// string strJunk = (*it).first;	// eg 'name0'
-				string strSurface = pValue->GetTopValue();
+				std::string strSurface = pValue->GetTopValue();
 
 				Model_GLMSurface_SetStatus( pContainer->hModel, strSurface.c_str(), SURF_OFF);
 
@@ -577,7 +575,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 			while (pValue)
 			{			
 				// string strJunk = (*it).first;	// eg 'name0'
-				string strSurface = pValue->GetTopValue();
+				std::string strSurface = pValue->GetTopValue();
 
 				Model_GLMSurface_SetStatus( pContainer->hModel, strSurface.c_str(), SURF_NO_DESCENDANTS);
 
@@ -592,7 +590,7 @@ static const char * Script_Parse_ReadOptionalArgs(ModelContainer_t *pContainer, 
 
 	if (psError)
 	{
-		static string	strErrors;
+		static std::string	strErrors;
 						strErrors = psError;
 						strErrors.insert(0,"Script_Parse_ReadOptionalArgs(): ");
 
@@ -611,7 +609,7 @@ static const char * Script_Parse_BoltModel(CGPGroup *pParseGroup)
 	{
 		// "name"...
 		//
-		string strHandle = pParseGroup->FindPairValue(sSCRIPTKEYWORD_NAME, "");
+		std::string strHandle = pParseGroup->FindPairValue(sSCRIPTKEYWORD_NAME, "");
 		if (! (strHandle.length()))
 		{
 			psError = "No '" sSCRIPTKEYWORD_NAME "' keyword found!";
@@ -620,7 +618,7 @@ static const char * Script_Parse_BoltModel(CGPGroup *pParseGroup)
 
 		// "modelfile"...
 		//
-		string strModelFile = pParseGroup->FindPairValue(sSCRIPTKEYWORD_MODELFILE, "");
+		std::string strModelFile = pParseGroup->FindPairValue(sSCRIPTKEYWORD_MODELFILE, "");
 		if (! (strModelFile.length()))
 		{
 			psError = "No '" sSCRIPTKEYWORD_MODELFILE "' keyword found!";
@@ -629,7 +627,7 @@ static const char * Script_Parse_BoltModel(CGPGroup *pParseGroup)
 
 		// "parent"...
 		//
-		string strParentHandle = pParseGroup->FindPairValue(sSCRIPTKEYWORD_PARENT, "");
+		std::string strParentHandle = pParseGroup->FindPairValue(sSCRIPTKEYWORD_PARENT, "");
 		if (! (strParentHandle.length()))
 		{
 			psError = "No '" sSCRIPTKEYWORD_PARENT "' keyword found!";
@@ -638,8 +636,8 @@ static const char * Script_Parse_BoltModel(CGPGroup *pParseGroup)
 
 		// "bolttobone" or "bolttosurface"
 		//
-		string strBoltToBone	= pParseGroup->FindPairValue(sSCRIPTKEYWORD_BOLTTOBONE, "");
-		string strBoltToSurface	= pParseGroup->FindPairValue(sSCRIPTKEYWORD_BOLTTOSURFACE, "");
+		std::string strBoltToBone	= pParseGroup->FindPairValue(sSCRIPTKEYWORD_BOLTTOBONE, "");
+		std::string strBoltToSurface	= pParseGroup->FindPairValue(sSCRIPTKEYWORD_BOLTTOSURFACE, "");
 		if ( !(strBoltToBone.length()) && !(strBoltToSurface.length()) )
 		{
 			psError = "No '" sSCRIPTKEYWORD_BOLTTOBONE "' or '" sSCRIPTKEYWORD_BOLTTOSURFACE "' keyword found!";
@@ -652,7 +650,7 @@ static const char * Script_Parse_BoltModel(CGPGroup *pParseGroup)
 		for (HandleXref_t::iterator it = HandleXRefs.begin(); it!=HandleXRefs.end(); it++)
 		{
 			pParentContainer = (*it).first;
-			string sThisName = (*it).second;
+			std::string sThisName = (*it).second;
 
 			if (sThisName == strParentHandle)
 				break;
@@ -701,7 +699,7 @@ static const char * Script_Parse_BoltModel(CGPGroup *pParseGroup)
 
 	if (psError)
 	{
-		static string	strErrors;
+		static std::string	strErrors;
 						strErrors = psError;
 						strErrors.insert(0,"Script_Parse_BoltModel(): ");
 
@@ -721,7 +719,7 @@ static const char * Script_Parse_LoadModel(CGPGroup *pParseGroup)
 	{
 		// "name"...
 		//
-		string strHandle = pParseGroup->FindPairValue(sSCRIPTKEYWORD_NAME, "");
+		std::string strHandle = pParseGroup->FindPairValue(sSCRIPTKEYWORD_NAME, "");
 		if (! (strHandle.length()))
 		{
 			psError = "No '" sSCRIPTKEYWORD_NAME "' keyword found!";
@@ -730,7 +728,7 @@ static const char * Script_Parse_LoadModel(CGPGroup *pParseGroup)
 
 		// "modelfile"...
 		//
-		string strModelFile = pParseGroup->FindPairValue(sSCRIPTKEYWORD_MODELFILE, "");
+		std::string strModelFile = pParseGroup->FindPairValue(sSCRIPTKEYWORD_MODELFILE, "");
 		if (! (strModelFile.length()))
 		{
 			psError = "No '" sSCRIPTKEYWORD_MODELFILE "' keyword found!";
@@ -766,7 +764,7 @@ static const char * Script_Parse_LoadModel(CGPGroup *pParseGroup)
 		CGPGroup *pSubGroup = pParseGroup->GetSubGroups();
 		while (pSubGroup)
 		{			
-			string strSubGroupType = pSubGroup->GetName();
+			std::string strSubGroupType = pSubGroup->GetName();
 
 			if (strSubGroupType == sSCRIPTKEYWORD_BOLTMODEL)
 			{
@@ -784,7 +782,7 @@ static const char * Script_Parse_LoadModel(CGPGroup *pParseGroup)
 
 	if (psError)
 	{
-		static string	strErrors;
+		static std::string	strErrors;
 						strErrors = psError;
 						strErrors.insert(0,"Script_Parse_LoadModel(): ");
 
@@ -821,7 +819,7 @@ bool Script_Read(const char * psFullPathedFilename)
 			{
 				// special optional arg for NPC->MVS hackiness...
 				//
-				string strBaseDir = pParseGroup_LoadModel->FindPairValue(sSCRIPTKEYWORD_BASEDIR, "");
+				std::string strBaseDir = pParseGroup_LoadModel->FindPairValue(sSCRIPTKEYWORD_BASEDIR, "");
 				if (!strBaseDir.empty())
 				{
 					SetQdirFromPath( strBaseDir.c_str() );

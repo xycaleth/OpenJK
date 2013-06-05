@@ -141,14 +141,14 @@ struct CompareSequencesByName
 void AddSequencesToTree ( SceneTreeItem *root, const ModelContainer_t& container, const SequenceList_t& sequenceList )
 {
     std::vector<int> sequenceIndices (sequenceList.size(), -1);
-    for ( int i = 0; i < sequenceList.size(); i++ )
+    for ( std::size_t i = 0; i < sequenceList.size(); i++ )
     {
         sequenceIndices[i] = i;
     }
 
     std::sort (sequenceIndices.begin(), sequenceIndices.end(), CompareSequencesByFrame (sequenceList));
 
-    for ( int i = 0; i < sequenceList.size(); i++ )
+    for ( std::size_t i = 0; i < sequenceList.size(); i++ )
     {
         root->AddChild (new SequenceSceneTreeItem (&sequenceList[sequenceIndices[i]], sequenceIndices[i], container.hModel, root));
     }
