@@ -25,12 +25,6 @@
     <Filter Include="ZLIB">
       <UniqueIdentifier>{09641fcb-bdd9-4e46-85cf-89bfa58ac313}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Foreign Muck Source">
-      <UniqueIdentifier>{8b9ed5b3-9de8-41ae-9e4c-38cf34b97c34}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Foreign Muck Headers">
-      <UniqueIdentifier>{352f6883-5cac-4102-8cce-676c8a9a92e2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Generated Files">
       <UniqueIdentifier>{71ED8ED8-ACB9-4CE9-BBE1-E00B30144E11}</UniqueIdentifier>
       <Extensions>moc;h;cpp</Extensions>
@@ -225,12 +219,6 @@
     <ClCompile Include="zlib\zutil.c">
       <Filter>ZLIB</Filter>
     </ClCompile>
-    <ClCompile Include="GenericParser2.cpp">
-      <Filter>Foreign Muck Source</Filter>
-    </ClCompile>
-    <ClCompile Include="files.cpp">
-      <Filter>Foreign Muck Source</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -274,6 +262,12 @@
       <Filter>Generated Files</Filter>
     </ClCompile>
     <ClCompile Include="StringUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GenericParser2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="files.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -456,18 +450,6 @@
     <CustomBuild Include="zlib\zutil.h">
       <Filter>ZLIB</Filter>
     </CustomBuild>
-    <CustomBuild Include="GenericParser2.h">
-      <Filter>Foreign Muck Headers</Filter>
-    </CustomBuild>
-    <CustomBuild Include="common_headers.h">
-      <Filter>Foreign Muck Headers</Filter>
-    </CustomBuild>
-    <CustomBuild Include="disablewarnings.h">
-      <Filter>Foreign Muck Headers</Filter>
-    </CustomBuild>
-    <CustomBuild Include="files.h">
-      <Filter>Foreign Muck Headers</Filter>
-    </CustomBuild>
     <CustomBuild Include="MainForm.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
@@ -485,6 +467,18 @@
     </CustomBuild>
     <CustomBuild Include="ModView.qrc">
       <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="common_headers.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="disablewarnings.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="files.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GenericParser2.h">
+      <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
