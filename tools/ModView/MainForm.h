@@ -51,7 +51,6 @@ private slots:
     void OnPicmipTo1();
     void OnPicmipTo2();
     void OnPicmipTo3();
-    void OnShowOpenGLInfo();
 
     void OnDoubleClickedTreeView ( const QModelIndex& index );
     void OnClickedTreeView ( const QModelIndex& index );

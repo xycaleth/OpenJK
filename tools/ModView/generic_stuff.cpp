@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "generic_stuff.h"
 
+#include <QtWidgets/QMessageBox>
 #include <algorithm>
 #include <string>
 #include "includes.h"
@@ -61,7 +62,7 @@ static bool SetQdirFromPath2( const char *path2, const char *psBaseDir )
 //		bDone = true;
 
 		char	temp[1024];
-        char    path[1024];
+		char    path[1024];
 		strcpy(temp,path2);
 		strcpy(path,temp);
 		const char	*c;
@@ -129,7 +130,7 @@ static bool SetQdirFromPath2( const char *path2, const char *psBaseDir )
 //
 void Filename_RemoveQUAKEBASE( std::string& string )
 {
-    std::replace (string.begin(), string.end(), '\\', '/');
+	std::replace (string.begin(), string.end(), '\\', '/');
 	ToLower (string);
 
 /*
@@ -153,7 +154,7 @@ void Filename_RemoveQUAKEBASE( std::string& string )
 */
 
 //	SetQdirFromPath( string );
-    string = Replace (string, gamedir, "");
+	string = Replace (string, gamedir, "");
 }
 
 
@@ -200,7 +201,7 @@ char *Filename_WithoutPath(const char * psFilename)
 /*
 	const char * p = strrchr(psFilename,'\\');
 
-  	if (!p++)
+	if (!p++)
 	{
 		p = strrchr(psFilename,'/');
 		if (!p++)
@@ -321,7 +322,7 @@ char *String_ToLower(const char * psString)
 	static char sString[MAX_QPATH];
 
 	strcpy(sString,psString);
-    
+	
 	return ToLower(sString);	
 
 }
@@ -348,7 +349,7 @@ char *String_ForwardSlash(const char * psString)
 	{
 		*p = '/';
 	}
-    
+	
 	return ToLower(sString);
 }
 
@@ -425,12 +426,12 @@ void ErrorBox(const char *sString)
 		Gallery_AddError(sString);
 		Gallery_AddError("\n");
 		return;
-	}
+	}*/
 
 	if (!gbErrorBox_Inhibit)
 	{
-		MessageBox( NULL, sString, "Error",		MB_OK|MB_ICONERROR|MB_TASKMODAL );		
-	}*/
+		QMessageBox::critical (NULL, "Error", sString);
+	}
 
 	strLastError = sString;
 }
@@ -441,9 +442,9 @@ void InfoBox(const char *sString)
 		Gallery_AddInfo(sString);
 		Gallery_AddInfo("\n");
 		return;
-	}
+	}*/
 
-	MessageBox( NULL, sString, "Info",		MB_OK|MB_ICONINFORMATION|MB_TASKMODAL );		*/
+	QMessageBox::information (NULL, "Information", sString);
 }
 void WarningBox(const char *sString)
 {
@@ -452,9 +453,9 @@ void WarningBox(const char *sString)
 		Gallery_AddWarning(sString);
 		Gallery_AddWarning("\n");
 		return;
-	}
+	}*/
 
-	MessageBox( NULL, sString, "Warning",	MB_OK|MB_ICONWARNING|MB_TASKMODAL );*/
+    QMessageBox::warning (NULL, "Warning", sString);
 }
 
 
@@ -467,12 +468,9 @@ bool GetYesNo(const char *psQuery)
 		Gallery_AddWarning(psQuery);
 		Gallery_AddWarning("\n");
 		return false;
-	}
+	}*/
 
-	//#define GetYesNo(psQuery)	(!!(MessageBox(AppVars.hWnd,psQuery,"Query",MB_YESNO|MB_ICONWARNING|MB_TASKMODAL)==IDYES))
-	#define _GetYesNo(psQuery)	(!!(AfxMessageBox(psQuery,						MB_YESNO|MB_ICONWARNING|MB_TASKMODAL)==IDYES))
-	return _GetYesNo(psQuery);*/
-    return false;
+	return QMessageBox::question (NULL, "Query", psQuery) == QMessageBox::Yes;
 }
 
 void StatusMessage(const char * psString)	// param can be NULL to indicate fallback to "ready" or whatever you want
@@ -558,7 +556,7 @@ int SaveFile (const char * psPathedFilename, const void *pBuffer, int iSize)
 	
 	return -1;
 #else
-    return iSize;
+	return iSize;
 #endif
 }
 
@@ -622,7 +620,7 @@ bool SendFileToNotepad(const char * psFilename)
 
 	return bReturn;
 #else
-    return true;
+	return true;
 #endif
 }
 
@@ -650,7 +648,7 @@ bool SendStringToNotepad(const char * psWhatever, const char * psLocalFileName)
 
 	return bReturn;
 #else
-    return true;
+	return true;
 #endif
 }
 

@@ -9,6 +9,7 @@
 //
 #include "files.h"
 
+#include <QtCore/QDir>
 
 /*
 ============
@@ -162,18 +163,9 @@ DIRECTORY SCANNING FUNCTIONS
 
 #define	MAX_FOUND_FILES	0x1000
 
-char *CopyString( const char *in ) {
-	char	*out;
-	
-	out = new char[strlen(in)+1];
-	strcpy (out, in);
-	return out;
-}
-
-#include <QtCore/QDir>
 std::vector<std::string> Sys_ListFiles( const char *directory, const char *extension, bool wantsubs ) {
-	int			nfiles;
-    std::vector<std::string> fileList;
+	int nfiles;
+	std::vector<std::string> fileList;
 
 	if ( !extension ) {
 		extension = "";
@@ -187,32 +179,32 @@ std::vector<std::string> Sys_ListFiles( const char *directory, const char *exten
 	// search
 	nfiles = 0;
 
-    QDir root (directory);
-    if ( !root.exists() )
-    {
-        return fileList;
-    }
+	QDir root (directory);
+	if ( !root.exists() )
+	{
+		return fileList;
+	}
 
-    QDir::Filters filters = QDir::Files;
-    if ( wantsubs )
-    {
-        filters |= QDir::AllDirs;
-    }
+	QDir::Filters filters = QDir::Files;
+	if ( wantsubs )
+	{
+		filters |= QDir::AllDirs;
+	}
 
-    QStringList nameFilters;
-    QString starExtension = "*";
-    starExtension += extension;
-    nameFilters.push_back (starExtension);
+	QStringList nameFilters;
+	QString starExtension = "*";
+	starExtension += extension;
+	nameFilters.push_back (starExtension);
 
-    QStringList files = root.entryList (nameFilters, filters);
-    nfiles = min (files.size(), MAX_FOUND_FILES - 1);
-    
-    fileList.resize (nfiles);
-    
-    for ( int i = 0; i < nfiles; i++ )
-    {
-        fileList[i] = files[i].toLatin1().constData();
-    }
+	QStringList files = root.entryList (nameFilters, filters);
+	nfiles = min (files.size(), MAX_FOUND_FILES - 1);
+	
+	fileList.resize (nfiles);
+	
+	for ( int i = 0; i < nfiles; i++ )
+	{
+		fileList[i] = files[i].toLatin1().constData();
+	}
 
 	return fileList;
 }

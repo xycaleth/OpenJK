@@ -80,7 +80,7 @@
      <x>0</x>
      <y>0</y>
      <width>945</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -137,8 +137,6 @@
     <addaction name="actionPicmip_1"/>
     <addaction name="actionPicmip_2"/>
     <addaction name="actionPicmip_3"/>
-    <addaction name="separator"/>
-    <addaction name="actionOpenGL_Driver_Info"/>
    </widget>
    <widget class="QMenu" name="menu_Animation">
     <property name="title">
@@ -828,22 +826,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionOpenGL_Driver_Info</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>OnShowOpenGLInfo()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>472</x>
-     <y>309</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionRefresh_All_Textures</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -916,7 +898,6 @@
   <slot>OnPicmipTo1()</slot>
   <slot>OnPicmipTo2()</slot>
   <slot>OnPicmipTo3()</slot>
-  <slot>OnShowOpenGLInfo()</slot>
   <slot>OnIncreaseLOD()</slot>
   <slot>OnDecreaseLOD()</slot>
   <slot>OnRefreshTextures()</slot>

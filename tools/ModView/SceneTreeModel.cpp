@@ -2,6 +2,7 @@
 #include "SceneTreeModel.h"
 
 #include "ISceneTreeItemVisitor.h"
+#include "r_model.h"
 #include "SceneTreeItem.h"
 
 //=============================================================================
@@ -92,8 +93,20 @@ void SequenceSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
     visitor->Visit (GetModel(), sequence, sequenceIndex);
 }
 
+std::string Surface_CreateTreeName ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface )
+{
+    ModelContainer_t *container = ModelContainer_FindFromModelHandle (model);
+    if ( trap_G2_IsSurfaceOff (model, container->slist, surface->name) == SURF_OFF )
+    {
+        std::string prefix = "////// ";
+        return prefix + surface->name;
+    }
+    
+    return surface->name;
+}
+
 SurfaceSceneTreeItem::SurfaceSceneTreeItem ( const mdxmSurfHierarchy_t *surface, int surfaceIndex, ModelHandle_t model, SceneTreeItem *parent )
-    : SceneTreeItem (surface->name, model, parent)
+    : SceneTreeItem (QString::fromStdString (Surface_CreateTreeName (model, surface)), model, parent)
     , surface (surface)
     , surfaceIndex (surfaceIndex)
 {

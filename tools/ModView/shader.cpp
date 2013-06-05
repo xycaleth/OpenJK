@@ -269,7 +269,9 @@ ShadersFoundAndFilesPicked_t ShadersFoundAndFilesPicked;
 
 void KillAllShaderFiles(void)
 {
-	SAFEFREE(s_shaderText);
+	free (s_shaderText);
+	s_shaderText = NULL;
+
 	ShadersFoundAndFilesPicked.clear();
 }
 
@@ -293,7 +295,11 @@ void ScanAndLoadShaderFiles( void )
 		if ( shaderFiles.empty() )
 		{
 			ri.Printf( PRINT_WARNING, "WARNING: no shader files found in '%s'\n", sSHADER_DIR);
-			s_shaderText = CopyString("// blank shader file to avoid re-scanning shaders\n");
+			const char *blankShaderText = "// blank shader file to avoid re-scanning shaders\n";
+			std::size_t len = strlen (blankShaderText);
+			s_shaderText = (char *)malloc (len + 1);
+			Q_strncpyz (s_shaderText, blankShaderText, len + 1);
+
 			return;
 		}
 
@@ -319,10 +325,10 @@ void ScanAndLoadShaderFiles( void )
 		s_shaderText = (char *)ri.Hunk_Alloc( sum + shaderFiles.size()*2 );
 
 		// free in reverse order, so the temp files are all dumped
-		for ( std::size_t i = shaderFiles.size() - 1; i >= 0 ; i-- ) {
+		for ( std::size_t i = shaderFiles.size(); i > 0; i-- ) {
 			strcat( s_shaderText, "\n" );
-			strcat( s_shaderText, buffers[i] );
-			ri.FS_FreeFile( buffers[i] );
+			strcat( s_shaderText, buffers[i - 1] );
+			ri.FS_FreeFile( buffers[i - 1] );
 		}
 
 	#ifdef SHADERTEXTHASH

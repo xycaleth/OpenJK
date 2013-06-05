@@ -330,12 +330,6 @@ void MainForm::ChangePicmip ( int level )
     ModelList_ForceRedraw();
 }
 
-void MainForm::OnShowOpenGLInfo()
-{
-    // FIXME: Message box is too narrow.
-    QMessageBox::information (this, "OpenGL Driver Info", QString::fromStdString (GL_GetInfo()));
-}
-
 void MainForm::OnRefreshTextures()
 {
     TextureList_Refresh();
