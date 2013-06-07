@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 #include "includes.h"
-#include "special_defines.h"
 //
 #include "anims.h"
 #include "R_Model.h"
@@ -68,10 +67,10 @@ static void GLMModel_BuildDefaultGLA()
 				static const mdxaBone_t IdentityBone = 
 				{				
 					{
-                        { 1.0f, 0.0f, 0.0f, 0.0f },
-                        { 0.0f, 1.0f, 0.0f, 0.0f },
-                        { 0.0f, 0.0f, 1.0f, 0.0f }
-                    }
+						{ 1.0f, 0.0f, 0.0f, 0.0f },
+						{ 0.0f, 1.0f, 0.0f, 0.0f },
+						{ 0.0f, 0.0f, 1.0f, 0.0f }
+					}
 				};
 				
 				// base and inverse of an identity matrix are the same, so...
@@ -427,7 +426,7 @@ static const char * v2tos(vec2_t v2)
 const char * GLMModel_SurfaceVertInfo( ModelHandle_t hModel, int iSurfaceIndex )
 {
 	static std::string str;
-    str = "";
+	str = "";
 
 	mdxmHeader_t			*pMDXMHeader		= (mdxmHeader_t	*) RE_GetModelData(hModel);
 	mdxmHierarchyOffsets_t	*pHierarchyOffsets	= (mdxmHierarchyOffsets_t *) ((byte *) pMDXMHeader + sizeof(*pMDXMHeader));
@@ -662,61 +661,61 @@ static const char * GLMModel_CreateSurfaceName( const char * psSurfaceName, bool
 }
 
 void R_GLM_SurfaceRecursiveApply (
-    ModelHandle_t model,
-    int surfaceIndex,
-    mdxmHierarchyOffsets_t *pHierarchyOffsets,
-    void (*preCallback) ( mdxmSurfHierarchy_t *, int, void * ),
-    void (*callback)( mdxmSurfHierarchy_t *, int, void * ),
-    void (*postCallback)( mdxmSurfHierarchy_t *, int, void * ),
-    void *userData
+	ModelHandle_t model,
+	int surfaceIndex,
+	mdxmHierarchyOffsets_t *pHierarchyOffsets,
+	void (*preCallback) ( mdxmSurfHierarchy_t *, int, void * ),
+	void (*callback)( mdxmSurfHierarchy_t *, int, void * ),
+	void (*postCallback)( mdxmSurfHierarchy_t *, int, void * ),
+	void *userData
 )
 {
-    mdxmSurfHierarchy_t *thisSurface = (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[surfaceIndex]);
-    if ( preCallback != NULL )
-    {
-        preCallback (thisSurface, surfaceIndex, userData);
-    }
+	mdxmSurfHierarchy_t *thisSurface = (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[surfaceIndex]);
+	if ( preCallback != NULL )
+	{
+		preCallback (thisSurface, surfaceIndex, userData);
+	}
 
 	for ( int i = 0; i < thisSurface->numChildren; i++ )
 	{
-        int childIndex = thisSurface->childIndexes[i];
-        mdxmSurfHierarchy_t *childSurface = (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[childIndex]);
+		int childIndex = thisSurface->childIndexes[i];
+		mdxmSurfHierarchy_t *childSurface = (mdxmSurfHierarchy_t *) ((byte *) pHierarchyOffsets + pHierarchyOffsets->offsets[childIndex]);
 		callback (childSurface, childIndex, userData);
 	}
 
-    if ( postCallback != NULL )
-    {
-        postCallback (thisSurface, surfaceIndex, userData);
-    }
+	if ( postCallback != NULL )
+	{
+		postCallback (thisSurface, surfaceIndex, userData);
+	}
 }
 
 void R_GLM_BoneRecursiveApply (
-    ModelHandle_t model,
-    int boneIndex,
-    mdxaSkelOffsets_t* pSkelOffsets,
-    void (*preCallback) ( mdxaSkel_t *, int, void * ),
-    void (*callback)( mdxaSkel_t *, int, void * ),
-    void (*postCallback)( mdxaSkel_t *, int, void * ),
-    void *userData
+	ModelHandle_t model,
+	int boneIndex,
+	mdxaSkelOffsets_t* pSkelOffsets,
+	void (*preCallback) ( mdxaSkel_t *, int, void * ),
+	void (*callback)( mdxaSkel_t *, int, void * ),
+	void (*postCallback)( mdxaSkel_t *, int, void * ),
+	void *userData
 )
 {
-    mdxaSkel_t *thisBone = (mdxaSkel_t *)((byte *)pSkelOffsets + pSkelOffsets->offsets[boneIndex]);
-    if ( preCallback != NULL )
-    {
-        preCallback (thisBone, boneIndex, userData);
-    }
+	mdxaSkel_t *thisBone = (mdxaSkel_t *)((byte *)pSkelOffsets + pSkelOffsets->offsets[boneIndex]);
+	if ( preCallback != NULL )
+	{
+		preCallback (thisBone, boneIndex, userData);
+	}
 
 	for ( int i = 0; i < thisBone->numChildren; i++ )
 	{
-        int childIndex = thisBone->children[i];
-        mdxaSkel_t *childBone = (mdxaSkel_t *)((byte *)pSkelOffsets + pSkelOffsets->offsets[childIndex]);
+		int childIndex = thisBone->children[i];
+		mdxaSkel_t *childBone = (mdxaSkel_t *)((byte *)pSkelOffsets + pSkelOffsets->offsets[childIndex]);
 		callback (childBone, childIndex, userData);
 	}
 
-    if ( postCallback != NULL )
-    {
-        postCallback (thisBone, boneIndex, userData);
-    }
+	if ( postCallback != NULL )
+	{
+		postCallback (thisBone, boneIndex, userData);
+	}
 }
 
 // Note, this function is only really supposed to be called once, to setup the Container that owns this model
@@ -1122,7 +1121,7 @@ bool GLMModel_Parse(struct ModelContainer *pContainer, const char * psLocalFilen
 
 		pContainer->iBoneBolt_MaxBoltPoints		= pContainer->iNumBones;	// ... since these are pretty much the same in this format
 		pContainer->iSurfaceBolt_MaxBoltPoints	= pContainer->iNumSurfaces;	// ... since these are pretty much the same in this format
-                
+				
 		GLMModel_ReadSkinFiles	  (pContainer, psLocalFilename);
 		GLMModel_ReadSequenceInfo (pContainer, pMDXMHeader->animName);
 	}
@@ -1264,19 +1263,19 @@ static void CUTDOWN_G2_TransformBone ( int newFrame, int parent, int child, mdxa
 
 	// decide where the transformed bone is going
 
-  	//
-  	// lerp this bone - use the temp space on the ref entity to put the bone transforms into
-  	//
-  	if (child)
-  	{
+	//
+	// lerp this bone - use the temp space on the ref entity to put the bone transforms into
+	//
+	if (child)
+	{
 //		MC_UnCompress(tbone[2].matrix,pCompBonePool[aframe->boneIndexes[child]].Comp);
 		UnCompressBone(tbone[2].matrix, child, header, newFrame);		
-  	}
-  	else
-  	{
+	}
+	else
+	{
 //		MC_UnCompress(bonePtr[child].matrix,pCompBonePool[aframe->boneIndexes[child]].Comp);
 		UnCompressBone(bonePtr[child].matrix, child, header, newFrame);		
-  	}
+	}
 
 	// now transform the matrix by it's parent, asumming we have a parent, and we aren't overriding the angles absolutely
 	if (child)

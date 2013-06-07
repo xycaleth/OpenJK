@@ -13,7 +13,6 @@
 #include "skins.h"
 #include "oldskins.h"
 #include "mc_compress2.h"
-#include "special_defines.h"
 #include "StringUtils.h"
 //
 #include "r_glm.h"

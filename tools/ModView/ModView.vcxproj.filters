@@ -360,9 +360,6 @@
     <CustomBuild Include="skins.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="special_defines.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="stl.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
@@ -493,9 +490,6 @@
     </ClInclude>
     <ClInclude Include="SceneTreeItemAction.h">
       <Filter>Header Files\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="resource1.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="StringUtils.h">
       <Filter>Header Files</Filter>

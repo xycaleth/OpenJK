@@ -185,11 +185,11 @@ static unsigned int DStamp_CalcBlockCRC(void *pvData, int iByteLength)
 static const char * DStamp_GetYear(void)
 {
 	static char sTemp[20];	
-    time_t ltime;	
+	time_t ltime;	
 
-    time( &ltime );    
+	time( &ltime );    
 	
-    struct tm *today = localtime( &ltime );    
+	struct tm *today = localtime( &ltime );    
 	
 	strftime( sTemp, sizeof(sTemp), "%d%m%y", today );
 
