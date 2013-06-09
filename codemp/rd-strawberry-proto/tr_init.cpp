@@ -424,41 +424,41 @@ GL_CheckErrors
 ==================
 */
 void GL_CheckErrors( void ) {
-    int		err;
-    char	s[64];
+	int		err;
+	char	s[64];
 
-    err = qglGetError();
-    if ( err == GL_NO_ERROR ) {
-        return;
-    }
-    if ( r_ignoreGLErrors->integer ) {
-        return;
-    }
-    switch( err ) {
-        case GL_INVALID_ENUM:
-            strcpy( s, "GL_INVALID_ENUM" );
-            break;
-        case GL_INVALID_VALUE:
-            strcpy( s, "GL_INVALID_VALUE" );
-            break;
-        case GL_INVALID_OPERATION:
-            strcpy( s, "GL_INVALID_OPERATION" );
-            break;
-        case GL_STACK_OVERFLOW:
-            strcpy( s, "GL_STACK_OVERFLOW" );
-            break;
-        case GL_STACK_UNDERFLOW:
-            strcpy( s, "GL_STACK_UNDERFLOW" );
-            break;
-        case GL_OUT_OF_MEMORY:
-            strcpy( s, "GL_OUT_OF_MEMORY" );
-            break;
-        default:
-            Com_sprintf( s, sizeof(s), "%i", err);
-            break;
-    }
+	err = qglGetError();
+	if ( err == GL_NO_ERROR ) {
+		return;
+	}
+	if ( r_ignoreGLErrors->integer ) {
+		return;
+	}
+	switch( err ) {
+		case GL_INVALID_ENUM:
+			strcpy( s, "GL_INVALID_ENUM" );
+			break;
+		case GL_INVALID_VALUE:
+			strcpy( s, "GL_INVALID_VALUE" );
+			break;
+		case GL_INVALID_OPERATION:
+			strcpy( s, "GL_INVALID_OPERATION" );
+			break;
+		case GL_STACK_OVERFLOW:
+			strcpy( s, "GL_STACK_OVERFLOW" );
+			break;
+		case GL_STACK_UNDERFLOW:
+			strcpy( s, "GL_STACK_UNDERFLOW" );
+			break;
+		case GL_OUT_OF_MEMORY:
+			strcpy( s, "GL_OUT_OF_MEMORY" );
+			break;
+		default:
+			Com_sprintf( s, sizeof(s), "%i", err);
+			break;
+	}
 
-    Com_Error( ERR_FATAL, "GL_CheckErrors: %s", s );
+	Com_Error( ERR_FATAL, "GL_CheckErrors: %s", s );
 }
 
 /*
@@ -466,32 +466,32 @@ void GL_CheckErrors( void ) {
 */
 typedef struct vidmode_s
 {
-    const char *description;
-    int         width, height;
+	const char *description;
+	int         width, height;
 } vidmode_t;
 
 const vidmode_t r_vidModes[] = {
-    { "Mode  0: 320x240",		320,	240 },
-    { "Mode  1: 400x300",		400,	300 },
-    { "Mode  2: 512x384",		512,	384 },
-    { "Mode  3: 640x480",		640,	480 },
-    { "Mode  4: 800x600",		800,	600 },
-    { "Mode  5: 960x720",		960,	720 },
-    { "Mode  6: 1024x768",		1024,	768 },
-    { "Mode  7: 1152x864",		1152,	864 },
-    { "Mode  8: 1280x1024",		1280,	1024 },
-    { "Mode  9: 1600x1200",		1600,	1200 },
-    { "Mode 10: 2048x1536",		2048,	1536 },
-    { "Mode 11: 856x480 (wide)", 856,	 480 },
-    { "Mode 12: 2400x600(surround)",2400,600 }
+	{ "Mode  0: 320x240",		320,	240 },
+	{ "Mode  1: 400x300",		400,	300 },
+	{ "Mode  2: 512x384",		512,	384 },
+	{ "Mode  3: 640x480",		640,	480 },
+	{ "Mode  4: 800x600",		800,	600 },
+	{ "Mode  5: 960x720",		960,	720 },
+	{ "Mode  6: 1024x768",		1024,	768 },
+	{ "Mode  7: 1152x864",		1152,	864 },
+	{ "Mode  8: 1280x1024",		1280,	1024 },
+	{ "Mode  9: 1600x1200",		1600,	1200 },
+	{ "Mode 10: 2048x1536",		2048,	1536 },
+	{ "Mode 11: 856x480 (wide)", 856,	 480 },
+	{ "Mode 12: 2400x600(surround)",2400,600 }
 };
 static const int	s_numVidModes = ( sizeof( r_vidModes ) / sizeof( r_vidModes[0] ) );
 
 qboolean R_GetModeInfo( int *width, int *height, int mode ) {
 	const vidmode_t	*vm;
 
-    if ( mode < -1 ) {
-        return qfalse;
+	if ( mode < -1 ) {
+		return qfalse;
 	}
 	if ( mode >= s_numVidModes ) {
 		return qfalse;
@@ -505,10 +505,10 @@ qboolean R_GetModeInfo( int *width, int *height, int mode ) {
 
 	vm = &r_vidModes[mode];
 
-    *width  = vm->width;
-    *height = vm->height;
+	*width  = vm->width;
+	*height = vm->height;
 
-    return qtrue;
+	return qtrue;
 }
 
 /*
@@ -792,7 +792,7 @@ void R_ScreenShotTGA_f (void) {
 		if ( ri.FS_FileExists( checkname ) ) {
 			Com_Printf( "ScreenShot: Couldn't create a file\n"); 
 			return;
- 		}
+		}
 	}
 
 	R_TakeScreenshot( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname );
@@ -836,7 +836,7 @@ void R_ScreenShotPNG_f (void) {
 		if ( ri.FS_FileExists( checkname ) ) {
 			Com_Printf( "ScreenShot: Couldn't create a file\n"); 
 			return;
- 		}
+		}
 	}
 
 	R_TakeScreenshotPNG( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname );
@@ -868,7 +868,7 @@ void R_ScreenShot_f (void) {
 		if ( ri.FS_FileExists( checkname ) ) {
 			Com_Printf( "ScreenShot: Couldn't create a file\n" );
 			return;
- 		}
+		}
 	}
 
 	R_TakeScreenshotJPEG( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname );
@@ -1337,68 +1337,79 @@ Ghoul2 Insert End
 }
 
 static const char *woop = "#version 150\n\
-uniform float u_Time;\n\
+uniform struct WaveDescription {\n\
+	int type;\n\
+	vec3 moveVector;\n\
+	struct WaveForm {\n\
+		int generator;\n\
+		vec4 data;\n\
+	} deformationWave;\n\
+	float		deformationSpread;\n\
+	float		bulgeWidth;\n\
+	float		bulgeHeight;\n\
+	float		bulgeSpeed;\n\
+} u_WaveDescription[3];\n\
+varying vec4 ex_Color;\n\
 void main() {\n\
-    gl_Position = ftransform();\n\
-    gl_TexCoord[0] = gl_MultiTexCoord0;\n\
-    gl_TexCoord[1] = gl_MultiTexCoord1;\n\
-    gl_TexCoord[2] = gl_MultiTexCoord2;\n\
-    gl_TexCoord[3] = gl_MultiTexCoord3;\n\
+	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n\
+	gl_TexCoord[0] = gl_MultiTexCoord0;\n\
+	gl_TexCoord[1] = gl_MultiTexCoord1;\n\
+	ex_Color = gl_Color;\n\
 }";
 
 static const char *woop2 = "#version 150\n\
 uniform sampler2D diffuse;\n\
 uniform sampler2D lightmap;\n\
+varying vec4 ex_Color;\n\
 void main() {\n\
-    gl_FragColor = texture2D (diffuse, gl_TexCoord[0].st) * texture2D (lightmap, gl_TexCoord[1].st);\n\
+	gl_FragColor = ex_Color * texture2D (diffuse, gl_TexCoord[0].st) * texture2D (lightmap, gl_TexCoord[1].st);\n\
 }";
 
 static void R_InitTemporaryShakeProgram()
 {
-    tr.vertexShader = qglCreateShader (GL_VERTEX_SHADER);
-    qglShaderSource (tr.vertexShader, 1, &woop, NULL);
-    qglCompileShader (tr.vertexShader);
+	tr.vertexShader = qglCreateShader (GL_VERTEX_SHADER);
+	qglShaderSource (tr.vertexShader, 1, &woop, NULL);
+	qglCompileShader (tr.vertexShader);
 
-    GLint status;
-    qglGetShaderiv (tr.vertexShader, GL_COMPILE_STATUS, &status);
-    if ( status == GL_FALSE )
-    {
-        char log[1024];
-        qglGetShaderInfoLog (tr.vertexShader, 1024, NULL, log);
+	GLint status;
+	qglGetShaderiv (tr.vertexShader, GL_COMPILE_STATUS, &status);
+	if ( status == GL_FALSE )
+	{
+		char log[1024];
+		qglGetShaderInfoLog (tr.vertexShader, 1024, NULL, log);
 
-        ri.Printf (PRINT_ALL, "%s\n", log);
-    }
+		ri.Printf (PRINT_ALL, "%s\n", log);
+	}
 
-    tr.fragmentShader = qglCreateShader (GL_FRAGMENT_SHADER);
-    qglShaderSource (tr.fragmentShader, 1, &woop2, NULL);
-    qglCompileShader (tr.fragmentShader);
-    qglGetShaderiv (tr.fragmentShader, GL_COMPILE_STATUS, &status);
-    if ( status == GL_FALSE )
-    {
-        char log[1024];
-        qglGetShaderInfoLog (tr.fragmentShader, 1024, NULL, log);
+	tr.fragmentShader = qglCreateShader (GL_FRAGMENT_SHADER);
+	qglShaderSource (tr.fragmentShader, 1, &woop2, NULL);
+	qglCompileShader (tr.fragmentShader);
+	qglGetShaderiv (tr.fragmentShader, GL_COMPILE_STATUS, &status);
+	if ( status == GL_FALSE )
+	{
+		char log[1024];
+		qglGetShaderInfoLog (tr.fragmentShader, 1024, NULL, log);
 
-        ri.Printf (PRINT_ALL, "%s\n", log);
-    }
+		ri.Printf (PRINT_ALL, "%s\n", log);
+	}
 
-    tr.shakeProgram = qglCreateProgram();
-    qglAttachShader (tr.shakeProgram, tr.vertexShader);
-    qglAttachShader (tr.shakeProgram, tr.fragmentShader);
-    qglLinkProgram (tr.shakeProgram);
-    qglGetProgramiv (tr.shakeProgram, GL_LINK_STATUS, &status);
-    if ( status == GL_FALSE )
-    {
-        char log[1024];
-        qglGetProgramInfoLog (tr.shakeProgram, 1024, NULL, log);
+	tr.shakeProgram = qglCreateProgram();
+	qglAttachShader (tr.shakeProgram, tr.vertexShader);
+	qglAttachShader (tr.shakeProgram, tr.fragmentShader);
+	qglLinkProgram (tr.shakeProgram);
+	qglGetProgramiv (tr.shakeProgram, GL_LINK_STATUS, &status);
+	if ( status == GL_FALSE )
+	{
+		char log[1024];
+		qglGetProgramInfoLog (tr.shakeProgram, 1024, NULL, log);
 
-        ri.Printf (PRINT_ALL, "%s\n", log);
-    }
+		ri.Printf (PRINT_ALL, "%s\n", log);
+	}
 
-    qglUseProgram (tr.shakeProgram);
-    tr.loc = qglGetUniformLocation (tr.shakeProgram, "u_Time");
-    GLint lightmap = qglGetUniformLocation (tr.shakeProgram, "lightmap");
-    qglUniform1i (lightmap, 1);
-    qglUseProgram (0);
+	qglUseProgram (tr.shakeProgram);
+	GLint lightmap = qglGetUniformLocation (tr.shakeProgram, "lightmap");
+	qglUniform1i (lightmap, 1);
+	qglUseProgram (0);
 }
 
 
@@ -1495,7 +1506,7 @@ void R_Init( void ) {
 
 	R_InitWorldEffects();
 
-    R_InitTemporaryShakeProgram();
+	R_InitTemporaryShakeProgram();
 
 	int	err = qglGetError();
 	if ( err != GL_NO_ERROR )
@@ -1510,14 +1521,14 @@ RE_Shutdown
 ===============
 */
 void RE_Shutdown( qboolean destroyWindow ) {
-    qglDeleteShader (tr.vertexShader);
-    qglDeleteShader (tr.fragmentShader);
-    qglDeleteProgram (tr.shakeProgram);
+	qglDeleteShader (tr.vertexShader);
+	qglDeleteShader (tr.fragmentShader);
+	qglDeleteProgram (tr.shakeProgram);
 
-    if ( qglGetError() != GL_NO_ERROR )
-    {
-        ri.Printf (PRINT_ALL, "wut\n");
-    }
+	if ( qglGetError() != GL_NO_ERROR )
+	{
+		ri.Printf (PRINT_ALL, "wut\n");
+	}
 
 //	Com_Printf ("RE_Shutdown( %i )\n", destroyWindow );
 
@@ -1608,7 +1619,7 @@ void RE_GetLightStyle(int style, color4ub_t color)
 {
 	if (style >= MAX_LIGHT_STYLES)
 	{
-	    Com_Error( ERR_FATAL, "RE_GetLightStyle: %d is out of range", (int)style );
+		Com_Error( ERR_FATAL, "RE_GetLightStyle: %d is out of range", (int)style );
 		return;
 	}
 
@@ -1619,7 +1630,7 @@ void RE_SetLightStyle(int style, int color)
 {
 	if (style >= MAX_LIGHT_STYLES)
 	{
-	    Com_Error( ERR_FATAL, "RE_SetLightStyle: %d is out of range", (int)style );
+		Com_Error( ERR_FATAL, "RE_SetLightStyle: %d is out of range", (int)style );
 		return;
 	}
 

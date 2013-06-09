@@ -426,17 +426,17 @@ static void AutospriteDeform( void ) {
 		}
 
 	  // compensate for scale in the axes if necessary
-  	if ( backEnd.currentEntity->e.nonNormalizedAxes ) {
-      float axisLength;
+	if ( backEnd.currentEntity->e.nonNormalizedAxes ) {
+	  float axisLength;
 		  axisLength = VectorLength( backEnd.currentEntity->e.axis[0] );
-  		if ( !axisLength ) {
-	  		axisLength = 0;
-  		} else {
-	  		axisLength = 1.0f / axisLength;
-  		}
-      VectorScale(left, axisLength, left);
-      VectorScale(up, axisLength, up);
-    }
+		if ( !axisLength ) {
+			axisLength = 0;
+		} else {
+			axisLength = 1.0f / axisLength;
+		}
+	  VectorScale(left, axisLength, left);
+	  VectorScale(up, axisLength, up);
+	}
 
 		RB_AddQuadStamp( mid, left, up, tess.vertexColors[i] );
 	}
@@ -576,8 +576,8 @@ void RB_DeformTessGeometry( void ) {
 		ds = tess.shader->deforms[ i ];
 
 		switch ( ds->deformation ) {
-        case DEFORM_NONE:
-            break;
+		case DEFORM_NONE:
+			break;
 		case DEFORM_NORMALS:
 			RB_CalcDeformNormals( ds );
 			break;

@@ -1983,6 +1983,140 @@ qboolean R_GetEntityToken( char *buffer, int size ) {
 	}
 }
 
+#if 0
+static void R_MoveMapDataToBuffers ( world_t &world )
+{
+    int numsurfaces = world.numsurfaces;
+    msurface_t *surfaces = world.surfaces;
+
+    qglGenBuffers (1, &world.vbo.id);
+    world.vbo.size = 0;
+
+    qglGenBuffers (1, &world.ibo.id);
+    world.ibo.size = 0;
+
+    for ( int i = 0; i < numsurfaces; i++ )
+    {
+        msurface_t *surface = &surfaces[i];
+        surfaceType_t *surfaceType = surface->data;
+
+        switch ( *surfaceType )
+        {
+            case SF_TRIANGLES:
+            {
+                srfTriangles_t *triangles = (srfTriangles_t *)surfaceType;
+                triangles->vbo = &world.vbo;
+                triangles->ibo = &world.ibo;
+
+                world.vbo.size += triangles->numVerts * sizeof (drawVert_t);
+                world.ibo.size += triangles->numIndexes; // Multiply by element size later
+
+                break;
+            }
+
+            case SF_FACE:
+            {
+                srfSurfaceFace_t *face = (srfSurfaceFace_t *)surfaceType;
+                face->vbo = &world.vbo;
+                face->ibo = &world.ibo;
+
+                world.vbo.size += face->numPoints * sizeof (drawVert_t);
+                world.ibo.size += face->numIndices; // Multiply by element size later
+
+                break;
+            }
+
+            case SF_GRID:
+            {
+                srfGridMesh_t *mesh = (srfGridMesh_t *)surfaceType;
+                // ignore for now :)
+
+                break;
+            }
+        }
+    }
+
+    drawVert_t *verts = (drawVert_t *)malloc (world.vbo.size);
+    drawVert_t *vertTop = verts;
+    size_t numVerts = 0;
+
+    unsigned int *indices = (unsigned int *)malloc (world.ibo.size * sizeof (unsigned int));
+    unsigned int *indexTop = indices;
+
+    for ( int i = 0; i < numsurfaces; i++ )
+    {
+        msurface_t *surface = &surfaces[i];
+        surfaceType_t *surfaceType = surface->data;
+
+        switch ( *surfaceType )
+        {
+            case SF_TRIANGLES:
+            {
+                srfTriangles_t *triangles = (srfTriangles_t *)surfaceType;
+
+                // Vertices
+                memcpy (vertTop, triangles->verts, triangles->numVerts * sizeof (drawVert_t));
+                vertTop += triangles->numVerts;
+                numVerts += triangles->numVerts;
+
+                // Indices
+                for ( int j = 0; j < triangles->numIndexes; j++ )
+                {
+                    indexTop[j] = triangles->indexes[i] + numVerts;
+                }
+                indexTop += triangles->numIndexes;
+
+                break;
+            }
+
+            case SF_FACE:
+            {
+                srfSurfaceFace_t *face = (srfSurfaceFace_t *)surfaceType;
+
+                // Vertices
+                for ( int j = 0; j < face->numPoints; j++ )
+                {
+                    VectorCopy (face->points[i], vertTop[j].xyz);
+                    vertTop[j].st[0] = face->points[j][2];
+                    vertTop[j].st[1] = face->points[j][3];
+                    VectorCopy (face->plane.normal, vertTop[j].normal);
+                }
+
+                vertTop += face->numPoints;
+                numVerts += face->numPoints;
+
+                // Indices
+                unsigned int *indices = (unsigned *)((char *)face + face->ofsIndices);
+                for ( int j = 0; j < face->numIndices; j++ )
+                {
+                    indexTop[j] = indices[j] + numVerts;
+                }
+                indexTop += face->numIndices;
+
+                break;
+            }
+
+            case SF_GRID:
+            {
+                srfGridMesh_t *mesh = (srfGridMesh_t *)surfaceType;
+                // ignore for now :)
+
+                break;
+            }
+        }
+    }
+
+    qglBindBuffer (GL_ARRAY_BUFFER, world.vbo.id);
+    qglBufferData (GL_ARRAY_BUFFER, world.vbo.size, verts, GL_STATIC_DRAW);
+    
+    qglBindBuffer (GL_ELEMENT_ARRAY_BUFFER, world.ibo.id);
+    qglBufferData (GL_ELEMENT_ARRAY_BUFFER, world.ibo.size * sizeof (unsigned int), indices, GL_STATIC_DRAW);
+
+    free (indices);
+    free (verts);
+}
+#endif
+
 /*
 =================
 RE_LoadWorldMap

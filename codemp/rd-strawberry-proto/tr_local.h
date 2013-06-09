@@ -591,6 +591,26 @@ typedef struct {
 /*
 ==============================================================================
 
+GPU RESOURCES
+
+==============================================================================
+*/
+struct buffer_object_t
+{
+    unsigned int id;
+    size_t size;
+};
+
+struct draw_call_t
+{
+    size_t numElements;
+    size_t offset;
+};
+
+
+/*
+==============================================================================
+
 SURFACES
 
 ==============================================================================
@@ -671,6 +691,10 @@ typedef struct srfGridMesh_s {
 	// dynamic lighting information
 	int				dlightBits;
 
+    buffer_object_t     *vbo;
+    buffer_object_t     *ibo;
+    draw_call_t         drawCall;
+
 	// culling information
 	vec3_t			meshBounds[2];
 	vec3_t			localOrigin;
@@ -694,6 +718,10 @@ typedef struct srfGridMesh_s {
 typedef struct {
 	surfaceType_t	surfaceType;
 	cplane_t	plane;
+
+    buffer_object_t     *vbo;
+    buffer_object_t     *ibo;
+    draw_call_t         drawCall;
 
 	// dynamic lighting information
 	int			dlightBits;
@@ -725,6 +753,10 @@ typedef struct {
 	int				numVerts;
 	drawVert_t		*verts;
 //	vec3_t			*tangents;
+
+    buffer_object_t     *vbo;
+    buffer_object_t     *ibo;
+    draw_call_t         drawCall;
 } srfTriangles_t;
 
 
@@ -751,7 +783,6 @@ BRUSH MODELS
 
 ==============================================================================
 */
-
 
 //
 // in memory representation
@@ -859,6 +890,9 @@ typedef struct {
 
 	char		*entityString;
 	char		*entityParsePoint;
+
+    buffer_object_t vbo;
+    buffer_object_t ibo;
 } world_t;
 
 //======================================================================

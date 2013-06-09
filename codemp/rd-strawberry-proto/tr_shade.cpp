@@ -1,5 +1,6 @@
 //Anything above this #include will be ignored by the compiler
 #include "qcommon/exe_headers.h"
+#include <cstddef>
 
 // tr_shade.c
 
@@ -1676,6 +1677,9 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		UseGLFog = true;
 	}
 
+    qglUseProgram (tr.shakeProgram);
+
+
 	for ( stage = 0; stage < input->shader->numUnfoggedPasses; stage++ )
 	{
 		shaderStage_t *pStage = &tess.xstages[stage];
@@ -1866,6 +1870,11 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				GL_State( stateBits );
 			}
 
+            GL_SelectTexture (1);
+            GL_Bind (tr.whiteImage); // Blank light map
+
+            GL_SelectTexture (0);
+
 			//
 			// draw
 			//
@@ -1889,6 +1898,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 	{
 		qglFogfv(GL_FOG_COLOR, fog->parms.color);
 	}
+
+    qglUseProgram (0);
 }
 
 
