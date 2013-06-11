@@ -957,6 +957,11 @@ void SV_Init (void) {
 
 	sv_filterCommands = Cvar_Get( "sv_filterCommands", "0", CVAR_ARCHIVE );
 
+    sv_rateLimitIncomingBurst = Cvar_Get ("sv_rateLimitIncomingBurst", "10", CVAR_ARCHIVE);
+    sv_rateLimitIncomingPeriod = Cvar_Get ("sv_rateLimitIncomingPeriod", "1000", CVAR_ARCHIVE);
+    sv_rateLimitOutgoingBurst = Cvar_Get ("sv_rateLimitOutgoingBurst", "10", CVAR_ARCHIVE);
+    sv_rateLimitOutgoingPeriod = Cvar_Get ("sv_rateLimitOutgoingPeriod", "100", CVAR_ARCHIVE);
+
 //	sv_debugserver = Cvar_Get ("sv_debugserver", "0", 0);
 
 	// initialize bot cvars so they are listed and can be set before loading the botlib
