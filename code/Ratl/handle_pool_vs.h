@@ -143,7 +143,7 @@ public:
 	const TTValue&	operator[](int handle) const 									
 	{
 		assert(is_used(handle));		//typically this is a stale handle (already been freed)
-		return value_at_index(handle&mMASK_HANDLE_TO_INDEX);
+		return pool_root<T>::value_at_index(handle&mMASK_HANDLE_TO_INDEX);
 	}
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -231,7 +231,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////
 	int			index_to_handle(int index) const
 	{
-		assert(index>=0 && index<CAPACITY && is_used_index(index)); //disallowing this on stale handles
+		assert(index>=0 && index<CAPACITY && pool_root<T>::is_used_index(index)); //disallowing this on stale handles
 		return (mHandles[index]);
 	}
 
@@ -259,7 +259,7 @@ public:
 	pool_root<T>::iterator	at(int handle)
 	{
 		assert(is_used(handle));
-		return at_index(handle&mMASK_HANDLE_TO_INDEX);
+		return pool_root<T>::at_index(handle&mMASK_HANDLE_TO_INDEX);
 	}
 
     ////////////////////////////////////////////////////////////////////////////////////
@@ -271,7 +271,7 @@ public:
 	pool_root<T>::const_iterator	at(int handle) const
 	{
 		assert(is_used(handle));
-		return at_index(handle&mMASK_HANDLE_TO_INDEX);
+		return pool_root<T>::at_index(handle&mMASK_HANDLE_TO_INDEX);
 	}
 };
 

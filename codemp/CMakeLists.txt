@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.8)
 
 # Make sure the user is not executing this script directly
 if(NOT InOpenJK)
@@ -35,7 +35,7 @@ if(BuildMPEngine OR BuildMPDed)
 	#    Botlib
 	# the files could arguably just be put into the engine and dedicated projects without having a library for it.
 	set(MPBotlibDefines ${SharedDefines} "BOTLIB")
-	set(MPBotlibIncludeDirectories "${MPDir}")
+	set(MPBotlibIncludeDirectories ${MPDir})
 	set(MPBotlibHeaderFiles
 		"${MPDir}/botlib/aasfile.h"
 		"${MPDir}/botlib/be_aas.h"
@@ -124,16 +124,14 @@ if(BuildMPEngine OR BuildMPDed)
 	# Platform-specific libraries
 	if(WIN32)
 		set(MPEngineAndDedLibraries ${MPEngineAndDedLibraries} "winmm" "wsock32")
-	else(WIN32)
-		message("You might need to add some libraries to codemp/CMakeLists.txt or you could get linker errors on non-Windows-OSs.")
 	endif(WIN32)
 	# Include directories
-	set(MPEngineAndDedIncludeDirectories ${MPDir}) # codemp folder, since includes are not always relative in the files
+	set(MPEngineAndDedIncludeDirectories ${MPDir} ${OpenJKLibDir}) # codemp folder, since includes are not always relative in the files
 	
 	if(UseInternalZlib)
-		set(MPEngineAndDedIncludeDirectories ${MPEngineAndDedIncludeDirectories} "${MPDir}/zlib")
+		#set(MPEngineAndDedIncludeDirectories ${MPEngineAndDedIncludeDirectories} "${OpenJKLibDir}/zlib")
 		# OpenAL32.lib is included for windows
-		find_library(ZlibLibrary NAMES zlib PATHS "${MPDir}/libs/win32")
+		find_library(ZlibLibrary NAMES zlib PATHS ${OpenJKLibDir})
 		if(NOT ZlibLibrary)
 			message(FATAL_ERROR "UseInternalOpenAL set, but libs/OpenAL32 not found!")
 		endif(NOT ZlibLibrary)
@@ -144,7 +142,7 @@ if(BuildMPEngine OR BuildMPDed)
 		set(MPEngineAndDedLibraries ${MPEngineAndDedLibraries} ${ZLIB_LIBRARY})
 	endif(UseInternalZlib)
 
-	file(GLOB_RECURSE J_SRC "${MPDir}/jpeg-8c/*.c" "${MPDir}/jpeg-8c/*.h")
+	file(GLOB_RECURSE J_SRC "${OpenJKLibDir}/jpeg-8c/*.c" "${OpenJKLibDir}/jpeg-8c/*.h")
 	source_group("jpeg-8c" FILES ${J_SRC})
 	
 	set(MPEngineAndDedCgameFiles
@@ -329,8 +327,8 @@ if(BuildMPEngine OR BuildMPDed)
 	set(MPEngineAndDedMinizipFiles
 		"${MPDir}/qcommon/unzip.cpp"
 		"${MPDir}/qcommon/unzip.h"
-		"${MPDir}/zlib/ioapi.c"
-		"${MPDir}/zlib/ioapi.h"
+		"${OpenJKLibDir}/zlib/ioapi.c"
+		"${OpenJKLibDir}/zlib/ioapi.h"
 		)
 	source_group("minizip" FILES ${MPEngineAndDedMinizipFiles})
 	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedMinizipFiles})
@@ -375,9 +373,9 @@ if(BuildMPEngine)
 		set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} "${MPDir}/client/OpenAL")
 		# There's a libs/OpenAL32.lib
 		# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
-		find_library(OpenALLibrary NAMES OpenAL32 PATHS "${MPDir}/libs/win32")
+		find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKDir})
 		if(NOT OpenALLibrary)
-			message(FATAL_ERROR "UseInternalOpenAL set, but codemp/libs/win32/OpenAL32 not found!")
+			message(FATAL_ERROR "UseInternalOpenAL set, but lib/OpenAL32 not found!")
 		endif(NOT OpenALLibrary)
 		set(MPEngineLibraries ${MPEngineLibraries} ${OpenALLibrary})
 	else(UseInternalOpenAL)
@@ -405,7 +403,7 @@ if(BuildMPEngine)
 	#    Source Files
 	
 	# TODO: Allow for use of external library
-	file(GLOB_RECURSE MPEngineJpegFiles "${MPDir}/jpeg-8c/*.c" "${MPDir}/jpeg-8c/*.h")
+	file(GLOB_RECURSE MPEngineJpegFiles "${OpenJKLibDir}/jpeg-8c/*.c" "${OpenJKLibDir}/jpeg-8c/*.h")
 	source_group("jpeg-8c" FILES ${MPEngineJpegFiles})
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineJpegFiles})
 	
@@ -584,27 +582,22 @@ if(BuildMPDed)
 	source_group("renderer" FILES ${MPDedicatedRendererFiles})
 	set(MPDedFiles ${MPDedFiles} ${MPDedicatedRendererFiles})
 
-	set(MPDedicatedPngFiles
-		"${MPDir}/png/rpng.cpp")
-	source_group("png" FILES ${MPDedicatedPngFiles})
-	set(MPDedFiles ${MPDedFiles} ${MPDedicatedPngFiles})
-
 	set(MPDedLibPngFiles
-		"${MPDir}/libpng/png.c"
-		"${MPDir}/libpng/pngerror.c"
-		"${MPDir}/libpng/pngget.c"
-		"${MPDir}/libpng/pngmem.c"
-		"${MPDir}/libpng/pngpread.c"
-		"${MPDir}/libpng/pngread.c"
-		"${MPDir}/libpng/pngrio.c"
-		"${MPDir}/libpng/pngrtran.c"
-		"${MPDir}/libpng/pngrutil.c"
-		"${MPDir}/libpng/pngset.c"
-		"${MPDir}/libpng/pngtrans.c"
-		"${MPDir}/libpng/pngwio.c"
-		"${MPDir}/libpng/pngwrite.c"
-		"${MPDir}/libpng/pngwtran.c"
-		"${MPDir}/libpng/pngwutil.c")
+		"${OpenJKLibDir}/libpng/png.c"
+		"${OpenJKLibDir}/libpng/pngerror.c"
+		"${OpenJKLibDir}/libpng/pngget.c"
+		"${OpenJKLibDir}/libpng/pngmem.c"
+		"${OpenJKLibDir}/libpng/pngpread.c"
+		"${OpenJKLibDir}/libpng/pngread.c"
+		"${OpenJKLibDir}/libpng/pngrio.c"
+		"${OpenJKLibDir}/libpng/pngrtran.c"
+		"${OpenJKLibDir}/libpng/pngrutil.c"
+		"${OpenJKLibDir}/libpng/pngset.c"
+		"${OpenJKLibDir}/libpng/pngtrans.c"
+		"${OpenJKLibDir}/libpng/pngwio.c"
+		"${OpenJKLibDir}/libpng/pngwrite.c"
+		"${OpenJKLibDir}/libpng/pngwtran.c"
+		"${OpenJKLibDir}/libpng/pngwutil.c")
 	source_group("libpng" FILES ${MPDedLibPngFiles})
 	set(MPDedFiles ${MPDedFiles} ${MPDedLibPngFiles})
 	
