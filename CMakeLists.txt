@@ -33,7 +33,7 @@ list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/CMakeModules")
 # Arch Suffix
 if (CMAKE_SIZEOF_VOID_P MATCHES "8")
 	if (WIN32)
-		set(Architecture "x64")
+		set(Architecture "x86_64")
 	else (WIN32)
 		set(Architecture "x86_64")
 	endif(WIN32)
@@ -79,18 +79,15 @@ if(WIN32)
 	endif(MSVC)
 else(WIN32)
 	if (APPLE)
-		set(SharedDefines "MACOS_X" "_M_IX86")
-	else(APPLE)
-		set(SharedDefines "__linux__" "_M_IX86")
+		set(SharedDefines "MACOS_X")
+	#	set(SharedDefines "MACOS_X" "_M_IX86")
+	#else(APPLE)
+	#	set(SharedDefines "__linux__" "_M_IX86")
 	endif()
 
 	# removes the -rdynamic flag at linking (which causes crashes for some reason)
 	set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 	set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
-
-	# maybe remove these flags later, when the warnings are fixed
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fpermissive")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 
 	# additional flags for debug configuration
 	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb")

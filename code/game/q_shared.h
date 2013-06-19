@@ -119,10 +119,46 @@ This file is part of Jedi Academy.
 // for windows fastcall option
 
 #define	QDECL
+#define QCALL
 
 //JAC: Added
 #define ARRAY_LEN( x ) ( sizeof( x ) / sizeof( *(x) ) )
 #define STRING( a ) #a
+
+// Win64
+
+// Win64
+#if defined(_WIN64) || defined(__WIN64__)
+
+#define	MAC_STATIC
+
+#define idx64
+
+#undef QDECL
+#define QDECL __cdecl
+
+#undef QCALL
+#define QCALL __stdcall
+
+#if defined(_MSC_VER)
+	#define OS_STRING "win_msvc64"
+#elif defined(__MINGW64__)
+	#define OS_STRING "win_mingw64"
+#endif
+
+#define QINLINE __inline
+#define PATH_SEP '\\'
+
+#if defined(__WIN64__)
+	#define ARCH_STRING "x84_64"
+#elif defined(_M_ALPHA)
+	#define ARCH_STRING "AXP"
+#endif
+
+#define Q3_LITTLE_ENDIAN
+
+#define DLL_EXT ".dll"
+#endif
 
 //======================= WIN32 DEFINES =================================
 
@@ -591,6 +627,7 @@ extern vec4_t colorTable[CT_MAX];
 #define Q_COLOR_ESCAPE	'^'
 // you MUST have the last bit on here about colour strings being less than 7 or taiwanese strings register as colour!!!!
 #define Q_IsColorString(p)	( p && *(p) == Q_COLOR_ESCAPE && *((p)+1) && *((p)+1) != Q_COLOR_ESCAPE && *((p)+1) <= '7' && *((p)+1) >= '0' )
+#define Q_IsColorStringExt(p)	((p) && *(p) == Q_COLOR_ESCAPE && *((p)+1) && *((p)+1) >= '0' && *((p)+1) <= '9') // ^[0-9]
 
 #define COLOR_BLACK		'0'
 #define COLOR_RED		'1'
@@ -1389,10 +1426,10 @@ const char *Q_stristr( const char *s, const char *find );
 int Q_PrintStrlen( const char *string );
 // removes color sequences from string
 char *Q_CleanStr( char *string );
-
+void Q_StripColor ( char *string );
 //=============================================
 
-#ifdef _M_IX86
+#ifdef id386
 //
 // optimised stuff for Intel, since most of our data is in that format anyway...
 //

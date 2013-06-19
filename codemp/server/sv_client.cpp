@@ -50,6 +50,20 @@ void SV_GetChallenge( netadr_t from ) {
 		return;
 	}
 
+	// Prevent using getchallenge as an amplifier
+	if ( SVC_RateLimitAddress( from, sv_rateLimitIncomingBurst->integer, sv_rateLimitIncomingPeriod->integer ) ) {
+		Com_DPrintf( "SV_GetChallenge: rate limit from %s exceeded, dropping request\n",
+			NET_AdrToString( from ) );
+		return;
+	}
+
+	// Allow getchallenge to be DoSed relatively easily, but prevent
+	// excess outbound bandwidth usage when being flooded inbound
+	if ( SVC_RateLimit( &outboundLeakyBucket, sv_rateLimitOutgoingBurst->integer, sv_rateLimitOutgoingPeriod->integer ) ) {
+		Com_DPrintf( "SV_GetChallenge: rate limit exceeded, dropping request\n" );
+		return;
+	}
+
 	oldest = 0;
 	oldestTime = 0x7fffffff;
 
