@@ -238,6 +238,11 @@ extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_needpass;
 extern	cvar_t	*sv_filterCommands;
 
+extern cvar_t *sv_rateLimitIncomingBurst;
+extern cvar_t *sv_rateLimitIncomingPeriod;
+extern cvar_t *sv_rateLimitOutgoingBurst;
+extern cvar_t *sv_rateLimitOutgoingPeriod;
+
 //===========================================================
 
 //

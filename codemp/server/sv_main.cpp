@@ -40,6 +40,11 @@ cvar_t	*sv_floodProtect;
 cvar_t	*sv_lanForceRate; // dedicated 1 (LAN) server forces local client rates to 99999 (bug #491)
 cvar_t	*sv_needpass;
 cvar_t	*sv_filterCommands; // strict filtering on commands (replace: \r \n ;)
+
+cvar_t *sv_rateLimitIncomingBurst;
+cvar_t *sv_rateLimitIncomingPeriod;
+cvar_t *sv_rateLimitOutgoingBurst;
+cvar_t *sv_rateLimitOutgoingPeriod;
 /*
 =============================================================================
 
@@ -464,7 +469,7 @@ void SVC_Status( netadr_t from ) {
 	*/
 
 	// Prevent using getstatus as an amplifier
-	if ( SVC_RateLimitAddress( from, 10, 1000 ) ) {
+	if ( SVC_RateLimitAddress( from, sv_rateLimitIncomingBurst->integer, sv_rateLimitIncomingPeriod->integer ) ) {
 		Com_DPrintf( "SVC_Status: rate limit from %s exceeded, dropping request\n",
 			NET_AdrToString( from ) );
 		return;
@@ -472,7 +477,7 @@ void SVC_Status( netadr_t from ) {
 
 	// Allow getstatus to be DoSed relatively easily, but prevent
 	// excess outbound bandwidth usage when being flooded inbound
-	if ( SVC_RateLimit( &outboundLeakyBucket, 10, 100 ) ) {
+	if ( SVC_RateLimit( &outboundLeakyBucket, sv_rateLimitOutgoingBurst->integer, sv_rateLimitOutgoingPeriod->integer ) ) {
 		Com_DPrintf( "SVC_Status: rate limit exceeded, dropping request\n" );
 		return;
 	}
@@ -534,7 +539,7 @@ void SVC_Info( netadr_t from ) {
 	}
 
 	// Prevent using getinfo as an amplifier
-	if ( SVC_RateLimitAddress( from, 10, 1000 ) ) {
+	if ( SVC_RateLimitAddress( from, sv_rateLimitIncomingBurst->integer, sv_rateLimitIncomingPeriod->integer ) ) {
 		Com_DPrintf( "SVC_Info: rate limit from %s exceeded, dropping request\n",
 			NET_AdrToString( from ) );
 		return;
@@ -542,7 +547,7 @@ void SVC_Info( netadr_t from ) {
 
 	// Allow getinfo to be DoSed relatively easily, but prevent
 	// excess outbound bandwidth usage when being flooded inbound
-	if ( SVC_RateLimit( &outboundLeakyBucket, 10, 100 ) ) {
+	if ( SVC_RateLimit( &outboundLeakyBucket, sv_rateLimitOutgoingBurst->integer, sv_rateLimitOutgoingPeriod->integer ) ) {
 		Com_DPrintf( "SVC_Info: rate limit exceeded, dropping request\n" );
 		return;
 	}
@@ -638,7 +643,7 @@ void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
 	char		*cmd_aux;
 
 	// Prevent using rcon as an amplifier and make dictionary attacks impractical
-	if ( SVC_RateLimitAddress( from, 10, 1000 ) ) {
+	if ( SVC_RateLimitAddress( from, sv_rateLimitIncomingBurst->integer, sv_rateLimitIncomingPeriod->integer ) ) {
 		Com_DPrintf( "SVC_RemoteCommand: rate limit from %s exceeded, dropping request\n",
 			NET_AdrToString( from ) );
 		return;
@@ -649,7 +654,7 @@ void SVC_RemoteCommand( netadr_t from, msg_t *msg ) {
 		static leakyBucket_t bucket;
 
 		// Make DoS via rcon impractical
-		if ( SVC_RateLimit( &bucket, 10, 1000 ) ) {
+		if ( SVC_RateLimit( &bucket, sv_rateLimitOutgoingBurst->integer, sv_rateLimitOutgoingPeriod->integer ) ) {
 			Com_DPrintf( "SVC_RemoteCommand: rate limit exceeded, dropping request\n" );
 			return;
 		}
