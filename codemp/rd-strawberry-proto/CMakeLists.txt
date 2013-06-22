@@ -6,7 +6,7 @@ if(NOT InOpenJK)
 endif(NOT InOpenJK)
 
 set(MPStrawberryProtoRendererIncludeDirectories ${MPDir})
-set(MPStrawberryProtoRendererIncludeDirectories ${MPStrawberryProtoRendererIncludeDirectories} "${MPDir}/rd-strawberry-proto")
+set(MPStrawberryProtoRendererIncludeDirectories ${MPStrawberryProtoRendererIncludeDirectories} "${MPDir}/rd-strawberry-proto" ${OpenJKLibDir})
 
 set(MPStrawberryProtoRendererFiles
 	"${MPDir}/rd-strawberry-proto/glext.h"
@@ -60,40 +60,35 @@ set(MPStrawberryProtoRendererQcommonFiles
 source_group("qcommon" FILES ${MPStrawberryProtoRendererQcommonFiles})
 set(MPStrawberryProtoRendererFiles ${MPStrawberryProtoRendererFiles} ${MPStrawberryProtoRendererQcommonFiles})
 
-file(GLOB_RECURSE MPStrawberryProtoRendererJpegFiles "${MPDir}/jpeg-8c/*.c" "${MPDir}/jpeg-8c/*.h")
+file(GLOB_RECURSE MPStrawberryProtoRendererJpegFiles "${OpenJKLibDir}/jpeg-8c/*.c" "${OpenJKLibDir}/jpeg-8c/*.h")
 source_group("jpeg-8c" FILES ${MPStrawberryProtoRendererJpegFiles})
 set(MPStrawberryProtoRendererFiles ${MPStrawberryProtoRendererFiles} ${MPStrawberryProtoRendererJpegFiles})
 
-set(MPStrawberryProtoRendererPngFiles
-	"${MPDir}/png/rpng.cpp")
-source_group("png" FILES ${MPStrawberryProtoRendererPngFiles})
-set(MPStrawberryProtoRendererFiles ${MPStrawberryProtoRendererFiles} ${MPStrawberryProtoRendererPngFiles})
-
 set(MPStrawberryProtoRendererLibPngFiles
-	"${MPDir}/libpng/png.c"
-	"${MPDir}/libpng/pngerror.c"
-	"${MPDir}/libpng/pngget.c"
-	"${MPDir}/libpng/pngmem.c"
-	"${MPDir}/libpng/pngpread.c"
-	"${MPDir}/libpng/pngread.c"
-	"${MPDir}/libpng/pngrio.c"
-	"${MPDir}/libpng/pngrtran.c"
-	"${MPDir}/libpng/pngrutil.c"
-	"${MPDir}/libpng/pngset.c"
-	"${MPDir}/libpng/pngtrans.c"
-	"${MPDir}/libpng/pngwio.c"
-	"${MPDir}/libpng/pngwrite.c"
-	"${MPDir}/libpng/pngwtran.c"
-	"${MPDir}/libpng/pngwutil.c")
+	"${OpenJKLibDir}/libpng/png.c"
+	"${OpenJKLibDir}/libpng/pngerror.c"
+	"${OpenJKLibDir}/libpng/pngget.c"
+	"${OpenJKLibDir}/libpng/pngmem.c"
+	"${OpenJKLibDir}/libpng/pngpread.c"
+	"${OpenJKLibDir}/libpng/pngread.c"
+	"${OpenJKLibDir}/libpng/pngrio.c"
+	"${OpenJKLibDir}/libpng/pngrtran.c"
+	"${OpenJKLibDir}/libpng/pngrutil.c"
+	"${OpenJKLibDir}/libpng/pngset.c"
+	"${OpenJKLibDir}/libpng/pngtrans.c"
+	"${OpenJKLibDir}/libpng/pngwio.c"
+	"${OpenJKLibDir}/libpng/pngwrite.c"
+	"${OpenJKLibDir}/libpng/pngwtran.c"
+	"${OpenJKLibDir}/libpng/pngwutil.c")
 source_group("libpng" FILES ${MPStrawberryProtoRendererLibPngFiles})
 set(MPStrawberryProtoRendererFiles ${MPStrawberryProtoRendererFiles} ${MPStrawberryProtoRendererLibPngFiles})
 
 if(UseInternalZlib)
 	set(MPStrawberryProtoRendererIncludeDirectories ${MPStrawberryProtoRendererIncludeDirectories} "${MPDir}/zlib")
 	# OpenAL32.lib is included for windows
-	find_library(ZlibLibrary NAMES zlib PATHS "${MPDir}/libs/win32")
+	find_library(ZlibLibrary NAMES zlib PATHS "${OpenJKLibDir}/libs/win32")
 	if(NOT ZlibLibrary)
-		message(FATAL_ERROR "UseInternalOpenAL set, but libs/OpenAL32 not found!")
+		message(FATAL_ERROR "UseInternalZlibLibrary set, but libs/zlib not found!")
 	endif(NOT ZlibLibrary)
 	set(MPStrawberryProtoRendererLibraries ${MPStrawberryProtoRendererLibraries} ${ZlibLibrary})
 else(UseInternalZlib)

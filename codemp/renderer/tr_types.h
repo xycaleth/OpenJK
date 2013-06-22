@@ -305,6 +305,20 @@ Ghoul2 Insert End
 */
 	int			 numLods;
 	qboolean	bspInstance;
+
+    struct
+    {
+        unsigned int vao;
+        unsigned int vbo;
+        unsigned int ibo;
+        unsigned int indexType;
+
+        struct
+        {
+            size_t offset;
+            size_t count;
+        } drawData;
+    } lodGpuData[5];
 } model_t;
 
 #define	MAX_RENDER_STRINGS			8

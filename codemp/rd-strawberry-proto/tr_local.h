@@ -18,6 +18,13 @@ typedef unsigned int glIndex_t;
 	#include "qcommon/platform.h"
 #endif
 
+struct StaticModelVertex
+{
+    vec3_t position;
+    vec3_t normal;
+    vec2_t texcoord;
+};
+
 //for 3d textures -rww
 #define GL_TEXTURE_3D                     0x806F
 
@@ -691,9 +698,8 @@ typedef struct srfGridMesh_s {
 	// dynamic lighting information
 	int				dlightBits;
 
-    buffer_object_t     *vbo;
-    buffer_object_t     *ibo;
-    draw_call_t         drawCall;
+    unsigned int vao;
+    draw_call_t  drawCall;
 
 	// culling information
 	vec3_t			meshBounds[2];
@@ -719,9 +725,8 @@ typedef struct {
 	surfaceType_t	surfaceType;
 	cplane_t	plane;
 
-    buffer_object_t     *vbo;
-    buffer_object_t     *ibo;
-    draw_call_t         drawCall;
+    unsigned int vao;
+    draw_call_t  drawCall;
 
 	// dynamic lighting information
 	int			dlightBits;
@@ -741,6 +746,9 @@ typedef struct {
 	// dynamic lighting information
 	int				dlightBits;
 
+    unsigned int vao;
+    draw_call_t  drawCall;
+
 	// culling information (FIXME: use this!)
 	vec3_t			bounds[2];
 //	vec3_t			localOrigin;
@@ -753,10 +761,6 @@ typedef struct {
 	int				numVerts;
 	drawVert_t		*verts;
 //	vec3_t			*tangents;
-
-    buffer_object_t     *vbo;
-    buffer_object_t     *ibo;
-    draw_call_t         drawCall;
 } srfTriangles_t;
 
 
@@ -1531,6 +1535,9 @@ struct shaderCommands_s
 	int			vertexDlightBits[SHADER_MAX_VERTEXES];
 
 	stageVars_t	svars;
+
+    unsigned int vao;
+    draw_call_t  drawCall;
 
 	shader_t	*shader;
   float   shaderTime;

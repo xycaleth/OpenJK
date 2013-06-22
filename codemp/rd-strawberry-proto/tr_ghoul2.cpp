@@ -4311,6 +4311,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 	for ( l = 0 ; l < mdxm->numLODs ; l++)
 	{
 		int	triCount = 0;
+        int vertCount = 0;
 
 		LL(lod->ofsEnd);
 		// swap all the surfaces
@@ -4328,6 +4329,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 //			LL(surf->maxVertBoneWeights);
 
 			triCount += surf->numTriangles;
+            vertCount += surf->numVerts;
 										
 			if ( surf->numVerts > SHADER_MAX_VERTEXES ) {
 				Com_Error (ERR_DROP, "R_LoadMDXM: %s has more than %i verts on a surface (%i)",
@@ -4337,7 +4339,18 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 				Com_Error (ERR_DROP, "R_LoadMDXM: %s has more than %i triangles on a surface (%i)",
 					mod_name, SHADER_MAX_INDEXES / 3, surf->numTriangles );
 			}
-		
+
+            // find the next surface
+			surf = (mdxmSurface_t *)( (byte *)surf + surf->ofsEnd );
+        }
+
+        StaticModelVertex *vertices = (StaticModelVertex *)ri.Hunk_AllocateTempMemory (sizeof (StaticModelVertex) * vertCount);
+        unsigned short *indices = (unsigned short *)ri.Hunk_AllocateTempMemory (sizeof (unsigned short) * 3 * triCount);
+
+        surf = (mdxmSurface_t *) ( (byte *)lod + sizeof (mdxmLOD_t) + (mdxm->numSurfaces * sizeof(mdxmLODSurfOffset_t)) );
+        int vertOffset = 0, indexOffset = 0;
+		for ( i = 0 ; i < mdxm->numSurfaces ; i++) 
+		{
 			// change to surface identifier
 			surf->ident = SF_MDX;
 			// register the shaders
@@ -4386,6 +4399,25 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 				v = (mdxmVertex_t *)&v->weights[/*v->numWeights*/surf->maxVertBoneWeights];
 			}
 #endif
+            mdxmVertex_t *v = (mdxmVertex_t *) ( (byte *)surf + surf->ofsVerts );
+            mdxmVertexTexCoord_t *tc = (mdxmVertexTexCoord_t *)(v + surf->numVerts);
+			for ( j = 0 ; j < surf->numVerts ; j++, vertOffset++ ) 
+			{
+                VectorCopy (v->vertCoords, vertices[vertOffset].position);
+                VectorCopy (v->normal, vertices[vertOffset].normal);
+                vertices[vertOffset].texcoord[0] = tc->texCoords[0];
+                vertices[vertOffset].texcoord[1] = tc->texCoords[1];
+
+                v++, tc++;
+			}
+
+            mdxmTriangle_t *t = (mdxmTriangle_t *)((byte *)surf + surf->ofsTriangles);
+            for ( j = 0; j < surf->numTriangles; j++, indexOffset += 3, t++ )
+            {
+                indices[indexOffset + 0] = (unsigned short)t->indexes[0];
+                indices[indexOffset + 1] = (unsigned short)t->indexes[1];
+                indices[indexOffset + 2] = (unsigned short)t->indexes[2];
+            }
 
 			if (isAnOldModelFile)
 			{
@@ -4406,9 +4438,41 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 			// find the next surface
 			surf = (mdxmSurface_t *)( (byte *)surf + surf->ofsEnd );
 		}
+
+        qglGenVertexArrays (1, &mod->lodGpuData[l].vao);
+        qglBindVertexArray (mod->lodGpuData[l].vao);
+
+        // Allocate the bufferrrr
+        qglGenBuffers (1, &mod->lodGpuData[l].vbo);
+        qglBindBuffer (GL_ARRAY_BUFFER, mod->lodGpuData[l].vbo);
+        qglBufferData (GL_ARRAY_BUFFER, vertCount * sizeof (StaticModelVertex), vertices, GL_STATIC_DRAW);
+
+        // Should probably consider splitting this up into more than one vbo, but laziness.
+        mod->lodGpuData[l].indexType = GL_UNSIGNED_SHORT;
+        qglGenBuffers (1, &mod->lodGpuData[l].ibo);
+        qglBindBuffer (GL_ELEMENT_ARRAY_BUFFER, mod->lodGpuData[l].ibo);
+        qglBufferData (GL_ELEMENT_ARRAY_BUFFER, triCount * 3 * sizeof (unsigned short), indices, GL_STATIC_DRAW);
+
+        // And assign attributes =]
+        qglEnableVertexAttribArray (0);
+        qglEnableVertexAttribArray (1);
+        qglEnableVertexAttribArray (2);
+
+        qglVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, sizeof (StaticModelVertex), (const GLvoid *)offsetof (StaticModelVertex, position));
+        qglVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, sizeof (StaticModelVertex), (const GLvoid *)offsetof (StaticModelVertex, normal));
+        qglVertexAttribPointer (2, 2, GL_FLOAT, GL_FALSE, sizeof (StaticModelVertex), (const GLvoid *)offsetof (StaticModelVertex, texcoord));
+
+        ri.Hunk_FreeTempMemory (vertices);
+        ri.Hunk_FreeTempMemory (indices);
+
 		// find the next LOD
 		lod = (mdxmLOD_t *)( (byte *)lod + lod->ofsEnd );
 	}
+
+    qglBindVertexArray (0);
+    qglBindBuffer (GL_ARRAY_BUFFER, 0);
+    qglBindBuffer (GL_ELEMENT_ARRAY_BUFFER, 0);
+
 	return qtrue;
 }
 
