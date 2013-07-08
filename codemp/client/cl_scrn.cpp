@@ -341,7 +341,6 @@ void SCR_DrawDebugGraph (void)
 {
 	int		a, x, y, w, i, h;
 	float	v;
-	int		color;
 
 	//
 	// draw the graph
@@ -358,7 +357,6 @@ void SCR_DrawDebugGraph (void)
 	{
 		i = (current-1-a+1024) & 1023;
 		v = values[i].value;
-		color = values[i].color;
 		v = v * cl_graphscale->integer + cl_graphshift->integer;
 		
 		if (v < 0)
@@ -608,7 +606,7 @@ void SCR_CenterPrint (char *str)//, PalIdx_t colour)
 
 			scr_center_lines++;
 
-			if ((*s) == NULL || scr_center_lines >= MAX_SCR_LINES)
+			if ((*s) == '\0' || scr_center_lines >= MAX_SCR_LINES)
 			{
 				done = true;
 			}

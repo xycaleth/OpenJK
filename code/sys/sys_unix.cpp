@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <libgen.h>
 
 #include "../game/q_shared.h"
 #include "../qcommon/qcommon.h"
@@ -138,6 +139,27 @@ void Sys_Print( const char *msg ) {
 }
 
 /*
+ ==================
+ Sys_Basename
+ ==================
+ */
+const char *Sys_Basename( char *path )
+{
+	return basename( path );
+}
+
+/*
+ ==================
+ Sys_Dirname
+ ==================
+ */
+const char *Sys_Dirname( char *path )
+{
+	return dirname( path );
+}
+
+
+/*
 ========================================================================
 
 EVENT LOOP
@@ -156,7 +178,6 @@ sysEvent_t Sys_GetEvent( void ) {
 	sysEvent_t	ev;
 	char		*s;
 	msg_t		netmsg;
-	netadr_t	adr;
 
 	// return if we have data
 	if ( eventHead > eventTail ) {
@@ -346,7 +367,7 @@ Sys_Mkdir
 */
 /*qboolean*/void Sys_Mkdir( const char *path )
 {
-	int result = mkdir( path, 0750 );
+	/*int result = */mkdir( path, 0750 );
 
 /*	if( result != 0 )
 		return (qboolean)(errno == EEXIST);

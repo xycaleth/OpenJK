@@ -377,7 +377,7 @@ float	Cvar_VariableValue( const char *var_name );
 int		Cvar_VariableIntegerValue( const char *var_name );
 // returns 0 if not defined or non numeric
 
-char	*Cvar_VariableString( const char *var_name );
+const char	*Cvar_VariableString( const char *var_name );
 void	Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize );
 // returns an empty string if not defined
 
@@ -528,7 +528,7 @@ void 		Com_Quit_f( void );
 int			Com_EventLoop( void );
 int			Com_Milliseconds( void );	// will be journaled properly
 unsigned	Com_BlockChecksum( const void *buffer, int length );
-int			Com_Filter(char *filter, char *name, int casesensitive);
+int			Com_Filter(const char *filter, const char *name, int casesensitive);
 qboolean	Com_SafeMode( void );
 
 void		Com_StartupVariable( const char *match );
@@ -596,7 +596,7 @@ void  Z_TagFree	( memtag_t eTag );
 int   Z_Free	( void *ptr );	//returns bytes freed
 int	  Z_Size	( void *pvAddress);
 void  Z_MorphMallocTag( void *pvAddress, memtag_t eDesiredTag );
-qboolean Z_IsFromZone(void *pvAddress, memtag_t eTag);	//returns size if true
+qboolean Z_IsFromZone(const void *pvAddress, memtag_t eTag);	//returns size if true
 
 #ifdef DEBUG_ZONE_ALLOCS
 
@@ -706,7 +706,7 @@ void SCR_DebugGraph (float value, int color);	// FIXME: move logging to common?
 // server interface
 //
 void SV_Init( void );
-void SV_Shutdown( char *finalmsg );
+void SV_Shutdown( const char *finalmsg );
 void SV_Frame( int msec,float fractionMsec);
 void SV_PacketEvent( netadr_t from, msg_t *msg );
 qboolean SV_GameCommand( void );
@@ -768,7 +768,7 @@ void	Sys_Init (void);
 
 char	*Sys_GetCurrentUser( void );
 
-void	QDECL Sys_Error( const char *error, ...);
+void	QDECL Sys_Error( const char *error, ...) __attribute__((noreturn));
 void	Sys_Quit (void);
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
 
@@ -800,8 +800,17 @@ void	Sys_SetErrorText( const char *text );
 void	Sys_Mkdir( const char *path );
 char	*Sys_Cwd( void );
 char	*Sys_DefaultCDPath(void);
+void	Sys_SetDefaultInstallPath(const char *path);
+char	*Sys_DefaultInstallPath(void);
 char	*Sys_DefaultBasePath(void);
+
+#ifdef MACOS_X
+char    *Sys_DefaultAppPath(void);
+#endif
+
 char	*Sys_DefaultHomePath(void);
+const char *Sys_Dirname( char *path );
+const char *Sys_Basename( char *path );
 
 char **Sys_ListFiles( const char *directory, const char *extension, int *numfiles, qboolean wantsubs );
 void	Sys_FreeFileList( char **filelist );

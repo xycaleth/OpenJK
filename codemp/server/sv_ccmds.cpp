@@ -3,6 +3,7 @@
 
 #include "server.h"
 #include "qcommon/stringed_ingame.h"
+#include "qcommon/game_version.h"
 
 /*
 ===============================================================================
@@ -150,16 +151,13 @@ Restart the server on a different map
 ==================
 */
 static void SV_Map_f( void ) {
-	char		*cmd;
-	char		*map;
-	qboolean	killBots, cheat;
-	char		expanded[MAX_QPATH];
-	char		mapname[MAX_QPATH];
+	char		*cmd = NULL, *map = NULL;
+	qboolean	killBots=qfalse, cheat=qfalse;
+	char		expanded[MAX_QPATH] = {0}, mapname[MAX_QPATH] = {0};
 
 	map = Cmd_Argv(1);
-	if ( !map ) {
+	if ( !map )
 		return;
-	}
 
 	// make sure the level exists before trying to change, so that
 	// a typo at the server console won't end the game
@@ -178,28 +176,12 @@ static void SV_Map_f( void ) {
 	Cvar_Get ("g_gametype", "0", CVAR_SERVERINFO | CVAR_LATCH );
 
 	cmd = Cmd_Argv(0);
-	if( Q_stricmpn( cmd, "sp", 2 ) == 0 ) {
-		Cvar_SetValue( "g_gametype", GT_SINGLE_PLAYER );
-		Cvar_SetValue( "g_doWarmup", 0 );
-		// may not set sv_maxclients directly, always set latched
-		Cvar_SetLatched( "sv_maxclients", "8" );
-		cmd += 2;
-		cheat = qfalse;
+	if ( !Q_stricmpn( cmd, "devmap", 6 ) ) {
+		cheat = qtrue;
 		killBots = qtrue;
-	}
-	else {
-		if ( !Q_stricmpn( cmd, "devmap",6 ) || !Q_stricmp( cmd, "spdevmap" ) ) {
-			cheat = qtrue;
-			killBots = qtrue;
-		} else {
-			cheat = qfalse;
-			killBots = qfalse;
-		}
-		/*
-		if( sv_gametype->integer == GT_SINGLE_PLAYER ) {
-			Cvar_SetValue( "g_gametype", GT_FFA );
-		}
-		*/
+	} else {
+		cheat = qfalse;
+		killBots = qfalse;
 	}
 
 	// save the map name here cause on a map restart we reload the jampconfig.cfg
@@ -227,11 +209,7 @@ static void SV_Map_f( void ) {
 	// if the level was started with "map <levelname>", then
 	// cheats will not be allowed.  If started with "devmap <levelname>"
 	// then cheats will be allowed
-	if ( cheat ) {
-		Cvar_Set( "sv_cheats", "1" );
-	} else {
-		Cvar_Set( "sv_cheats", "0" );
-	}
+	Cvar_Set( "sv_cheats", cheat ? "1" : "0" );
 }
 
 
@@ -584,7 +562,7 @@ SV_Status_f
 */
 static void SV_Status_f( void ) 
 {
-	int				i;
+	int				i, humans, bots;
 	client_t		*cl;
 	playerState_t	*ps;
 	const char		*s;
@@ -609,8 +587,41 @@ static void SV_Status_f( void )
 		}
 	}
 
-	Com_Printf ("map: %s\n", sv_mapname->string );
-	Com_Printf ("gametype: %i\n", sv_gametype->integer );
+	humans = bots = 0;
+	for ( i = 0 ; i < sv_maxclients->integer ; i++ ) {
+		if ( svs.clients[i].state >= CS_CONNECTED ) {
+			if ( svs.clients[i].netchan.remoteAddress.type != NA_BOT ) {
+				humans++;
+			}
+			else {
+				bots++;
+			}
+		}
+	}
+
+#if defined(_WIN32)
+#define STATUS_OS "Windows"
+#elif defined(__linux__)
+#define STATUS_OS "Linux"
+#elif defined(MACOS_X)
+#define STATUS_OS "OSX"
+#else
+#define STATUS_OS "Unknown"
+#endif
+
+	const char *ded_table[] = 
+	{
+		"listen",
+		"lan dedicated",
+		"public dedicated",
+	};
+
+	Com_Printf ("hostname: %s\n", sv_hostname->string );
+	Com_Printf ("version : %s %i\n", VERSION_STRING_DOTTED, PROTOCOL_VERSION );
+	Com_Printf ("game    : %s\n", FS_GetCurrentGameDir() );
+	Com_Printf ("udp/ip  : %s:%i os(%s) type(%s)\n", Cvar_VariableString("net_ip"), Cvar_VariableIntegerValue("net_port"), STATUS_OS, ded_table[com_dedicated->integer]);
+	Com_Printf ("map     : %s gametype(%i)\n", sv_mapname->string, sv_gametype->integer );
+	Com_Printf ("players : %i humans, %i bots (%i max)\n", humans, bots, sv_maxclients->integer - sv_privateClients->integer);
 
 	Com_Printf ("num score ping name            lastmsg address               qport rate\n");
 	Com_Printf ("--- ----- ---- --------------- ------- --------------------- ----- -----\n");
@@ -668,6 +679,7 @@ static void SV_Status_f( void )
 	Com_Printf ("\n");
 }
 
+char	*SV_ExpandNewlines( char *in );
 #define SVSAY_PREFIX "Server^7\x19: "
 
 /*
@@ -695,6 +707,7 @@ static void SV_ConSay_f(void) {
 
 	Cmd_ArgsBuffer( text, sizeof(text) );
 
+	Com_Printf ("broadcast: chat \""SVSAY_PREFIX"%s\\n\"\n", SV_ExpandNewlines((char *)text) );
 	SV_SendServerCommand(NULL, "chat \""SVSAY_PREFIX"%s\"\n", text);
 }
 
@@ -880,8 +893,6 @@ void SV_AddOperatorCommands( void ) {
 	Cmd_AddCommand ("sectorlist", SV_SectorList_f);
 	Cmd_AddCommand ("map", SV_Map_f);
 	Cmd_AddCommand ("devmap", SV_Map_f);
-	Cmd_AddCommand ("spmap", SV_Map_f);
-	Cmd_AddCommand ("spdevmap", SV_Map_f);
 //	Cmd_AddCommand ("devmapbsp", SV_Map_f);	// not used in MP codebase, no server BSP_cacheing
 	Cmd_AddCommand ("devmapmdl", SV_Map_f);
 	Cmd_AddCommand ("devmapall", SV_Map_f);

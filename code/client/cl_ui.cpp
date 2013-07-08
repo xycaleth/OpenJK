@@ -107,7 +107,7 @@ Key_GetBindingBuf
 ====================
 */
 void Key_GetBindingBuf( int keynum, char *buf, int buflen ) {
-	char	*value;
+	const char	*value;
 
 	value = Key_GetBinding( keynum );
 	if ( value ) {
@@ -143,13 +143,11 @@ void Key_SetCatcher( int catcher )
 FloatAsInt
 ====================
 */
-int FloatAsInt( float f ) 
+static int FloatAsInt( float f ) 
 {
-	int		temp;
-
-	*(float *)&temp = f;
-
-	return temp;
+	floatint_t fi;
+	fi.f = f;
+	return fi.i;
 }
 
 static void UI_Cvar_Create( const char *var_name, const char *var_value, int flags ) {
@@ -349,7 +347,7 @@ qboolean UI_GameCommand( void ) {
 
 void CL_GenericMenu_f(void)
 {		
-	char *arg = Cmd_Argv( 1 );
+	const char *arg = Cmd_Argv( 1 );
 
 	if (cls.uiStarted) {
 		UI_SetActiveMenu("ingame",arg);

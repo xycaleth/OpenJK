@@ -88,7 +88,7 @@ static void R_DrawStripElements( int numIndexes, const glIndex_t *indexes, void 
 			{
 				element( indexes[i+2] );
 				c_vertexes++;
-				assert( indexes[i+2] < tess.numVertexes );
+				assert( (int)indexes[i+2] < tess.numVertexes );
 				even = qtrue;
 			}
 			// otherwise we're done with this strip so finish it and start
@@ -1441,6 +1441,8 @@ static void ComputeColors( shaderStage_t *pStage, int forceRGBGen )
 			}
 		}
 		break;
+	default:
+		break;
 	}
 avoidGen:
 	//
@@ -1684,7 +1686,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 		if ( !pStage->active )
 		{
-			assert(pStage->active);//wtf?
 			break;
 		}
 

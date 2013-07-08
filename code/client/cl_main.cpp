@@ -355,7 +355,7 @@ so when they are typed in at the console, they will need to be forwarded.
 ===================
 */
 void CL_ForwardCommandToServer( void ) {
-	char	*cmd;
+	const char	*cmd;
 	char	string[MAX_STRING_CHARS];
 
 	cmd = Cmd_Argv(0);
@@ -519,7 +519,7 @@ void CL_Clientinfo_f( void ) {
 
 //====================================================================
 
-void UI_UpdateConnectionString( char *string );
+void UI_UpdateConnectionString( const char *string );
 
 /*
 =================
@@ -621,7 +621,7 @@ Responses to broadcasts, etc
 */
 void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 	char	*s;
-	char	*c;
+	const char	*c;
 	
 	MSG_BeginReading( msg );
 	MSG_ReadLong( msg );	// skip the -1
@@ -708,8 +708,6 @@ A packet has arrived from the main event loop
 =================
 */
 void CL_PacketEvent( netadr_t from, msg_t *msg ) {
-	int		headerBytes;
-
 	clc.lastPacketTime = cls.realtime;
 
 	if ( msg->cursize >= 4 && *(int *)msg->data == -1 ) {
@@ -739,9 +737,6 @@ void CL_PacketEvent( netadr_t from, msg_t *msg ) {
 	if (!Netchan_Process( &clc.netchan, msg) ) {
 		return;		// out of order, duplicated, etc
 	}
-
-	// the header is different lengths for reliable and unreliable messages
-	headerBytes = msg->readcount;
 
 	clc.lastPacketTime = cls.realtime;
 	CL_ParseServerMessage( msg );

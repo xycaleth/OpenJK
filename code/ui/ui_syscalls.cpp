@@ -23,35 +23,12 @@ This file is part of Jedi Academy.
 
 #include "ui_local.h"
 
-// this file is only included when building a dll
-// syscalls.asm is included instead when building a qvm
-
-#define syscall Q_syscall
-static int (*syscall)( int arg, ... ) = (int (*)( int, ...))-1;
-
-void dllEntry( int (*syscallptr)( int arg,... ) ) {
-	syscall = syscallptr;
-//	CG_PreInit();
-}
-
-inline int PASSFLOAT( float x ) 
-{
-	float	floatTemp;
-	floatTemp = x;
-	return *(int *)&floatTemp;
-}
-
-intptr_t CL_UISystemCalls( intptr_t *args );
-
-
-int FloatAsInt( float f );
-
 float trap_Cvar_VariableValue( const char *var_name ) 
 {
-	int temp;
-//	temp = syscall( UI_CVAR_VARIABLEVALUE, var_name );
-	temp = FloatAsInt( Cvar_VariableValue(var_name) );
-	return (*(float*)&temp);
+	floatint_t fi;
+//	fi.i = syscall( UI_CVAR_VARIABLEVALUE, var_name );
+	fi.i = Cvar_VariableValue( var_name );
+	return fi.f;
 }
 
 
@@ -164,7 +141,8 @@ void trap_GetGlconfig( glconfig_t *glconfig )
 #ifndef _XBOX
 // this returns a handle.  arg0 is the name in the format "idlogo.roq", set arg1 to NULL, alteredstates to qfalse (do not alter gamestate)
 int trap_CIN_PlayCinematic( const char *arg0, int xpos, int ypos, int width, int height, int bits, const char *psAudioFile) {
-  return syscall(UI_CIN_PLAYCINEMATIC, arg0, xpos, ypos, width, height, bits, psAudioFile);
+//  return syscall(UI_CIN_PLAYCINEMATIC, arg0, xpos, ypos, width, height, bits, psAudioFile);
+	return CIN_PlayCinematic( arg0, xpos, ypos, width, height, bits, psAudioFile );
 }
 #endif
 
@@ -172,6 +150,7 @@ int trap_CIN_PlayCinematic( const char *arg0, int xpos, int ypos, int width, int
 // cinematics must be stopped in reverse order of when they are started
 int trap_CIN_StopCinematic(int handle) 
 {
-  return syscall(UI_CIN_STOPCINEMATIC, handle);
+//  return syscall(UI_CIN_STOPCINEMATIC, handle);
+	return CIN_StopCinematic(handle);
 }
 

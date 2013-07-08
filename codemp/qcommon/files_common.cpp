@@ -180,6 +180,12 @@ or configs will never get loaded from disk!
 char		fs_gamedir[MAX_OSPATH];	// this will be a single file name with no separators
 cvar_t		*fs_debug;
 cvar_t		*fs_homepath;
+
+#ifdef MACOS_X
+// Also search the .app bundle for .pk3 files
+cvar_t          *fs_apppath;
+#endif
+
 cvar_t		*fs_basepath;
 cvar_t		*fs_basegame;
 cvar_t		*fs_cdpath;
@@ -326,7 +332,8 @@ char *FS_BuildOSPath( const char *base, const char *game, const char *qpath ) {
 	//pre-fs_cf2
 	//toggle ^= 1;		// flip-flop to allow two returns without clash
 	//post-fs_cf2
-	toggle = (++toggle)&3;	// allows four returns without clash (increased from 2 during fs_copyfiles 2 enhancement)
+	int nextToggle = (toggle + 1)&3;	// allows four returns without clash (increased from 2 during fs_copyfiles 2 enhancement)
+	toggle = nextToggle;
 
 	if( !game || !game[0] ) {
 		game = fs_gamedir;

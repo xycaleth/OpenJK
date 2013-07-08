@@ -299,12 +299,7 @@ void	*VM_ArgPtr( intptr_t intValue );
 void	*VM_ExplicitArgPtr( vm_t *vm, intptr_t intValue );
 
 #define	VMA(x) VM_ArgPtr(args[x])
-static ID_INLINE float _vmf(intptr_t x)
-{
-	floatint_t fi;
-	fi.i = (int) x;
-	return fi.f;
-}
+float _vmf(intptr_t x);
 #define	VMF(x)	_vmf(args[x])
 
 /*
@@ -609,6 +604,8 @@ int		FS_FTell( fileHandle_t f );
 // where are we?
 
 void	FS_Flush( fileHandle_t f );
+
+const char *FS_GetCurrentGameDir(bool emptybase=false);
 
 void 	QDECL FS_Printf( fileHandle_t f, const char *fmt, ... );
 // like fprintf
@@ -973,7 +970,7 @@ void	*Sys_GetBotLibAPI( void *parms );
 
 char	*Sys_GetCurrentUser( void );
 
-void	QDECL Sys_Error( const char *error, ...);
+void	QDECL Sys_Error( const char *error, ...) __attribute__((noreturn));
 void	Sys_Quit (void);
 char	*Sys_GetClipboardData( void );	// note that this isn't journaled...
 

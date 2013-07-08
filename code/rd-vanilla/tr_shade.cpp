@@ -107,7 +107,7 @@ static void R_DrawStripElements( int numIndexes, const glIndex_t *indexes, void 
 			{
 				element( indexes[i+2] );
 				c_vertexes++;
-				assert( indexes[i+2] < tess.numVertexes );
+				assert( (int)indexes[i+2] < tess.numVertexes );
 				even = qtrue;
 			}
 			// otherwise we're done with this strip so finish it and start
@@ -2048,6 +2048,8 @@ static void ComputeColors( shaderStage_t *pStage, alphaGen_t forceAlphaGen, colo
 			}
 		}
 		break;
+	default:
+		break;
 	}
 
 	//
@@ -2067,6 +2069,8 @@ static void ComputeColors( shaderStage_t *pStage, alphaGen_t forceAlphaGen, colo
 			RB_CalcModulateRGBAsByFog( ( unsigned char * ) tess.svars.colors );
 			break;
 		case ACFF_NONE:
+			break;
+		default:
 			break;
 		}
 	}
@@ -2279,7 +2283,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		shaderStage_t *pStage = &tess.xstages[stage];
 		if ( !pStage->active )
 		{
-			assert(pStage->active);//wtf?
 			break;
 		}
 
