@@ -10,6 +10,7 @@
 #include "GameInterface.h"
 #include "qcommon/RoffSystem.h"
 #include "Q3_Interface.h"
+#include "server/sv_gameapi.h"
 
 ICARUS_Instance		*iICARUS;
 bufferlist_t		ICARUS_BufferList;
@@ -184,7 +185,7 @@ void ICARUS_Shutdown( void )
 	}
 
 	//Clear out all precached scripts
-	for ( ei = ICARUS_BufferList.begin(); ei != ICARUS_BufferList.end(); ei++ )
+	for ( ei = ICARUS_BufferList.begin(); ei != ICARUS_BufferList.end(); ++ei )
 	{
 		//gi.Free( (*ei).second->buffer );
 		ICARUS_Free((*ei).second->buffer);
@@ -356,7 +357,7 @@ bool ICARUS_RegisterScript( const char *name, qboolean bCalledDuringInterrogate 
 	{
 		fileHandle_t file;
 
-		gi.FS_FOpenFile( newname, &file, FS_READ );
+		gi.FS_Open( newname, &file, FS_READ );
 		
 		if ( file == NULL )
 		{
@@ -364,7 +365,7 @@ bool ICARUS_RegisterScript( const char *name, qboolean bCalledDuringInterrogate 
 		}
 		else
 		{
-			gi.FS_FCloseFile( file );
+			gi.FS_Close( file );
 		}
 	}
 #endif
@@ -399,9 +400,9 @@ void ICARUS_SoundPrecache(const char *filename)
 {
 	T_G_ICARUS_SOUNDINDEX *sharedMem = (T_G_ICARUS_SOUNDINDEX *)sv.mSharedMemory;
 
-	strcpy(sharedMem->filename, filename);
+	strcpy( sharedMem->filename, filename );
 
-	VM_Call(gvm, GAME_ICARUS_SOUNDINDEX);	
+	GVM_ICARUS_SoundIndex();
 }
 
 int ICARUS_GetIDForString( const char *string )
@@ -410,7 +411,7 @@ int ICARUS_GetIDForString( const char *string )
 
 	strcpy(sharedMem->string, string);
 
-	return VM_Call(gvm, GAME_ICARUS_GETSETIDFORSTRING);
+	return GVM_ICARUS_GetSetIDForString();
 }
 
 /*
@@ -597,7 +598,7 @@ stringID_table_t BSTable[] =
 	ENUM2STRING(BS_REMOVE),//# Waits for player to leave PVS then removes itself
 	ENUM2STRING(BS_CINEMATIC),//# Does nothing but face it's angles and move to a goal if it has one
 	//the rest are internal only
-	"",				-1,
+	{ "",				-1 }
 };
 
 /*

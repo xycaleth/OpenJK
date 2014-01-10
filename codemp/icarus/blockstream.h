@@ -2,20 +2,27 @@
 
 // BlockStream.h
 
+#ifdef _MSC_VER
 #pragma warning(disable : 4786)  //identifier was truncated 
 #pragma warning(disable : 4514)  //unreffed inline func removed
+#endif
 
 #include "qcommon/qcommon.h"
 #include <stdio.h>
 
+#ifdef _MSC_VER
 #pragma warning (push, 3)	//go back down to 3 for the stl include
+#endif
 #include <list>
 #include <vector>
+#ifdef _MSC_VER
 #pragma warning (pop)
+#endif
 using namespace std;
 
 #define	IBI_EXT			".IBI"	//(I)nterpreted (B)lock (I)nstructions
 #define IBI_HEADER_ID	"IBI"
+#define IBI_HEADER_ID_LENGTH 4 // Length of IBI_HEADER_ID + 1 for the null terminating byte.
 
 const	float	IBI_VERSION			= 1.57f;
 const	int		MAX_FILENAME_LENGTH = 1024;

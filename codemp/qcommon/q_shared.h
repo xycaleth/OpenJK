@@ -11,9 +11,11 @@
 
 #define CLIENT_WINDOW_TITLE "OpenJK (MP)"
 #define CLIENT_CONSOLE_TITLE "OpenJK Console (MP)"
-#define HOMEPATH_NAME_UNIX ".openjk"
+#define HOMEPATH_NAME_UNIX "openjk"
 #define HOMEPATH_NAME_WIN "OpenJK"
 #define HOMEPATH_NAME_MACOSX HOMEPATH_NAME_WIN
+
+#define	BASEGAME "base"
 
 //NOTENOTE: Only change this to re-point ICARUS to a new script directory
 #define Q3_SCRIPT_DIR	"scripts"
@@ -40,19 +42,17 @@
 #define	VALIDATEB( a )	if ( a == NULL ) {	assert(0);	return qfalse;	}
 #define VALIDATEP( a )	if ( a == NULL ) {	assert(0);	return NULL;	}
 
-#define VALIDSTRING( a )	( ( a != 0 ) && ( a[0] != '\0' ) )
-#define VALIDENT( e )		( ( e != 0 ) && ( (e)->inuse ) )
+#define VALIDSTRING( a )	( ( a != NULL ) && ( a[0] != '\0' ) )
+#define VALIDENT( e )		( ( e != NULL ) && ( (e)->inuse ) )
 
-//JAC: Added
 #define ARRAY_LEN( x ) ( sizeof( x ) / sizeof( *(x) ) )
 #define STRING( a ) #a
 #define XSTRING( a ) STRING( a )
-
 /*
 #define G2_EHNANCEMENTS
 
 #ifdef G2_EHNANCEMENTS
-//these two will probably explode if they're defined independant of one another.
+//these two will probably explode if they're defined independent of one another.
 //rww - RAGDOLL_BEGIN
 #define JK2_RAGDOLL
 //rww - RAGDOLL_END
@@ -62,7 +62,7 @@
 */
 
 #ifndef FINAL_BUILD
-	//RAZFIXME: may want to enable timing and leak checking again. requires G2API changes.
+	// may want to enable timing and leak checking again. requires G2API changes.
 //	#define G2_PERFORMANCE_ANALYSIS
 //	#define _FULL_G2_LEAK_CHECKING
 //	extern int g_Ghoul2Allocations;
@@ -73,6 +73,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <float.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -81,6 +82,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <errno.h>
+#include <stddef.h>
 
 //Ignore __attribute__ on non-gcc platforms
 #if !defined(__GNUC__) && !defined(__attribute__)
@@ -103,14 +105,8 @@
 	#define Q_EXPORT
 #endif
 
-#if defined(__linux__) && !defined(__GCC__)
-#define Q_EXPORT_C// extern "C"
-#else
-#define Q_EXPORT_C
-#endif
-
 // this is the define for determining if we have an asm version of a C function
-#if (defined(_M_IX86) || defined(__i386__)) && !defined(__sun__) && !defined(__LCC__)
+#if (defined(_M_IX86) || defined(__i386__)) && !defined(__sun__)
 	#define id386	1
 #else
 	#define id386	0
@@ -122,354 +118,12 @@
 	#define idppc	0
 #endif
 
-// the mac compiler can't handle >32k of locals, so we
-// just waste space and make big arrays static...
-#define MAC_STATIC //RAZFIXME
-
 short ShortSwap( short l );
 int LongSwap( int l );
 float FloatSwap( const float *f );
 
 
-// for windows fastcall option
-#define QDECL
-#define QCALL
-
-// Win64
-#if defined(_WIN64) || defined(__WIN64__)
-
-	#define idx64
-
-	#undef QDECL
-	#define QDECL __cdecl
-
-	#undef QCALL
-	#define QCALL __stdcall
-
-	#if defined(_MSC_VER)
-		#define OS_STRING "win_msvc64"
-	#elif defined(__MINGW64__)
-		#define OS_STRING "win_mingw64"
-	#endif
-
-	#define QINLINE __inline
-	#define PATH_SEP '\\'
-
-	#if defined(__WIN64__)
-		#define ARCH_STRING "x64"
-	#elif defined(_M_ALPHA)
-		#define ARCH_STRING "AXP"
-	#endif
-
-	#define Q3_LITTLE_ENDIAN
-
-	#define DLL_EXT ".dll"
-#endif
-
-// Win32
-#ifdef WIN32
-
-	#undef QDECL
-	#define	QDECL __cdecl
-
-	#undef QCALL
-	#define QCALL __stdcall
-
-	#if defined(_MSC_VER)
-		#define OS_STRING "win_msvc"
-	#elif defined(__MINGW32__)
-		#define OS_STRING "win_mingw"
-	#endif
-
-	#define ID_INLINE __inline
-	#define PATH_SEP '\\'
-
-	#if defined(_M_IX86) || defined(__i386__)
-		#define ARCH_STRING "x86"
-	#elif defined _M_ALPHA
-		#define ARCH_STRING "AXP"
-	#endif
-
-	#define Q3_LITTLE_ENDIAN
-
-	#define DLL_EXT ".dll"
-
-#endif
-
-
-// ================================================================
-//
-// MAC OS X DEFINES
-//
-// ================================================================
-
-#ifdef MACOS_X
-
-	#include <sys/mman.h>
-    #include <unistd.h>
-
-	#define __cdecl
-	#define __declspec(x)
-	#define stricmp strcasecmp
-	#define ID_INLINE /*inline*/ 
-
-    #define OS_STRING "MacOSX"
-
-	#ifdef __ppc__
-		#define CPUSTRING "MacOSX-ppc"
-	#elif defined __i386__
-		#define CPUSTRING "MacOSX-i386"
-	#else
-		#define CPUSTRING "MacOSX-other"
-	#endif
-
-	#define	PATH_SEP	'/'
-
-	#define __rlwimi(out, in, shift, maskBegin, maskEnd) asm("rlwimi %0,%1,%2,%3,%4" : "=r" (out) : "r" (in), "i" (shift), "i" (maskBegin), "i" (maskEnd))
-	#define __dcbt(addr, offset) asm("dcbt %0,%1" : : "b" (addr), "r" (offset))
-
-	static inline unsigned int __lwbrx(register void *addr, register int offset) {
-		register unsigned int word;
-
-		asm("lwbrx %0,%2,%1" : "=r" (word) : "r" (addr), "b" (offset));
-		return word;
-	}
-
-	static inline unsigned short __lhbrx(register void *addr, register int offset) {
-		register unsigned short halfword;
-
-		asm("lhbrx %0,%2,%1" : "=r" (halfword) : "r" (addr), "b" (offset));
-		return halfword;
-	}
-
-	static inline float __fctiw(register float f) {
-		register float fi;
-
-		asm("fctiw %0,%1" : "=f" (fi) : "f" (f));
-		return fi;
-	}
-
-    #if defined(__i386__)
-        #define ARCH_STRING "i386"
-    #elif defined(__x86_64__)
-        #define idx64
-        #define ARCH_STRING "x86_64"
-    #elif defined(__powerpc64__)
-        #define ARCH_STRING "ppc64"
-    #elif defined(__powerpc__)
-        #define ARCH_STRING "ppc"
-    #endif
-
-    #define DLL_EXT ".dylib"
-
-#if BYTE_ORDER == BIG_ENDIAN
-#define Q3_BIG_ENDIAN
-#else
-#define Q3_LITTLE_ENDIAN
-#endif
-
-
-#endif // MACOS_X
-
-
-// ================================================================
-//
-// MAC DEFINES
-//
-// ================================================================
-
-#ifdef __MACOS__
-
-	#include <MacTypes.h>
-	#define ID_INLINE inline 
-
-	#define	CPUSTRING "MacOS-PPC"
-
-	#define	PATH_SEP ':'
-
-	void Sys_PumpEvents( void );
-
-	#define BigShort
-	static inline short LittleShort( short l ) { return ShortSwap( l ); }
-	#define BigLong
-	static inline int LittleLong( int l ) { return LongSwap( l ); }
-	#define BigFloat
-	static inline float LittleFloat( const float l ) { return FloatSwap( &l ); }
-
-	#define DLL_EXT ".dylib"
-
-#endif // __MACOS__
-
-
-// ================================================================
-//
-// LINUX DEFINES
-//
-// ================================================================
-
-#ifdef __linux__
-
-	#include <sys/mman.h>
-	#include <unistd.h>
-
-	// bk001205 - from Makefile
-	#define stricmp strcasecmp
-
-	#define ID_INLINE /*inline*/
-
-	#define	PATH_SEP '/'
-	#define RAND_MAX 2147483647
-
-	#if defined(__linux__)
-		#define OS_STRING "linux"
-	#else
-		#define OS_STRING "kFreeBSD"
-	#endif
-
-	#ifdef __clang__
-		#define QINLINE static inline
-	#else
-		#define QINLINE inline
-	#endif
-
-	#define PATH_SEP '/'
-
-	#if defined(__i386__)
-		#define ARCH_STRING "i386"
-	#elif defined(__x86_64__)
-		#define idx64
-		#define ARCH_STRING "x86_64"
-	#elif defined(__powerpc64__)
-		#define ARCH_STRING "ppc64"
-	#elif defined(__powerpc__)
-		#define ARCH_STRING "ppc"
-	#elif defined(__s390__)
-		#define ARCH_STRING "s390"
-	#elif defined(__s390x__)
-		#define ARCH_STRING "s390x"
-	#elif defined(__ia64__)
-		#define ARCH_STRING "ia64"
-	#elif defined(__alpha__)
-		#define ARCH_STRING "alpha"
-	#elif defined(__sparc__)
-		#define ARCH_STRING "sparc"
-	#elif defined(__arm__)
-		#define ARCH_STRING "arm"
-	#elif defined(__cris__)
-		#define ARCH_STRING "cris"
-	#elif defined(__hppa__)
-		#define ARCH_STRING "hppa"
-	#elif defined(__mips__)
-		#define ARCH_STRING "mips"
-	#elif defined(__sh__)
-		#define ARCH_STRING "sh"
-	#endif
-
-	#if __FLOAT_WORD_ORDER == __BIG_ENDIAN
-		#define Q3_BIG_ENDIAN
-	#else
-		#define Q3_LITTLE_ENDIAN
-	#endif
-
-	#define DLL_EXT ".so"
-
-#endif
-
-	// BSD
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-
-	#include <sys/types.h>
-	#include <machine/endian.h>
-	
-	#ifndef __BSD__
-		#define __BSD__
-	#endif
-	
-	#if defined(__FreeBSD__)
-		#define OS_STRING "freebsd"
-	#elif defined(__OpenBSD__)
-		#define OS_STRING "openbsd"
-	#elif defined(__NetBSD__)
-		#define OS_STRING "netbsd"
-	#endif
-	
-	#define QINLINE inline
-	#define PATH_SEP '/'
-	
-	#if defined(__i386__)
-		#define ARCH_STRING "i386"
-	#elif defined(__amd64__)
-		#define idx64
-		#define ARCH_STRING "amd64"
-	#elif defined(__axp__)
-		#define ARCH_STRING "alpha"
-	#endif
-	
-	#if BYTE_ORDER == BIG_ENDIAN
-		#define Q3_BIG_ENDIAN
-	#else
-		#define Q3_LITTLE_ENDIAN
-	#endif
-	
-	#define DLL_EXT ".so"
-
-#endif
-// catch missing defines in above blocks
-#if !defined(OS_STRING)
-	#error "Operating system not supported"
-#endif
-#if !defined(ARCH_STRING)
-	#error "Architecture not supported"
-#endif
-#if !defined(ID_INLINE)
-	#error "ID_INLINE not defined"
-#endif
-#if !defined(PATH_SEP)
-	#error "PATH_SEP not defined"
-#endif
-#if !defined(DLL_EXT)
-	#error "DLL_EXT not defined"
-#endif
-
-
-// endianness
-void CopyShortSwap( void *dest, void *src );
-void CopyLongSwap( void *dest, void *src );
-short ShortSwap( short l );
-int LongSwap( int l );
-float FloatSwap( const float *f );
-
-#if defined(Q3_BIG_ENDIAN) && defined(Q3_LITTLE_ENDIAN)
-	#error "Endianness defined as both big and little"
-#elif defined(Q3_BIG_ENDIAN)
-	#define CopyLittleShort( dest, src )	CopyShortSwap( dest, src )
-	#define CopyLittleLong( dest, src )		CopyLongSwap( dest, src )
-	#define LittleShort( x )				ShortSwap( x )
-	#define LittleLong( x )					LongSwap( x )
-	#define LittleFloat( x )				FloatSwap( &x )
-	#define BigShort
-	#define BigLong
-	#define BigFloat
-#elif defined( Q3_LITTLE_ENDIAN )
-	#define CopyLittleShort( dest, src )	Com_Memcpy(dest, src, 2)
-	#define CopyLittleLong( dest, src )		Com_Memcpy(dest, src, 4)
-	#define LittleShort
-	#define LittleLong
-	#define LittleFloat
-	#define BigShort( x )					ShortSwap( x )
-	#define BigLong( x )					LongSwap( x )
-	#define BigFloat( x )					FloatSwap( &x )
-#else
-	#error "Endianness not defined"
-#endif
-
-
-// platform string
-#if defined(NDEBUG)
-	#define PLATFORM_STRING OS_STRING "-" ARCH_STRING
-#else
-	#define PLATFORM_STRING OS_STRING "-" ARCH_STRING "-debug"
-#endif
+#include "qcommon/q_platform.h"
 
 // ================================================================
 // TYPE DEFINITIONS
@@ -501,8 +155,13 @@ typedef int		sfxHandle_t;
 typedef int		fileHandle_t;
 typedef int		clipHandle_t;
 
-//Raz: can't think of a better place to put this atm,
-//		should probably be in the platform specific definitions
+#define NULL_HANDLE		((qhandle_t) 0)
+#define NULL_SOUND		((sfxHandle_t) 0)
+#define NULL_FX				((fxHandle_t) 0)
+#define NULL_SFX			((sfxHandle_t) 0)
+#define NULL_FILE			((fileHandle_t) 0)
+#define NULL_CLIP			((clipHandle_t) 0)
+
 #if defined (_MSC_VER) && (_MSC_VER >= 1600)
 
 	#include <stdint.h>
@@ -553,6 +212,7 @@ typedef int		clipHandle_t;
 #define	MAX_QINT			0x7fffffff
 #define	MIN_QINT			(-MAX_QINT-1)
 
+#define INT_ID( a, b, c, d ) (uint32_t)((((d) & 0xff) << 24) | (((c) & 0xff) << 16) | (((b) & 0xff) << 8) | ((a) & 0xff))
 
 // angle indexes
 #define	PITCH				0		// up / down
@@ -575,7 +235,7 @@ typedef int		clipHandle_t;
 
 #define NET_ADDRSTRMAXLEN 48 // maximum length of an IPv6 address string including trailing '\0'
 
-//Raz: moved these from ui_local.h so we can access them everywhere
+// moved these from ui_local.h so we can access them everywhere
 #define MAX_ADDRESSLENGTH		256//64
 #define MAX_HOSTNAMELENGTH		256//22
 #define MAX_MAPNAMELENGTH		256//16
@@ -656,8 +316,7 @@ typedef enum {
 #define PROP_HEIGHT				27
 #define PROP_SMALL_SIZE_SCALE	0.75*/
 
-#define PROP_GAP_WIDTH			2
-//#define PROP_GAP_WIDTH			3
+#define PROP_GAP_WIDTH			2 // 3
 #define PROP_SPACE_WIDTH		4
 #define PROP_HEIGHT				16
 
@@ -683,7 +342,7 @@ typedef enum {
 #define UI_FORMATMASK	0x00000007
 #define UI_SMALLFONT	0x00000010
 #define UI_BIGFONT		0x00000020	// default
-//#define UI_GIANTFONT	0x00000040
+
 #define UI_DROPSHADOW	0x00000800
 #define UI_BLINK		0x00001000
 #define UI_INVERSE		0x00002000
@@ -719,22 +378,11 @@ MATHLIB
 */
 
 
-typedef float vec_t;
-typedef vec_t vec2_t[2];
-typedef vec_t vec3_t[3];
-typedef vec_t vec4_t[4];
-typedef vec_t vec5_t[5];
+typedef float	 vec2_t[2],	 vec3_t[3],	 vec4_t[4],	 vec5_t[5];
+typedef int		ivec2_t[2],	ivec3_t[3],	ivec4_t[4],	ivec5_t[5];
+typedef vec3_t vec3pair_t[2], matrix3_t[3];
 
-//rwwRMG - new vec types
-typedef vec3_t	vec3pair_t[2];
-
-typedef int ivec3_t[3];
-typedef int ivec4_t[4];
-typedef int ivec5_t[5];
-
-typedef	int	fixed4_t;
-typedef	int	fixed8_t;
-typedef	int	fixed16_t;
+typedef	int	fixed4_t, fixed8_t, fixed16_t;
 
 #ifndef M_PI
 #define M_PI		3.14159265358979323846f	// matches value in gcc v2 math.h
@@ -813,236 +461,7 @@ typedef enum
 	NUM_FORCE_POWERS
 } forcePowers_t;
 
-typedef enum
-{
-	SABER_NONE = 0,
-	SABER_SINGLE,
-	SABER_STAFF,
-	SABER_DAGGER,
-	SABER_BROAD,
-	SABER_PRONG,
-	SABER_ARC,
-	SABER_SAI,
-	SABER_CLAW,
-	SABER_LANCE,
-	SABER_STAR,
-	SABER_TRIDENT,
-	SABER_SITH_SWORD,
-	NUM_SABERS
-} saberType_t;
-
-typedef struct 
-{
-	// Actual trail stuff
-	int		inAction;	// controls whether should we even consider starting one
-	int		duration;	// how long each trail seg stays in existence
-	int		lastTime;	// time a saber segement was last stored
-	vec3_t	base;
-	vec3_t	tip;
-
-	vec3_t	dualbase;
-	vec3_t	dualtip;
-
-	// Marks stuff
-	qboolean	haveOldPos[2];
-	vec3_t		oldPos[2];		
-	vec3_t		oldNormal[2];	// store this in case we don't have a connect-the-dots situation
-							//	..then we'll need the normal to project a mark blob onto the impact point
-} saberTrail_t;
-
-typedef struct
-{
-	qboolean	active;
-	saber_colors_t	color;
-	float		radius;
-	float		length;
-	float		lengthMax;
-	float		lengthOld;
-	float		desiredLength;
-	vec3_t		muzzlePoint;
-	vec3_t		muzzlePointOld;
-	vec3_t		muzzleDir;
-	vec3_t		muzzleDirOld;
-	saberTrail_t	trail;
-	int			hitWallDebounceTime;
-	int			storageTime;
-	int			extendDebounce;
-} bladeInfo_t;
-#define MAX_BLADES 8
-
-typedef enum
-{
-	SS_NONE = 0,
-	SS_FAST,
-	SS_MEDIUM,
-	SS_STRONG,
-	SS_DESANN,
-	SS_TAVION,
-	SS_DUAL,
-	SS_STAFF,
-	SS_NUM_SABER_STYLES
-} saber_styles_t;
-
-//SABER FLAGS
-//Old bools converted to a flag now
-#define SFL_NOT_LOCKABLE			(1<<0)//can't get into a saberlock
-#define SFL_NOT_THROWABLE			(1<<1)//can't be thrown - FIXME: maybe make this a max level of force saber throw that can be used with this saber?
-#define SFL_NOT_DISARMABLE			(1<<2)//can't be dropped
-#define SFL_NOT_ACTIVE_BLOCKING		(1<<3)//don't to try to block incoming shots with this saber
-#define SFL_TWO_HANDED				(1<<4)//uses both hands
-#define SFL_SINGLE_BLADE_THROWABLE	(1<<5)//can throw this saber if only the first blade is on
-#define SFL_RETURN_DAMAGE			(1<<6)//when returning from a saber throw, it keeps spinning and doing damage
-//NEW FLAGS
-#define SFL_ON_IN_WATER				(1<<7)//if set, weapon stays active even in water
-#define SFL_BOUNCE_ON_WALLS			(1<<8)//if set, the saber will bounce back when it hits solid architecture (good for real-sword type mods)
-#define SFL_BOLT_TO_WRIST			(1<<9)//if set, saber model is bolted to wrist, not in hand... useful for things like claws & shields, etc.
-//#define SFL_STICK_ON_IMPACT		(1<<?)//if set, the saber will stick in the wall when thrown and hits solid architecture (good for sabers that are meant to be thrown).
-//#define SFL_NO_ATTACK				(1<<?)//if set, you cannot attack with the saber (for sabers/weapons that are meant to be thrown only, not used as melee weapons).
-//Move Restrictions
-#define SFL_NO_PULL_ATTACK			(1<<10)//if set, cannot do pull+attack move (move not available in MP anyway)
-#define SFL_NO_BACK_ATTACK			(1<<11)//if set, cannot do back-stab moves
-#define SFL_NO_STABDOWN				(1<<12)//if set, cannot do stabdown move (when enemy is on ground)
-#define SFL_NO_WALL_RUNS			(1<<13)//if set, cannot side-run or forward-run on walls
-#define SFL_NO_WALL_FLIPS			(1<<14)//if set, cannot do backflip off wall or side-flips off walls
-#define SFL_NO_WALL_GRAB			(1<<15)//if set, cannot grab wall & jump off
-#define SFL_NO_ROLLS				(1<<16)//if set, cannot roll
-#define SFL_NO_FLIPS				(1<<17)//if set, cannot do flips
-#define SFL_NO_CARTWHEELS			(1<<18)//if set, cannot do cartwheels
-#define SFL_NO_KICKS				(1<<19)//if set, cannot do kicks (can't do kicks anyway if using a throwable saber/sword)
-#define SFL_NO_MIRROR_ATTACKS		(1<<20)//if set, cannot do the simultaneous attack left/right moves (only available in Dual Lightsaber Combat Style)
-#define SFL_NO_ROLL_STAB			(1<<21)//if set, cannot do roll-stab move at end of roll
-//SABER FLAGS2
-//Primary Blade Style
-#define SFL2_NO_WALL_MARKS			(1<<0)//if set, stops the saber from drawing marks on the world (good for real-sword type mods)
-#define SFL2_NO_DLIGHT				(1<<1)//if set, stops the saber from drawing a dynamic light (good for real-sword type mods)
-#define SFL2_NO_BLADE				(1<<2)//if set, stops the saber from drawing a blade (good for real-sword type mods)
-#define SFL2_NO_CLASH_FLARE			(1<<3)//if set, the saber will not do the big, white clash flare with other sabers
-#define SFL2_NO_DISMEMBERMENT		(1<<4)//if set, the saber never does dismemberment (good for pointed/blunt melee weapons)
-#define SFL2_NO_IDLE_EFFECT			(1<<5)//if set, the saber will not do damage or any effects when it is idle (not in an attack anim).  (good for real-sword type mods)
-#define SFL2_ALWAYS_BLOCK			(1<<6)//if set, the blades will always be blocking (good for things like shields that should always block)
-#define SFL2_NO_MANUAL_DEACTIVATE	(1<<7)//if set, the blades cannot manually be toggled on and off
-#define SFL2_TRANSITION_DAMAGE		(1<<8)//if set, the blade does damage in start, transition and return anims (like strong style does)
-//Secondary Blade Style
-#define SFL2_NO_WALL_MARKS2			(1<<9)//if set, stops the saber from drawing marks on the world (good for real-sword type mods)
-#define SFL2_NO_DLIGHT2				(1<<10)//if set, stops the saber from drawing a dynamic light (good for real-sword type mods)
-#define SFL2_NO_BLADE2				(1<<11)//if set, stops the saber from drawing a blade (good for real-sword type mods)
-#define SFL2_NO_CLASH_FLARE2		(1<<12)//if set, the saber will not do the big, white clash flare with other sabers
-#define SFL2_NO_DISMEMBERMENT2		(1<<13)//if set, the saber never does dismemberment (good for pointed/blunt melee weapons)
-#define SFL2_NO_IDLE_EFFECT2		(1<<14)//if set, the saber will not do damage or any effects when it is idle (not in an attack anim).  (good for real-sword type mods)
-#define SFL2_ALWAYS_BLOCK2			(1<<15)//if set, the blades will always be blocking (good for things like shields that should always block)
-#define SFL2_NO_MANUAL_DEACTIVATE2	(1<<16)//if set, the blades cannot manually be toggled on and off
-#define SFL2_TRANSITION_DAMAGE2		(1<<17)//if set, the blade does damage in start, transition and return anims (like strong style does)
-
-typedef struct
-{
-	char		name[64];						//entry in sabers.cfg, if any
-	char		fullName[64];				//the "Proper Name" of the saber, shown in UI
-	saberType_t	type;						//none, single or staff
-	char		model[MAX_QPATH];						//hilt model
-	qhandle_t	skin;						//registered skin id
-	int			soundOn;					//game soundindex for turning on sound
-	int			soundLoop;					//game soundindex for hum/loop sound
-	int			soundOff;					//game soundindex for turning off sound
-	int			numBlades;
-	bladeInfo_t	blade[MAX_BLADES];			//blade info - like length, trail, origin, dir, etc.
-	int			stylesLearned;				//styles you get when you get this saber, if any
-	int			stylesForbidden;			//styles you cannot use with this saber, if any
-	int			maxChain;					//how many moves can be chained in a row with this weapon (-1 is infinite, 0 is use default behavior)
-	int			forceRestrictions;			//force powers that cannot be used while this saber is on (bitfield) - FIXME: maybe make this a limit on the max level, per force power, that can be used with this type?
-	int			lockBonus;					//in saberlocks, this type of saber pushes harder or weaker
-	int			parryBonus;					//added to strength of parry with this saber
-	int			breakParryBonus;			//added to strength when hit a parry
-	int			breakParryBonus2;			//for bladeStyle2 (see bladeStyle2Start below)
-	int			disarmBonus;				//added to disarm chance when win saberlock or have a good parry (knockaway)
-	int			disarmBonus2;				//for bladeStyle2 (see bladeStyle2Start below)
-	saber_styles_t	singleBladeStyle;		//makes it so that you use a different style if you only have the first blade active
-//	char		*brokenSaber1;				//if saber is actually hit by another saber, it can be cut in half/broken and will be replaced with this saber in your right hand
-//	char		*brokenSaber2;				//if saber is actually hit by another saber, it can be cut in half/broken and will be replaced with this saber in your left hand
-//===NEW========================================================================================
-	//these values are global to the saber, like all of the ones above
-	int			saberFlags;					//from SFL_ list above
-	int			saberFlags2;				//from SFL2_ list above
-
-	//done in cgame (client-side code)
-	qhandle_t	spinSound;					//none - if set, plays this sound as it spins when thrown
-	qhandle_t	swingSound[3];				//none - if set, plays one of these 3 sounds when swung during an attack - NOTE: must provide all 3!!!
-
-	//done in game (server-side code)
-	float		moveSpeedScale;				//1.0 - you move faster/slower when using this saber
-	float		animSpeedScale;				//1.0 - plays normal attack animations faster/slower
-
-	//done in both cgame and game (BG code)
-	int	kataMove;				//LS_INVALID - if set, player will execute this move when they press both attack buttons at the same time 
-	int	lungeAtkMove;			//LS_INVALID - if set, player will execute this move when they crouch+fwd+attack 
-	int	jumpAtkUpMove;			//LS_INVALID - if set, player will execute this move when they jump+attack 
-	int	jumpAtkFwdMove;			//LS_INVALID - if set, player will execute this move when they jump+fwd+attack 
-	int	jumpAtkBackMove;		//LS_INVALID - if set, player will execute this move when they jump+back+attack
-	int	jumpAtkRightMove;		//LS_INVALID - if set, player will execute this move when they jump+rightattack
-	int	jumpAtkLeftMove;		//LS_INVALID - if set, player will execute this move when they jump+left+attack
-	int	readyAnim;				//-1 - anim to use when standing idle
-	int	drawAnim;				//-1 - anim to use when drawing weapon
-	int	putawayAnim;			//-1 - anim to use when putting weapon away
-	int	tauntAnim;				//-1 - anim to use when hit "taunt"
-	int	bowAnim;				//-1 - anim to use when hit "bow"
-	int	meditateAnim;			//-1 - anim to use when hit "meditate"
-	int	flourishAnim;			//-1 - anim to use when hit "flourish"
-	int	gloatAnim;				//-1 - anim to use when hit "gloat"
-
-	//***NOTE: you can only have a maximum of 2 "styles" of blades, so this next value, "bladeStyle2Start" is the number of the first blade to use these value on... all blades before this use the normal values above, all blades at and after this number use the secondary values below***
-	int			bladeStyle2Start;			//0 - if set, blades from this number and higher use the following values (otherwise, they use the normal values already set)
-
-	//***The following can be different for the extra blades - not setting them individually defaults them to the value for the whole saber (and first blade)***
-	
-	//===PRIMARY BLADES=====================
-	//done in cgame (client-side code)
-	int			trailStyle;					//0 - default (0) is normal, 1 is a motion blur and 2 is no trail at all (good for real-sword type mods)
-	int			g2MarksShader;				//none - if set, the game will use this shader for marks on enemies instead of the default "gfx/damage/saberglowmark"
-	int			g2WeaponMarkShader;			//none - if set, the game will ry to project this shader onto the weapon when it damages a person (good for a blood splatter on the weapon)
-	//int		bladeShader;				//none - if set, overrides the shader used for the saber blade?
-	//int		trailShader;				//none - if set, overrides the shader used for the saber trail?
-	qhandle_t	hitSound[3];				//none - if set, plays one of these 3 sounds when saber hits a person - NOTE: must provide all 3!!!
-	qhandle_t	blockSound[3];				//none - if set, plays one of these 3 sounds when saber/sword hits another saber/sword - NOTE: must provide all 3!!!
-	qhandle_t	bounceSound[3];				//none - if set, plays one of these 3 sounds when saber/sword hits a wall and bounces off (must set bounceOnWall to 1 to use these sounds) - NOTE: must provide all 3!!!
-	int			blockEffect;				//none - if set, plays this effect when the saber/sword hits another saber/sword (instead of "saber/saber_block.efx")
-	int			hitPersonEffect;			//none - if set, plays this effect when the saber/sword hits a person (instead of "saber/blood_sparks_mp.efx")
-	int			hitOtherEffect;				//none - if set, plays this effect when the saber/sword hits something else damagable (instead of "saber/saber_cut.efx")
-	int			bladeEffect;				//none - if set, plays this effect at the blade tag
-
-	//done in game (server-side code)
-	float		knockbackScale;				//0 - if non-zero, uses damage done to calculate an appropriate amount of knockback
-	float		damageScale;				//1 - scale up or down the damage done by the saber
-	float		splashRadius;				//0 - radius of splashDamage
-	int			splashDamage;				//0 - amount of splashDamage, 100% at a distance of 0, 0% at a distance = splashRadius
-	float		splashKnockback;			//0 - amount of splashKnockback, 100% at a distance of 0, 0% at a distance = splashRadius
-	
-	//===SECONDARY BLADES===================
-	//done in cgame (client-side code)
-	int			trailStyle2;				//0 - default (0) is normal, 1 is a motion blur and 2 is no trail at all (good for real-sword type mods)
-	int			g2MarksShader2;				//none - if set, the game will use this shader for marks on enemies instead of the default "gfx/damage/saberglowmark"
-	int			g2WeaponMarkShader2;		//none - if set, the game will ry to project this shader onto the weapon when it damages a person (good for a blood splatter on the weapon)
-	//int		bladeShader2;				//none - if set, overrides the shader used for the saber blade?
-	//int		trailShader2;				//none - if set, overrides the shader used for the saber trail?
-	qhandle_t	hit2Sound[3];				//none - if set, plays one of these 3 sounds when saber hits a person - NOTE: must provide all 3!!!
-	qhandle_t	block2Sound[3];				//none - if set, plays one of these 3 sounds when saber/sword hits another saber/sword - NOTE: must provide all 3!!!
-	qhandle_t	bounce2Sound[3];			//none - if set, plays one of these 3 sounds when saber/sword hits a wall and bounces off (must set bounceOnWall to 1 to use these sounds) - NOTE: must provide all 3!!!
-	int			blockEffect2;				//none - if set, plays this effect when the saber/sword hits another saber/sword (instead of "saber/saber_block.efx")
-	int			hitPersonEffect2;			//none - if set, plays this effect when the saber/sword hits a person (instead of "saber/blood_sparks_mp.efx")
-	int			hitOtherEffect2;			//none - if set, plays this effect when the saber/sword hits something else damagable (instead of "saber/saber_cut.efx")
-	int			bladeEffect2;				//none - if set, plays this effect at the blade tag
-
-	//done in game (server-side code)
-	float		knockbackScale2;			//0 - if non-zero, uses damage done to calculate an appropriate amount of knockback
-	float		damageScale2;				//1 - scale up or down the damage done by the saber
-	float		splashRadius2;				//0 - radius of splashDamage
-	int			splashDamage2;				//0 - amount of splashDamage, 100% at a distance of 0, 0% at a distance = splashRadius
-	float		splashKnockback2;			//0 - amount of splashKnockback, 100% at a distance of 0, 0% at a distance = splashRadius
-//=========================================================================================================================================
-
-} saberInfo_t;
-#define MAX_SABERS 2
-
-typedef enum forcePowerLevels_e
-{
+typedef enum forcePowerLevels_e {
 	FORCE_LEVEL_0,
 	FORCE_LEVEL_1,
 	FORCE_LEVEL_2,
@@ -1094,8 +513,7 @@ enum sharedERagEffector
 	RE_CEYEBROW=			0x01000000 //"ceyebrow"
 };
 
-typedef struct
-{
+typedef struct sharedRagDollParams_s {
 	vec3_t angles;
 	vec3_t position;
 	vec3_t scale;
@@ -1123,8 +541,7 @@ typedef struct
 } sharedRagDollParams_t;
 
 //And one for updating during model animation.
-typedef struct
-{
+typedef struct sharedRagDollUpdateParams_s {
 	vec3_t angles;
 	vec3_t position;
 	vec3_t scale;
@@ -1134,8 +551,7 @@ typedef struct
 } sharedRagDollUpdateParams_t;
 
 //rww - update parms for ik bone stuff
-typedef struct
-{
+typedef struct sharedIKMoveParams_s {
 	char boneName[512]; //name of bone
 	vec3_t desiredOrigin; //world coordinate that this bone should be attempting to reach
 	vec3_t origin; //world coordinate of the entity who owns the g2 instance that owns the bone
@@ -1143,8 +559,7 @@ typedef struct
 } sharedIKMoveParams_t;
 
 
-typedef struct
-{
+typedef struct sharedSetBoneIKStateParams_s {
 	vec3_t pcjMins; //ik joint limit
 	vec3_t pcjMaxs; //ik joint limit
 	vec3_t origin; //origin of caller
@@ -1332,6 +747,7 @@ extern	vec4_t		colorRed;
 extern	vec4_t		colorGreen;
 extern	vec4_t		colorBlue;
 extern	vec4_t		colorYellow;
+extern	vec4_t		colorOrange;
 extern	vec4_t		colorMagenta;
 extern	vec4_t		colorCyan;
 extern	vec4_t		colorWhite;
@@ -1342,8 +758,10 @@ extern	vec4_t		colorLtBlue;
 extern	vec4_t		colorDkBlue;
 
 #define Q_COLOR_ESCAPE	'^'
+#define Q_COLOR_BITS 0xF // was 7
+
 // you MUST have the last bit on here about colour strings being less than 7 or taiwanese strings register as colour!!!!
-#define Q_IsColorString(p)	( p && *(p) == Q_COLOR_ESCAPE && *((p)+1) && *((p)+1) != Q_COLOR_ESCAPE && *((p)+1) <= '7' && *((p)+1) >= '0' )
+#define Q_IsColorString(p)	( p && *(p) == Q_COLOR_ESCAPE && *((p)+1) && *((p)+1) != Q_COLOR_ESCAPE && *((p)+1) <= '9' && *((p)+1) >= '0' )
 // Correct version of the above for Q_StripColor
 #define Q_IsColorStringExt(p)	((p) && *(p) == Q_COLOR_ESCAPE && *((p)+1) && *((p)+1) >= '0' && *((p)+1) <= '9') // ^[0-9]
 
@@ -1356,7 +774,9 @@ extern	vec4_t		colorDkBlue;
 #define COLOR_CYAN		'5'
 #define COLOR_MAGENTA	'6'
 #define COLOR_WHITE		'7'
-#define ColorIndex(c)	( ( (c) - '0' ) & 7 )
+#define COLOR_ORANGE	'8'
+#define COLOR_GREY		'9'
+#define ColorIndex(c)	( ( (c) - '0' ) & Q_COLOR_BITS )
 
 #define S_COLOR_BLACK	"^0"
 #define S_COLOR_RED		"^1"
@@ -1366,20 +786,18 @@ extern	vec4_t		colorDkBlue;
 #define S_COLOR_CYAN	"^5"
 #define S_COLOR_MAGENTA	"^6"
 #define S_COLOR_WHITE	"^7"
+#define S_COLOR_ORANGE	"^8"
+#define S_COLOR_GREY	"^9"
 
-extern vec4_t	g_color_table[8];
+extern vec4_t g_color_table[Q_COLOR_BITS+1];
 
 #define	MAKERGB( v, r, g, b ) v[0]=r;v[1]=g;v[2]=b
 #define	MAKERGBA( v, r, g, b, a ) v[0]=r;v[1]=g;v[2]=b;v[3]=a
 
 struct cplane_s;
 
-extern	vec3_t	vec3_origin;
-extern	vec3_t	axisDefault[3];
-
-#define	nanmask (255<<23)
-#define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
-
+extern	vec3_t		vec3_origin;
+extern	matrix3_t	axisDefault;
 
 #if idppc
 
@@ -1428,61 +846,61 @@ void ByteToDir( int b, vec3_t dir );
 #define minimum( x, y ) ((x) < (y) ? (x) : (y))
 #define maximum( x, y ) ((x) > (y) ? (x) : (y))
 
-//JAC: Moved to q_math.c
 #define DEG2RAD( deg ) ( ((deg)*M_PI) / 180.0f )
 #define RAD2DEG( rad ) ( ((rad)*180.0f) / M_PI )
 
-extern ID_INLINE void		VectorAdd( const vec3_t vec1, const vec3_t vec2, vec3_t vecOut );
-extern ID_INLINE void		VectorSubtract( const vec3_t vec1, const vec3_t vec2, vec3_t vecOut );
-extern ID_INLINE void		VectorScale( const vec3_t vecIn, vec_t scale, vec3_t vecOut );
-extern ID_INLINE void		VectorScale4( const vec4_t vecIn, vec_t scale, vec4_t vecOut );
-extern ID_INLINE void		VectorMA( const vec3_t vec1, float scale, const vec3_t vec2, vec3_t vecOut );
-extern ID_INLINE vec_t		VectorLength( const vec3_t vec );
-extern ID_INLINE vec_t		VectorLengthSquared( const vec3_t vec );
-extern ID_INLINE vec_t		Distance( const vec3_t p1, const vec3_t p2 );
-extern ID_INLINE vec_t		DistanceSquared( const vec3_t p1, const vec3_t p2 );
-extern ID_INLINE void		VectorNormalizeFast( vec3_t vec );
-extern ID_INLINE vec_t		VectorNormalize( vec3_t vec );
-extern ID_INLINE vec_t		VectorNormalize2( const vec3_t vec, vec3_t vecOut );
-extern ID_INLINE void		VectorCopy( const vec3_t vecIn, vec3_t vecOut );
-extern ID_INLINE void		VectorCopy4( const vec4_t vecIn, vec4_t vecOut );
-extern ID_INLINE void		VectorSet( vec3_t vec, vec_t x, vec_t y, vec_t z );
-extern ID_INLINE void		VectorSet4( vec4_t vec, vec_t x, vec_t y, vec_t z, vec_t w );
-extern ID_INLINE void		VectorSet5( vec5_t vec, vec_t x, vec_t y, vec_t z, vec_t w, vec_t u );
-extern ID_INLINE void		VectorClear( vec3_t vec );
-extern ID_INLINE void		VectorClear4( vec4_t vec );
-extern ID_INLINE void		VectorInc( vec3_t vec );
-extern ID_INLINE void		VectorDec( vec3_t vec );
-extern ID_INLINE void		VectorInverse( vec3_t vec );
-extern ID_INLINE void		CrossProduct( const vec3_t vec1, const vec3_t vec2, vec3_t vecOut );
-extern ID_INLINE vec_t		DotProduct( const vec3_t vec1, const vec3_t vec2 );
-extern ID_INLINE qboolean	VectorCompare( const vec3_t vec1, const vec3_t vec2 );
+void		VectorAdd( const vec3_t vec1, const vec3_t vec2, vec3_t vecOut );
+void		VectorSubtract( const vec3_t vec1, const vec3_t vec2, vec3_t vecOut );
+void		VectorScale( const vec3_t vecIn, float scale, vec3_t vecOut );
+void		VectorScale4( const vec4_t vecIn, float scale, vec4_t vecOut );
+void		VectorMA( const vec3_t vec1, float scale, const vec3_t vec2, vec3_t vecOut );
+float		VectorLength( const vec3_t vec );
+float		VectorLengthSquared( const vec3_t vec );
+float		Distance( const vec3_t p1, const vec3_t p2 );
+float		DistanceSquared( const vec3_t p1, const vec3_t p2 );
+void		VectorNormalizeFast( vec3_t vec );
+float		VectorNormalize( vec3_t vec );
+float		VectorNormalize2( const vec3_t vec, vec3_t vecOut );
+void		VectorCopy( const vec3_t vecIn, vec3_t vecOut );
+void		VectorCopy4( const vec4_t vecIn, vec4_t vecOut );
+void		VectorSet( vec3_t vec, float x, float y, float z );
+void		VectorSet4( vec4_t vec, float x, float y, float z, float w );
+void		VectorSet5( vec5_t vec, float x, float y, float z, float w, float u );
+void		VectorClear( vec3_t vec );
+void		VectorClear4( vec4_t vec );
+void		VectorInc( vec3_t vec );
+void		VectorDec( vec3_t vec );
+void		VectorInverse( vec3_t vec );
+void		CrossProduct( const vec3_t vec1, const vec3_t vec2, vec3_t vecOut );
+float		DotProduct( const vec3_t vec1, const vec3_t vec2 );
+qboolean	VectorCompare( const vec3_t vec1, const vec3_t vec2 );
+void		SnapVector( float *v );
 
-#define				VectorAddM( vec1, vec2, vecOut )		((vecOut)[0]=(vec1)[0]+(vec2)[0], (vecOut)[1]=(vec1)[1]+(vec2)[1], (vecOut)[2]=(vec1)[2]+(vec2)[2])
-#define				VectorSubtractM( vec1, vec2, vecOut )	((vecOut)[0]=(vec1)[0]-(vec2)[0], (vecOut)[1]=(vec1)[1]-(vec2)[1], (vecOut)[2]=(vec1)[2]-(vec2)[2])
-#define				VectorScaleM( vecIn, scale, vecOut )	((vecOut)[0]=(vecIn)[0]*(scale), (vecOut)[1]=(vecIn)[1]*(scale), (vecOut)[2]=(vecIn)[2]*(scale))
-#define				VectorScale4M( vecIn, scale, vecOut )	((vecOut)[0]=(vecIn)[0]*(scale), (vecOut)[1]=(vecIn)[1]*(scale), (vecOut)[2]=(vecIn)[2]*(scale), (vecOut)[3]=(vecIn)[3]*(scale))
-#define				VectorMAM( vec1, scale, vec2, vecOut )	((vecOut)[0]=(vec1)[0]+(vec2)[0]*(scale), (vecOut)[1]=(vec1)[1]+(vec2)[1]*(scale), (vecOut)[2]=(vec1)[2]+(vec2)[2]*(scale))
-#define				VectorLengthM( vec )					VectorLength( vec )
-#define				VectorLengthSquaredM( vec )				VectorLengthSquared( vec )
-#define				DistanceM( vec )						Distance( vec )
-#define				DistanceSquaredM( p1, p2 )				DistanceSquared( p1, p2 )
-#define				VectorNormalizeFastM( vec )				VectorNormalizeFast( vec )
-#define				VectorNormalizeM( vec )					VectorNormalize( vec )
-#define				VectorNormalize2M( vec, vecOut )		VectorNormalize2( vec, vecOut )
-#define				VectorCopyM( vecIn, vecOut )			((vecOut)[0]=(vecIn)[0], (vecOut)[1]=(vecIn)[1], (vecOut)[2]=(vecIn)[2])
-#define				VectorCopy4M( vecIn, vecOut )			((vecOut)[0]=(vecIn)[0], (vecOut)[1]=(vecIn)[1], (vecOut)[2]=(vecIn)[2], (vecOut)[3]=(vecIn)[3])
-#define				VectorSetM( vec, x, y, z )				((vec)[0]=(x), (vec)[1]=(y), (vec)[2]=(z))
-#define				VectorSet4M( vec, x, y, z, w )			((vec)[0]=(x), (vec)[1]=(y), (vec)[2]=(z), (vec)[3]=(w))
-#define				VectorSet5M( vec, x, y, z, w, u )		((vec)[0]=(x), (vec)[1]=(y), (vec)[2]=(z), (vec)[3]=(w), (vec)[4]=(u))
-#define				VectorClearM( vec )						((vec)[0]=(vec)[1]=(vec)[2]=0)
-#define				VectorClear4M( vec )					((vec)[0]=(vec)[1]=(vec)[2]=(vec)[3]=0)
-#define				VectorIncM( vec )						((vec)[0]+=1.0f, (vec)[1]+=1.0f, (vec)[2]+=1.0f)
-#define				VectorDecM( vec )						((vec)[0]-=1.0f, (vec)[1]-=1.0f, (vec)[2]-=1.0f)
-#define				VectorInverseM( vec )					((vec)[0]=-(vec)[0], (vec)[1]=-(vec)[1], (vec)[2]=-(vec)[2])
-#define				CrossProductM( vec1, vec2, vecOut )		((vecOut)[0]=((vec1)[1]*(vec2)[2])-((vec1)[2]*(v2)[1]), (vecOut)[1]=((vec1)[2]*(vec2)[0])-((vec1)[0]*(vec2)[2]), (vecOut)[2]=((vec1)[0]*(vec2)[1])-((vec1)[1]*(vec2)[0]))
-#define				DotProductM( x, y )						((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
-#define				VectorCompareM( vec1, vec2 )			(!!((vec1)[0]==(vec2)[0] && (vec1)[1]==(vec2)[1] && (vec1)[2]==(vec2)[2]))
+#define		VectorAddM( vec1, vec2, vecOut )		((vecOut)[0]=(vec1)[0]+(vec2)[0], (vecOut)[1]=(vec1)[1]+(vec2)[1], (vecOut)[2]=(vec1)[2]+(vec2)[2])
+#define		VectorSubtractM( vec1, vec2, vecOut )	((vecOut)[0]=(vec1)[0]-(vec2)[0], (vecOut)[1]=(vec1)[1]-(vec2)[1], (vecOut)[2]=(vec1)[2]-(vec2)[2])
+#define		VectorScaleM( vecIn, scale, vecOut )	((vecOut)[0]=(vecIn)[0]*(scale), (vecOut)[1]=(vecIn)[1]*(scale), (vecOut)[2]=(vecIn)[2]*(scale))
+#define		VectorScale4M( vecIn, scale, vecOut )	((vecOut)[0]=(vecIn)[0]*(scale), (vecOut)[1]=(vecIn)[1]*(scale), (vecOut)[2]=(vecIn)[2]*(scale), (vecOut)[3]=(vecIn)[3]*(scale))
+#define		VectorMAM( vec1, scale, vec2, vecOut )	((vecOut)[0]=(vec1)[0]+(vec2)[0]*(scale), (vecOut)[1]=(vec1)[1]+(vec2)[1]*(scale), (vecOut)[2]=(vec1)[2]+(vec2)[2]*(scale))
+#define		VectorLengthM( vec )					VectorLength( vec )
+#define		VectorLengthSquaredM( vec )				VectorLengthSquared( vec )
+#define		DistanceM( vec )						Distance( vec )
+#define		DistanceSquaredM( p1, p2 )				DistanceSquared( p1, p2 )
+#define		VectorNormalizeFastM( vec )				VectorNormalizeFast( vec )
+#define		VectorNormalizeM( vec )					VectorNormalize( vec )
+#define		VectorNormalize2M( vec, vecOut )		VectorNormalize2( vec, vecOut )
+#define		VectorCopyM( vecIn, vecOut )			((vecOut)[0]=(vecIn)[0], (vecOut)[1]=(vecIn)[1], (vecOut)[2]=(vecIn)[2])
+#define		VectorCopy4M( vecIn, vecOut )			((vecOut)[0]=(vecIn)[0], (vecOut)[1]=(vecIn)[1], (vecOut)[2]=(vecIn)[2], (vecOut)[3]=(vecIn)[3])
+#define		VectorSetM( vec, x, y, z )				((vec)[0]=(x), (vec)[1]=(y), (vec)[2]=(z))
+#define		VectorSet4M( vec, x, y, z, w )			((vec)[0]=(x), (vec)[1]=(y), (vec)[2]=(z), (vec)[3]=(w))
+#define		VectorSet5M( vec, x, y, z, w, u )		((vec)[0]=(x), (vec)[1]=(y), (vec)[2]=(z), (vec)[3]=(w), (vec)[4]=(u))
+#define		VectorClearM( vec )						((vec)[0]=(vec)[1]=(vec)[2]=0)
+#define		VectorClear4M( vec )					((vec)[0]=(vec)[1]=(vec)[2]=(vec)[3]=0)
+#define		VectorIncM( vec )						((vec)[0]+=1.0f, (vec)[1]+=1.0f, (vec)[2]+=1.0f)
+#define		VectorDecM( vec )						((vec)[0]-=1.0f, (vec)[1]-=1.0f, (vec)[2]-=1.0f)
+#define		VectorInverseM( vec )					((vec)[0]=-(vec)[0], (vec)[1]=-(vec)[1], (vec)[2]=-(vec)[2])
+#define		CrossProductM( vec1, vec2, vecOut )		((vecOut)[0]=((vec1)[1]*(vec2)[2])-((vec1)[2]*(v2)[1]), (vecOut)[1]=((vec1)[2]*(vec2)[0])-((vec1)[0]*(vec2)[2]), (vecOut)[2]=((vec1)[0]*(vec2)[1])-((vec1)[1]*(vec2)[0]))
+#define		DotProductM( x, y )						((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
+#define		VectorCompareM( vec1, vec2 )			(!!((vec1)[0]==(vec2)[0] && (vec1)[1]==(vec2)[1] && (vec1)[2]==(vec2)[2]))
 
 // TODO
 #define VectorScaleVector(a,b,c)		(((c)[0]=(a)[0]*(b)[0]),((c)[1]=(a)[1]*(b)[1]),((c)[2]=(a)[2]*(b)[2]))
@@ -1492,49 +910,6 @@ extern ID_INLINE qboolean	VectorCompare( const vec3_t vec1, const vec3_t vec2 );
 #define VectorAverage(a,b,c)			(((c)[0]=((a)[0]+(b)[0])*0.5f),((c)[1]=((a)[1]+(b)[1])*0.5f),((c)[2]=((a)[2]+(b)[2])*0.5f))
 #define VectorNegate(a,b)				((b)[0]=-(a)[0],(b)[1]=-(a)[1],(b)[2]=-(a)[2])
 
-#ifdef __LCC__
-#ifdef VectorCopy
-#undef VectorCopy
-// this is a little hack to get more efficient copies in our interpreter
-typedef struct {
-	float	v[3];
-} vec3struct_t;
-#define VectorCopy(a,b)	*(vec3struct_t *)b=*(vec3struct_t *)a;
-#define ID_INLINE static
-#endif
-#endif
-
-#if defined(MACOS_X) || defined(__linux__)
-	#define	SnapVector(v) {v[0]=((int)(v[0]));v[1]=((int)(v[1]));v[2]=((int)(v[2]));}
-#else 
-	#if !defined(__LCC__) && !defined(MINGW32)
-		//pitiful attempt to reduce _ftol2 calls -rww
-		static ID_INLINE void SnapVector( float *v )
-		{
-			//RAZTODO: q_math.c plz
-			static int i;
-			static float f;
-
-			f = *v;
-			__asm fld f
-			__asm fistp	i
-			*v = i;
-			v++;
-			f = *v;
-			__asm fld f
-			__asm fistp i
-			*v = i;
-			v++;
-			f = *v;
-			__asm fld f
-			__asm fistp i
-			*v = i;
-		}
-	#else
-		#define	SnapVector(v) {v[0]=((int)(v[0]));v[1]=((int)(v[1]));v[2]=((int)(v[2]));}
-	#endif // __LCC__ || MINGW32
-#endif // MACOS_X || __linux__
-
 unsigned ColorBytes3 (float r, float g, float b);
 unsigned ColorBytes4 (float r, float g, float b, float a);
 
@@ -1542,12 +917,13 @@ float NormalizeColor( const vec3_t in, vec3_t out );
 
 float RadiusFromBounds( const vec3_t mins, const vec3_t maxs );
 void ClearBounds( vec3_t mins, vec3_t maxs );
-vec_t DistanceHorizontal( const vec3_t p1, const vec3_t p2 );
-vec_t DistanceHorizontalSquared( const vec3_t p1, const vec3_t p2 );
+float DistanceHorizontal( const vec3_t p1, const vec3_t p2 );
+float DistanceHorizontalSquared( const vec3_t p1, const vec3_t p2 );
 void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs );
-void VectorRotate( vec3_t in, vec3_t matrix[3], vec3_t out );
+void VectorRotate( const vec3_t in, matrix3_t matrix, vec3_t out );
 int Q_log2(int val);
 
+qboolean Q_isnan(float f);
 float Q_acos(float c);
 float Q_asin(float c);
 
@@ -1559,10 +935,10 @@ float	Q_crandom( int *seed );
 #define crandom()	(2.0 * (random() - 0.5))
 
 void vectoangles( const vec3_t value1, vec3_t angles);
-void AnglesToAxis( const vec3_t angles, vec3_t axis[3] );
+void AnglesToAxis( const vec3_t angles, matrix3_t axis );
 
-void AxisClear( vec3_t axis[3] );
-void AxisCopy( vec3_t in[3], vec3_t out[3] );
+void AxisClear( matrix3_t axis );
+void AxisCopy( matrix3_t in, matrix3_t out );
 
 void SetPlaneSignbits( struct cplane_s *out );
 int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, struct cplane_s *plane);
@@ -1580,7 +956,7 @@ float AngleDelta ( float angle1, float angle2 );
 qboolean PlaneFromPoints( vec4_t plane, const vec3_t a, const vec3_t b, const vec3_t c );
 void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal );
 void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
-void RotateAroundDirection( vec3_t axis[3], float yaw );
+void RotateAroundDirection( matrix3_t axis, float yaw );
 void MakeNormalVectors( const vec3_t forward, vec3_t right, vec3_t up );
 // perpendicular vector could be replaced by this
 
@@ -1593,10 +969,10 @@ void NormalToLatLong( const vec3_t normal, byte bytes[2] ); //rwwRMG - added
 
 //=============================================
 
-extern ID_INLINE int Com_Clampi( int min, int max, int value ); //rwwRMG - added
-extern ID_INLINE float Com_Clamp( float min, float max, float value );
-extern ID_INLINE int Com_AbsClampi( int min, int max, int value );
-extern ID_INLINE float Com_AbsClamp( float min, float max, float value );
+int Com_Clampi( int min, int max, int value ); //rwwRMG - added
+float Com_Clamp( float min, float max, float value );
+int Com_AbsClampi( int min, int max, int value );
+float Com_AbsClamp( float min, float max, float value );
 
 char	*COM_SkipPath( char *pathname );
 const char	*COM_GetExtension( const char *name );
@@ -1652,6 +1028,10 @@ int Com_HexStrToInt( const char *str );
 
 int	QDECL Com_sprintf (char *dest, int size, const char *fmt, ...);
 
+char *Com_SkipTokens( char *s, int numTokens, char *sep );
+char *Com_SkipCharset( char *s, char *sep );
+
+void Com_RandomBytes( byte *string, int len );
 
 // mode parm for FS_FOpenFile
 typedef enum {
@@ -1702,8 +1082,7 @@ const char *Q_strchrs( const char *string, const char *search );
 
 // 64-bit integers for global rankings interface
 // implemented as a struct for qvm compatibility
-typedef struct
-{
+typedef struct qint64_s {
 	byte	b0;
 	byte	b1;
 	byte	b2;
@@ -1729,6 +1108,9 @@ void	Swap_Init (void);
 */
 char	* QDECL va(const char *format, ...);
 
+#define TRUNCATE_LENGTH	64
+void Com_TruncateLongString( char *buffer, const char *s );
+
 //=============================================
 
 //
@@ -1740,11 +1122,16 @@ void Info_RemoveKey_Big( char *s, const char *key );
 void Info_SetValueForKey( char *s, const char *key, const char *value );
 void Info_SetValueForKey_Big( char *s, const char *key, const char *value );
 qboolean Info_Validate( const char *s );
-void Info_NextPair( const char **s, char *key, char *value );
+qboolean Info_NextPair( const char **s, char *key, char *value );
 
 // this is only here so the functions in q_shared.c and bg_*.c can link
-void	QDECL Com_Error( int level, const char *error, ... );
-void	QDECL Com_Printf( const char *msg, ... );
+#if defined( _GAME ) || defined( _CGAME ) || defined( _UI )
+	void (*Com_Error)( int level, const char *error, ... );
+	void (*Com_Printf)( const char *msg, ... );
+#else
+	void QDECL Com_Error( int level, const char *error, ... );
+	void QDECL Com_Printf( const char *msg, ... );
+#endif
 
 
 /*
@@ -1815,7 +1202,7 @@ typedef int	cvarHandle_t;
 
 // the modules that run in the virtual machine can't access the cvar_t directly,
 // so they must ask for structured updates
-typedef struct {
+typedef struct vmCvar_s {
 	cvarHandle_t	handle;
 	int			modificationCount;
 	float		value;
@@ -1861,8 +1248,7 @@ typedef struct cplane_s {
 /*
 Ghoul2 Insert Start
 */
-typedef struct
-{
+typedef struct CollisionRecord_s {
 	float		mDistance;
 	int			mEntityNum;
 	int			mModelIndex;
@@ -1875,7 +1261,7 @@ typedef struct
 	int			mLocation;
 	float		mBarycentricI; // two barycentic coodinates for the hit point
 	float		mBarycentricJ; // K = 1-I-J
-}CollisionRecord_t;
+} CollisionRecord_t;
 
 #define MAX_G2_COLLISIONS 16
 
@@ -1885,7 +1271,7 @@ typedef CollisionRecord_t G2Trace_t[MAX_G2_COLLISIONS];	// map that describes al
 Ghoul2 Insert End
 */
 // a trace is returned when a box is swept through the world
-typedef struct {
+typedef struct trace_s {
 	byte		allsolid;	// if true, plane is not valid
 	byte		startsolid;	// if true, the initial point was in a solid area
 	short		entityNum;	// entity the contacted sirface is a part of
@@ -1910,16 +1296,16 @@ Ghoul2 Insert End
 
 
 // markfragments are returned by CM_MarkFragments()
-typedef struct {
+typedef struct markFragment_s {
 	int		firstPoint;
 	int		numPoints;
 } markFragment_t;
 
 
 
-typedef struct {
+typedef struct orientation_s {
 	vec3_t		origin;
-	vec3_t		axis[3];
+	matrix3_t	axis;
 } orientation_t;
 
 //=====================================================================
@@ -2029,7 +1415,7 @@ Ghoul2 Insert End
 #define	RESERVED_CONFIGSTRINGS	2	// game can't modify below this, only the system can
 
 #define	MAX_GAMESTATE_CHARS	16000
-typedef struct {
+typedef struct gameState_s {
 	int			stringOffsets[MAX_CONFIGSTRINGS];
 	char		stringData[MAX_GAMESTATE_CHARS];
 	int			dataCount;
@@ -2119,7 +1505,9 @@ typedef enum {
 #define	MAX_STATS				16
 #define	MAX_PERSISTANT			16
 #define	MAX_POWERUPS			16
-#define	MAX_WEAPONS				19		
+#define	MAX_WEAPONS				19
+#define MAX_AMMO_TRANSMIT		16 // This is needed because the ammo array is 19 but only 16 sized array is networked
+#define MAX_AMMO				MAX_WEAPONS
 
 #define	MAX_PS_EVENTS			2
 
@@ -2227,7 +1615,7 @@ typedef struct playerState_s {
 	int			stats[MAX_STATS];
 	int			persistant[MAX_PERSISTANT];	// stats that aren't cleared on death
 	int			powerups[MAX_POWERUPS];	// level.time that the powerup runs out
-	int			ammo[MAX_WEAPONS];
+	int			ammo[MAX_AMMO];
 
 	int			generic1;
 	int			loopSound;
@@ -2575,8 +1963,7 @@ typedef struct addspriteArgStruct_s
 	int flags;
 } addspriteArgStruct_t;
 
-typedef struct
-{
+typedef struct effectTrailVertStruct_s {
 	vec3_t	origin;
 
 	// very specifc case, we can modulate the color and the alpha
@@ -2602,8 +1989,7 @@ typedef struct effectTrailArgStruct_s {
 	int							mKillTime;
 } effectTrailArgStruct_t;
 
-typedef struct
-{
+typedef struct addElectricityArgStruct_s {
 	vec3_t start;
 	vec3_t end;
 	float size1;
@@ -2634,7 +2020,7 @@ typedef enum {
 	TR_GRAVITY
 } trType_t;
 
-typedef struct {
+typedef struct trajectory_s {
 	trType_t	trType;
 	int		trTime;
 	int		trDuration;			// if non 0, trTime + trDuration = stop time
@@ -2690,7 +2076,7 @@ typedef struct entityState_s {
 	int		otherEntityNum;	// shotgun sources, etc
 	int		otherEntityNum2;
 
-	int		groundEntityNum;	// -1 = in air
+	int		groundEntityNum;	// ENTITYNUM_NONE = in air
 
 	int		constantLight;	// r + (g<<8) + (b<<16) + (intensity<<24)
 	int		loopSound;		// constantly loop this sound
@@ -2863,15 +2249,6 @@ typedef enum {
 	FMV_ID_WAIT
 } e_status;
 
-typedef enum _flag_status {
-	FLAG_ATBASE = 0,
-	FLAG_TAKEN,			// CTF
-	FLAG_TAKEN_RED,		// One Flag CTF
-	FLAG_TAKEN_BLUE,	// One Flag CTF
-	FLAG_DROPPED
-} flagStatus_t;
-
-
 #define	MAX_GLOBAL_SERVERS			2048
 #define	MAX_OTHER_SERVERS			128
 #define MAX_PINGREQUESTS			32
@@ -2892,7 +2269,7 @@ int Q_irand(int value1, int value2);
 Ghoul2 Insert Start
 */
 
-typedef struct {
+typedef struct mdxaBone_s {
 	float		matrix[3][4];
 } mdxaBone_t;
 
@@ -2918,7 +2295,7 @@ Ghoul2 Insert End
 typedef enum {
 	#include "qcommon/tags.h"
 } memtag;
-typedef char memtag_t;
+typedef unsigned memtag_t;
 
 //rww - conveniently toggle "gore" code, for model decals and stuff.
 #define _G2_GORE
@@ -2967,7 +2344,7 @@ String ID Tables
 #define ENUM2STRING(arg)   { #arg, arg }
 typedef struct stringID_table_s
 {
-	char	*name;
+	const char	*name;
 	int		id;
 } stringID_table_t;
 

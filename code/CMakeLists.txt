@@ -20,11 +20,11 @@ if(BuildSPEngine)
 	# Libraries
 	if(WIN32)
 		set(SPEngineLibraries "winmm")
-	else(WIN32)
-		message("You might need to add libraries to code/CMakeLists.txt for this to link properly on your platform.")
 	endif(WIN32)
 	# Defines
 	set(SPEngineDefines ${SharedDefines} "_JK2EXE")
+
+	set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OpenJKLibDir})
 	
 	#    Dependencies
 	
@@ -38,9 +38,9 @@ if(BuildSPEngine)
 	if(UseInternalOpenAL)
 		# There's a libs/OpenAL32.lib
 		# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
-		find_library(OpenALLibrary NAMES OpenAL32 PATHS "${SPDir}")
+		find_library(OpenALLibrary NAMES OpenAL32 PATHS "${OpenJKLibDir}")
 		if(NOT OpenALLibrary)
-			message(FATAL_ERROR "UseInternalOpenAL set, but code/OpenAL32 not found!")
+			message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
 		endif(NOT OpenALLibrary)
 		set(SPEngineLibraries ${SPEngineLibraries} ${OpenALLibrary})
 	else(UseInternalOpenAL)
@@ -143,6 +143,11 @@ if(BuildSPEngine)
 		"${SPDir}/qcommon/msg.cpp"
 		"${SPDir}/qcommon/net_chan.cpp"
 
+		"${SPDir}/qcommon/q_math.cpp"
+		"${SPDir}/qcommon/q_shared.cpp"
+		"${SPDir}/qcommon/q_shared.h"
+		"${SPDir}/qcommon/q_platform.h"
+
 		"${SPDir}/qcommon/sstring.h"
 		"${SPDir}/qcommon/stringed_ingame.cpp"
 		"${SPDir}/qcommon/stringed_interface.cpp"
@@ -151,16 +156,17 @@ if(BuildSPEngine)
 
 		"${SPDir}/qcommon/strip.cpp"
 		"${SPDir}/qcommon/unzip.cpp"
+		"${SPDir}/qcommon/unzip.h"
+		"${OpenJKLibDir}/zlib/ioapi.c"
+		"${OpenJKLibDir}/zlib/ioapi.h"
+		"${SPDir}/qcommon/tags.h"
 		"${SPDir}/qcommon/z_memman_pc.cpp"
 		"${SPDir}/qcommon/chash.h"
-		"${SPDir}/qcommon/platform.h"
 		"${SPDir}/qcommon/qfiles.h"
 		"${SPDir}/qcommon/files.h"
 		"${SPDir}/qcommon/qcommon.h"
 		"${SPDir}/qcommon/stv_version.h"
 		"${SPDir}/qcommon/timing.h"
-		"${SPDir}/qcommon/unzip.h"
-		"${SPDir}/qcommon/tags.h"
 		"${SPDir}/qcommon/MiniHeap.h"
 		)
 	source_group("common" FILES ${SPEngineCommonFiles})
@@ -188,8 +194,6 @@ if(BuildSPEngine)
 	# Game files
 	set(SPEngineGameFiles
 		"${SPDir}/game/genericparser2.cpp"
-		"${SPDir}/game/q_math.cpp"
-		"${SPDir}/game/q_shared.cpp"
 		"${SPDir}/game/channels.h"
 		"${SPDir}/game/anims.h"
 		"${SPDir}/game/b_public.h"
@@ -204,7 +208,6 @@ if(BuildSPEngine)
 		"${SPDir}/game/g_public.h"
 		"${SPDir}/game/g_shared.h"
 		"${SPDir}/game/genericparser2.h"
-		"${SPDir}/game/q_shared.h"
 		"${SPDir}/game/statindex.h"
 		"${SPDir}/game/teams.h"
 		"${SPDir}/game/weapons.h"
@@ -252,9 +255,9 @@ if(BuildSPEngine)
 	set(SPEngineFiles ${SPEngineFiles} ${SPEngineMP3Files})
 
 	set(SPEngineRendererFiles
-		"${SPDir}/renderer/mdx_format.h"
-		"${SPDir}/renderer/tr_public.h"
-		"${SPDir}/renderer/tr_types.h"
+		"${SPDir}/rd-common/mdx_format.h"
+		"${SPDir}/rd-common/tr_public.h"
+		"${SPDir}/rd-common/tr_types.h"
 		)
 
 
@@ -307,18 +310,6 @@ if(BuildSPEngine)
 	source_group("rmg" FILES ${SPEngineRMGFiles})
 	set(SPEngineFiles ${SPEngineFiles} ${SPEngineRMGFiles})
 
-	# zlib files
-	set(SPEngineZlibFiles
-		"${SPDir}/zlib32/deflate.cpp"
-		"${SPDir}/zlib32/inflate.cpp"
-		"${SPDir}/zlib32/zipcommon.cpp"
-		"${SPDir}/zlib32/deflate.h"
-		"${SPDir}/zlib32/inflate.h"
-		"${SPDir}/zlib32/zip.h"
-		)
-	source_group("zlib" FILES ${SPEngineZlibFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineZlibFiles})
-
 
 	# Ghoul2 files
 	set(SPEngineGhoul2Files
@@ -347,7 +338,6 @@ if(BuildSPEngine)
 			"${SPDir}/win32/win_shared.cpp"
 			"${SPDir}/win32/win_snd.cpp"
 			"${SPDir}/win32/win_syscon.cpp"
-			"${SPDir}/win32/win_video.cpp"
 			"${SPDir}/win32/win_wndproc.cpp"
 			"${SPDir}/win32/win_local.h"
 			"${SPDir}/win32/AutoVersion.h"
@@ -371,19 +361,47 @@ if(BuildSPEngine)
 		set(SPEngineFiles ${SPEngineFiles} ${SPEngineSysFiles})
 	endif(WIN32)
 
-	# todo: windows resources
+	if(UseInternalZlib)
+		# zlib.lib is included for windows
+		find_library(ZlibLibrary NAMES zlib PATHS ${OpenJKLibDir})
+		if(NOT ZlibLibrary)
+			message(FATAL_ERROR "UseInternalZlib enabled, but lib/zlib.lib not found!")
+		endif(NOT ZlibLibrary)
+		set(SPEngineLibraries ${SPEngineLibraries} ${ZlibLibrary})
+	else(UseInternalZlib)
+		find_package(ZLIB REQUIRED)
+		set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${ZLIB_INCLUDE_DIR})
+		set(SPEngineLibraries ${SPEngineLibraries} ${ZLIB_LIBRARY})
+	endif(UseInternalZlib)
+
+	if(MakeApplicationBundles)
+		set(MACOSX_BUNDLE_ICON_FILE OpenJK.icns)
+		set_source_files_properties(${SPDir}/macosx/OpenJK.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+		set(SPEngineFiles ${SPEngineFiles} ${SPDir}/macosx/OpenJK.icns)
+	endif(MakeApplicationBundles)
 
 	if(WIN32)
 		add_executable(${SPEngine} WIN32 ${SPEngineFiles})
 	else(WIN32)
-		add_executable(${SPEngine} ${SPEngineFiles})
+		if(MakeApplicationBundles)
+			add_executable(${SPEngine} MACOSX_BUNDLE ${SPEngineFiles})
+		else(MakeApplicationBundles)
+			add_executable(${SPEngine} ${SPEngineFiles})
+		endif(MakeApplicationBundles)
 	endif(WIN32)
-	install(TARGETS ${SPEngine} RUNTIME DESTINATION ".")
+
+	if(MakeApplicationBundles)
+		install(TARGETS ${SPEngine} BUNDLE DESTINATION ".")
+	else(MakeApplicationBundles)
+		install(TARGETS ${SPEngine} RUNTIME DESTINATION ".")
+	endif(MakeApplicationBundles)
+
 	set_target_properties(${SPEngine} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "${SPEngineDefines};${ReleaseDefines}")
 	set_target_properties(${SPEngine} PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "${SPEngineDefines};${ReleaseDefines}")
 	set_target_properties(${SPEngine} PROPERTIES COMPILE_DEFINITIONS_RELEASE "${SPEngineDefines};${ReleaseDefines}")
 	set_target_properties(${SPEngine} PROPERTIES COMPILE_DEFINITIONS_DEBUG "${SPEngineDefines};${DebugDefines}")
 	set_target_properties(${SPEngine} PROPERTIES INCLUDE_DIRECTORIES "${SPEngineIncludeDirectories}")
+	set_target_properties(${SPEngine} PROPERTIES PROJECT_LABEL "SP Client")
 	if(SPEngineLibraries)
 		target_link_libraries(${SPEngine} ${SPEngineLibraries})
 	endif(SPEngineLibraries)

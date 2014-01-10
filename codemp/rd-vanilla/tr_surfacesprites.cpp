@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 // tr_shade.c
 
 #include "tr_local.h"
@@ -1392,7 +1389,7 @@ extern void R_InvertMatrix(float *sourcemat, float *destmat);
 
 void RB_DrawSurfaceSprites( shaderStage_t *stage, shaderCommands_t *input) 
 {
-	unsigned long	glbits=stage->stateBits;
+	uint32_t	glbits=stage->stateBits;
 	
 	R_SurfaceSpriteFrameUpdate();
 

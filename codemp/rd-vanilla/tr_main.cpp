@@ -1,7 +1,4 @@
 // tr_main.c -- main control flow for each frame
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "tr_local.h"
 #include "G2_local.h"
 // Yeah, this might be kind of bad, but no linux version is planned so far :-) - AReis
@@ -21,7 +18,7 @@ static float	s_flipMatrix[16] = {
 	0, 0, 0, 1
 };
 
-refimport_t	ri;
+refimport_t	*ri = NULL;
 
 void R_AddTerrainSurfaces(void);
 
@@ -937,7 +934,7 @@ qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum) {
 
 	// don't recursively mirror
 	if (tr.viewParms.isPortal) {
-		ri.Printf( PRINT_DEVELOPER, S_COLOR_RED "WARNING: recursive mirror/portal found\n" );
+		ri->Printf( PRINT_DEVELOPER, S_COLOR_RED "WARNING: recursive mirror/portal found\n" );
 		return qfalse;
 	}
 
@@ -1025,7 +1022,7 @@ DRAWSURF SORTING
 R_Radix
 ===============
 */
-static ID_INLINE void R_Radix( int byte, int size, drawSurf_t *source, drawSurf_t *dest )
+static QINLINE void R_Radix( int byte, int size, drawSurf_t *source, drawSurf_t *dest )
 {
   int           count[ 256 ] = { 0 };
   int           index[ 256 ];
@@ -1086,12 +1083,8 @@ void R_AddDrawSurf( surfaceType_t *surface, shader_t *shader,
 	{
 		fogIndex = 0;
 	}
-	else
-	{
-		fogIndex = fogIndex;
-	}
 
-	// Ensiform: FIXME implement RDF_ForceSightOn
+	//FIXME: implement RDF_ForceSightOn
 	if ( (shader->surfaceFlags & SURF_FORCESIGHT) /*&& !(tr.refdef.rdflags & RDF_ForceSightOn)*/ )
 	{	//if shader is only seen with ForceSight and we don't have ForceSight on, then don't draw
 		return;
@@ -1364,11 +1357,11 @@ void R_DebugGraphics( void ) {
 	}
 
 	// the render thread can't make callbacks to the main thread
-	R_SyncRenderThread();
+	R_IssuePendingRenderCommands();
 
 	GL_Bind( tr.whiteImage);
 	GL_Cull( CT_FRONT_SIDED );
-	ri.CM_DrawDebugSurface( R_DebugPolygon );
+	ri->CM_DrawDebugSurface( R_DebugPolygon );
 }
 
 

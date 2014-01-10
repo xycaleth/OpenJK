@@ -22,15 +22,8 @@ This file is part of Jedi Academy.
 //
 #include "../server/exe_headers.h"
 
-
-
-
 #include "tr_local.h"
-#include "matcomp.h"
-
-#ifdef VV_LIGHTING
-#include "tr_lightmanager.h"
-#endif
+#include "qcommon/matcomp.h"
 
 float ProjectRadius( float r, vec3_t location )
 {
@@ -62,9 +55,6 @@ float ProjectRadius( float r, vec3_t location )
 				   tr.viewParms.projectionMatrix[15];
 
 	pr = width / depth;
-#if defined (_XBOX)
-	pr = -pr;
-#endif
 
 	if ( pr > 1.0f )
 		pr = 1.0f;
@@ -342,7 +332,7 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 		|| (ent->e.oldframe >= tr.currentModel->md3[0]->numFrames)
 		|| (ent->e.oldframe < 0) ) 
 	{
-			VID_Printf (PRINT_ALL, "R_AddMD3Surfaces: no such frame %d to %d for '%s'\n",
+			ri.Printf (PRINT_ALL, "R_AddMD3Surfaces: no such frame %d to %d for '%s'\n",
 				ent->e.oldframe, ent->e.frame,
 				tr.currentModel->name );
 			ent->e.frame = 0;
@@ -368,13 +358,8 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 	//
 	// set up lighting now that we know we aren't culled
 	//
-#ifdef VV_LIGHTING
-	if ( !personalModel ) {
-		VVLightMan.R_SetupEntityLighting( &tr.refdef, ent );
-#else
 	if ( !personalModel || r_shadows->integer > 1 ) {
 		R_SetupEntityLighting( &tr.refdef, ent );
-#endif
 	}
 
 	//
@@ -421,9 +406,7 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 		// stencil shadows can't do personal models unless I polyhedron clip
 		if ( !personalModel
 			&& r_shadows->integer == 2 
-#ifndef VV_LIGHTING
 			&& fogNum == 0
-#endif
 			&& (ent->e.renderfx & RF_SHADOW_PLANE )
 			&& !(ent->e.renderfx & ( RF_NOSHADOW | RF_DEPTHHACK ) ) 
 			&& shader->sort == SS_OPAQUE ) {
@@ -440,12 +423,7 @@ void R_AddMD3Surfaces( trRefEntity_t *ent ) {
 
 		// don't add third_person objects if not viewing through a portal
 		if ( !personalModel ) {
-#ifdef VV_LIGHTING
-			int dlightBits = ( ent->dlightBits != 0 );
-			R_AddDrawSurf( (surfaceType_t *)surface, shader, fogNum, dlightBits );
-#else
 			R_AddDrawSurf( (surfaceType_t *)surface, shader, fogNum, qfalse );
-#endif
 		}
 
 		surface = (md3Surface_t *)( (byte *)surface + surface->ofsEnd );

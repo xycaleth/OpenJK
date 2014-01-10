@@ -25,7 +25,7 @@ This file is part of Jedi Academy.
  *****************************************************************************/
 
 
-#include "../game/q_shared.h"
+#include "q_shared.h"
 #include "qcommon.h"
 #include "files.h"
 
@@ -170,22 +170,21 @@ or configs will never get loaded from disk!
 
 */
 
-// if this is defined, the executable positively won't work with any paks other
-// than the demo pak, even if productid is present.  This is only used for our
-// last demo release to prevent the mac and linux users from using the demo
-// executable with the production windows pak before the mac/linux products
-// hit the shelves a little later
-//#define	PRE_RELEASE_DEMO
-
-
 char		fs_gamedir[MAX_OSPATH];	// this will be a single file name with no separators
 cvar_t		*fs_debug;
 cvar_t		*fs_homepath;
+
+#ifdef MACOS_X
+// Also search the .app bundle for .pk3 files
+cvar_t          *fs_apppath;
+#endif
+
 cvar_t		*fs_basepath;
 cvar_t		*fs_basegame;
 cvar_t		*fs_cdpath;
 cvar_t		*fs_copyfiles;
 cvar_t		*fs_gamedirvar;
+cvar_t		*fs_dirbeforepak; //rww - when building search path, keep directories at top and insert pk3's under them
 searchpath_t	*fs_searchpaths;
 int			fs_readCount;			// total bytes read
 int			fs_loadCount;			// total files read
@@ -226,11 +225,7 @@ fileHandle_t	FS_HandleForFile(void) {
 	int		i;
 
 	for ( i = 1 ; i < MAX_FILE_HANDLES ; i++ ) {
-#ifdef _XBOX
-		if ( !fsh[i].used ) {
-#else
 		if ( fsh[i].handleFiles.file.o == NULL ) {
-#endif
 			return i;
 		}
 	}
@@ -298,13 +293,13 @@ char *FS_BuildOSPath( const char *qpath )
 	return ospath[toggle];
 }
 
-#ifndef _XBOX
 char *FS_BuildOSPath( const char *base, const char *game, const char *qpath ) {
 	char	temp[MAX_OSPATH];
 	static char ospath[4][MAX_OSPATH];
 	static int toggle;
 	
-	toggle = (++toggle)&3;	// allows four returns without clash (increased from 2 during fs_copyfiles 2 enhancement)
+	int nextToggle = (toggle + 1)&3;	// allows four returns without clash (increased from 2 during fs_copyfiles 2 enhancement)
+	toggle = nextToggle;
 	
 	if( !game || !game[0] ) {
 		game = fs_gamedir;
@@ -316,7 +311,6 @@ char *FS_BuildOSPath( const char *base, const char *game, const char *qpath ) {
 	
 	return ospath[toggle];
 }
-#endif
 
 
 /*
@@ -326,26 +320,36 @@ FS_CreatePath
 Creates any directories needed to store the given filename
 ============
 */
-void	FS_CreatePath (char *OSPath) {
+qboolean FS_CreatePath (char *OSPath) {
 	char	*ofs;
+	char	path[MAX_OSPATH];
 	
 	// make absolutely sure that it can't back up the path
 	// FIXME: is c: allowed???
 	if ( strstr( OSPath, ".." ) || strstr( OSPath, "::" ) ) {
 		Com_Printf( "WARNING: refusing to create relative path \"%s\"\n", OSPath );
-		return;
+		return qtrue;
 	}
 
-	Q_strlwr(OSPath);
+	Q_strncpyz( path, OSPath, sizeof( path ) );
+	FS_ReplaceSeparators( path );
 
-	for (ofs = OSPath+1 ; *ofs ; ofs++) {
-		if (*ofs == PATH_SEP) {	
+	// Skip creation of the root directory as it will always be there
+	ofs = strchr( path, PATH_SEP );
+	ofs++;
+
+	for (; ofs != NULL && *ofs ; ofs++) {
+		if (*ofs == PATH_SEP) {
 			// create the directory
 			*ofs = 0;
-			Sys_Mkdir (OSPath);
+			if (!Sys_Mkdir (path)) {
+				Com_Error( ERR_FATAL, "FS_CreatePath: failed to create path \"%s\"",
+					path );
+			}
 			*ofs = PATH_SEP;
 		}
 	}
+	return qfalse;
 }
 
 
@@ -372,11 +376,7 @@ int FS_SV_FOpenFileRead( const char *filename, fileHandle_t *fp ) {
 	// don't let sound stutter
 	S_ClearSoundBuffer();
 
-#ifdef _XBOX
-	ospath = FS_BuildOSPath( filename );
-#else
 	ospath = FS_BuildOSPath( fs_homepath->string, filename, "" );
-#endif
 	// remove trailing slash
   ospath[strlen(ospath)-1] = '\0';
 
@@ -459,11 +459,7 @@ fileHandle_t FS_FOpenFileAppend( const char *filename ) {
 	// don't let sound stutter
 	S_ClearSoundBuffer();
 
-#ifdef _XBOX
-	ospath = FS_BuildOSPath( filename );
-#else
 	ospath = FS_BuildOSPath( fs_homepath->string, fs_gamedir, filename );
-#endif
 
 	if ( fs_debug->integer ) {
 		Com_Printf( "FS_FOpenFileAppend: %s\n", ospath );
@@ -589,9 +585,7 @@ void FS_Shutdown( void ) {
 		next = p->next;
 
 		if ( p->pack ) {
-#ifndef _XBOX
 			unzClose(p->pack->handle);
-#endif
 			Z_Free( p->pack->buildBuffer );
 			Z_Free( p->pack );
 		}
@@ -606,7 +600,9 @@ void FS_Shutdown( void ) {
 
 	Cmd_RemoveCommand( "path" );
 	Cmd_RemoveCommand( "dir" );
+	Cmd_RemoveCommand( "fdir" );
 	Cmd_RemoveCommand( "touchFile" );
+	Cmd_RemoveCommand( "which" );
 
 	initialized = qfalse;
 }
@@ -636,6 +632,10 @@ void FS_InitFilesystem( void ) {
 	Com_StartupVariable( "fs_homepath" );
 	Com_StartupVariable( "fs_game" );
 	Com_StartupVariable( "fs_copyfiles" );
+	Com_StartupVariable( "fs_dirbeforepak" );
+#ifdef MACOS_X
+	Com_StartupVariable( "fs_apppath" );
+#endif
 
 	// try to start up normally
 	FS_Startup( BASEGAME );

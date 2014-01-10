@@ -7,13 +7,17 @@
 #define	BOX_MODEL_HANDLE		(MAX_SUBMODELS-1)
 #define CAPSULE_MODEL_HANDLE	(MAX_SUBMODELS-2)
 
+struct Point
+{
+	long x, y;
+};
 
-typedef struct {
+typedef struct cNode_s {
 	cplane_t	*plane;
 	int			children[2];		// negative numbers are leafs
 } cNode_t;
 
-typedef struct {
+typedef struct cLeaf_s {
 	int			cluster;
 	int			area;
 
@@ -58,7 +62,7 @@ public:
 	void	Destroy(void) { }
 };
 
-typedef struct {
+typedef struct cPatch_s {
 	int			checkcount;				// to avoid repeated testings
 	int			surfaceFlags;
 	int			contents;
@@ -66,12 +70,12 @@ typedef struct {
 } cPatch_t;
 
 
-typedef struct {
+typedef struct cArea_s {
 	int			floodnum;
 	int			floodvalid;
 } cArea_t;
 
-typedef struct {
+typedef struct clipMap_s {
 	char		name[MAX_QPATH];
 
 	int			numShaders;
@@ -138,8 +142,7 @@ extern	cvar_t		*cm_playerCurveClip;
 // cm_test.c
 
 // Used for oriented capsule collision detection
-typedef struct
-{
+typedef struct sphere_s {
 	qboolean	use;
 	float		radius;
 	float		halfheight;

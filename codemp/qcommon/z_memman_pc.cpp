@@ -3,8 +3,6 @@
 //Anything above this #include will be ignored by the compiler
 #include "qcommon/exe_headers.h"
 
-#include "platform.h"
-
 #include "client/client.h" // hi i'm bad
 
 ////////////////////////////////////////////////
@@ -76,7 +74,7 @@ typedef struct zone_s
 
 cvar_t	*com_validateZone;
 
-zone_t	TheZone = {0};
+zone_t	TheZone = {};
 
 
 // Scans through the linked list of mallocs and makes sure no data has been overwritten
@@ -123,15 +121,13 @@ void Z_Validate(void)
 //
 #pragma pack(push)
 #pragma pack(1)
-typedef struct
-{
+typedef struct StaticZeroMem_s {
 	zoneHeader_t	Header;	
 //	byte mem[0];
 	zoneTail_t		Tail;
 } StaticZeroMem_t;
 
-typedef struct
-{
+typedef struct StaticMem_s {
 	zoneHeader_t	Header;	
 	byte mem[2];
 	zoneTail_t		Tail;
@@ -141,18 +137,18 @@ typedef struct
 StaticZeroMem_t gZeroMalloc  =
 	{ {ZONE_MAGIC, TAG_STATIC,0,NULL,NULL},{ZONE_MAGIC}};
 StaticMem_t gEmptyString =
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'\0','\0',{ZONE_MAGIC}};
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'\0','\0'},{ZONE_MAGIC}};
 StaticMem_t gNumberString[] = {
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'0','\0',{ZONE_MAGIC}},
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'1','\0',{ZONE_MAGIC}},
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'2','\0',{ZONE_MAGIC}},
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'3','\0',{ZONE_MAGIC}},
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'4','\0',{ZONE_MAGIC}},
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'5','\0',{ZONE_MAGIC}},
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'6','\0',{ZONE_MAGIC}},
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'7','\0',{ZONE_MAGIC}},
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'8','\0',{ZONE_MAGIC}},
-	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},'9','\0',{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'0','\0'},{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'1','\0'},{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'2','\0'},{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'3','\0'},{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'4','\0'},{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'5','\0'},{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'6','\0'},{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'7','\0'},{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'8','\0'},{ZONE_MAGIC}},
+	{ {ZONE_MAGIC, TAG_STATIC,2,NULL,NULL},{'9','\0'},{ZONE_MAGIC}},
 };
 
 qboolean gbMemFreeupOccured = qfalse;
@@ -214,7 +210,7 @@ void *Z_Malloc(int iSize, memtag_t eTag, qboolean bZeroit /* = qfalse */, int iU
 #ifndef DEDICATED
 			// ditch any image_t's (and associated GL memory) not used on this level...
 			//
-			if (re.RegisterImages_LevelLoadEnd())
+			if (re->RegisterImages_LevelLoadEnd())
 			{
 				gbMemFreeupOccured = qtrue;
 				continue;		// we've dropped at least one image, so try again with the malloc
@@ -223,7 +219,7 @@ void *Z_Malloc(int iSize, memtag_t eTag, qboolean bZeroit /* = qfalse */, int iU
 
 			// ditch the model-binaries cache...  (must be getting desperate here!)
 			//
-			if ( re.RegisterModels_LevelLoadEnd(qtrue) )
+			if ( re->RegisterModels_LevelLoadEnd(qtrue) )
 			{
 				gbMemFreeupOccured = qtrue;
 				continue;
@@ -765,8 +761,8 @@ void Hunk_Clear( void ) {
 	Z_TagFree(TAG_HUNK_MARK1);
 	Z_TagFree(TAG_HUNK_MARK2);
 
-	if ( re.HunkClearCrap ) {
-		re.HunkClearCrap();
+	if ( re && re->HunkClearCrap ) {
+		re->HunkClearCrap();
 	}
 
 //	Com_Printf( "Hunk_Clear: reset the hunk ok\n" );

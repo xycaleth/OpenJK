@@ -19,11 +19,6 @@ This file is part of Jedi Academy.
 // g_weapon.c 
 // perform the server side effects of a weapon firing
 
-// leave this line at the top for all g_xxxx.cpp files...
-#include "g_headers.h"
-
-
-
 #include "g_local.h"
 #include "g_functions.h"
 #include "anims.h"
@@ -31,6 +26,7 @@ This file is part of Jedi Academy.
 #include "wp_saber.h"
 #include "g_vehicles.h"
 #include "w_local.h"
+#include "../cgame/cg_local.h"
 
 vec3_t	forwardVec, vrightVec, up;
 vec3_t	muzzle;
@@ -46,35 +42,35 @@ int	g_rocketSlackTime = 0;
 // Weapon Helper Functions
 float weaponSpeed[WP_NUM_WEAPONS][2] =
 {
-	0,0,//WP_NONE,
-	0,0,//WP_SABER,				 // NOTE: lots of code assumes this is the first weapon (... which is crap) so be careful -Ste.
-	BRYAR_PISTOL_VEL,BRYAR_PISTOL_VEL,//WP_BLASTER_PISTOL,
-	BLASTER_VELOCITY,BLASTER_VELOCITY,//WP_BLASTER,
-	Q3_INFINITE,Q3_INFINITE,//WP_DISRUPTOR,
-	BOWCASTER_VELOCITY,BOWCASTER_VELOCITY,//WP_BOWCASTER,
-	REPEATER_VELOCITY,REPEATER_ALT_VELOCITY,//WP_REPEATER,
-	DEMP2_VELOCITY,DEMP2_ALT_RANGE,//WP_DEMP2,
-	FLECHETTE_VEL,FLECHETTE_MINE_VEL,//WP_FLECHETTE,
-	ROCKET_VELOCITY,ROCKET_ALT_VELOCITY,//WP_ROCKET_LAUNCHER,
-	TD_VELOCITY,TD_ALT_VELOCITY,//WP_THERMAL,
-	0,0,//WP_TRIP_MINE,
-	0,0,//WP_DET_PACK,
-	CONC_VELOCITY,Q3_INFINITE,//WP_CONCUSSION,
-	0,0,//WP_MELEE,			// Any ol' melee attack
-	0,0,//WP_STUN_BATON,
-	BRYAR_PISTOL_VEL,BRYAR_PISTOL_VEL,//WP_BRYAR_PISTOL,
-	EMPLACED_VEL,EMPLACED_VEL,//WP_EMPLACED_GUN,
-	BRYAR_PISTOL_VEL,BRYAR_PISTOL_VEL,//WP_BOT_LASER,		// Probe droid	- Laser blast
-	0,0,//WP_TURRET,			// turret guns 
-	ATST_MAIN_VEL,ATST_MAIN_VEL,//WP_ATST_MAIN,
-	ATST_SIDE_MAIN_VELOCITY,ATST_SIDE_ALT_NPC_VELOCITY,//WP_ATST_SIDE,
-	EMPLACED_VEL,EMPLACED_VEL,//WP_TIE_FIGHTER,
-	EMPLACED_VEL,REPEATER_ALT_VELOCITY,//WP_RAPID_FIRE_CONC,
-	0,0,//WP_JAWA,
-	TUSKEN_RIFLE_VEL,TUSKEN_RIFLE_VEL,//WP_TUSKEN_RIFLE,
-	0,0,//WP_TUSKEN_STAFF,
-	0,0,//WP_SCEPTER,
-	0,0,//WP_NOGHRI_STICK,
+	{ 0,0 },//WP_NONE,
+	{ 0,0 },//WP_SABER,				 // NOTE: lots of code assumes this is the first weapon (... which is crap) so be careful -Ste.
+	{ BRYAR_PISTOL_VEL,BRYAR_PISTOL_VEL },//WP_BLASTER_PISTOL,
+	{ BLASTER_VELOCITY,BLASTER_VELOCITY },//WP_BLASTER,
+	{ Q3_INFINITE,Q3_INFINITE },//WP_DISRUPTOR,
+	{ BOWCASTER_VELOCITY,BOWCASTER_VELOCITY },//WP_BOWCASTER,
+	{ REPEATER_VELOCITY,REPEATER_ALT_VELOCITY },//WP_REPEATER,
+	{ DEMP2_VELOCITY,DEMP2_ALT_RANGE },//WP_DEMP2,
+	{ FLECHETTE_VEL,FLECHETTE_MINE_VEL },//WP_FLECHETTE,
+	{ ROCKET_VELOCITY,ROCKET_ALT_VELOCITY },//WP_ROCKET_LAUNCHER,
+	{ TD_VELOCITY,TD_ALT_VELOCITY },//WP_THERMAL,
+	{ 0,0 },//WP_TRIP_MINE,
+	{ 0,0 },//WP_DET_PACK,
+	{ CONC_VELOCITY,Q3_INFINITE },//WP_CONCUSSION,
+	{ 0,0 },//WP_MELEE,			// Any ol' melee attack
+	{ 0,0 },//WP_STUN_BATON,
+	{ BRYAR_PISTOL_VEL,BRYAR_PISTOL_VEL },//WP_BRYAR_PISTOL,
+	{ EMPLACED_VEL,EMPLACED_VEL },//WP_EMPLACED_GUN,
+	{ BRYAR_PISTOL_VEL,BRYAR_PISTOL_VEL },//WP_BOT_LASER,		// Probe droid	- Laser blast
+	{ 0,0 },//WP_TURRET,			// turret guns 
+	{ ATST_MAIN_VEL,ATST_MAIN_VEL },//WP_ATST_MAIN,
+	{ ATST_SIDE_MAIN_VELOCITY,ATST_SIDE_ALT_NPC_VELOCITY },//WP_ATST_SIDE,
+	{ EMPLACED_VEL,EMPLACED_VEL },//WP_TIE_FIGHTER,
+	{ EMPLACED_VEL,REPEATER_ALT_VELOCITY },//WP_RAPID_FIRE_CONC,
+	{ 0,0 },//WP_JAWA,
+	{ TUSKEN_RIFLE_VEL,TUSKEN_RIFLE_VEL },//WP_TUSKEN_RIFLE,
+	{ 0,0 },//WP_TUSKEN_STAFF,
+	{ 0,0 },//WP_SCEPTER,
+	{ 0,0 },//WP_NOGHRI_STICK,
 };
 
 float WP_SpeedOfMissileForWeapon( int wp, qboolean alt_fire )
@@ -247,217 +243,9 @@ void WP_ExplosiveDie( gentity_t *self, gentity_t *inflictor, gentity_t *attacker
 	WP_Explode( self );
 }
 
-#ifdef _XBOX	// Auto-aim
-
-static float VectorDistanceSquared(vec3_t p1, vec3_t p2)
-{
-	vec3_t dir;
-	VectorSubtract(p2, p1, dir);
-	return VectorLengthSquared(dir);
-}
-
-int WP_FindClosestBodyPart(gentity_t *ent, gentity_t *other, vec3_t point, vec3_t out, int c = 0)
-{
-	int shortestLen = 509999;
-	char where = -1;
-	int len;
-	renderInfo_t *ri = NULL;
-	
-	ri = &ent->client->renderInfo;
-
-	if (ent->client)
-	{
-		if (c > 0)
-		{
-			where = c - 1;		// Fail safe, set to torso
-		}
-		else
-		{
-			len = VectorDistanceSquared(point, ri->eyePoint);
-			if (len < shortestLen) {
-				shortestLen = len;		where = 0;
-			}
-
-			len = VectorDistanceSquared(point, ri->headPoint);
-			if (len < shortestLen) {
-				shortestLen = len;		where = 1;
-			}
-
-			len = VectorDistanceSquared(point, ri->handRPoint);
-			if (len < shortestLen) {
-				shortestLen = len;		where = 2;
-			}
-
-			len = VectorDistanceSquared(point, ri->handLPoint);
-			if (len < shortestLen) {
-				shortestLen = len;		where = 3;
-			}
-
-			len = VectorDistanceSquared(point, ri->crotchPoint);
-			if (len < shortestLen)	{
-				shortestLen = len;		where = 4;
-			}
-
-			len = VectorDistanceSquared(point, ri->footRPoint);
-			if (len < shortestLen) {
-				shortestLen = len;		where = 5;
-			}
-
-			len = VectorDistanceSquared(point, ri->footLPoint);
-			if (len < shortestLen)	{
-				shortestLen = len;		where = 6;
-			}
-
-			len = VectorDistanceSquared(point, ri->torsoPoint);
-			if (len < shortestLen)	{
-				shortestLen = len;		where = 7;
-			}
-		}
-
-		if (where < 2 && c == 0) 
-		{
-			if (random() < .75f)		// 25% chance to actualy hit the head or eye
-				where = 7;
-		}
-
-		switch (where)
-		{
-		case 0:
-			VectorCopy(ri->eyePoint, out);
-			break;
-		case 1:
-			VectorCopy(ri->headPoint, out);
-			break;
-		case 2:
-			VectorCopy(ri->handRPoint, out);
-			break;
-		case 3:
-			VectorCopy(ri->handLPoint, out);
-			break;
-		case 4:
-			VectorCopy(ri->crotchPoint, out);
-			break;
-		case 5:
-			VectorCopy(ri->footRPoint, out);
-			break;
-		case 6:
-			VectorCopy(ri->footLPoint, out);
-			break;
-		case 7:
-			VectorCopy(ri->torsoPoint, out);
-			break;
-		}
-	}
-	else
-	{
-		VectorCopy(ent->s.pos.trBase, out);
-		// Really bad hack
-		if (strcmp(ent->classname, "misc_turret") == 0)
-		{
-			out[2] = point[2];	
-		}
-		
-	}
-
-	if (ent && ent->client && ent->client->NPC_class == CLASS_MINEMONSTER)
-	{
-		out[2] -= 24;		// not a clue???
-		return shortestLen;	// mine critters are too small to randomize
-	}
-
-	if (ent->NPC_type && !Q_stricmp(ent->NPC_type, "atst"))
-	{
-		// Dont randomize those atst's they have some pretty small legs
-		return shortestLen;
-	}
-
-	if (c == 0)
-	{
-		// Add a bit of chance to the actual location
-		float r = random() * 8.0f - 4.0f;
-		float r2 = random() * 8.0f - 4.0f;
-		float r3 = random() * 10.0f - 5.0f;
-
-		out[0] += r;
-		out[1] += r2;
-		out[2] += r3;
-	}
-
-	return shortestLen;
-}
-#endif // Auto-aim
-
-//extern cvar_t *cv_autoAim;
-#ifdef _XBOX // Auto-aim
-static bool cv_autoAim = qtrue;
-#endif // Auto-aim
-
 bool WP_MissileTargetHint(gentity_t* shooter, vec3_t start, vec3_t out)
 {
-#ifdef _XBOX
-	extern short cg_crossHairStatus;
-	extern int g_crosshairEntNum;
-//	int allow = 0;
-//	allow = Cvar_VariableIntegerValue("cv_autoAim");
-
-//	if ((!cg.snap) || !allow ) return false;
-	if ((!cg.snap) || !cv_autoAim ) return false;
-	if (shooter->s.clientNum != 0) return false;		// assuming shooter must be client, using 0 for cg_entities[0] a few lines down if you change this
-//	if (cg_crossHairStatus != 1 || cg_crosshairEntNum < 0 || cg_crosshairEntNum >= ENTITYNUM_WORLD) return false;
-	if (cg_crossHairStatus != 1 || g_crosshairEntNum < 0 || g_crosshairEntNum >= ENTITYNUM_WORLD) return false;
-	
-	gentity_t* traceEnt = &g_entities[g_crosshairEntNum];
-
-	vec3_t		d_f, d_rt, d_up;
-	vec3_t		end;
-	trace_t		trace;
-
-	// Calculate the end point
-	AngleVectors( cg_entities[0].lerpAngles, d_f, d_rt, d_up );			
-	VectorMA( start, 8192, d_f, end );//4028 is max for mind trick
-
-	// This will get a detailed trace
-	gi.trace( &trace, start, vec3_origin, vec3_origin, end, cg.snap->ps.clientNum, MASK_OPAQUE|CONTENTS_SHOTCLIP|CONTENTS_BODY|CONTENTS_ITEM, G2_COLLIDE, 10);
-	// If the trace came up with a different entity then our crosshair, then you are not actualy over the enemy
-	if (trace.entityNum != g_crosshairEntNum)
-	{
-		// Must trace again to find out where the crosshair will end up
-		gi.trace( &trace, start, vec3_origin, vec3_origin, end, cg.snap->ps.clientNum, MASK_OPAQUE|CONTENTS_SHOTCLIP|CONTENTS_BODY|CONTENTS_ITEM, G2_NOCOLLIDE, 10 );
-	
-		// Find the closest body part to the trace
-		WP_FindClosestBodyPart(traceEnt, shooter, trace.endpos, out);
-
-		// Compute the direction vector between the shooter and the guy being shot
-		VectorSubtract(out,	start, out);
-		VectorNormalize(out);
-
-		for (int i = 1; i < 8; i++)		/// do this 7 times to make sure we get it
-		{
-			/// Where will this direction end up?
-			VectorMA( start, 8192, out, end );//4028 is max for mind trick
-
-			// Try it one more time, ??? are we trying to shoot through solid space??
-			gi.trace( &trace, start, vec3_origin, vec3_origin, end, cg.snap->ps.clientNum, MASK_OPAQUE|CONTENTS_SHOTCLIP|CONTENTS_BODY|CONTENTS_ITEM, G2_COLLIDE, 10);
-			if (trace.entityNum != g_crosshairEntNum)
-			{
-				// Find the closest body part to the trace
-				WP_FindClosestBodyPart(traceEnt, shooter, trace.endpos, out, i);
-
-				// Computer the direction vector between the shooter and the guy being shot
-				VectorSubtract(out,	start, out);
-				VectorNormalize(out);	
-			}
-			else
-			{
-				break;	/// a hit wahoo
-			}
-		}
-	} 
-
-	return true;
-#else // Auto-aim
 	return false;
-#endif
 }
 
 int G_GetHitLocFromTrace( trace_t *trace, int mod )

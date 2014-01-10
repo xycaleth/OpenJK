@@ -70,7 +70,7 @@ char	*SV_ExpandNewlines( char *in ) {
 	int		l;
 
 	l = 0;
-	while ( *in && l < sizeof(string) - 3 ) {
+	while ( *in && l < (int)(sizeof(string) - 3) ) {
 		if ( *in == '\n' ) {
 			string[l++] = '\\';
 			string[l++] = 'n';
@@ -135,7 +135,7 @@ void SV_SendServerCommand(client_t *cl, const char *fmt, ...) {
 	// The actual cause of the bug is probably further downstream
 	// and should maybe be addressed later, but this certainly
 	// fixes the problem for now
-	if ( strlen ((char *)message) > (1022 + 1) ) {
+	if ( strlen ((char *)message+1) > 1022 ) {
 		return;
 	}
 
@@ -202,7 +202,7 @@ void SVC_Status( netadr_t from ) {
 			Com_sprintf (player, sizeof(player), "%i %i \"%s\"\n", 
 				score, cl->ping, cl->name);
 			playerLength = strlen(player);
-			if (statusLength + playerLength >= sizeof(status) ) {
+			if (statusLength + playerLength >= (int)sizeof(status) ) {
 				break;		// can't hold any more
 			}
 			strcpy (status + statusLength, player);
@@ -260,7 +260,7 @@ connectionless packets.
 */
 static void SV_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 	char	*s;
-	char	*c;
+	const char	*c;
 
 	MSG_BeginReading( msg );
 	MSG_ReadLong( msg );		// skip the -1 marker
@@ -459,7 +459,7 @@ qboolean SV_CheckPaused( void ) {
 		return qfalse;
 	}
 
-	sv_paused->integer = 1;
+	Cvar_Set("sv_paused", "1");
 	return qtrue;
 }
 

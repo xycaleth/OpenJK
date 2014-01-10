@@ -1,15 +1,10 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "tr_local.h"
+#ifdef _WIN32
 #include "glext.h"
+#endif
 
 #if !defined __TR_WORLDEFFECTS_H
 	#include "tr_WorldEffects.h"
-#endif
-
-#ifdef VV_LIGHTING
-#include "tr_lightmanager.h"
 #endif
 
 backEndData_t	*backEndData;
@@ -62,29 +57,6 @@ void GL_Bind( image_t *image ) {
 		image->frameUsed = tr.frameCount;
 		glState.currenttextures[glState.currenttmu] = texnum;
 		qglBindTexture (GL_TEXTURE_2D, texnum);
-	}
-}
-
-//bind 3D texture -rww
-void GL_Bind3D( image_t *image )
-{
-	int texnum;
-
-	if ( !image ) {
-		Com_Printf (S_COLOR_YELLOW  "GL_Bind: NULL image\n" );
-		texnum = tr.defaultImage->texnum;
-	} else {
-		texnum = image->texnum;
-	}
-
-	if ( r_nobind->integer && tr.dlightImage ) {		// performance evaluation option
-		texnum = tr.dlightImage->texnum;
-	}
-
-	if ( glState.currenttextures[glState.currenttmu] != texnum ) {
-		image->frameUsed = tr.frameCount;
-		glState.currenttextures[glState.currenttmu] = texnum;
-		qglBindTexture (GL_TEXTURE_3D, texnum);
 	}
 }
 
@@ -142,7 +114,7 @@ void GL_Cull( int cullType ) {
 		return;
 	}
 	glState.faceCulling = cullType;
-	if (backEnd.projection2D){	//don't care, we're in 2d when it's always disabled
+	if (backEnd.projection2D) {	//don't care, we're in 2d when it's always disabled
 		return;	
 	}
 
@@ -218,9 +190,9 @@ void GL_TexEnv( int env )
 ** This routine is responsible for setting the most commonly changed state
 ** in Q3.
 */
-void GL_State( unsigned long stateBits )
+void GL_State( uint32_t stateBits )
 {
-	unsigned long diff = stateBits ^ glState.glStateBits;
+	uint32_t diff = stateBits ^ glState.glStateBits;
 
 	if ( !diff )
 	{
@@ -631,8 +603,7 @@ RB_RenderDrawSurfList
 //so it's slower.
 #define MAX_POST_RENDERS	128
 
-typedef struct
-{
+typedef struct postRender_s {
 	int			fogNum;
 	int			entNum;
 	int			dlighted;
@@ -692,15 +663,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	trRefEntity_t	*curEnt;
 	postRender_t	*pRender;
 	bool			didShadowPass = false;
-#ifdef __MACOS__
-	int				macEventTime;
-
-	Sys_PumpEvents();		// crutch up the mac's limited buffer queue size
-
-	// we don't want to pump the event loop too often and waste time, so
-	// we are going to check every shader change
-	macEventTime = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" ) + MAC_EVENT_PUMP_MSEC;
-#endif
 
 	if (g_bRenderGlowingObjects)
 	{ //only shadow on initial passes
@@ -854,15 +816,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			|| ( entityNum != oldEntityNum && !shader->entityMergable ) )
 		{
 			if (oldShader != NULL) {
-#ifdef __MACOS__	// crutch up the mac's limited buffer queue size
-				int		t;
-
-				t = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
-				if ( t > macEventTime ) {
-					macEventTime = t + MAC_EVENT_PUMP_MSEC;
-					Sys_PumpEvents();
-				}
-#endif
 				RB_EndSurface();
 
 				if (!didShadowPass && shader && shader->sort > SS_BANNER)
@@ -896,11 +849,7 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 				// set up the dynamic lighting if needed
 				if ( backEnd.currentEntity->needDlights ) {
-#ifdef VV_LIGHTING
-					VVLightMan.R_TransformDlights( &backEnd.ori );
-#else
 					R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
-#endif
 				}
 
 				if ( backEnd.currentEntity->e.renderfx & RF_NODEPTH ) {
@@ -918,11 +867,7 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				// we have to reset the shaderTime as well otherwise image animations on
 				// the world (like water) continue with the wrong frame
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-#ifdef VV_LIGHTING
-				VVLightMan.R_TransformDlights( &backEnd.ori );
-#else
 				R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
-#endif
 			}
 
 			qglLoadMatrixf( backEnd.ori.modelMatrix );
@@ -998,11 +943,7 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				// the world (like water) continue with the wrong frame
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
 
-#ifdef VV_LIGHTING
-				VVLightMan.R_TransformDlights( &backEnd.ori );
-#else
 				R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
-#endif
 			}
 			else
 			*/
@@ -1019,11 +960,7 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 				// set up the dynamic lighting if needed
 				if ( backEnd.currentEntity->needDlights ) {
-#ifdef VV_LIGHTING
-					VVLightMan.R_TransformDlights( &backEnd.ori );
-#else
 					R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
-#endif
 				}
 			}
 
@@ -1205,23 +1142,17 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		didShadowPass = true;
 	}
 
-	//HDREffect.Render();
-
 	// add light flares on lights that aren't obscured
 
 	// rww - 9-13-01 [1-26-01-sof2]
 //	RB_RenderFlares();
-
-#ifdef __MACOS__
-	Sys_PumpEvents();		// crutch up the mac's limited buffer queue size
-#endif
 }
 
 
 /*
 ============================================================================
 
-RENDER BACK END THREAD FUNCTIONS
+RENDER BACK END FUNCTIONS
 
 ============================================================================
 */
@@ -1252,7 +1183,7 @@ void	RB_SetGL2D (void) {
 	qglDisable( GL_CLIP_PLANE0 );
 
 	// set time for 2D shaders
-	backEnd.refdef.time = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+	backEnd.refdef.time = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 	backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;
 }
 
@@ -1273,14 +1204,14 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 	if ( !tr.registered ) {
 		return;
 	}
-	R_SyncRenderThread();
+	R_IssuePendingRenderCommands();
 
 	// we definately want to sync every frame for the cinematics
 	qglFinish();
 
 	start = end = 0;
 	if ( r_speeds->integer ) {
-		start = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+		start = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 	}
 
 	// make sure rows and cols are powers of 2
@@ -1309,7 +1240,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 	}
 
 	if ( r_speeds->integer ) {
-		end = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+		end = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 		Com_Printf ("qglTexSubImage2D %i, %i: %i msec\n", cols, rows, end - start );
 	}
 
@@ -1335,8 +1266,9 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 
 	// if the scratchImage isn't in the format we want, specify it as a new texture
 	if ( cols != tr.scratchImage[client]->width || rows != tr.scratchImage[client]->height ) {
-		tr.scratchImage[client]->width = tr.scratchImage[client]->width = cols;
-		tr.scratchImage[client]->height = tr.scratchImage[client]->height = rows;
+		// Note: q3 has the commented sections being uploaded width/height
+		tr.scratchImage[client]->width = /*tr.scratchImage[client]->width =*/ cols;
+		tr.scratchImage[client]->height = /*tr.scratchImage[client]->height =*/ rows;
 		qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGB8, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
@@ -1734,7 +1666,7 @@ void RB_ShowImages( void ) {
 
 	qglFinish();
 
-//	start = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+//	start = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 
 
 	int i=0;
@@ -1768,7 +1700,7 @@ void RB_ShowImages( void ) {
 
 	qglFinish();
 
-//	end = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+//	end = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 //	Com_Printf ("%i msec to draw all images\n", end - start );
 }
 
@@ -1849,16 +1781,13 @@ const void	*RB_WorldEffects( const void *data )
 /*
 ====================
 RB_ExecuteRenderCommands
-
-This function will be called syncronously if running without
-smp extensions, or asyncronously by another thread.
 ====================
 */
 extern const void *R_DrawWireframeAutomap(const void *data); //tr_world.cpp
 void RB_ExecuteRenderCommands( const void *data ) {
 	int		t1, t2;
 
-	t1 = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+	t1 = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 
 	while ( 1 ) {
 		data = PADP(data, sizeof(void *));
@@ -1896,8 +1825,8 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			break;
 		case RC_END_OF_LIST:
 		default:
-			// stop rendering on this thread
-			t2 = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+			// stop rendering
+			t2 = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 			backEnd.pc.msec = t2 - t1;
 			return;
 		}

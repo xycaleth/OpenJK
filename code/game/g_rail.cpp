@@ -27,13 +27,13 @@ This file is part of Jedi Academy.
 // upon their targets and recycled in random positions and order
 //
 ////////////////////////////////////////////////////////////////////////////////////////
-#include "g_headers.h"
-
-
+#include "../qcommon/q_shared.h"
+#include "bg_public.h"
+#include "../cgame/cg_local.h"
+#include "g_functions.h"
 ////////////////////////////////////////////////////////////////////////////////////////
 // Externs & Fwd Decl.
 ////////////////////////////////////////////////////////////////////////////////////////
-//extern cvar_t*		g_nav1;
 extern void		G_SoundAtSpot( vec3_t org, int soundIndex, qboolean broadcast );
 
 class	CRailTrack;
@@ -62,10 +62,6 @@ class	CRailMover;
 #endif
 #if !defined(RATL_POOL_VS_INC)
 	#include "../Ratl/pool_vs.h"
-#endif
-
-#ifdef _XBOX
-using dllNamespace::hstring;
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////

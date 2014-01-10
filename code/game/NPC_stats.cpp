@@ -17,14 +17,12 @@ This file is part of Jedi Academy.
 // Copyright 2001-2013 Raven Software
 
 //NPC_stats.cpp
-// leave this line at the top for all NPC_xxxx.cpp files...
-#include "g_headers.h"
-
 #include "b_local.h"
 #include "b_public.h"
 #include "anims.h"
 #include "wp_saber.h"
 #include "g_vehicles.h"
+#include "../cgame/cg_local.h"
 #if !defined(RUFL_HSTRING_INC)
 	#include "../Rufl/hstring.h"
 #endif
@@ -40,9 +38,6 @@ extern stringID_table_t WPTable[];
 
 #define		MAX_MODELS_PER_LEVEL	40
 
-#ifdef _XBOX
-using dllNamespace::hstring;
-#endif
 hstring		modelsAlreadyDone[MAX_MODELS_PER_LEVEL];
 
 
@@ -57,7 +52,7 @@ stringID_table_t animEventTypeTable[] =
 	ENUM2STRING(AEV_SABER_SWING),	//# animID AEV_SABER_SWING framenum CHANNEL randomlow randomhi chancetoplay 
 	ENUM2STRING(AEV_SABER_SPIN),	//# animID AEV_SABER_SPIN framenum CHANNEL chancetoplay 
 	//must be terminated
-	NULL,-1
+	{ NULL,-1 }
 };
 
 stringID_table_t footstepTypeTable[] = 
@@ -67,7 +62,7 @@ stringID_table_t footstepTypeTable[] =
 	ENUM2STRING(FOOTSTEP_HEAVY_R),
 	ENUM2STRING(FOOTSTEP_HEAVY_L),
 	//must be terminated
-	NULL,-1
+	{ NULL,-1 }
 };
 
 stringID_table_t FPTable[] =
@@ -89,21 +84,21 @@ stringID_table_t FPTable[] =
 	ENUM2STRING(FP_ABSORB),
 	ENUM2STRING(FP_DRAIN),
 	ENUM2STRING(FP_SEE),
-	"",	-1
+	{ "",	-1 }
 };
 
 
 stringID_table_t TeamTable[] =
 {
-	"free", TEAM_FREE,			// caution, some code checks a team_t via "if (!team_t_varname)" so I guess this should stay as entry 0, great or what? -slc
+	{ "free", TEAM_FREE },			// caution, some code checks a team_t via "if (!team_t_varname)" so I guess this should stay as entry 0, great or what? -slc
 	ENUM2STRING(TEAM_FREE),			// caution, some code checks a team_t via "if (!team_t_varname)" so I guess this should stay as entry 0, great or what? -slc
-	"player", TEAM_PLAYER,
+	{ "player", TEAM_PLAYER },
 	ENUM2STRING(TEAM_PLAYER),
-	"enemy", TEAM_ENEMY,
+	{ "enemy", TEAM_ENEMY },
 	ENUM2STRING(TEAM_ENEMY),
-	"neutral", TEAM_NEUTRAL,	// most droids are team_neutral, there are some exceptions like Probe,Seeker,Interrogator
+	{ "neutral", TEAM_NEUTRAL },	// most droids are team_neutral, there are some exceptions like Probe,Seeker,Interrogator
 	ENUM2STRING(TEAM_NEUTRAL),	// most droids are team_neutral, there are some exceptions like Probe,Seeker,Interrogator
-	"",	-1
+	{ "",	-1 }
 };
 
 
@@ -176,7 +171,7 @@ stringID_table_t ClassTable[] =
 	ENUM2STRING(CLASS_ASSASSIN_DROID),
 	ENUM2STRING(CLASS_HAZARD_TROOPER),
 	ENUM2STRING(CLASS_VEHICLE),
-	"",	-1
+	{ "",	-1 }
 };
 
 /*
@@ -268,9 +263,6 @@ static rank_t TranslateRankName( const char *name )
 	return RANK_CIVILIAN;
 }
 
-#ifdef _XBOX
-extern saber_colors_t TranslateSaberColor( const char *name );
-#else
 saber_colors_t TranslateSaberColor( const char *name ) 
 {
 	if ( !Q_stricmp( name, "red" ) ) 
@@ -303,7 +295,6 @@ saber_colors_t TranslateSaberColor( const char *name )
 	}
 	return SABER_BLUE;
 }
-#endif
 
 /* static int MethodNameToNumber( const char *name ) {
 	if ( !Q_stricmp( name, "EXPONENTIAL" ) ) {
@@ -364,7 +355,6 @@ static int MoveTypeNameToEnum( const char *name )
 extern void CG_RegisterClientRenderInfo(clientInfo_t *ci, renderInfo_t *ri);
 extern void CG_RegisterClientModels (int entityNum);
 extern void CG_RegisterNPCCustomSounds( clientInfo_t *ci );
-//extern void CG_RegisterNPCEffects( team_t team );
 
 //#define CONVENIENT_ANIMATION_FILE_DEBUG_THING
 
@@ -443,10 +433,6 @@ static void ParseAnimationEvtBlock(int glaIndex, unsigned short modelIndex, cons
 	// read information for each frame
 	while ( 1 ) 
 	{
-		if ( lastAnimEvent >= MAX_ANIM_EVENTS )
-		{
-			CG_Error( "ParseAnimationEvtBlock: number events in file %s > MAX_ANIM_EVENTS(%i)", aeb_filename, MAX_ANIM_EVENTS );
-		}
 		// Get base frame of sequence
 		token = COM_Parse( text_p );
 		if ( !token || !token[0]) 
@@ -823,7 +809,7 @@ void G_ParseAnimationEvtFile(int glaIndex, const char* eventsDirectory, int file
 	{//no file
 		return;
 	}
-	if ( len >= sizeof( text ) - 1 ) 
+	if ( len >= (int)(sizeof( text ) - 1) ) 
 	{
 		CG_Printf( "File %s too long\n", eventsPath );
 		return;
@@ -910,7 +896,7 @@ qboolean G_ParseAnimationFile(int glaIndex, const char *skeletonName, int fileIn
 			return qfalse;
 		}
 	}
-	if ( len >= sizeof( text ) - 1 ) 
+	if ( len >= (int)(sizeof( text ) - 1) ) 
 	{
 		G_Error( "G_ParseAnimationFile: File %s too long\n (%d > %d)", skeletonName, len, sizeof( text ) - 1);
 		return qfalse;
@@ -1205,14 +1191,6 @@ int		G_ParseAnimFileSet(const char *skeletonName, const char *modelName=0)
 	return fileIndex;
 }
 
-#ifdef _XBOX
-// Utility to wipe the modelsAlreadyDone array, as it is never cleared
-void ClearModelsAlreadyDone(void)
-{
-	memset(modelsAlreadyDone, 0, sizeof(modelsAlreadyDone));
-}
-#endif
-
 extern cvar_t	*g_char_model;
 void G_LoadAnimFileSet( gentity_t *ent, const char *pModelName )
 {
@@ -1371,6 +1349,7 @@ void NPC_PrecacheAnimationCFG( const char *NPC_type )
 					Q_strncpyz( filename, value, sizeof( filename ), qtrue );
 
 					G_ParseAnimFileSet(strippedName, filename);
+					COM_EndParseSession(  );
 					return;
 				}
 			}
@@ -1593,8 +1572,8 @@ Precaches NPC skins, tgas and md3s.
 */
 void CG_NPC_Precache ( gentity_t *spawner )
 {
-	clientInfo_t	ci={0};
-	renderInfo_t	ri={0};
+	clientInfo_t	ci={};
+	renderInfo_t	ri={};
 	team_t			playerTeam = TEAM_FREE;
 	const char	*token;
 	const char	*value;
@@ -1903,6 +1882,8 @@ void CG_NPC_Precache ( gentity_t *spawner )
 		}
 	}
 
+	COM_EndParseSession(  );
+
 	if ( md3Model )
 	{
 		CG_RegisterClientRenderInfo( &ci, &ri );
@@ -1933,7 +1914,6 @@ void CG_NPC_Precache ( gentity_t *spawner )
 
 	CG_RegisterNPCCustomSounds( &ci );
 
-	COM_EndParseSession(  );
 	//CG_RegisterNPCEffects( playerTeam );
 	//FIXME: Look for a "sounds" directory and precache death, pain, alert sounds
 }
@@ -2100,7 +2080,6 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 		// parse the NPC info block
 		while ( 1 ) 
 		{
-			COM_BeginParseSession();
 			token = COM_ParseExt( &p, qtrue );
 			if ( !token[0] ) 
 			{
@@ -2493,7 +2472,7 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 
 				if(!Q_stricmp("none", value))
 				{
-					ri->headModelName[0] = NULL;
+					ri->headModelName[0] = '\0';
 					//Zero the head clamp range so the torso & legs don't lag behind
 					ri->headYawRangeLeft = 
 					ri->headYawRangeRight = 
@@ -2517,7 +2496,7 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 
 				if(!Q_stricmp("none", value))
 				{
-					ri->torsoModelName[0] = NULL;
+					ri->torsoModelName[0] = '\0';
 					//Zero the torso clamp range so the legs don't lag behind
 					ri->torsoYawRangeLeft = 
 					ri->torsoYawRangeRight = 
@@ -3143,6 +3122,7 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 					if ( !NPC->m_pVehicle )
 					{//you didn't spawn this guy right!
 						Com_Printf ( S_COLOR_RED "ERROR: Tried to spawn a vehicle NPC (%s) without using NPC_Vehicle or 'NPC spawn vehicle <vehiclename>'!!!  Bad, bad, bad!  Shame on you!\n", NPCName );
+						COM_EndParseSession();
 						return qfalse;
 					}
 					md3Model = qfalse;

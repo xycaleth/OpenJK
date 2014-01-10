@@ -26,7 +26,6 @@ This file is part of Jedi Academy.
 // Remap sky to contents of the cvar ar_sky
 // Grab sunlight properties from the indirected sky
 
-//void R_RemapShader(const char *shaderName, const char *newShaderName, const char *timeOffset);
 void R_ColorShiftLightingBytes( byte in[4], byte out[4] );
 
 void NormalToLatLong( const vec3_t normal, byte bytes[2] )
@@ -64,7 +63,6 @@ void R_RMGInit(void)
 {
 	char			newSky[MAX_QPATH];
 	char			newFog[MAX_QPATH];
-	shader_t		*sky;
 	shader_t		*fog;
 	fog_t			*gfog;
 	mgrid_t			*grid;
@@ -74,7 +72,7 @@ void R_RMGInit(void)
 
 	ri.Cvar_VariableStringBuffer("RMG_sky", newSky, MAX_QPATH);
 	// Get sunlight - this should set up all the sunlight data
-	sky = R_FindShader( newSky, lightmapsNone, stylesDefault, qfalse );
+	R_FindShader( newSky, lightmapsNone, stylesDefault, qfalse );
 
 	// Remap sky
 //	R_RemapShader("textures/tools/_sky", newSky, NULL);
@@ -82,23 +80,6 @@ void R_RMGInit(void)
 	// Fill in the lightgrid with sunlight
 	if(tr.world->lightGridData)
 	{
-#ifdef _XBOX
-		byte *memory = (byte *)tr.world->lightGridData;
-
-		byte *array;
-		array = memory;
-		memory += 3;
-
-		array[0] = (byte)Com_Clamp(0, 255, tr.sunAmbient[0] * 255.0f);
-		array[1] = (byte)Com_Clamp(0, 255, tr.sunAmbient[1] * 255.0f);
-		array[2] = (byte)Com_Clamp(0, 255, tr.sunAmbient[2] * 255.0f);
-		
-		array[3] = (byte)Com_Clamp(0, 255, tr.sunLight[0]);
-		array[4] = (byte)Com_Clamp(0, 255, tr.sunLight[1]);
-		array[5] = (byte)Com_Clamp(0, 255, tr.sunLight[2]);
-		
-		NormalToLatLong(tr.sunDirection, grid->latLong);
-#else // _XBOX
 		grid = tr.world->lightGridData;
 		grid->ambientLight[0][0] = (byte)Com_Clamp(0, 255, tr.sunAmbient[0] * 255.0f);
 		grid->ambientLight[0][1] = (byte)Com_Clamp(0, 255, tr.sunAmbient[1] * 255.0f);
@@ -111,7 +92,6 @@ void R_RMGInit(void)
 		R_ColorShiftLightingBytes(grid->directLight[0], grid->directLight[0]);
 
 		NormalToLatLong(tr.sunDirection, grid->latLong);
-#endif // _XBOX
 
 		pos = tr.world->lightGridArray;
 		for(i=0;i<tr.world->numGridArrayElements;i++)

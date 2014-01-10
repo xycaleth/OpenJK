@@ -22,11 +22,8 @@ This file is part of Jedi Academy.
 #include "cm_patch.h"
 #include "cm_landscape.h"
 #include "../game/genericparser2.h"
-//#include "image.h"
-//#include "../qcommon/q_imath.h"
 #include "cm_terrainmap.h"
 #include "cm_draw.h"
-#include "../png/png.h"
 
 static CTerrainMap	*TerrainMap = 0;
 
@@ -83,13 +80,12 @@ CTerrainMap::CTerrainMap(CCMLandScape *landscape) :
 		}
 
 	// Load icons for symbols on map
-	int	format;
 
-	re.LoadImageJA("gfx/menus/rmg/start", (byte**)&mSymStart, &mSymStartWidth, &mSymStartHeight, &format);
-	re.LoadImageJA("gfx/menus/rmg/end", (byte**)&mSymEnd, &mSymEndWidth, &mSymEndHeight, &format);
-	re.LoadImageJA("gfx/menus/rmg/objective", (byte**)&mSymObjective, &mSymObjectiveWidth, &mSymObjectiveHeight, &format);
+	re.R_LoadImage("gfx/menus/rmg/start", (byte**)&mSymStart, &mSymStartWidth, &mSymStartHeight);
+	re.R_LoadImage("gfx/menus/rmg/end", (byte**)&mSymEnd, &mSymEndWidth, &mSymEndHeight);
+	re.R_LoadImage("gfx/menus/rmg/objective", (byte**)&mSymObjective, &mSymObjectiveWidth, &mSymObjectiveHeight);
 
-	re.LoadImageJA("gfx/menus/rmg/building", (byte**)&mSymBld, &mSymBldWidth, &mSymBldHeight, &format);
+	re.R_LoadImage("gfx/menus/rmg/building", (byte**)&mSymBld, &mSymBldWidth, &mSymBldHeight);
 }
 
 CTerrainMap::~CTerrainMap()
@@ -127,15 +123,13 @@ void CTerrainMap::ApplyBackground(void)
 	byte	*outPos;
 	float	xRel, yRel, xInc, yInc;
 	byte	*backgroundImage;
-	int		backgroundWidth, backgroundHeight, backgroundDepth;
+	int		backgroundWidth, backgroundHeight;
 	int		pos;
-	int		format;
 
 	memset(mImage, 255, sizeof(mBufImage));
-//	R_LoadImage("textures\\kamchatka\\ice", &backgroundImage, &backgroundWidth, &backgroundHeight, &format);0
-	backgroundDepth = 4;
+//	R_LoadImage("textures\\kamchatka\\ice", &backgroundImage, &backgroundWidth, &backgroundHeight);0
 
-	re.LoadImageJA("gfx\\menus\\rmg\\01_bg", &backgroundImage, &backgroundWidth, &backgroundHeight, &format);
+	re.R_LoadImage("gfx\\menus\\rmg\\01_bg", &backgroundImage, &backgroundWidth, &backgroundHeight);
 	if (backgroundImage)
 	{
 		outPos = (byte *)mBufImage;
@@ -321,7 +315,7 @@ void CTerrainMap::AddPlayer(vec3_t origin, vec3_t angles)
 	vec3_t p;
 	int x,y,i;
 	float facing;
-	POINT poly[4];
+	Point poly[4];
 
 	facing = angles[1];
 	

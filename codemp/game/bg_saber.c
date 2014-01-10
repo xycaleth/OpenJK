@@ -293,7 +293,6 @@ saberMoveData_t	saberMoveData[LS_MOVE_MAX] = {//							NB:randomized
 	{"BParry Top",	BOTH_H1_S1_T_,		Q_T,	Q_B,	AFLAG_ACTIVE,	50,		BLK_NO,	LS_READY,		LS_READY,		150	},	// LS_PARRY_UP,
 	{"BParry UR",	BOTH_H1_S1_TR,		Q_TR,	Q_BL,	AFLAG_ACTIVE,	50,		BLK_NO,	LS_READY,		LS_READY,		150	},	// LS_PARRY_UR,
 	{"BParry UL",	BOTH_H1_S1_TL,		Q_TL,	Q_BR,	AFLAG_ACTIVE,	50,		BLK_NO,	LS_READY,		LS_READY,		150	},	// LS_PARRY_UL,
-	//JAC: the bottom right and bottom left animations were accidently switched.
 	{"BParry LR",	BOTH_H1_S1_BR,		Q_BL,	Q_TR,	AFLAG_ACTIVE,	50,		BLK_NO,	LS_READY,		LS_READY,		150	},	// LS_PARRY_LR,
 	{"BParry Bot",	BOTH_H1_S1_B_,		Q_B,	Q_T,	AFLAG_ACTIVE,	50,		BLK_NO,	LS_READY,		LS_READY,		150	},	// LS_PARRY_LR
 	{"BParry LL",	BOTH_H1_S1_BL,		Q_BR,	Q_TL,	AFLAG_ACTIVE,	50,		BLK_NO,	LS_READY,		LS_READY,		150	},	// LS_PARRY_LL
@@ -305,7 +304,6 @@ saberMoveData_t	saberMoveData[LS_MOVE_MAX] = {//							NB:randomized
 	{"Knock Top",	BOTH_K1_S1_T_,		Q_R,	Q_T,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_BL2TR,		LS_T1_T__BR,		150	},	// LS_PARRY_UP,
 	{"Knock UR",	BOTH_K1_S1_TR,		Q_R,	Q_TR,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_BL2TR,		LS_T1_TR__R,		150	},	// LS_PARRY_UR,
 	{"Knock UL",	BOTH_K1_S1_TL,		Q_R,	Q_TL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_BR2TL,		LS_T1_TL__L,		150	},	// LS_PARRY_UL,
-	//JAC: the bottom right and bottom left animations were accidently switched.
 	{"Knock LR",	BOTH_K1_S1_BR,		Q_R,	Q_BL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TL2BR,		LS_T1_BL_TL,		150	},	// LS_PARRY_LR,
 	{"Knock LL",	BOTH_K1_S1_BL,		Q_R,	Q_BR,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TR2BL,		LS_T1_BR_TR,		150	},	// LS_PARRY_LL
 	//{"Knock LR",	BOTH_K1_S1_BL,		Q_R,	Q_BL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TL2BR,		LS_T1_BL_TL,		150	},	// LS_PARRY_LR,
@@ -315,7 +313,6 @@ saberMoveData_t	saberMoveData[LS_MOVE_MAX] = {//							NB:randomized
 	{"Parry Top",	BOTH_P1_S1_T_,		Q_R,	Q_T,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_BL2TR,		LS_A_T2B,		150	},	// LS_PARRY_UP,
 	{"Parry UR",	BOTH_P1_S1_TR,		Q_R,	Q_TL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_BL2TR,		LS_A_TR2BL,		150	},	// LS_PARRY_UR,
 	{"Parry UL",	BOTH_P1_S1_TL,		Q_R,	Q_TR,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_BR2TL,		LS_A_TL2BR,		150	},	// LS_PARRY_UL,
-	//JAC: the bottom right and bottom left animations were accidently switched.
 	{"Parry LR",	BOTH_P1_S1_BR,		Q_R,	Q_BR,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TL2BR,		LS_A_BR2TL,		150	},	// LS_PARRY_LR,
 	{"Parry LL",	BOTH_P1_S1_BL,		Q_R,	Q_BL,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TR2BL,		LS_A_BL2TR,		150	},	// LS_PARRY_LL
 	//{"Parry LR",	BOTH_P1_S1_BL,		Q_R,	Q_BR,	AFLAG_ACTIVE,	50,		BLK_WIDE,	LS_R_TL2BR,		LS_A_BR2TL,		150	},	// LS_PARRY_LR,
@@ -887,16 +884,12 @@ int PM_SaberLockWinAnim( qboolean victory, qboolean superBreak )
 }
 
 // Need to avoid nesting namespaces!
-#ifdef QAGAME //including game headers on cgame is FORBIDDEN ^_^
-
-#include "g_local.h"
-extern void NPC_SetAnim(gentity_t *ent, int setAnimParts, int anim, int setAnimFlags);
-extern gentity_t g_entities[];
-
-#elif defined CGAME
-
-#include "cgame/cg_local.h" //ahahahahhahahaha@$!$!
-
+#ifdef _GAME //including game headers on cgame is FORBIDDEN ^_^
+	#include "g_local.h"
+	extern void NPC_SetAnim(gentity_t *ent, int setAnimParts, int anim, int setAnimFlags);
+	extern gentity_t g_entities[];
+#elif defined(_CGAME)
+	#include "cgame/cg_local.h" //ahahahahhahahaha@$!$!
 #endif
 
 int PM_SaberLockLoseAnim( playerState_t *genemy, qboolean victory, qboolean superBreak )
@@ -1017,7 +1010,7 @@ int PM_SaberLockLoseAnim( playerState_t *genemy, qboolean victory, qboolean supe
 	}
 	if ( loseAnim != -1 )
 	{
-#ifdef QAGAME
+#ifdef _GAME
 		NPC_SetAnim( &g_entities[genemy->clientNum], SETANIM_BOTH, loseAnim, SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD );
 		genemy->weaponTime = genemy->torsoTimer;// + 250;
 #endif
@@ -1071,7 +1064,7 @@ int PM_SaberLockResultAnim( playerState_t *duelist, qboolean superBreak, qboolea
 	}
 
 	//play the anim and hold it
-#ifdef QAGAME
+#ifdef _GAME
 	//server-side: set it on the other guy, too
 	if ( duelist->clientNum == pm->ps->clientNum )
 	{//me
@@ -1099,7 +1092,7 @@ int PM_SaberLockResultAnim( playerState_t *duelist, qboolean superBreak, qboolea
 			G_SetOrigin(saberent, duelist->currentOrigin);
 		}
 		*/
-#ifdef QAGAME
+#ifdef _GAME
 		if ( 1 )
 #else
 		if ( duelist->clientNum == pm->ps->clientNum )
@@ -1112,7 +1105,7 @@ int PM_SaberLockResultAnim( playerState_t *duelist, qboolean superBreak, qboolea
 		}
 	}
 
-#ifdef QAGAME
+#ifdef _GAME
 	if ( 1 )
 #else
 	if ( duelist->clientNum == pm->ps->clientNum )
@@ -1135,23 +1128,19 @@ int PM_SaberLockResultAnim( playerState_t *duelist, qboolean superBreak, qboolea
 
 void PM_SaberLockBreak( playerState_t *genemy, qboolean victory, int strength )
 {
-	int	winAnim = BOTH_STAND1, loseAnim = BOTH_STAND1;
 	//qboolean punishLoser = qfalse;
 	qboolean noKnockdown = qfalse;
-	qboolean singleVsSingle = qtrue;
 	qboolean superBreak = (strength+pm->ps->saberLockHits > Q_irand(2,4));
 
-	winAnim = PM_SaberLockWinAnim( victory, superBreak );
-	if ( winAnim != -1 )
-	{//a single vs. single break
-		loseAnim = PM_SaberLockLoseAnim( genemy, victory, superBreak );
-	}
-	else
-	{//must be a saberlock that's not between single and single...
-		singleVsSingle = qfalse;
-		winAnim = PM_SaberLockResultAnim( pm->ps, superBreak, qtrue );
+	//a single vs. single break
+	if ( PM_SaberLockWinAnim( victory, superBreak ) != -1 )
+		PM_SaberLockLoseAnim( genemy, victory, superBreak );
+
+	//must be a saberlock that's not between single and single...
+	else {
+		PM_SaberLockResultAnim( pm->ps, superBreak, qtrue );
 		pm->ps->weaponstate = WEAPON_FIRING;
-		loseAnim = PM_SaberLockResultAnim( genemy, superBreak, qfalse );
+		PM_SaberLockResultAnim( genemy, superBreak, qfalse );
 		genemy->weaponstate = WEAPON_READY;
 	}
 
@@ -1355,15 +1344,13 @@ void PM_SaberLocked( void )
 			animation_t *anim;
 			float		currentFrame;
 			int			curFrame;
-			int			strength = 1;
+			int			strength = pm->ps->fd.forcePowerLevel[FP_SABER_OFFENSE]+1;
 
 			pm->ps->saberLockAdvance = qfalse;
 
 			anim = &pm->animations[pm->ps->torsoAnim];
 
 			currentFrame = pm->ps->saberLockFrame;
-
-			strength = pm->ps->fd.forcePowerLevel[FP_SABER_OFFENSE]+1;
 
 			//advance/decrement my frame number
 			if ( BG_InSaberLockOld( pm->ps->torsoAnim ) )
@@ -2735,7 +2722,7 @@ qboolean BG_SuperBreakLoseAnim( int anim );
 qboolean BG_SuperBreakWinAnim( int anim );
 void PM_WeaponLightsaber(void)
 {
-	int			addTime,amount;
+	int			addTime;
 	qboolean	delayed_fire = qfalse;
 	int			anim=-1, curmove, newmove=LS_NONE;
 
@@ -3687,8 +3674,6 @@ weapChecks:
 
 	pm->ps->weaponstate = WEAPON_FIRING;
 
-	amount = weaponData[pm->ps->weapon].energyPerShot;
-
 	addTime = pm->ps->weaponTime;
 
 	pm->ps->saberAttackSequence = pm->ps->torsoAnim;
@@ -4000,7 +3985,7 @@ void PM_SetSaberMove(short newMove)
 saberInfo_t *BG_MySaber( int clientNum, int saberNum )
 {
 	//returns a pointer to the requested saberNum
-#ifdef QAGAME
+#ifdef _GAME
 	gentity_t *ent = &g_entities[clientNum];
 	if ( ent->inuse && ent->client )
 	{
@@ -4011,7 +3996,7 @@ saberInfo_t *BG_MySaber( int clientNum, int saberNum )
 		}
 		return &ent->client->saber[saberNum];
 	}
-#elif defined CGAME
+#elif defined(_CGAME)
 	clientInfo_t *ci = NULL;
 	if (clientNum < MAX_CLIENTS)
 	{

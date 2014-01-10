@@ -200,7 +200,7 @@ copied out.
 */
 qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 	int			sequence;
-	int			qport;
+	//int			qport;
 	int			fragmentStart, fragmentLength;
 	qboolean	fragmented;
 
@@ -218,7 +218,7 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 
 	// read the qport if we are a server
 	if ( chan->sock == NS_SERVER ) {
-		qport = MSG_ReadShort( msg );
+		/*qport = */MSG_ReadShort( msg );
 	}
 
 	// read the fragment information
@@ -309,7 +309,7 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 
 		// copy the fragment to the fragment buffer
 		if ( fragmentLength < 0 || msg->readcount + fragmentLength > msg->cursize ||
-			chan->fragmentLength + fragmentLength > sizeof( chan->fragmentBuffer ) ) {
+			chan->fragmentLength + fragmentLength > (int)sizeof( chan->fragmentBuffer ) ) {
 			if ( showdrop->integer || showpackets->integer ) {
 				Com_Printf ("%s:illegal fragment length\n"
 				, NET_AdrToString (chan->remoteAddress ) );
@@ -403,12 +403,12 @@ const char	*NET_AdrToString (netadr_t a)
 	} else if (a.type == NA_BOT) {
 		Com_sprintf (s, sizeof(s), "bot");
 	} else if (a.type == NA_IP) {
-		Com_sprintf (s, sizeof(s), "%i.%i.%i.%i:%i",
+		Com_sprintf (s, sizeof(s), "%i.%i.%i.%i:%hu",
 			a.ip[0], a.ip[1], a.ip[2], a.ip[3], BigShort(a.port));
 	} else if (a.type == NA_BAD) {
 		Com_sprintf (s, sizeof(s), "BAD");
 	} else {
-		Com_sprintf (s, sizeof(s), "%02x%02x%02x%02x.%02x%02x%02x%02x%02x%02x:%i",
+		Com_sprintf (s, sizeof(s), "%02x%02x%02x%02x.%02x%02x%02x%02x%02x%02x:%hu",
 		a.ipx[0], a.ipx[1], a.ipx[2], a.ipx[3], a.ipx[4], a.ipx[5], a.ipx[6], a.ipx[7], a.ipx[8], a.ipx[9], 
 		BigShort(a.port));
 	}
@@ -462,12 +462,12 @@ LOOPBACK BUFFERS FOR LOCAL PLAYER
 // gamestate of maximum size
 #define	MAX_LOOPBACK	16
 
-typedef struct {
+typedef struct loopmsg_s {
 	byte	data[MAX_PACKETLEN];
 	int		datalen;
 } loopmsg_t;
 
-typedef struct {
+typedef struct loopback_s {
 	loopmsg_t	msgs[MAX_LOOPBACK];
 	int			get, send;
 } loopback_t;
@@ -604,9 +604,8 @@ Traps "localhost" for loopback, passes everything else to system
 =============
 */
 qboolean	NET_StringToAdr( const char *s, netadr_t *a ) {
-	qboolean	r;
 	char	base[MAX_STRING_CHARS];
-	char	*port;
+	char	*port = NULL;
 
 	if (!strcmp (s, "localhost")) {
 		Com_Memset (a, 0, sizeof(*a));
@@ -616,15 +615,13 @@ qboolean	NET_StringToAdr( const char *s, netadr_t *a ) {
 
 	// look for a port number
 	Q_strncpyz( base, s, sizeof( base ) );
-	port = strstr( base, ":" );
+	port = strchr( base, ':' );
 	if ( port ) {
-		*port = 0;
+		*port = '\0';
 		port++;
 	}
 
-	r = Sys_StringToAdr( base, a );
-
-	if ( !r ) {
+	if ( !Sys_StringToAdr( base, a ) ) {
 		a->type = NA_BAD;
 		return qfalse;
 	}

@@ -3,12 +3,16 @@
 #include "FxUtil.h"
 #include "qcommon/GenericParser2.h"
 
+#ifdef _MSC_VER
 #pragma warning (push, 3)	//go back down to 3 for the stl include
+#endif
 #include <vector>
 #include <map>
 #include <list>
 #include <string>
+#ifdef _MSC_VER
 #pragma warning (pop)
+#endif
 
 using namespace std;
 
@@ -68,7 +72,7 @@ public:
 	int		GetHandle()				{ if (mMediaList.size()==0) {return 0;}
 										else {return mMediaList[irand(0,mMediaList.size()-1)];} }
 
-	void operator=(const CMediaHandles &that );
+	CMediaHandles &operator=(const CMediaHandles &that );
 };
 
 
@@ -329,7 +333,7 @@ public:
 
 	bool ParsePrimitive( CGPGroup *grp );
 
-	void operator=(const CPrimitiveTemplate &that);
+	CPrimitiveTemplate &operator=(const CPrimitiveTemplate &that);
 };
 
 // forward declaration
@@ -347,9 +351,9 @@ struct SEffectTemplate
 
 	bool operator == (const char * name) const 
 	{
-		return !stricmp( mEffectName, name );
+		return !Q_stricmp( mEffectName, name );
 	}
-	void operator=(const SEffectTemplate &that);
+	SEffectTemplate &operator=(const SEffectTemplate &that);
 };
 
 
@@ -379,7 +383,7 @@ private:
 		bool	mIsRelative;	// bolt this puppy on keep it updated
 		int		iGhoul2;
 		vec3_t	mOrigin;
-		vec3_t	mAxis[3];
+		matrix3_t	mAxis;
 
 		bool operator <= (const int time) const 
 		{
@@ -450,7 +454,7 @@ private:
 	void	AddPrimitiveToEffect( SEffectTemplate *fx, CPrimitiveTemplate *prim );
 	int		ParseEffect( const char *file, CGPGroup *base );
 
-	void	CreateEffect( CPrimitiveTemplate *fx, const vec3_t origin, vec3_t axis[3], int lateTime, int fxParm = -1,  int iGhoul2 = 0, int entNum = -1, int modelNum = -1, int boltNum = -1);
+	void	CreateEffect( CPrimitiveTemplate *fx, const vec3_t origin, matrix3_t axis, int lateTime, int fxParm = -1,  int iGhoul2 = 0, int entNum = -1, int modelNum = -1, int boltNum = -1);
 	void	CreateEffect( CPrimitiveTemplate *fx, SScheduledEffect *schedFx );
 
 public:
@@ -463,19 +467,19 @@ public:
 	//rww - maybe this should be done differently.. it's more than a bit confusing.
 	//Remind me when I don't have 50 files checked out.
 	void	PlayEffect( int id, vec3_t org, vec3_t fwd, int vol = -1, int rad = -1, bool isPortal = false );				// builds arbitrary perp. right vector, does a cross product to define up
-	void	PlayEffect( int id, vec3_t origin, vec3_t axis[3], const int boltInfo=-1, int iGhoul2 = 0,
+	void	PlayEffect( int id, vec3_t origin, matrix3_t axis, const int boltInfo=-1, int iGhoul2 = 0,
 				int fxParm = -1, int vol = -1, int rad = -1, bool isPortal = false, int iLoopTime = false, bool isRelative = false  );
 	void	PlayEffect( const char *file, vec3_t org, int vol = -1, int rad = -1 );					// uses a default up axis
 	void	PlayEffect( const char *file, vec3_t org, vec3_t fwd, int vol = -1, int rad = -1 );		// builds arbitrary perp. right vector, does a cross product to define up
 	void	PlayEffect( const char *file, vec3_t origin, 
-				vec3_t axis[3], const int boltInfo = -1, int iGhoul2 = 0, int fxParm = -1, int vol = -1, int rad = -1, int iLoopTime = false, bool isRelative = false );
+				matrix3_t axis, const int boltInfo = -1, int iGhoul2 = 0, int fxParm = -1, int vol = -1, int rad = -1, int iLoopTime = false, bool isRelative = false );
 
 	void	StopEffect( const char *file, const int boltInfo, bool isPortal = false );	//find a scheduled Looping effect with these parms and kill it
 	void	AddScheduledEffects( bool portal );								// call once per CGame frame
 
 	// kef -- called for a 2D effect instead of addRefToScene
 	bool	Add2DEffect(float x, float y, float w, float h, vec4_t color, qhandle_t shaderHandle);
-	// kef -- called once per cgame frame AFTER cgi.RenderScene
+	// kef -- called once per cgame frame AFTER trap->RenderScene
 	void	Draw2DEffects(float screenXScale, float screenYScale);
 
 	int		NumScheduledFx()	{ return mFxSchedule.size();	}

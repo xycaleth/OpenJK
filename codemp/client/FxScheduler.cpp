@@ -2,6 +2,7 @@
 #include "qcommon/exe_headers.h"
 
 #include "client.h"
+#include "cl_cgameapi.h"
 #include "FxScheduler.h"
 #include "qcommon/q_shared.h"
 
@@ -14,14 +15,15 @@
 CFxScheduler	theFxScheduler;
 
 //-----------------------------------------------------------
-void CMediaHandles::operator=(const CMediaHandles &that )
+CMediaHandles &CMediaHandles::operator=(const CMediaHandles &that )
 {
 	mMediaList.clear();
 
-	for ( int i = 0; i < that.mMediaList.size(); i++ )
+	for ( size_t i = 0; i < that.mMediaList.size(); i++ )
 	{
 		mMediaList.push_back( that.mMediaList[i] );
 	}
+	return *this;
 }
 
 //------------------------------------------------------
@@ -125,7 +127,7 @@ void CFxScheduler::AddLoopedEffects()
 			TCGVectorData	*data = (TCGVectorData*)cl.mSharedMemory;
 
 			data->mEntityNum = entNum;
-			VM_Call( cgvm, CG_GET_LERP_ORIGIN );
+			CGVM_GetLerpOrigin();
 
 			PlayEffect( mLoopedEffectArray[i].mId, data->mPoint, 0, mLoopedEffectArray[i].mBoltInfo, mLoopedEffectArray[i].mGhoul2.mItem, -1, mLoopedEffectArray[i].mPortalEffect, false, mLoopedEffectArray[i].mIsRelative );	//very important to send FALSE to not recursively add me!
 			mLoopedEffectArray[i].mNextTime = theFxHelper.mTime + mEffectTemplates[mLoopedEffectArray[i].mId].mRepeatDelay;
@@ -139,7 +141,7 @@ void CFxScheduler::AddLoopedEffects()
 }
 
 //-----------------------------------------------------------
-void SEffectTemplate::operator=(const SEffectTemplate &that)
+SEffectTemplate &SEffectTemplate::operator=(const SEffectTemplate &that)
 {
 	mCopy = true;
 
@@ -154,6 +156,7 @@ void SEffectTemplate::operator=(const SEffectTemplate &that)
 		// Mark use as a copy so that we know that we should be chucked when used up
 		mPrimitives[i]->mCopy = true;
 	}
+	return *this;
 }
 
 //------------------------------------------------------
@@ -178,7 +181,7 @@ void CFxScheduler::Clean(bool bRemoveTemplates /*= true*/, int idToPreserve /*= 
 	while ( itr != mFxSchedule.end() )
 	{
 		next = itr;
-		next++;
+		++next;
 
 		delete *itr;
 		mFxSchedule.erase(itr);
@@ -332,7 +335,7 @@ int CFxScheduler::RegisterEffect( const char *file, bool bHasCorrectPath /*= fal
 	}
 
 	// If we'll overflow our buffer, bail out--not a particularly elegant solution
-	if (len >= sizeof(data) - 1 )
+	if ((unsigned)len >= sizeof(data) - 1 )
 	{
 		theFxHelper.CloseFile( fh );
 		return 0;
@@ -366,6 +369,24 @@ int CFxScheduler::RegisterEffect( const char *file, bool bHasCorrectPath /*= fal
 // Return:
 //	int handle of the effect
 //------------------------------------------------------
+
+struct primitiveType_s { const char *name; EPrimType type; } primitiveTypes[] = {
+	{ "particle", Particle },
+	{ "line", Line },
+	{ "tail", Tail },
+	{ "sound", Sound },
+	{ "cylinder", Cylinder },
+	{ "electricity", Electricity },
+	{ "emitter", Emitter },
+	{ "decal", Decal },
+	{ "orientedparticle", OrientedParticle },
+	{ "fxrunner", FxRunner },
+	{ "light", Light },
+	{ "cameraShake", CameraShake },
+	{ "flash", ScreenFlash },
+};
+static const size_t numPrimitiveTypes = ARRAY_LEN( primitiveTypes );
+
 int CFxScheduler::ParseEffect( const char *file, CGPGroup *base )
 {
 	CGPGroup			*primitiveGroup;
@@ -386,7 +407,7 @@ int CFxScheduler::ParseEffect( const char *file, CGPGroup *base )
 	if ((pair = base->GetPairs())!=0)
 	{
 		grpName = pair->GetName();
-		if ( !stricmp( grpName, "repeatDelay" ))
+		if ( !Q_stricmp( grpName, "repeatDelay" ))
 		{
 			effect->mRepeatDelay = atoi(pair->GetTopValue());
 		}
@@ -402,64 +423,14 @@ int CFxScheduler::ParseEffect( const char *file, CGPGroup *base )
 	{
 		grpName = primitiveGroup->GetName();
 
-		// Huge stricmp lists suxor
-		if ( !stricmp( grpName, "particle" ))
-		{
-			type = Particle;
+		type = None;
+		for ( size_t i=0; i<numPrimitiveTypes; i++ ) {
+			if ( !Q_stricmp( grpName, primitiveTypes[i].name ) ) {
+				type = primitiveTypes[i].type;
+				break;
+			}
 		}
-		else if ( !stricmp( grpName, "line" ))
-		{
-			type = Line;
-		}
-		else if ( !stricmp( grpName, "tail" ))
-		{
-			type = Tail;
-		}
-		else if ( !stricmp( grpName, "sound" ))
-		{
-			type = Sound;
-		}
-		else if ( !stricmp( grpName, "cylinder" ))
-		{
-			type = Cylinder;
-		}
-		else if ( !stricmp( grpName, "electricity" ))
-		{
-			type = Electricity;
-		}
-		else if ( !stricmp( grpName, "emitter" ))
-		{
-			type = Emitter;
-		}
-		else if ( !stricmp( grpName, "decal" ))
-		{
-			type = Decal;
-		}
-		else if ( !stricmp( grpName, "orientedparticle" ))
-		{
-			type = OrientedParticle;
-		}
-		else if ( !stricmp( grpName, "fxrunner" ))
-		{
-			type = FxRunner;
-		}
-		else if ( !stricmp( grpName, "light" ))
-		{
-			type = Light;
-		}
-		else if ( !stricmp( grpName, "cameraShake" ))
-		{
-			type = CameraShake;
-		}
-		else if ( !stricmp( grpName, "flash" ))
-		{
-			type = ScreenFlash;
-		}
-		else 
-		{
-			type = None;
-		}
-		
+
 		if ( type != None )
 		{
 			prim = new CPrimitiveTemplate;
@@ -645,7 +616,7 @@ CPrimitiveTemplate *CFxScheduler::GetPrimitiveCopy( SEffectTemplate *effectCopy,
 
 	for ( int i = 0; i < effectCopy->mPrimitiveCount; i++ )
 	{
-		if ( !stricmp( effectCopy->mPrimitives[i]->mName, componentName ))
+		if ( !Q_stricmp( effectCopy->mPrimitives[i]->mName, componentName ))
 		{
 			// we found a match, so return it
 			return effectCopy->mPrimitives[i];
@@ -703,7 +674,7 @@ static void ReportPlayEffectError(int id)
 //------------------------------------------------------
 /*void CFxScheduler::PlayEffect( int id, vec3_t origin, int vol, int rad )
 {
-	vec3_t	axis[3];
+	matrix3_t	axis;
 
 	VectorSet( axis[0], 0, 0, 1 );
 	VectorSet( axis[1], 1, 0, 0 );
@@ -726,7 +697,7 @@ static void ReportPlayEffectError(int id)
 //------------------------------------------------------
 void CFxScheduler::PlayEffect( int id, vec3_t origin, vec3_t forward, int vol, int rad, bool isPortal )
 {
-	vec3_t	axis[3];
+	matrix3_t	axis;
 
 	// Take the forward vector and create two arbitrary but perpendicular vectors
 	VectorCopy( forward, axis[0] );
@@ -749,7 +720,7 @@ void CFxScheduler::PlayEffect( int id, vec3_t origin, vec3_t forward, int vol, i
 // Return:
 //	none
 //------------------------------------------------------
-void CFxScheduler::PlayEffect( const char *file, vec3_t origin, vec3_t axis[3], const int boltInfo, int iGhoul2,
+void CFxScheduler::PlayEffect( const char *file, vec3_t origin, matrix3_t axis, const int boltInfo, int iGhoul2,
 							  int fxParm /*-1*/, int vol, int rad, int iLoopTime, bool isRelative )
 {
 	char	sfile[MAX_QPATH];
@@ -802,7 +773,7 @@ void GetRGB_Colors( CPrimitiveTemplate *fx, vec3_t outStartRGB, vec3_t outEndRGB
 // Return:
 //	none
 //------------------------------------------------------
-void CFxScheduler::PlayEffect( int id, vec3_t origin, vec3_t axis[3], const int boltInfo, int iGhoul2, int fxParm /*-1*/, int vol, int rad, bool isPortal/*false*/, int iLoopTime/*0*/,  bool isRelative )
+void CFxScheduler::PlayEffect( int id, vec3_t origin, matrix3_t axis, const int boltInfo, int iGhoul2, int fxParm /*-1*/, int vol, int rad, bool isPortal/*false*/, int iLoopTime/*0*/,  bool isRelative )
 {
 	SEffectTemplate			*fx;
 	CPrimitiveTemplate		*prim;
@@ -929,7 +900,7 @@ void CFxScheduler::PlayEffect( int id, vec3_t origin, vec3_t axis[3], const int 
 					TCGVectorData	*data = (TCGVectorData*)cl.mSharedMemory;
 
 					data->mEntityNum = entityNum;
-					VM_Call( cgvm, CG_GET_LERP_ORIGIN );
+					CGVM_GetLerpOrigin();
 					CreateEffect( prim, data->mPoint, axis, -delay, fxParm );
 				}
 				else
@@ -1066,9 +1037,8 @@ bool gEffectsInPortal = qfalse; //this is just because I don't want to have to a
 void CFxScheduler::AddScheduledEffects( bool portal )
 {
 	TScheduledEffect::iterator	itr, next;
-	SScheduledEffect			*schedEffect = 0;
 	vec3_t						origin;
-	vec3_t						axis[3];
+	matrix3_t					axis;
 	int							oldEntNum = -1, oldBoltIndex = -1, oldModelNum = -1;
 	qboolean					doesBoltExist  = qfalse;
 
@@ -1086,8 +1056,7 @@ void CFxScheduler::AddScheduledEffects( bool portal )
 	while ( itr != mFxSchedule.end() )
 	{
 		next = itr;
-		next++;
-		schedEffect = (*itr);
+		++next;
 
 		if (portal == (*itr)->mPortalEffect)
 		{ //only render portal fx on the skyportal pass and vice versa
@@ -1101,7 +1070,7 @@ void CFxScheduler::AddScheduledEffects( bool portal )
 						TCGVectorData	*data = (TCGVectorData*)cl.mSharedMemory;
 
 						data->mEntityNum = (*itr)->mEntNum;
-						VM_Call( cgvm, CG_GET_LERP_ORIGIN );
+						CGVM_GetLerpOrigin();
 						CreateEffect( (*itr)->mpTemplate, 
 									data->mPoint, (*itr)->mAxis, 
 									theFxHelper.mTime - (*itr)->mStartTime );
@@ -1197,7 +1166,7 @@ void CFxScheduler::Draw2DEffects(float screenXScale, float screenYScale)
 		h *= screenYScale;
 
 		//allow 2d effect coloring?
-		re.DrawStretchPic(x - (w*0.5f), y - (h*0.5f), w, h, 0, 0, 1, 1, /*m2DEffects[i].mColor,*/ m2DEffects[i].mShaderHandle);
+		re->DrawStretchPic(x - (w*0.5f), y - (h*0.5f), w, h, 0, 0, 1, 1, /*m2DEffects[i].mColor,*/ m2DEffects[i].mShaderHandle);
 	}
 	// now that all 2D effects have been drawn we can consider the entire array to be free
 	mNextFree2DEffect = 0;
@@ -1216,7 +1185,7 @@ void CFxScheduler::Draw2DEffects(float screenXScale, float screenYScale)
 // Return:
 //	none
 //------------------------------------------------------
-void CFxScheduler::CreateEffect( CPrimitiveTemplate *fx, const vec3_t origin, vec3_t axis[3], int lateTime, int fxParm /*-1*/, int iGhoul2, int entNum, int modelNum, int boltNum  )
+void CFxScheduler::CreateEffect( CPrimitiveTemplate *fx, const vec3_t origin, matrix3_t axis, int lateTime, int fxParm /*-1*/, int iGhoul2, int entNum, int modelNum, int boltNum  )
 {
 	vec3_t	org, org2, temp,
 				vel, accel,
@@ -1251,7 +1220,9 @@ void CFxScheduler::CreateEffect( CPrimitiveTemplate *fx, const vec3_t origin, ve
 		case Sound:
 		case CameraShake:
 			//does not work bolted
-				break;
+			break;
+		default:
+			break;
 		}
 	}
 

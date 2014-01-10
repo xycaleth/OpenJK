@@ -6,7 +6,6 @@
 
 //Node flags
 #define	NF_ANY			0
-//#define	NF_CLEAR_LOS	0x00000001
 #define NF_CLEAR_PATH	0x00000002
 #define NF_RECALC		0x00000004
 
@@ -15,12 +14,9 @@
 #define EFLAG_BLOCKED	0x00000001
 #define EFLAG_FAILED	0x00000002
 
-//Miscellaneous defines
-#define	NODE_NONE		-1
-#define	NAV_HEADER_ID	'JNV5'
-#define	NODE_HEADER_ID	'NODE'
-
+#ifdef _MSC_VER
 #pragma warning( disable : 4786) 
+#endif
 
 #if defined(_WIN32)
 	#define COM_NO_WINDOWS_H
@@ -35,6 +31,10 @@ using namespace std;
 #include "server/server.h"
 #include "qcommon/q_shared.h"
 
+//Miscellaneous defines
+#define	NODE_NONE		-1
+#define	NAV_HEADER_ID	INT_ID('J','N','V','5')
+#define	NODE_HEADER_ID	INT_ID('N','O','D','E')
 
 typedef multimap<int, int> EdgeMultimap;
 typedef multimap<int, int>::iterator EdgeMultimapIt;
@@ -51,7 +51,7 @@ class CEdge
 
 public:
 
-	CEdge( void );
+	CEdge( void ) : m_first(-1), m_second(-1), m_cost(-1) {}
 	CEdge( int first, int second, int cost );
 	~CEdge( void );
 
@@ -72,7 +72,7 @@ class CNode
 	{
 		int		ID;
 		int		cost;
-		BYTE	flags;
+		byte	flags;
 	} edge_t;
 
 	typedef	vector< edge_t >	edge_v;
@@ -97,7 +97,7 @@ public:
 	int	GetEdgeNumToNode( int ID );
 	int GetEdge( int edgeNum );
 	int GetEdgeCost( int edgeNum );
-	BYTE GetEdgeFlags( int edgeNum );
+	byte GetEdgeFlags( int edgeNum );
 	void SetEdgeFlags( int edgeNum, int newFlags );
 	int	GetRadius( void )				const	{	return m_radius;	}
 
@@ -137,7 +137,7 @@ class CNavigator
 
 #if __NEWCOLLECT
 	
-	typedef struct nodeList_t
+	struct nodeList_t
 	{
 		int				nodeID;
 		unsigned int	distance;
@@ -231,7 +231,6 @@ protected:
 	float	GetFloat( fileHandle_t file );
 	long	GetLong( fileHandle_t file );
 
-	//void	ConnectNodes( void );
 	void	SetEdgeCost( int ID1, int ID2, int cost );
 	int		GetEdgeCost( CNode *first, CNode *second );
 	void	AddNodeEdges( CNode *node, int addDist, edge_l &edgeList, bool *checkedNodes );

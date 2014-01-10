@@ -241,7 +241,9 @@ static void Shader_SkipRestOfLine ( const char **data ) {
 #endif
 
 
+#ifndef USE_NEW_SHADER_HASH
 static char *s_shaderText;
+#endif
 
 // the shader is parsed into these global variables, then copied into
 // dynamically allocated memory if it is valid.
@@ -266,8 +268,10 @@ typedef struct shaderText_s {   // 8 bytes + strlen(text)+1
 
 static shaderText_t *shaderTextHashTable[MAX_SHADERTEXT_HASH];
 
+#ifndef DEDICATED
 static int fileShaderCount;		// total .shader files found
 static int shaderCount;			// total shaders parsed
+#endif
 // !drakkar
 #else
 #define MAX_SHADERTEXT_HASH		2048
@@ -1093,7 +1097,7 @@ static void ParseSurfaceSprites( const char *_text, shaderStage_t *stage )
 	stage->ss->facing = SURFSPRITE_FACING_NORMAL;
 
 	// A vertical parameter that needs a default regardless
-	stage->ss->vertSkew;
+	stage->ss->vertSkew = 0.0f;
 
 	// These are effect parameters that need defaults nonetheless.
 	stage->ss->fxDuration = 1000;		// 1 second
@@ -1498,32 +1502,6 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				return qfalse;
 			}
 		}
-#ifdef VV_LIGHTING
-		//
-		// specularmap <name>
-		//
-		else if ( !Q_stricmp( token, "specularmap" ) )
-		{
-			token = Shader_ParseExt( text, qfalse );
-			if ( !token[0] )
-			{
-				Com_Printf( S_COLOR_YELLOW "WARNING: missing parameter for 'specularmap' keyword in shader '%s'\n", shader.name );
-				return qfalse;
-			}
-
-			stage->bundle[0].image = R_FindImageFile( token, !shader.noMipMaps, !shader.noPicMip, !shader.noTC, GL_REPEAT );
-			if ( !stage->bundle[0].image )
-			{
-				Com_Printf( S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
-				return qfalse;
-			}
-
-			stage->isSpecular = qtrue;
-
-			shader.needsNormal = true;
-			shader.needsTangent = true;
-		}
-#endif // VV_LIGHTING
 		//
 		// clampmap <name>
 		//
@@ -2300,50 +2278,50 @@ void ParseMaterial( const char **text )
 
 // this table is also present in q3map
 
-typedef struct {
-	char	*name;
-	int		clearSolid, surfaceFlags, contents;
+typedef struct infoParm_s {
+	const char	*name;
+	uint32_t	clearSolid, surfaceFlags, contents;
 } infoParm_t;
 
 
 infoParm_t	infoParms[] = {
 	// Game content Flags
-	{"nonsolid", 	~CONTENTS_SOLID,	0, 				0 },						// special hack to clear solid flag
-	{"nonopaque", 	~CONTENTS_OPAQUE,	0, 				0 },						// special hack to clear opaque flag
-	{"lava",		~CONTENTS_SOLID,	0,				CONTENTS_LAVA },			// very damaging
-	{"slime",		~CONTENTS_SOLID,	0,				CONTENTS_SLIME },			// mildly damaging
-	{"water",		~CONTENTS_SOLID,	0,				CONTENTS_WATER },
-	{"fog",			~CONTENTS_SOLID,	0,				CONTENTS_FOG},				// carves surfaces entering
-	{"shotclip",	~CONTENTS_SOLID,	0,				CONTENTS_SHOTCLIP },		/* block shots, but not people */
-	{"playerclip",	~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_PLAYERCLIP },	   	/* block only the player */ 
-	{"monsterclip",	~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_MONSTERCLIP },		
-	{"botclip",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_BOTCLIP },		   	/* for bots */															
-	{"trigger",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_TRIGGER },
-	{"nodrop",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_NODROP },			// don't drop items or leave bodies (death fog, lava, etc)
-	{"terrain",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_TERRAIN },		   	/* use special terrain collsion */										
-	{"ladder",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_LADDER },			// climb up in it like water
-	{"abseil",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_ABSEIL },			// can abseil down this brush
-	{"outside",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_OUTSIDE },			// volume is considered to be in the outside (i.e. not indoors)
-	{"inside",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_INSIDE },			// volume is considered to be inside (i.e. indoors)
+	{ "nonsolid",		~CONTENTS_SOLID,					SURF_NONE,	 		CONTENTS_NONE },			// special hack to clear solid flag
+	{ "nonopaque",		~CONTENTS_OPAQUE,					SURF_NONE,	 		CONTENTS_NONE },			// special hack to clear opaque flag
+	{ "lava",			~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_LAVA },			// very damaging
+	{ "slime",			~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_SLIME },			// mildly damaging
+	{ "water",			~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_WATER },			// 
+	{ "fog",			~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_FOG},				// carves surfaces entering
+	{ "shotclip",		~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_SHOTCLIP },		// block shots, but not people
+	{ "playerclip",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_PLAYERCLIP },	   	// block only the player
+	{ "monsterclip",	~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_MONSTERCLIP },		// 
+	{ "botclip",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_BOTCLIP },		   	// for bots
+	{ "trigger",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_TRIGGER },			// 
+	{ "nodrop",			~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_NODROP },			// don't drop items or leave bodies (death fog, lava, etc)
+	{ "terrain",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_TERRAIN },		   	// use special terrain collsion
+	{ "ladder",			~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_LADDER },			// climb up in it like water
+	{ "abseil",			~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_ABSEIL },			// can abseil down this brush
+	{ "outside",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_OUTSIDE },			// volume is considered to be in the outside (i.e. not indoors)
+	{ "inside",			~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_INSIDE },			// volume is considered to be inside (i.e. indoors)
 
-																		
-	{"detail",		-1,					0,				CONTENTS_DETAIL },			// don't include in structural bsp
-	{"trans",		-1,					0,				CONTENTS_TRANSLUCENT },		// surface has an alpha component
-	
+
+	{ "detail",			CONTENTS_ALL,						SURF_NONE,			CONTENTS_DETAIL },			// don't include in structural bsp
+	{ "trans",			CONTENTS_ALL,						SURF_NONE,			CONTENTS_TRANSLUCENT },		// surface has an alpha component
+
 	/* Game surface flags */
-	{"sky",			-1,					SURF_SKY,		0 },					   	/* emit light from an environment map */
-	{"slick",		-1,					SURF_SLICK,		0 },
+	{ "sky",			CONTENTS_ALL,						SURF_SKY,			CONTENTS_NONE },			// emit light from an environment map
+	{ "slick",			CONTENTS_ALL,						SURF_SLICK,			CONTENTS_NONE },			// 
 
-	{"nodamage",	-1,					SURF_NODAMAGE,	0 },					   	   																	
-	{"noimpact",	-1,					SURF_NOIMPACT,	0 },					   	/* don't make impact explosions or marks */
-	{"nomarks",		-1,					SURF_NOMARKS,	0 },					   	/* don't make impact marks, but still explode */
-	{"nodraw",		-1,					SURF_NODRAW,	0 },					   	/* don't generate a drawsurface (or a lightmap) */
-	{"nosteps",		-1,					SURF_NOSTEPS,	0 },
-	{"nodlight",	-1,					SURF_NODLIGHT,	0 },					   	/* don't ever add dynamic lights */
-	{"metalsteps",	-1,					SURF_METALSTEPS,0 },
-	{"nomiscents",	-1,					SURF_NOMISCENTS,0 },						/* No misc ents on this surface */
-	{"forcefield",	-1,					SURF_FORCEFIELD,0 },
-	{"forcesight",	-1,					SURF_FORCESIGHT,0 },						// only visible with force sight
+	{ "nodamage",		CONTENTS_ALL,						SURF_NODAMAGE,		CONTENTS_NONE },			// 
+	{ "noimpact",		CONTENTS_ALL,						SURF_NOIMPACT,		CONTENTS_NONE },			// don't make impact explosions or marks
+	{ "nomarks",		CONTENTS_ALL,						SURF_NOMARKS,		CONTENTS_NONE },			// don't make impact marks, but still explode
+	{ "nodraw",			CONTENTS_ALL,						SURF_NODRAW,		CONTENTS_NONE },			// don't generate a drawsurface (or a lightmap)
+	{ "nosteps",		CONTENTS_ALL,						SURF_NOSTEPS,		CONTENTS_NONE },			// 
+	{ "nodlight",		CONTENTS_ALL,						SURF_NODLIGHT,		CONTENTS_NONE },			// don't ever add dynamic lights
+	{ "metalsteps",		CONTENTS_ALL,						SURF_METALSTEPS,	CONTENTS_NONE },			// 
+	{ "nomiscents",		CONTENTS_ALL,						SURF_NOMISCENTS,	CONTENTS_NONE },			// No misc ents on this surface
+	{ "forcefield",		CONTENTS_ALL,						SURF_FORCEFIELD,	CONTENTS_NONE },			// 
+	{ "forcesight",		CONTENTS_ALL,						SURF_FORCESIGHT,	CONTENTS_NONE },			// only visible with force sight
 };
 
 
@@ -2636,7 +2614,7 @@ SHADER OPTIMIZATION AND FOGGING
 ========================================================================================
 */
 
-typedef struct {
+typedef struct collapse_s {
 	int		blendA;
 	int		blendB;
 
@@ -2723,7 +2701,7 @@ static shader_t *GeneratePermanentShader( void ) {
 		return tr.defaultShader;
 	}
 
-	newShader = (struct shader_s *)ri.Hunk_Alloc( sizeof( shader_t ), h_low );
+	newShader = (struct shader_s *)ri->Hunk_Alloc( sizeof( shader_t ), h_low );
 
 	*newShader = shader;
 
@@ -2778,7 +2756,7 @@ static shader_t *GeneratePermanentShader( void ) {
 VertexLightingCollapse
 
 If vertex lighting is enabled, only render a single
-pass, trying to guess which is the correct one to best aproximate
+pass, trying to guess which is the correct one to best approximate
 what it is supposed to look like.
 
   OUTPUT:  Number of stages after the collapse (in the case of surfacesprites this isn't one).
@@ -3195,7 +3173,7 @@ static shader_t *FinishShader( void ) {
 	{
 		if (vertexLightmap) 
 		{
-//			ri.DPrintf( "WARNING: shader '%s' has VERTEX forced lightmap!\n", shader.name );
+//			ri->DPrintf( "WARNING: shader '%s' has VERTEX forced lightmap!\n", shader.name );
 		} 
 		else 
 		{
@@ -3383,18 +3361,18 @@ be defined for every single image used in the game, three default
 shader behaviors can be auto-created for any image:
 
 If lightmapIndex == LIGHTMAP_NONE, then the image will have
-dynamic diffuse lighting applied to it, as apropriate for most
+dynamic diffuse lighting applied to it, as appropriate for most
 entity skin surfaces.
 
 If lightmapIndex == LIGHTMAP_2D, then the image will be used
 for 2D rendering unless an explicit shader is found
 
 If lightmapIndex == LIGHTMAP_BY_VERTEX, then the image will use
-the vertex rgba modulate values, as apropriate for misc_model
+the vertex rgba modulate values, as appropriate for misc_model
 pre-lit surfaces.
 
 Other lightmapIndex values will have a lightmap stage created
-and src*dest blending applied with the texture, as apropriate for
+and src*dest blending applied with the texture, as appropriate for
 most world construction surfaces.
 
 ===============
@@ -3420,7 +3398,7 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 	else if ( lightmapIndex[0] < LIGHTMAP_2D )
 	{
 		// negative lightmap indexes cause stray pointers (think tr.lightmaps[lightmapIndex])
-		ri.Printf( PRINT_WARNING, "WARNING: shader '%s' has invalid lightmap index of %d\n", name, lightmapIndex[0] );
+		ri->Printf( PRINT_WARNING, "WARNING: shader '%s' has invalid lightmap index of %d\n", name, lightmapIndex[0] );
 		lightmapIndex = lightmapsVertex;
 	}
 
@@ -3471,7 +3449,6 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 	return FinishShader();
 }
 
-static void ScanAndLoadShaderFiles( const char *path );
 shader_t *R_FindServerShader( const char *name, const int *lightmapIndex, const byte *styles, qboolean mipRawImage ) 
 {
 	char		strippedName[MAX_QPATH];
@@ -3747,7 +3724,7 @@ void R_InitShaders(qboolean server)
 	if (!server)
 	{
 		Shader_BeginParseSession( "R_InitShaders" );
-		time = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+		time = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 		mem = Hunk_MemoryRemaining();
 		fileShaderCount = 0;
 		shaderCount = 0;
@@ -3766,7 +3743,7 @@ void R_InitShaders(qboolean server)
 // drakkar - print profiling info
 	if (!server)
 	{
-		time = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" ) - time;
+		time = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" ) - time;
 		mem = mem - Hunk_MemoryRemaining();
 		Com_Printf( "-------------------------\n" );
 		Com_Printf( "%d shader files read \n", fileShaderCount );

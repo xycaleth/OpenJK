@@ -1,7 +1,4 @@
 // tr_map.c
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "tr_local.h"
 
 /*
@@ -151,7 +148,7 @@ R_LoadLightmaps
 static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldData ) {
 	byte		*buf, *buf_p;
 	int			len;
-	MAC_STATIC byte		image[LIGHTMAP_SIZE*LIGHTMAP_SIZE*4];
+	byte		image[LIGHTMAP_SIZE*LIGHTMAP_SIZE*4];
 	int			i, j;
 	float maxIntensity = 0;
 	double sumIntensity = 0;
@@ -168,7 +165,7 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 	buf = fileBase + l->fileofs;
 
 	// we are about to upload textures
-	R_SyncRenderThread();
+	R_IssuePendingRenderCommands();
 
 	// create all the lightmaps
 	tr.numLightmaps = len / (LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3);
@@ -311,7 +308,7 @@ static shader_t *ShaderForShaderNum( int shaderNum, const int *lightmapNum, cons
 
 	styles = lightmapStyles;
 
-	shaderNum = LittleLong( shaderNum );
+	LL( shaderNum );
 	if ( shaderNum < 0 || shaderNum >= worldData.numShaders ) {
 		Com_Error( ERR_DROP, "ShaderForShaderNum: bad num %i", shaderNum );
 	}
@@ -432,7 +429,7 @@ static void ParseMesh ( dsurface_t *ds, mapVert_t *verts, msurface_t *surf, worl
 	srfGridMesh_t			*grid;
 	int						i, j, k;
 	int						width, height, numPoints;
-	MAC_STATIC drawVert_t	points[MAX_PATCH_SIZE*MAX_PATCH_SIZE];
+	drawVert_t				points[MAX_PATCH_SIZE*MAX_PATCH_SIZE];
 	int						lightmapNum[MAXLIGHTMAPS];
 	vec3_t					bounds[2];
 	vec3_t					tmpVec;
@@ -1425,7 +1422,7 @@ static	void R_LoadSubmodels( lump_t *l, world_t &worldData, int index ) {
 
 		assert( model != NULL );			// this should never happen
 		if ( model == NULL ) {
-			ri.Error(ERR_DROP, "R_LoadSubmodels: R_AllocModel() failed");
+			ri->Error(ERR_DROP, "R_LoadSubmodels: R_AllocModel() failed");
 		}
 
 		model->type = MOD_BRUSH;
@@ -1716,14 +1713,14 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump, world
 		}
 		else
 		{
-			if ( (unsigned)out->originalBrushNumber >= brushesCount ) {
+			if ( (unsigned)out->originalBrushNumber >= (unsigned)brushesCount ) {
 				Com_Error( ERR_DROP, "fog brushNumber out of range" );
 			}
 			brush = brushes + out->originalBrushNumber;
 
 			firstSide = LittleLong( brush->firstSide );
 
-				if ( (unsigned)firstSide > sidesCount - 6 ) {
+				if ( (unsigned)firstSide > (unsigned)(sidesCount - 6) ) {
 				Com_Error( ERR_DROP, "fog brush sideNumber out of range" );
 			}
 
@@ -1850,7 +1847,7 @@ void R_LoadLightGridArray( lump_t *l, world_t &worldData ) {
 
 	w->numGridArrayElements = w->lightGridBounds[0] * w->lightGridBounds[1] * w->lightGridBounds[2];
 
-	if ( l->filelen != w->numGridArrayElements * sizeof(*w->lightGridArray) ) {
+	if ( (unsigned)l->filelen != w->numGridArrayElements * sizeof(*w->lightGridArray) ) {
 		Com_Printf (S_COLOR_YELLOW  "WARNING: light grid array mismatch\n" );
 		w->lightGridData = NULL;
 		return;
@@ -1887,6 +1884,8 @@ void R_LoadEntities( lump_t *l, world_t &worldData ) {
 	w->entityString = (char *)Hunk_Alloc( l->filelen + 1, h_low );
 	strcpy( w->entityString, p );
 	w->entityParsePoint = w->entityString;
+
+	COM_BeginParseSession ("R_LoadEntities");
 
 	token = COM_ParseExt( &p, qtrue );
 	if (!*token || *token != '{') {
@@ -1992,7 +1991,6 @@ Called directly from cgame
 */
 void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 {
-	int			i;
 	dheader_t	*header;
 	byte		*buffer;
 	byte		*startMarker;
@@ -2022,15 +2020,15 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 
 	// check for cached disk file from the server first...
 	//
-	if (ri.CM_GetCachedMapDiskImage())
+	if (ri->CM_GetCachedMapDiskImage())
 	{
-		buffer = (byte *)ri.CM_GetCachedMapDiskImage();
+		buffer = (byte *)ri->CM_GetCachedMapDiskImage();
 	}
 	else		
 	{
 		// still needs loading...
 		//
-		ri.FS_ReadFile( name, (void **)&buffer );
+		ri->FS_ReadFile( name, (void **)&buffer );
 		if ( !buffer ) {
 			Com_Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
 		}
@@ -2048,14 +2046,14 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 	header = (dheader_t *)buffer;
 	fileBase = (byte *)header;
 
-	i = LittleLong (header->version);
+	int i = LittleLong (header->version);
 	if ( i != BSP_VERSION ) {
 		Com_Error (ERR_DROP, "RE_LoadWorldMap: %s has wrong version number (%i should be %i)", 
 			name, i, BSP_VERSION);
 	}
 
 	// swap all the lumps
-	for (i=0 ; i<sizeof(dheader_t)/4 ; i++) {
+	for (size_t i=0 ; i<sizeof(dheader_t)/4 ; i++) {
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
 	}
 
@@ -2081,20 +2079,20 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 		// only set tr.world now that we know the entire level has loaded properly
 		tr.world = &worldData;
 
-		if ( ri.Cvar_VariableIntegerValue( "com_RMG" ) )
+		if ( ri->Cvar_VariableIntegerValue( "com_RMG" ) )
 		{
 			R_RMGInit();
 		}
 	}
 
-	if (ri.CM_GetCachedMapDiskImage())
+	if (ri->CM_GetCachedMapDiskImage())
 	{
-		Z_Free( ri.CM_GetCachedMapDiskImage() );
-		ri.CM_SetCachedMapDiskImage( NULL );
+		Z_Free( ri->CM_GetCachedMapDiskImage() );
+		ri->CM_SetCachedMapDiskImage( NULL );
 	}
 	else
 	{
-		ri.FS_FreeFile( buffer );
+		ri->FS_FreeFile( buffer );
 	}
 }
 
@@ -2103,7 +2101,7 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index )
 //
 void RE_LoadWorldMap( const char *name )
 {
-	ri.CM_SetUsingCache( qtrue );
+	ri->CM_SetUsingCache( qtrue );
 	RE_LoadWorldMap_Actual( name, s_worldData, 0 );
-	ri.CM_SetUsingCache( qfalse );
+	ri->CM_SetUsingCache( qfalse );
 }

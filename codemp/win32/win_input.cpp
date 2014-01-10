@@ -7,7 +7,7 @@
 #include "win_local.h"
 
 
-typedef struct {
+typedef struct WinMouseVars_s {
 	int			oldButtonState;
 
 	qboolean	mouseActive;
@@ -26,7 +26,7 @@ static void IN_ShutdownMIDI( void );
 
 #define MAX_MIDIIN_DEVICES	8
 
-typedef struct {
+typedef struct MidiInfo_s {
 	int			numDevices;
 	MIDIINCAPS	caps[MAX_MIDIIN_DEVICES];
 
@@ -40,7 +40,7 @@ static MidiInfo_t s_midiInfo;
 //
 #define	JOY_MAX_AXES		6				// X, Y, Z, R, U, V
 
-typedef struct {
+typedef struct joystickInfo_s {
 	qboolean	avail;
 	int			id;			// joystick number
 	JOYCAPS		jc;
@@ -942,9 +942,7 @@ XIFuncPointer XI_SetState = NULL;
 IN_LoadXInput
 
 Uses direct DLL loading as opposed to static linkage
-This is because, as Ensiform pointed out, Windows 8
-and Windows 7 use different XInput versions, hence
-different linkage.
+This is because Windows 8 and Windows 7 use different XInput versions, hence different linkage.
 ===============
 */
 
@@ -1303,7 +1301,7 @@ XI_ThumbFloat
 Gets the percentage going one way or the other (as normalized float)
 ===========
 */
-float ID_INLINE XI_ThumbFloat( signed short thumbValue )
+float QINLINE XI_ThumbFloat( signed short thumbValue )
 {
 	return (thumbValue < 0) ? (thumbValue / 32768.0f) : (thumbValue / 32767.0f);
 }

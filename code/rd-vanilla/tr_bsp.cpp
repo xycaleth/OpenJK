@@ -101,28 +101,18 @@ R_ColorShiftLightingBytes
 ===============
 */
 void R_ColorShiftLightingBytes( byte in[4], byte out[4] ) {
-	int		shift=0, r, g, b;
+	int shift, r, g, b;
 
-	// should NOT do it if overbrightBits is 0
-	if (tr.overbrightBits)
-		shift = 1 - tr.overbrightBits;
-
-	if (!shift)
-	{
-		out[0] = in[0];
-		out[1] = in[1];
-		out[2] = in[2];
-		out[3] = in[3];
-		return;
-	}
+	// shift the color data based on overbright range
+	shift = r_mapOverBrightBits->integer - tr.overbrightBits;
 
 	// shift the data based on overbright range
 	r = in[0] << shift;
 	g = in[1] << shift;
 	b = in[2] << shift;
-	
+
 	// normalize by color instead of saturating to white
-	if ( ( r | g | b ) > 255 ) {
+	if ( (r|g|b) > 255 ) {
 		int		max;
 
 		max = r > g ? r : g;
@@ -144,24 +134,19 @@ R_ColorShiftLightingBytes
 
 ===============
 */
-static	void R_ColorShiftLightingBytes( byte in[3]) 
-{
-	int		shift=0, r, g, b;
+void R_ColorShiftLightingBytes( byte in[3] ) {
+	int shift, r, g, b;
 
-	// should NOT do it if overbrightBits is 0
-	if (tr.overbrightBits)
-		shift = 1 - tr.overbrightBits;
+	// shift the color data based on overbright range
+	shift = r_mapOverBrightBits->integer - tr.overbrightBits;
 
-	if (!shift) {
-		return;	//no need if not overbright
-	}
 	// shift the data based on overbright range
 	r = in[0] << shift;
 	g = in[1] << shift;
 	b = in[2] << shift;
-	
+
 	// normalize by color instead of saturating to white
-	if ( ( r | g | b ) > 255 ) {
+	if ( (r|g|b) > 255 ) {
 		int		max;
 
 		max = r > g ? r : g;
@@ -176,7 +161,6 @@ static	void R_ColorShiftLightingBytes( byte in[3])
 	in[2] = b;
 }
 
-
 /*
 ===============
 R_LoadLightmaps
@@ -188,7 +172,7 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 {
 	byte				*buf, *buf_p;
 	int					len;
-	MAC_STATIC byte		image[LIGHTMAP_SIZE*LIGHTMAP_SIZE*4];
+	byte		image[LIGHTMAP_SIZE*LIGHTMAP_SIZE*4];
 	int					i, j;
 	float				maxIntensity = 0;
 	double				sumIntensity = 0;
@@ -219,7 +203,7 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 	}
 
 	char sMapName[MAX_QPATH];
-	COM_StripExtension(psMapName,sMapName);	// will already by MAX_QPATH legal, so no length check
+	COM_StripExtension(psMapName,sMapName, sizeof(sMapName));
 
 	for ( i = 0 ; i < count ; i++ ) {
 		// expand the 24 bit on-disk to 32 bit
@@ -265,7 +249,7 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 	}
 
 	if ( r_lightmap->integer == 2 )	{
-		VID_Printf( PRINT_ALL, "Brightest lightmap value: %d\n", ( int ) ( maxIntensity * 255 ) );
+		ri.Printf( PRINT_ALL, "Brightest lightmap value: %d\n", ( int ) ( maxIntensity * 255 ) );
 	}
 }
 
@@ -418,7 +402,7 @@ static void ParseFace( dsurface_t *ds, mapVert_t *verts, msurface_t *surf, int *
 	numIndexes = LittleLong( ds->numIndexes );
 
 	// create the srfSurfaceFace_t
-	sfaceSize = ( int ) &((srfSurfaceFace_t *)0)->points[numPoints];
+	sfaceSize = ( intptr_t ) &((srfSurfaceFace_t *)0)->points[numPoints];
 	ofsIndexes = sfaceSize;
 	sfaceSize += sizeof( int ) * numIndexes;
 
@@ -474,7 +458,7 @@ static void ParseMesh ( dsurface_t *ds, mapVert_t *verts, msurface_t *surf, worl
 	srfGridMesh_t	*grid;
 	int				i, j, k;
 	int				width, height, numPoints;
-	MAC_STATIC drawVert_t points[MAX_PATCH_SIZE*MAX_PATCH_SIZE];
+	drawVert_t points[MAX_PATCH_SIZE*MAX_PATCH_SIZE];
 	int				lightmapNum[MAXLIGHTMAPS];
 	vec3_t			bounds[2];
 	vec3_t			tmpVec;
@@ -680,16 +664,16 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 
 	in = (dsurface_t *)(fileBase + surfs->fileofs);
 	if (surfs->filelen % sizeof(*in))
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 	count = surfs->filelen / sizeof(*in);
 
 	dv = (mapVert_t *)(fileBase + verts->fileofs);
 	if (verts->filelen % sizeof(*dv))
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 
 	indexes = (int *)(fileBase + indexLump->fileofs);
 	if ( indexLump->filelen % sizeof(*indexes))
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 
 	out = (struct msurface_s *) Hunk_Alloc ( count * sizeof(*out), qtrue );	
 
@@ -707,7 +691,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 		{
 			case MST_PLANAR:
 				
-				int sfaceSize = ( int ) &((srfSurfaceFace_t *)0)->points[LittleLong(in->numVerts)];	
+				int sfaceSize = ( intptr_t ) &((srfSurfaceFace_t *)0)->points[LittleLong(in->numVerts)];	
 					sfaceSize += sizeof( int ) * LittleLong(in->numIndexes);
 
 				iFaceDataSizeRequired += sfaceSize;
@@ -746,7 +730,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 		}
 	}
 	
-	VID_Printf( PRINT_ALL, "...loaded %d faces, %i meshes, %i trisurfs, %i flares\n", 
+	ri.Printf( PRINT_ALL, "...loaded %d faces, %i meshes, %i trisurfs, %i flares\n", 
 		numFaces, numMeshes, numTriSurfs, numFlares );
 }
 
@@ -764,7 +748,7 @@ static	void R_LoadSubmodels( lump_t *l, world_t &worldData, int index  ) {
 
 	in = (dmodel_t *)(fileBase + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 	count = l->filelen / sizeof(*in);
 
 	worldData.bmodels = out = (bmodel_t *) Hunk_Alloc( count * sizeof(*out), qtrue );
@@ -839,7 +823,7 @@ static	void R_LoadNodesAndLeafs (lump_t *nodeLump, lump_t *leafLump, world_t &wo
 	in = (dnode_t *)(fileBase + nodeLump->fileofs);
 	if (nodeLump->filelen % sizeof(dnode_t) ||
 		leafLump->filelen % sizeof(dleaf_t) ) {
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 	}
 	numNodes = nodeLump->filelen / sizeof(dnode_t);
 	numLeafs = leafLump->filelen / sizeof(dleaf_t);
@@ -913,7 +897,7 @@ static	void R_LoadShaders( lump_t *l, world_t &worldData ) {
 	
 	in = (dshader_t *)(fileBase + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 	count = l->filelen / sizeof(*in);
 	out = (dshader_t *) Hunk_Alloc ( count*sizeof(*out), qfalse );
 
@@ -942,7 +926,7 @@ static	void R_LoadMarksurfaces (lump_t *l, world_t &worldData)
 	
 	in = (int *)(fileBase + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 	count = l->filelen / sizeof(*in);
 	out = (struct msurface_s **) Hunk_Alloc ( count*sizeof(*out), qtrue );	
 
@@ -971,7 +955,7 @@ static	void R_LoadPlanes( lump_t *l, world_t &worldData ) {
 	
 	in = (dplane_t *)(fileBase + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 	count = l->filelen / sizeof(*in);
 	out = (struct cplane_s *) Hunk_Alloc ( count*2*sizeof(*out), qtrue );	
 	
@@ -1015,7 +999,7 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump, world
 
 	fogs = (dfog_t *)(fileBase + l->fileofs);
 	if (l->filelen % sizeof(*fogs)) {
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 	}
 	count = l->filelen / sizeof(*fogs);
 
@@ -1043,13 +1027,13 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump, world
 
 	brushes = (dbrush_t *)(fileBase + brushesLump->fileofs);
 	if (brushesLump->filelen % sizeof(*brushes)) {
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 	}
 	brushesCount = brushesLump->filelen / sizeof(*brushes);
 
 	sides = (dbrushside_t *)(fileBase + sidesLump->fileofs);
 	if (sidesLump->filelen % sizeof(*sides)) {
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",tr.worldDir);
+		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worldData.name);
 	}
 	sidesCount = sidesLump->filelen / sizeof(*sides);
 
@@ -1059,7 +1043,7 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump, world
 		{
 			if(index)
 			{
-				Com_Error (ERR_DROP, "LoadMap: global fog not allowed in bsp instances - %s", tr.worldDir);
+				Com_Error (ERR_DROP, "LoadMap: global fog not allowed in bsp instances - %s", worldData.name);
 			}
 			VectorSet(out->bounds[0], MIN_WORLD_COORD, MIN_WORLD_COORD, MIN_WORLD_COORD);
 			VectorSet(out->bounds[1], MAX_WORLD_COORD, MAX_WORLD_COORD, MAX_WORLD_COORD);
@@ -1067,14 +1051,14 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump, world
 		}
 		else
 		{
-			if ( (unsigned)out->originalBrushNumber >= brushesCount ) {
+			if ( (unsigned)out->originalBrushNumber >= (unsigned)brushesCount ) {
 				Com_Error( ERR_DROP, "fog brushNumber out of range" );
 			}
 			brush = brushes + out->originalBrushNumber;
 
 			firstSide = LittleLong( brush->firstSide );
 
-				if ( (unsigned)firstSide > sidesCount - 6 ) {
+				if ( (unsigned)firstSide > (unsigned)(sidesCount - 6) ) {
 				Com_Error( ERR_DROP, "fog brush sideNumber out of range" );
 			}
 
@@ -1217,7 +1201,7 @@ void R_LoadLightGridArray( lump_t *l, world_t &worldData ) {
 
 	if ( l->filelen != (int)(w->numGridArrayElements * sizeof(*w->lightGridArray)) ) {
 		if (l->filelen>0)//don't warn if not even lit
-			VID_Printf( PRINT_WARNING, "WARNING: light grid array mismatch\n" );
+			ri.Printf( PRINT_WARNING, "WARNING: light grid array mismatch\n" );
 		w->lightGridData = NULL;
 		return;
 	}
@@ -1280,7 +1264,7 @@ void R_LoadEntities( lump_t *l, world_t &worldData ) {
 		if (!Q_strncmp(keyname, s, strlen(s)) ) {
 			s = strchr(value, ';');
 			if (!s) {
-				VID_Printf( S_COLOR_YELLOW "WARNING: no semi colon in vertexshaderremap '%s'\n", value );
+				ri.Printf( S_COLOR_YELLOW "WARNING: no semi colon in vertexshaderremap '%s'\n", value );
 				break;
 			}
 			*s++ = 0;
@@ -1294,7 +1278,7 @@ void R_LoadEntities( lump_t *l, world_t &worldData ) {
 		if (!Q_strncmp(keyname, s, strlen(s)) ) {
 			s = strchr(value, ';');
 			if (!s) {
-				VID_Printf( S_COLOR_YELLOW "WARNING: no semi colon in shaderremap '%s'\n", value );
+				ri.Printf( S_COLOR_YELLOW "WARNING: no semi colon in shaderremap '%s'\n", value );
 				break;
 			}
 			*s++ = 0;
@@ -1341,7 +1325,6 @@ Called directly from cgame
 =================
 */
 void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index ) {
-	int			i;
 	dheader_t	*header;
 	byte		*buffer = NULL;
 	qboolean	loadedSubBSP = qfalse;
@@ -1391,6 +1374,8 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index ) {
 			loadedSubBSP = qtrue;
 		}
 	}
+
+	tr.worldDir[0] = '\0';
 	
 	if (buffer == NULL)
 	{
@@ -1403,9 +1388,12 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index ) {
 	}
 
 	memset( &worldData, 0, sizeof( worldData ) );
-	
+	Q_strncpyz( worldData.name, name, sizeof( worldData.name ) );
 	Q_strncpyz( tr.worldDir, name, sizeof( tr.worldDir ) );
-	COM_StripExtension( tr.worldDir, tr.worldDir );
+	Q_strncpyz( worldData.baseName, COM_SkipPath( worldData.name ), sizeof( worldData.name ) );
+
+	COM_StripExtension( worldData.baseName, worldData.baseName, sizeof( worldData.baseName ) );
+	COM_StripExtension( tr.worldDir, tr.worldDir, sizeof( tr.worldDir ) );
 
 	c_gridVerts = 0;
 
@@ -1420,7 +1408,7 @@ void RE_LoadWorldMap_Actual( const char *name, world_t &worldData, int index ) {
 	}
 
 	// swap all the lumps
-	for (i=0 ; i<sizeof(dheader_t)/4 ; i++) {
+	for (size_t i=0 ; i<sizeof(dheader_t)/4 ; i++) {
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
 	}
 

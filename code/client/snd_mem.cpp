@@ -74,7 +74,7 @@ int GetLittleLong(void)
 	return val;
 }
 
-void FindNextChunk(char *name)
+void FindNextChunk(const char *name)
 {
 	while (1)
 	{
@@ -100,7 +100,7 @@ void FindNextChunk(char *name)
 	}
 }
 
-void FindChunk(char *name)
+void FindChunk(const char *name)
 {
 	last_chunk = iff_data;
 	FindNextChunk (name);
@@ -118,7 +118,7 @@ void DumpChunks(void)
 		memcpy (str, data_p, 4);
 		data_p += 4;
 		iff_chunk_len = GetLittleLong();
-		Com_Printf ("0x%x : %s (%d)\n", (int)(data_p - 4), str, iff_chunk_len);
+		Com_Printf ("0x%x : %s (%d)\n", (intptr_t)(data_p - 4), str, iff_chunk_len);
 		data_p += (iff_chunk_len + 1) & ~1;
 	} while (data_p < iff_end);
 }
@@ -639,15 +639,15 @@ static qboolean S_LoadSound_FileLoadAndNameAdjuster(char *psFilename, byte **pDa
 		// account for foreign voices...
 		//		
 		extern cvar_t* s_language;
-		if (s_language && stricmp("DEUTSCH",s_language->string)==0)
+		if (s_language && Q_stricmp("DEUTSCH",s_language->string)==0)
 		{				
 			strncpy(psVoice,"chr_d",5);	// same number of letters as "chars"
 		}
-		else if (s_language && stricmp("FRANCAIS",s_language->string)==0)
+		else if (s_language && Q_stricmp("FRANCAIS",s_language->string)==0)
 		{				
 			strncpy(psVoice,"chr_f",5);	// same number of letters as "chars"
 		}
-		else if (s_language && stricmp("ESPANOL",s_language->string)==0)
+		else if (s_language && Q_stricmp("ESPANOL",s_language->string)==0)
 		{				
 			strncpy(psVoice,"chr_e",5);	// same number of letters as "chars"
 		}
@@ -720,10 +720,10 @@ static qboolean S_LoadSound_DirIsAllowedToKeepMP3s(const char *psFilename)
 //		"sound/chr_d/"	// no need for this now, or any other language, since we'll always compare against english
 	};
 
-	int i;
+	unsigned int i;
 	for (i=0; i< (sizeof(psAllowedDirs) / sizeof(psAllowedDirs[0])); i++)
 	{
-		if (strnicmp(psFilename, psAllowedDirs[i], strlen(psAllowedDirs[i]))==0)
+		if (Q_stricmpn(psFilename, psAllowedDirs[i], strlen(psAllowedDirs[i]))==0)
 			return qtrue;	// found a dir that's allowed to keep MP3s
 	}
 
@@ -749,7 +749,6 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 	int		size;
 	char	*psExt;
 	char	sLoadName[MAX_QPATH];
-	ALuint  Buffer;
 	
 	int		len = strlen(sfx->sSoundName);
 	if (len<5)
@@ -785,7 +784,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 
 	SND_TouchSFX(sfx);
 //=========
-	if (strnicmp(psExt,".mp3",4)==0)
+	if (Q_stricmpn(psExt,".mp3",4)==0)
 	{
 		// load MP3 file instead...
 		//		
@@ -800,6 +799,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 			{
 //				Com_DPrintf("(Keeping file \"%s\" as MP3)\n",sLoadName);
 
+#ifdef _WIN32
 				if (s_UseOpenAL)
 				{
 					// Create space for lipsync data (4 lip sync values per streaming AL buffer)
@@ -808,6 +808,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 					else
 						sfx->lipSyncData = NULL;
 				}
+#endif
 			}
 			else
 			{
@@ -842,6 +843,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 						S_LoadSound_Finalize(&info,sfx,pbUnpackBuffer);
 
 						// Open AL
+#ifdef _WIN32
 						if (s_UseOpenAL)
 						{
 							if (strstr(sfx->sSoundName, "chars"))
@@ -856,6 +858,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 							alGetError();
 
 							// Generate AL Buffer
+							ALuint Buffer;
 							alGenBuffers(1, &Buffer);
 							if (alGetError() == AL_NO_ERROR)
 							{
@@ -869,6 +872,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 								}
 							}
 						}
+#endif
 
 						Z_Free(pbUnpackBuffer);
 					}
@@ -912,6 +916,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 		ResampleSfx( sfx, info.rate, info.width, data + info.dataofs );
 
 		// Open AL
+#ifdef _WIN32
 		if (s_UseOpenAL)
 		{
 			if ((strstr(sfx->sSoundName, "chars")) || (strstr(sfx->sSoundName, "CHARS")))
@@ -926,6 +931,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 			alGetError();
 
 			// Generate AL Buffer
+			ALuint Buffer;
 			alGenBuffers(1, &Buffer);
 			if (alGetError() == AL_NO_ERROR)
 			{
@@ -940,6 +946,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 				}
 			}
 		}
+#endif
 
 		Z_Free(samples);
 	}

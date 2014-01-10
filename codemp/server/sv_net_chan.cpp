@@ -15,7 +15,7 @@ SV_Netchan_Encode
 ==============
 */
 static void SV_Netchan_Encode( client_t *client, msg_t *msg ) {
-	long reliableAcknowledge, i, index;
+	long /*reliableAcknowledge,*/ i, index;
 	byte key, *string;
         int	srdc, sbit;
 		qboolean soob;
@@ -32,7 +32,7 @@ static void SV_Netchan_Encode( client_t *client, msg_t *msg ) {
         msg->readcount = 0;
         msg->oob = qfalse;
         
-	reliableAcknowledge = MSG_ReadLong(msg);
+	/*reliableAcknowledge =*/ MSG_ReadLong(msg);
 
         msg->oob = soob;
         msg->bit = sbit;
@@ -130,7 +130,6 @@ SV_Netchan_Transmit
 ================
 */
 
-//extern byte chksum[65536];
 void SV_Netchan_Transmit( client_t *client, msg_t *msg) {	//int length, const byte *data ) {
 //	int i;
 	MSG_WriteByte( msg, svc_EOF );

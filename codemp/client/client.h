@@ -4,20 +4,24 @@
 
 #include "qcommon/q_shared.h"
 #include "qcommon/qcommon.h"
-#include "ui/ui_public.h"
-#include "renderer/tr_public.h"
+#include "rd-common/tr_public.h"
 #include "keys.h"
 #include "snd_public.h"
-#include "cgame/cg_public.h"
 #include "game/bg_public.h"
+#include "cgame/cg_public.h"
+#include "ui/ui_public.h"
 
 #define	RETRANSMIT_TIMEOUT	3000	// time between connection packet retransmits
+
+// file full of random crap that gets used to create ja_guid
+#define QKEY_FILE "jakey"
+#define QKEY_SIZE 2048
 
 // Wind
 extern vec3_t cl_windVec;
 
 // snapshots are a view of the server at a given time
-typedef struct {
+typedef struct clSnapshot_s {
 	qboolean		valid;			// cleared if delta parsing was invalid
 	int				snapFlags;		// rate delayed and dropped commands
 
@@ -50,7 +54,7 @@ new gamestate_t, potentially several times during an established connection
 =============================================================================
 */
 
-typedef struct {
+typedef struct outPacket_s {
 	int		p_cmdNumber;		// cl.cmdNumber when packet was sent
 	int		p_serverTime;		// usercmd->serverTime when packet was sent
 	int		p_realtime;			// cls.realtime when packet was sent
@@ -63,7 +67,7 @@ typedef struct {
 
 extern int g_console_field_width;
 
-typedef struct {
+typedef struct clientActive_s {
 	int			timeoutcount;		// it requres several frames in a timeout condition
 									// to disconnect, preventing debugging breaks from
 									// causing immediate disconnects on continue
@@ -154,7 +158,7 @@ demo through a file.
 */
 
 
-typedef struct {
+typedef struct clientConnection_s {
 
 	int			clientNum;
 	int			lastPacketSentTime;			// for retransmits during connection
@@ -210,6 +214,9 @@ typedef struct {
 	int			timeDemoStart;		// cls.realtime before first frame
 	int			timeDemoBaseTime;	// each frame will be at this time + frameNum * 50
 
+	float		aviVideoFrameRemainder;
+	float		aviSoundFrameRemainder;
+
 	// big stuff at end of structure so most offsets are 15 bits or less
 	netchan_t	netchan;
 
@@ -233,14 +240,14 @@ no client connection is active at all
 ==================================================================
 */
 
-typedef struct {
+typedef struct ping_s {
 	netadr_t	adr;
 	int			start;
 	int			time;
 	char		info[MAX_INFO_STRING];
 } ping_t;
 
-typedef struct {
+typedef struct serverInfo_s {
 	netadr_t	adr;
 	char	  	hostName[MAX_NAME_LENGTH];
 	char	  	mapName[MAX_NAME_LENGTH];
@@ -253,15 +260,13 @@ typedef struct {
 	int			maxPing;
 	int			ping;
 	qboolean	visible;
-//	int			allowAnonymous;
 	qboolean	needPassword;
 	int			trueJedi;
 	int			weaponDisable;
 	int			forceDisable;
-//	qboolean	pure;
 } serverInfo_t;
 
-typedef struct {
+typedef struct clientStatic_s {
 	connstate_t	state;				// connection status
 
 	char		servername[MAX_OSPATH];		// name of server from original connect (used by reconnect)
@@ -310,7 +315,7 @@ typedef struct {
 #define	CON_TEXTSIZE	0x30000 //was 32768
 #define	NUM_CON_TIMES	4
 
-typedef struct {
+typedef struct console_s {
 	qboolean	initialized;
 
 	short	text[CON_TEXTSIZE];
@@ -336,11 +341,7 @@ typedef struct {
 
 extern	clientStatic_t		cls;
 
-//=============================================================================
-
-extern	vm_t			*cgvm;	// interface to cgame dll or vm
-extern	vm_t			*uivm;	// interface to ui dll or vm
-extern	refexport_t		re;		// interface to refresh .dll
+extern	refexport_t		*re;		// interface to refresh .dll
 
 //
 // cvars
@@ -390,6 +391,8 @@ extern	cvar_t	*cl_inGameVideo;
 extern	cvar_t	*cl_consoleKeys;
 #endif
 
+extern  cvar_t  *cl_lanForcePackets;
+
 //=================================================
 
 //
@@ -402,6 +405,12 @@ void CL_ShutdownAll( qboolean shutdownRef );
 void CL_AddReliableCommand( const char *cmd, qboolean isDisconnectCmd );
 
 void CL_StartHunkUsers( void );
+
+qboolean CL_GetSnapshot( int snapshotNumber, snapshot_t *snapshot );
+qboolean CL_GetDefaultState( int index, entityState_t *state );
+qboolean CL_GetServerCommand( int serverCommandNumber );
+qboolean CL_GetUserCmd( int cmdNumber, usercmd_t *ucmd );
+void CL_SetUserCmdValue( int userCmdValue, float sensitivityScale, float mPitchOverride, float mYawOverride, float mSensitivityOverride, int fpSel, int invenSel );
 
 void CL_Disconnect_f (void);
 void CL_GetChallengePacket (void);
@@ -422,14 +431,14 @@ int CL_GetPingQueueCount( void );
 void CL_ShutdownRef( void );
 void CL_InitRef( void );
 
-int CL_ServerStatus( char *serverAddress, char *serverStatusString, int maxLen );
+int CL_ServerStatus( const char *serverAddress, char *serverStatusString, int maxLen );
 
 qboolean CL_CheckPaused(void);
 
 //
 // cl_input
 //
-typedef struct {
+typedef struct kbutton_s {
 	int			down[2];		// key nums holding it down
 	unsigned	downtime;		// msec timestamp
 	unsigned	msec;			// msec down this frame if both a down and up happened
@@ -459,13 +468,9 @@ const char *Key_KeynumToString( int keynum/*, qboolean bTranslate */ ); //note: 
 //
 extern int cl_connectedToPureServer;
 extern int cl_connectedToCheatServer;
-extern int cl_connectedGAME;
-extern int cl_connectedCGAME;
-extern int cl_connectedUI;
 
 void CL_SystemInfoChanged( void );
 void CL_ParseServerMessage( msg_t *msg );
-//void CL_SP_Print(const word ID, byte *Data);
 
 //====================================================================
 
@@ -480,7 +485,6 @@ qboolean CL_UpdateVisiblePings_f( int source );
 //
 // console
 //
-void Con_DrawCharacter (int cx, int line, int num);
 
 void Con_CheckResize (void);
 void Con_Init (void);

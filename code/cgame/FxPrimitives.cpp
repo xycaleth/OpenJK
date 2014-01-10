@@ -177,12 +177,14 @@ bool CParticle::Update()
 		if (mModelNum>=0 && mBoltNum>=0)	//bolt style
 		{
 			const centity_t &cent = cg_entities[mClientID];
-			if (cent.gent->ghoul2.IsValid())
+			if (!cent.gent->ghoul2.IsValid())
 			{
-				if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, org, ax))
-				{	//could not get bolt
-					return false;
-				}
+				return false;
+			}
+
+			if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, org, ax))
+			{	//could not get bolt
+				return false;
 			}
 		}
 		else
@@ -677,12 +679,14 @@ bool COrientedParticle::Update()
 		if (mModelNum>=0 && mBoltNum>=0)	//bolt style
 		{
 			const centity_t &cent = cg_entities[mClientID];
-			if (cent.gent->ghoul2.IsValid())
+			if (!cent.gent->ghoul2.IsValid())
 			{
-				if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, org, ax))
-				{	//could not get bolt
-					return false;
-				}
+				return false;
+			}
+
+			if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, org, ax))
+			{	//could not get bolt
+				return false;
 			}
 		}
 		else
@@ -786,17 +790,19 @@ bool CLine::Update()
 			return false;
 		}
 
-		vec3_t	ax[3] = {0};
+		vec3_t	ax[3] = {};
 		// Get our current position and direction
 		if (mModelNum>=0 && mBoltNum>=0)	//bolt style
 		{
 			const centity_t &cent = cg_entities[mClientID];
-			if (cent.gent->ghoul2.IsValid())
+			if (!cent.gent->ghoul2.IsValid())
 			{
-				if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, mOrigin1, ax))
-				{	//could not get bolt
-					return false;
-				}
+				return false;
+			}
+
+			if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, mOrigin1, ax))
+			{	//could not get bolt
+				return false;
 			}
 		}
 		else
@@ -903,17 +909,19 @@ bool CElectricity::Update()
 			return false;
 		}
 
-		vec3_t	ax[3] = {0};
+		vec3_t	ax[3] = {};
 		// Get our current position and direction
 		if (mModelNum>=0 && mBoltNum>=0)	//bolt style
 		{
 			const centity_t &cent = cg_entities[mClientID];
-			if (cent.gent->ghoul2.IsValid())
+			if (!cent.gent->ghoul2.IsValid())
 			{
-				if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, mOrigin1, ax))
-				{	//could not get bolt
-					return false;
-				}
+				return false;
+			}
+
+			if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, mOrigin1, ax))
+			{	//could not get bolt
+				return false;
 			}
 		}
 		else
@@ -1006,12 +1014,14 @@ bool CTail::Update()
 		if (mModelNum>=0 && mBoltNum>=0)	//bolt style
 		{
 			const centity_t &cent = cg_entities[mClientID];
-			if (cent.gent->ghoul2.IsValid())
+			if (!cent.gent->ghoul2.IsValid())
 			{
-				if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, org, ax))
-				{	//could not get bolt
-					return false;
-				}
+				return false;
+			}
+
+			if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, org, ax))
+			{	//could not get bolt
+				return false;
 			}
 		}
 		else
@@ -1276,17 +1286,19 @@ bool CCylinder::Update()
 			return false;
 		}
 
-		vec3_t	ax[3] = {0};
+		vec3_t	ax[3] = {};
 		// Get our current position and direction
 		if (mModelNum>=0 && mBoltNum>=0)	//bolt style
 		{
 			const centity_t &cent = cg_entities[mClientID];
-			if (cent.gent->ghoul2.IsValid())
+			if (!cent.gent->ghoul2.IsValid())
 			{
-				if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, mOrigin1, ax))
-				{	//could not get bolt
-					return false;
-				}
+				return false;
+			}
+
+			if (!theFxHelper.GetOriginAxisFromBolt(cent, mModelNum, mBoltNum, mOrigin1, ax))
+			{	//could not get bolt
+				return false;
 			}
 		}
 		else

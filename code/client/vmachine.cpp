@@ -19,7 +19,9 @@ This file is part of Jedi Academy.
 // vmachine.cpp -- wrapper to fake virtual machine for client
 
 #include "vmachine.h"
+#ifdef _MSC_VER
 #pragma warning (disable : 4514)
+#endif
 /*
 ==============================================================
 
@@ -27,19 +29,18 @@ VIRTUAL MACHINE
 
 ==============================================================
 */
-int	VM_Call( int callnum, ... )
+intptr_t	VM_Call( int callnum, ... )
 {
 //	assert (cgvm.entryPoint);
 	//Getting crashes here on OSX with debug dlls.
-#ifdef MACOS_X
-	int i;
-	int args[10];
+#if !id386 || defined(MACOS_X)
+	intptr_t args[10];
 	va_list ap;
 	if (cgvm.entryPoint)
 	{
 		va_start(ap, callnum);
-		for (i = 0; i < sizeof (args) / sizeof (args[i]); i++) {
-			args[i] = va_arg(ap, int);
+		for (size_t i = 0; i < ARRAY_LEN(args); i++) {
+			args[i] = va_arg(ap, intptr_t);
 		}
 		va_end(ap);
 		
@@ -55,8 +56,8 @@ int	VM_Call( int callnum, ... )
 			(&callnum)[8],  (&callnum)[9] );
 	}
 	
-	return -1;
 #endif
+	return -1;
 }
 
 /*
@@ -105,22 +106,21 @@ we pass this to the cgame dll to call back into the client
  ============
  */
 
-extern int CL_CgameSystemCalls( int *args );
-extern int CL_UISystemCalls( int *args );
+extern intptr_t CL_CgameSystemCalls( intptr_t *args );
 
-int VM_DllSyscall( int arg, ... ) {
+intptr_t VM_DllSyscall( intptr_t arg, ... ) {
 //	return cgvm->systemCall( &arg );
 #if !id386 || defined __clang__ || defined MACOS_X
 	// rcg010206 - see commentary above
-	int args[16];
-	int i;
+	intptr_t args[16];
+	size_t i;
 	va_list ap;
 	
 	args[0] = arg;
 	
 	va_start(ap, arg);
 	for (i = 1; i < sizeof (args) / sizeof (args[i]); i++)
-		args[i] = va_arg(ap, int);
+		args[i] = va_arg(ap, intptr_t);
 	va_end(ap);
 	
 	return CL_CgameSystemCalls( args );

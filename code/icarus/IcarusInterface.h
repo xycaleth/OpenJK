@@ -20,6 +20,8 @@ This file is part of Jedi Academy.
 #ifndef ICARUSINTERFACE_DEFINED
 #define ICARUSINTERFACE_DEFINED
 
+#include "../qcommon/q_shared.h"
+
 // IcarusInterface.h: ICARUS Interface header file.
 // -Date: ~October, 2002
 // -Created by: Mike Crowns and Aurelio Reis.
@@ -138,8 +140,8 @@ public:
 
 	// Save / Load functions
 
-	virtual int		WriteSaveData( unsigned long chid, void *data, int length ) = 0;
-	virtual int		ReadSaveData( unsigned long chid, void *address, int length, void **addressptr = NULL )  = 0;
+	virtual int		WriteSaveData( unsigned int chid, void *data, int length ) = 0;
+	virtual int		ReadSaveData( unsigned int chid, void *address, int length, void **addressptr = NULL )  = 0;
 	virtual int		LinkGame( int gameID, int icarusID ) = 0;
 	
 	// Access functions

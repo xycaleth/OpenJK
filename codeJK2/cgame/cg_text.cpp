@@ -17,10 +17,7 @@ This file is part of Jedi Knight 2.
 // Copyright 2001-2013 Raven Software
 
 // cg_text.c -- 
-
-// this line must stay at top so the whole PCH thing works...
-#include "cg_headers.h"
-
+#include "cg_local.h"
 #include "cg_media.h"
 
 
@@ -461,7 +458,7 @@ void CG_CaptionText( const char *str, int sound )
 	{	
 #ifndef FINAL_BUILD
 		// we only care about some sound dirs...
-		if (!strnicmp(str,"sound/chars/",12))	// whichever language it is, it'll be pathed as english at this point
+		if (!Q_strncmp(str,"sound/chars/",12))	// whichever language it is, it'll be pathed as english at this point
 		{
 			Com_Printf("WARNING: CG_CaptionText given invalid text key :'%s'\n",str);
 		}
@@ -712,7 +709,7 @@ void CG_ScrollText( const char *str, int iPixelWidth )
 	//
 	// malloc space to hold it...
 	//
-	char *psText = (char *) cgi_Z_Malloc( i+1, TAG_STRING );
+	char *psText = (char *) cgi_Z_Malloc( i+1, TAG_TEMP_WORKSPACE );
 	//
 	// now get the string...
 	//	

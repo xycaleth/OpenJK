@@ -25,20 +25,10 @@ This file is part of Jedi Academy.
    Structures local to the files_* modules.
 */
 
-
-
-#ifdef _XBOX
-#include "../goblib/goblib.h"
-
-typedef int wfhandle_t;
-#else
-#include "../zlib32/zip.h"
+#include "zlib/zlib.h"
 #include "unzip.h"
-#endif
-
 
 #define MAX_ZPATH			256
-#define	BASEGAME			"base"
 
 
 
@@ -50,9 +40,7 @@ typedef struct fileInPack_s {
 
 typedef struct {
 	char			pakFilename[MAX_OSPATH];	// c:\quake3\base\asset0.pk3
-#ifndef _XBOX
 	unzFile			handle;
-#endif
 	int				checksum;
 	int				numfiles;
 	int				hashSize;					// hash table size (power of 2)
@@ -77,9 +65,7 @@ typedef struct searchpath_s {
 
 typedef union qfile_gus {
 	FILE*		o;
-#ifndef _XBOX
 	unzFile		z;
-#endif
 } qfile_gut;
 
 typedef struct qfile_us {
@@ -90,18 +76,10 @@ typedef struct qfile_us {
 typedef struct {
 	qfile_ut	handleFiles;
 	qboolean	handleSync;
-	int			baseOffset;
 	int			fileSize;
 	int			zipFilePos;
 	qboolean	zipFile;
 	char		name[MAX_QPATH];
-
-#ifdef _XBOX
-	GOBHandle	ghandle;
-	qboolean	gob;
-	qboolean	used;
-	wfhandle_t  whandle;
-#endif
 } fileHandleData_t;
 
 
@@ -111,11 +89,18 @@ extern searchpath_t	*fs_searchpaths;
 extern char			fs_gamedir[MAX_OSPATH];	// this will be a single file name with no separators
 extern cvar_t		*fs_debug;
 extern cvar_t		*fs_homepath;
+
+#ifdef MACOS_X
+// Also search the .app bundle for .pk3 files
+extern cvar_t          *fs_apppath;
+#endif
+
 extern cvar_t		*fs_basepath;
 extern cvar_t		*fs_basegame;
 extern cvar_t		*fs_cdpath;
 extern cvar_t		*fs_copyfiles;
 extern cvar_t		*fs_gamedirvar;
+extern cvar_t		*fs_dirbeforepak; //rww - when building search path, keep directories at top and insert pk3's under them
 extern int			fs_readCount;			// total bytes read
 extern int			fs_loadCount;			// total files read
 extern int			fs_packFiles;			// total number of files in packs
@@ -126,7 +111,7 @@ extern char		lastValidBase[MAX_OSPATH];
 extern char		lastValidGame[MAX_OSPATH];
 
 void			FS_Startup( const char *gameName );
-void			FS_CreatePath(char *OSPath);
+qboolean		FS_CreatePath(char *OSPath);
 char			*FS_BuildOSPath( const char *base, const char *game, const char *qpath );
 char			*FS_BuildOSPath( const char *qpath );
 fileHandle_t	FS_HandleForFile(void);

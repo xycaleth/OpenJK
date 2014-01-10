@@ -169,14 +169,14 @@ sboolean MP3_ReadSpecialTagInfo(byte *pbLoadedFile, int iLoadedFileLen,
 
 	id3v1_1* pTAG = (id3v1_1*) ((pbLoadedFile+iLoadedFileLen)-sizeof(id3v1_1));	// sizeof = 128	
 
-	if (!strncmp(pTAG->id, "TAG", 3))
+	if (!Q_strncmp(pTAG->id, "TAG", 3))
 	{
 		// TAG found...
 		//
 		
 		// read MAXVOL key...
 		//
-		if (strncmp(pTAG->comment, sKEY_MAXVOL,	strlen(sKEY_MAXVOL)))
+		if (Q_strncmp(pTAG->comment, sKEY_MAXVOL,	strlen(sKEY_MAXVOL)))
 		{
 			qbError = qtrue;
 		}
@@ -191,7 +191,7 @@ sboolean MP3_ReadSpecialTagInfo(byte *pbLoadedFile, int iLoadedFileLen,
 		//
 		// read UNCOMP key...
 		//
-		if (strncmp(pTAG->album, sKEY_UNCOMP, strlen(sKEY_UNCOMP)))
+		if (Q_strncmp(pTAG->album, sKEY_UNCOMP, strlen(sKEY_UNCOMP)))
 		{
 			qbError = qtrue;
 		}
@@ -270,7 +270,7 @@ sboolean MP3Stream_InitFromFile( sfx_t* sfx, byte *pbSrcData, int iSrcDatalen, c
 		
 		// now init the low-level MP3 stuff...
 		//
-		MP3STREAM SFX_MP3Stream = {0};	// important to init to all zeroes!
+		MP3STREAM SFX_MP3Stream = {};	// important to init to all zeroes!
 		char *psError = C_MP3Stream_DecodeInit( &SFX_MP3Stream, /*sfx->data*/ /*sfx->soundData*/ pbSrcData, iSrcDatalen,
 												dma.speed,//(s_khz->value == 44)?44100:(s_khz->value == 22)?22050:11025,
 												2/*sfx->width*/ * 8,

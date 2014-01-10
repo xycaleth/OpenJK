@@ -4,6 +4,8 @@
 // cl.input.c  -- builds an intended movement command to send to the server
 
 #include "client.h"
+#include "cl_cgameapi.h"
+#include "cl_uiapi.h"
 #ifndef _WIN32
 #include <cmath>
 #endif
@@ -342,15 +344,7 @@ void IN_AutoMapButton(void)
 extern cvar_t *r_autoMap;
 void IN_AutoMapToggle(void)
 {
-
-	if (Cvar_VariableIntegerValue("cg_drawRadar"))
-	{
-		Cvar_Set("cg_drawRadar", "0");
-	}
-	else
-	{
-		Cvar_Set("cg_drawRadar", "1");
-	}
+	Cvar_User_SetValue("cg_drawRadar", !Cvar_VariableValue("cg_drawRadar"));
 	/*
 	if (r_autoMap && r_autoMap->integer)
 	{ //automap off, radar on
@@ -370,11 +364,11 @@ void IN_AutoMapToggle(void)
 
 void IN_VoiceChatButton(void)
 {
-	if (!uivm)
+	if (!cls.uiStarted)
 	{ //ui not loaded so this command is useless
 		return;
 	}
-	VM_Call( uivm, UI_SET_ACTIVE_MENU, UIMENU_VOICECHAT );
+	UIVM_SetActiveMenu( UIMENU_VOICECHAT );
 }
 
 void IN_KeyDown( kbutton_t *b ) {
@@ -581,9 +575,9 @@ static void CL_AutoMapKey(int autoMapKey, qboolean up)
 
 	memcpy(data, &g_clAutoMapInput, sizeof(autoMapInput_t));
 
-	if (cgvm)
+	if (cls.cgameStarted)
 	{
-		VM_Call(cgvm, CG_AUTOMAP_INPUT, 0);
+		CGVM_AutomapInput();
 	}
 
 	g_clAutoMapInput.goToDefaults = qfalse;
@@ -783,12 +777,6 @@ void IN_CenterView (void) {
 	cl.viewangles[PITCH] = -SHORT2ANGLE(cl.snap.ps.delta_angles[PITCH]);
 }
 
-#ifdef _XBOX
-void IN_VoiceToggleDown(void) { g_Voice.SetChannel( CHAN_ALL ); }
-void IN_VoiceToggleUp(void) { g_Voice.SetChannel( CHAN_TEAM ); }
-#endif
-
-
 //==========================================================================
 
 cvar_t	*cl_upspeed;
@@ -913,22 +901,22 @@ CL_MouseEvent
 =================
 */
 void CL_MouseEvent( int dx, int dy, int time ) {
-	if (g_clAutoMapMode && cgvm)
+	if (g_clAutoMapMode && cls.cgameStarted)
 	{ //automap input
 		autoMapInput_t *data = (autoMapInput_t *)cl.mSharedMemory;
 
 		g_clAutoMapInput.yaw = dx;
 		g_clAutoMapInput.pitch = dy;
 		memcpy(data, &g_clAutoMapInput, sizeof(autoMapInput_t));
-		VM_Call(cgvm, CG_AUTOMAP_INPUT, 1);
+		CGVM_AutomapInput();
 
 		g_clAutoMapInput.yaw = 0.0f;
 		g_clAutoMapInput.pitch = 0.0f;
 	}
 	else if ( Key_GetCatcher( ) & KEYCATCH_UI ) {
-		VM_Call( uivm, UI_MOUSE_EVENT, dx, dy );
+		UIVM_MouseEvent( dx, dy );
 	} else if ( Key_GetCatcher( ) & KEYCATCH_CGAME ) {
-		VM_Call (cgvm, CG_MOUSE_EVENT, dx, dy);
+		CGVM_MouseEvent( dx, dy );
 	} else {
 		cl.mouseDx[cl.mouseIndex] += dx;
 		cl.mouseDy[cl.mouseIndex] += dy;
@@ -970,13 +958,9 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 	else
 	{
 #endif
-	int		movespeed;
 	float	anglespeed;
 
-	if ( in_speed.active ^ cl_run->integer ) {
-		movespeed = 2;
-	} else {
-		movespeed = 1;
+	if ( !(in_speed.active ^ cl_run->integer) ) {
 		cmd->buttons |= BUTTON_WALKING;
 	}
 
@@ -1132,12 +1116,12 @@ void CL_MouseMove( usercmd_t *cmd ) {
 
 qboolean CL_NoUseableForce(void)
 {
-	if (!cgvm)
+	if (!cls.cgameStarted)
 	{ //ahh, no cgame loaded
 		return qfalse;
 	}
 
-	return (qboolean)VM_Call(cgvm, CG_GET_USEABLE_FORCE);
+	return CGVM_NoUseableForce();
 }
 
 /*
@@ -1332,7 +1316,6 @@ Create a new usercmd_t structure for this frame
 =================
 */
 void CL_CreateNewCommands( void ) {
-	usercmd_t	*cmd;
 	int			cmdNum;
 
 	// no need to create usercmds until we have a gamestate
@@ -1349,12 +1332,10 @@ void CL_CreateNewCommands( void ) {
 	}
 	old_com_frameTime = com_frameTime;
 
-
 	// generate a command for this frame
 	cl.cmdNumber++;
 	cmdNum = cl.cmdNumber & CMD_MASK;
 	cl.cmds[cmdNum] = CL_CreateCmd ();
-	cmd = &cl.cmds[cmdNum];
 }
 
 /*
@@ -1398,7 +1379,7 @@ qboolean CL_ReadyToSendPacket( void ) {
 	}
 
 	// send every frame for LAN
-	if ( Sys_IsLANAddress( clc.netchan.remoteAddress ) ) {
+	if ( cl_lanForcePackets->integer && Sys_IsLANAddress( clc.netchan.remoteAddress ) ) {
 		return qtrue;
 	}
 

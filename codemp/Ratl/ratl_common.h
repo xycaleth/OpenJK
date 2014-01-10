@@ -226,19 +226,19 @@ namespace str
 	}
 	inline int		icmp(const char *s1,const char *s2)
 	{
-		return stricmp(s1,s2);
+		return Q_stricmp(s1,s2);
 	}
 	inline int		cmpi(const char *s1,const char *s2)
 	{
-		return stricmp(s1,s2);
+		return Q_stricmp(s1,s2);
 	}
 	inline bool	ieql(const char *s1,const char *s2)
 	{
-		return !stricmp(s1,s2);
+		return !Q_stricmp(s1,s2);
 	}
 	inline bool	eqli(const char *s1,const char *s2)
 	{
-		return !stricmp(s1,s2);
+		return !Q_stricmp(s1,s2);
 	}
 
 	inline char	*tok(char *s,const char *gap)
@@ -281,7 +281,7 @@ public:
 	{
 		return 1;
 	}
-#endif;
+#endif
 };
 
 
@@ -301,10 +301,8 @@ public:
 class	ratl_base
 {
 public:
-#ifndef _XBOX
 	void	save(hfile& file);
 	void	load(hfile& file);
-#endif
 
 	void	ProfilePrint(const char * format, ...);
 
@@ -715,9 +713,6 @@ namespace storage
 			assert(dynamic_cast<const T *>(p));
 			T *ptr=p; // if this doesn't compile, you are trying to alloc something that is not derived from base
 			assert(dynamic_cast<const CAST_TO *>(ptr));
-			int i=VALUE_SIZE;
-			int k=MAX_CLASS_SIZE;
-			int j=sizeof(CAST_TO);
 			compile_assert<sizeof(CAST_TO)<=MAX_CLASS_SIZE>();
 			assert(sizeof(CAST_TO)<=MAX_CLASS_SIZE);
 #endif
@@ -1001,9 +996,6 @@ namespace storage
 			assert(dynamic_cast<const T *>(p));
 			T *ptr=p; // if this doesn't compile, you are trying to alloc something that is not derived from base
 			assert(dynamic_cast<const CAST_TO *>(ptr));
-			int i=VALUE_SIZE;
-			int k=MAX_CLASS_SIZE;
-			int j=sizeof(CAST_TO);
 			compile_assert<sizeof(CAST_TO)<=MAX_CLASS_SIZE>();
 			assert(sizeof(CAST_TO)<=MAX_CLASS_SIZE);
 #endif

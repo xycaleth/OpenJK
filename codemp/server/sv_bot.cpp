@@ -4,6 +4,7 @@
 
 #include "server.h"
 #include "botlib/botlib.h"
+#include "server/sv_gameapi.h"
 
 typedef struct bot_debugpoly_s
 {
@@ -58,7 +59,7 @@ int SV_OrgVisibleBox(vec3_t org1, vec3_t mins, vec3_t maxs, vec3_t org2, int ign
 	return 0;
 }
 
-void *BotVMShift( int ptr );
+void *BotVMShift( intptr_t ptr );
 
 void SV_BotWaypointReception(int wpnum, wpobject_t **wps)
 {
@@ -68,7 +69,7 @@ void SV_BotWaypointReception(int wpnum, wpobject_t **wps)
 
 	while (i < gWPNum)
 	{
-		gWPArray[i] = (wpobject_t *)BotVMShift((int)wps[i]);
+		gWPArray[i] = wps[i];
 		i++;
 	}
 }
@@ -583,10 +584,12 @@ SV_BotFrame
 ==================
 */
 void SV_BotFrame( int time ) {
-	if (!bot_enable) return;
+	if (!bot_enable)
+		return;
 	//NOTE: maybe the game is already shutdown
-	if (!gvm) return;
-	VM_Call( gvm, BOTAI_START_FRAME, time );
+	if (!svs.gameStarted)
+		return;
+	GVM_BotAIStartFrame( time );
 }
 
 /*
@@ -704,7 +707,7 @@ void SV_BotInitBotLib(void) {
 
 	// file system access
 	botlib_import.FS_FOpenFile = FS_FOpenFileByMode;
-	botlib_import.FS_Read = FS_Read2;
+	botlib_import.FS_Read = FS_Read;
 	botlib_import.FS_Write = FS_Write;
 	botlib_import.FS_FCloseFile = FS_FCloseFile;
 	botlib_import.FS_Seek = FS_Seek;

@@ -1,11 +1,4 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "tr_local.h"
-
-#ifdef VV_LIGHTING
-#include "tr_lightmanager.h"
-#endif
 
 inline void Q_CastShort2Float(float *f, const short *s)
 {
@@ -158,7 +151,7 @@ static qboolean	R_CullSurface( surfaceType_t *surface, shader_t *shader ) {
 			VectorSet(nNormal, 0.0f, 0.0f, 1.0f);
 			VectorMA(basePoint, 8192.0f, nNormal, endPoint);
 
-			ri.CM_BoxTrace(&tr, basePoint, endPoint, NULL, NULL, 0, (CONTENTS_SOLID|CONTENTS_TERRAIN), qfalse);
+			ri->CM_BoxTrace(&tr, basePoint, endPoint, NULL, NULL, 0, (CONTENTS_SOLID|CONTENTS_TERRAIN), qfalse);
 
 			if (!tr.startsolid &&
 				!tr.allsolid &&
@@ -176,7 +169,7 @@ static qboolean	R_CullSurface( surfaceType_t *surface, shader_t *shader ) {
 					while (i < 4096)
 					{
 						VectorMA(basePoint, i, nNormal, endPoint);
-						ri.CM_BoxTrace(&tr, endPoint, endPoint, NULL, NULL, 0, (CONTENTS_SOLID|CONTENTS_TERRAIN), qfalse);
+						ri->CM_BoxTrace(&tr, endPoint, endPoint, NULL, NULL, 0, (CONTENTS_SOLID|CONTENTS_TERRAIN), qfalse);
 						if (!tr.startsolid &&
 							!tr.allsolid &&
 							tr.fraction == 1.0f)
@@ -198,7 +191,7 @@ static qboolean	R_CullSurface( surfaceType_t *surface, shader_t *shader ) {
 						//If we hit something within a set amount of units, we will assume it's a bridge type object
 						//and leave it to be drawn. Otherwise we will assume it is a roof or other obstruction and
 						//cull it out.
-						ri.CM_BoxTrace(&tr, basePoint, endPoint, NULL, NULL, 0, (CONTENTS_SOLID|CONTENTS_TERRAIN), qfalse);
+						ri->CM_BoxTrace(&tr, basePoint, endPoint, NULL, NULL, 0, (CONTENTS_SOLID|CONTENTS_TERRAIN), qfalse);
 
 						if (!tr.startsolid &&
 							!tr.allsolid &&
@@ -234,7 +227,6 @@ static qboolean	R_CullSurface( surfaceType_t *surface, shader_t *shader ) {
 	return qfalse;
 }
 
-#ifndef VV_LIGHTING
 static int R_DlightFace( srfSurfaceFace_t *face, int dlightBits ) {
 	float		d;
 	int			i;
@@ -348,7 +340,6 @@ static int R_DlightSurface( msurface_t *surf, int dlightBits ) {
 
 	return dlightBits;
 }
-#endif // VV_LIGHTING
 
 
 
@@ -362,11 +353,7 @@ static float g_playerHeight = 0.0f;
 R_AddWorldSurface
 ======================
 */
-#ifdef VV_LIGHTING
-void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noViewCount ) 
-#else
 static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noViewCount = qfalse )
-#endif
 {
 	if (!noViewCount)
 	{
@@ -413,11 +400,7 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noView
 
 	// check for dlighting
 	if ( dlightBits ) {
-#ifdef VV_LIGHTING
-		dlightBits = VVLightMan.R_DlightSurface( surf, dlightBits );
-#else
 		dlightBits = R_DlightSurface( surf, dlightBits );
-#endif
 		dlightBits = ( dlightBits != 0 );
 	}
 
@@ -544,21 +527,13 @@ void R_AddBrushModelSurfaces ( trRefEntity_t *ent ) {
 	
 	if(pModel->bspInstance)
 	{ //rwwRMG - added
-#ifdef VV_LIGHTING
-		VVLightMan.R_SetupEntityLighting(&tr.refdef, ent);
-#else
 		R_SetupEntityLighting(&tr.refdef, ent);
-#endif
 	}
 
 	//rww - Take this into account later?
-//	if ( !ri.Cvar_VariableIntegerValue( "com_RMG" ) )
+//	if ( !ri->Cvar_VariableIntegerValue( "com_RMG" ) )
 //	{	// don't dlight bmodels on rmg, as multiple copies of the same instance will light up
-#ifdef VV_LIGHTING
-		VVLightMan.R_DlightBmodel( bmodel, false );
-#else
 		R_DlightBmodel( bmodel, false );
-#endif
 //	}
 //	else
 //	{
@@ -976,7 +951,7 @@ qboolean R_WriteWireframeMapToFile(void)
 	}
 	
 
-	f = ri.FS_FOpenFileWrite("blahblah.bla");
+	f = ri->FS_FOpenFileWrite("blahblah.bla", qtrue);
 	if (!f)
 	{ //can't create?
 		return qfalse;
@@ -1002,9 +977,9 @@ qboolean R_WriteWireframeMapToFile(void)
 	}
 
 	//now write the buffer, and close
-	ri.FS_Write(rOut, requiredSize, f);
+	ri->FS_Write(rOut, requiredSize, f);
 	Z_Free(rOut);
-	ri.FS_FCloseFile(f);
+	ri->FS_FCloseFile(f);
 
 	return qtrue;
 }
@@ -1019,7 +994,7 @@ qboolean R_GetWireframeMapFromFile(void)
 	int len;
 	int stepBytes;
 
-	len = ri.FS_FOpenFileRead("blahblah.bla", &f, qfalse);
+	len = ri->FS_FOpenFileRead("blahblah.bla", &f, qfalse);
 	if (!f || len <= 0)
 	{ //it doesn't exist
 		return qfalse;
@@ -1027,7 +1002,7 @@ qboolean R_GetWireframeMapFromFile(void)
 
 	surfs = (wireframeMapSurf_t *)Z_Malloc(len, TAG_ALL, qtrue);
 	rSurfs = surfs;
-	ri.FS_Read(surfs, len, f);
+	ri->FS_Read(surfs, len, f);
 
 	while (i < len)
 	{
@@ -1051,7 +1026,7 @@ qboolean R_GetWireframeMapFromFile(void)
 	//it should end up being equal, if not something was wrong with this file.
 	assert(i == len);
 
-	ri.FS_FCloseFile(f);
+	ri->FS_FCloseFile(f);
 	Z_Free(rSurfs);
 	return qtrue;
 }
@@ -1354,7 +1329,6 @@ const void *R_DrawWireframeAutomap(const void *data)
 R_RecursiveWorldNode
 ================
 */
-#ifndef VV_LIGHTING
 static void R_RecursiveWorldNode( mnode_t *node, int planeBits, int dlightBits ) {
 
 	do
@@ -1516,8 +1490,6 @@ static void R_RecursiveWorldNode( mnode_t *node, int planeBits, int dlightBits )
 	}
 
 }
-#endif // VV_LIGHTING
-
 
 /*
 ===============
@@ -1571,23 +1543,18 @@ R_inPVS
 qboolean R_inPVS( const vec3_t p1, const vec3_t p2, byte *mask ) {
 	int		leafnum;
 	int		cluster;
-	int		area1, area2;
 
-	leafnum = ri.CM_PointLeafnum (p1);
-	cluster = ri.CM_LeafCluster (leafnum);
-	area1 = ri.CM_LeafArea (leafnum);
+	leafnum = ri->CM_PointLeafnum (p1);
+	cluster = ri->CM_LeafCluster (leafnum);
 
 	//agh, the damn snapshot mask doesn't work for this
-	mask = (byte *) ri.CM_ClusterPVS (cluster);
+	mask = (byte *) ri->CM_ClusterPVS (cluster);
 
-	leafnum = ri.CM_PointLeafnum (p2);
-	cluster = ri.CM_LeafCluster (leafnum);
-	area2 = ri.CM_LeafArea (leafnum);
+	leafnum = ri->CM_PointLeafnum (p2);
+	cluster = ri->CM_LeafCluster (leafnum);
 	if ( mask && (!(mask[cluster>>3] & (1<<(cluster&7)) ) ) )
 		return qfalse;
-	//this doesn't freakin work
-//	if (!CM_AreasConnected (area1, area2))
-//		return qfalse;		// a door blocks sight
+
 	return qtrue;
 }
 

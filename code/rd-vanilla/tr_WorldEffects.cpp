@@ -25,7 +25,9 @@ This file is part of Jedi Academy.
 //
 ////////////////////////////////////////////////////////////////////////////////////////
 #include "../server/exe_headers.h"
+#ifdef _MSC_VER
 #pragma warning( disable : 4512 )
+#endif
 
 
 
@@ -45,10 +47,6 @@ extern void			SetViewportAndScissor( void );
 #include "../Ratl/vector_vs.h"
 #include "../Ratl/bits_vs.h"
 
-#ifdef _XBOX
-#include "../win32/glw_win_dx8.h"
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////////////
 // Defines
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -57,22 +55,7 @@ extern void			SetViewportAndScissor( void );
 #define MAX_WEATHER_ZONES		50	// so we can more zones that are smaller
 #define	MAX_PUFF_SYSTEMS		2
 #define	MAX_PARTICLE_CLOUDS		5
-
-#ifdef _XBOX
-#define POINTCACHE_CELL_SIZE	32.0f		
-
-// Note to Vv:
-// you guys may want to look into lowering that number.  I've optimized the storage
-// space by breaking it up into small boxes (weather zones) around the areas we care about
-// in order to speed up load time and reduce memory.  A very high number here will mean
-// that weather related effects like rain, fog, snow, etc will bleed through to where
-// they shouldn't...
-
-#else
 #define POINTCACHE_CELL_SIZE	32.0f
-#endif
-
-
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Globals
@@ -472,7 +455,7 @@ private:
 	struct SWeatherZone
 	{
 		static bool	mMarkedOutside;		
-		ulong*		mPointCache;			// malloc block ptr
+		uint32_t	*mPointCache;			// malloc block ptr
 		
 		int			miPointCacheByteSize;	// size of block
 		SVecRange	mExtents;
@@ -628,8 +611,8 @@ public:
 			Wz.mHeight		=  (int)(Wz.mSize.mMaxs[1] - Wz.mSize.mMins[1]);
 			Wz.mDepth		= ((int)(Wz.mSize.mMaxs[2] - Wz.mSize.mMins[2]) + 31) >> 5;
 			
-			Wz.miPointCacheByteSize = (Wz.mWidth * Wz.mHeight * Wz.mDepth) * sizeof(ulong);
-			Wz.mPointCache  = (ulong *)Z_Malloc( Wz.miPointCacheByteSize, TAG_POINTCACHE, qtrue );
+			Wz.miPointCacheByteSize = (Wz.mWidth * Wz.mHeight * Wz.mDepth) * sizeof(uint32_t);
+			Wz.mPointCache  = (uint32_t *)Z_Malloc( Wz.miPointCacheByteSize, TAG_POINTCACHE, qtrue );
 		}
 		else
 		{
@@ -668,7 +651,7 @@ public:
 		}
 		else
 		{
-			VID_Printf( PRINT_WARNING, "(Unable to open weather file \"%s\" for writing!)\n",GenCachedWeatherFilename());
+			ri.Printf( PRINT_WARNING, "(Unable to open weather file \"%s\" for writing!)\n",GenCachedWeatherFilename());
 		}
 
 		return 0;
@@ -696,12 +679,12 @@ public:
 				return f;
 			}
 
-            VID_Printf( PRINT_WARNING, "( Cached weather file \"%s\" out of date, regenerating... )\n",GenCachedWeatherFilename());
+            ri.Printf( PRINT_WARNING, "( Cached weather file \"%s\" out of date, regenerating... )\n",GenCachedWeatherFilename());
 			ri.FS_FCloseFile( f );
 		}
 		else
 		{
-			VID_Printf( PRINT_WARNING, "( No cached weather file found, generating... )\n");
+			ri.Printf( PRINT_WARNING, "( No cached weather file found, generating... )\n");
 		}
 
 		return 0;
@@ -737,8 +720,8 @@ public:
 			CVec3		Mins;
 			int			x, y, z, q, zbase;
 			bool		curPosOutside;
-			ulong		contents;
-			ulong		bit;
+			uint32_t		contents;
+			uint32_t		bit;
 
 
 			// Record The Extents Of The World Incase No Other Weather Zones Exist
@@ -1081,11 +1064,6 @@ public:
 		}
 
 		mVertexCount = VertexCount;
-#ifdef _XBOX	// Check for point sprite use
-		if(mVertexCount == 1)
-			mGLModeEnum = GL_POINTS;
-		else
-#endif
 		mGLModeEnum = (mVertexCount==3)?(GL_TRIANGLES):(GL_QUADS);
 	}
 
@@ -1467,12 +1445,6 @@ public:
 
 		// Enable And Disable Things
 		//---------------------------
-#ifdef _XBOX	// Simpler pointsprite setup on Xbox
-		if (mGLModeEnum==GL_POINTS)
-		{
-			pointBegin(mParticleCountRender, mWidth);
-		}
-#else
 		if (mGLModeEnum==GL_POINTS && qglPointParameteriNV)
 		{
 			qglEnable(GL_POINT_SPRITE_NV);
@@ -1488,7 +1460,6 @@ public:
 
 			qglTexEnvi(GL_POINT_SPRITE_NV, GL_COORD_REPLACE_NV, GL_TRUE);
 		}
-#endif
 		else
 		{
 			qglEnable(GL_TEXTURE_2D);
@@ -1503,16 +1474,11 @@ public:
 			qglMatrixMode(GL_MODELVIEW);
 			qglPushMatrix();
 
-#ifdef _XBOX
-			qglBeginEXT(mGLModeEnum, mParticleCountRender*mVertexCount, mParticleCountRender, 0, mParticleCountRender*mVertexCount, 0);
-#endif
 		}
 
 		// Begin
 		//-------
-#ifndef _XBOX
 		qglBegin(mGLModeEnum);
-#endif
 		for (particleNum=0; particleNum<mParticleCount; particleNum++)
 		{
 			part = &(mParticles[particleNum]);
@@ -1614,12 +1580,8 @@ public:
 
 		if (mGLModeEnum==GL_POINTS)
 		{
-#ifdef _XBOX
-			pointEnd();
-#else
 			qglDisable(GL_POINT_SPRITE_NV);
 			qglTexEnvi(GL_POINT_SPRITE_NV, GL_COORD_REPLACE_NV, GL_FALSE);
-#endif
 		}
 		else
 		{
@@ -1806,7 +1768,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Clear - Removes All Particle Clouds And Wind Zones
 	//----------------------------------------------------
-	if (strcmpi(token, "clear") == 0)
+	if (Q_stricmp(token, "clear") == 0)
 	{
 		for (int p=0; p<mParticleClouds.size(); p++)
 		{
@@ -1819,14 +1781,14 @@ void R_WorldEffectCommand(const char *command)
 
 	// Freeze / UnFreeze - Stops All Particle Motion Updates
 	//--------------------------------------------------------
-	else if (strcmpi(token, "freeze") == 0)
+	else if (Q_stricmp(token, "freeze") == 0)
 	{
 		mFrozen = !mFrozen;
 	}
 
 	// Add a zone
 	//---------------
-	else if (strcmpi(token, "zone") == 0)
+	else if (Q_stricmp(token, "zone") == 0)
 	{
 		vec3_t	mins;
 		vec3_t	maxs;
@@ -1838,7 +1800,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Basic Wind
 	//------------
-	else if (strcmpi(token, "wind") == 0)
+	else if (Q_stricmp(token, "wind") == 0)
 	{
 		if (mWindZones.full())
 		{
@@ -1851,7 +1813,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Constant Wind
 	//---------------
-	else if (strcmpi(token, "constantwind") == 0)
+	else if (Q_stricmp(token, "constantwind") == 0)
 	{
 		if (mWindZones.full())
 		{
@@ -1870,7 +1832,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Gusting Wind
 	//--------------
-	else if (strcmpi(token, "gustingwind") == 0)
+	else if (Q_stricmp(token, "gustingwind") == 0)
 	{
 		if (mWindZones.full())
 		{
@@ -1896,7 +1858,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Local Wind Zone
 	//-----------------
-	else if (strcmpi(token, "windzone") == 0)
+	else if (Q_stricmp(token, "windzone") == 0)
 	{
 		if (mWindZones.full())
 		{
@@ -1940,7 +1902,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Create A Rain Storm
 	//---------------------
-	else if (strcmpi(token, "lightrain") == 0)
+	else if (Q_stricmp(token, "lightrain") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1962,7 +1924,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Create A Rain Storm
 	//---------------------
-	else if (strcmpi(token, "rain") == 0)
+	else if (Q_stricmp(token, "rain") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1984,7 +1946,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Create A Rain Storm
 	//---------------------
-	else if (strcmpi(token, "acidrain") == 0)
+	else if (Q_stricmp(token, "acidrain") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -2013,7 +1975,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Create A Rain Storm
 	//---------------------
-	else if (strcmpi(token, "heavyrain") == 0)
+	else if (Q_stricmp(token, "heavyrain") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -2035,7 +1997,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Create A Snow Storm
 	//---------------------
-	else if (strcmpi(token, "snow") == 0)
+	else if (Q_stricmp(token, "snow") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -2043,23 +2005,16 @@ void R_WorldEffectCommand(const char *command)
 			return;
 		}
 		CParticleCloud& nCloud = mParticleClouds.push_back();
-#ifdef _XBOX
-		nCloud.Initialize(1000, "gfx/effects/snowflake1.bmp", 1);
-#else
 		nCloud.Initialize(1000, "gfx/effects/snowflake1.bmp");
-#endif
 		nCloud.mBlendMode			= 1;
 		nCloud.mRotationChangeNext	= 0;
 		nCloud.mColor		= 0.75f;
 		nCloud.mWaterParticles = true;
-#ifdef _XBOX
-		nCloud.mWidth = 0.05f;
-#endif
 	}
 
 	// Create A Some stuff
 	//---------------------
-	else if (strcmpi(token, "spacedust") == 0)
+	else if (Q_stricmp(token, "spacedust") == 0)
 	{
 		int count;
 		if (mParticleClouds.full())
@@ -2091,7 +2046,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Create A Sand Storm
 	//---------------------
-	else if (strcmpi(token, "sand") == 0)
+	else if (Q_stricmp(token, "sand") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -2119,7 +2074,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Create Blowing Clouds Of Fog
 	//------------------------------
-	else if (strcmpi(token, "fog") == 0)
+	else if (Q_stricmp(token, "fog") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -2144,7 +2099,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Create Heavy Rain Particle Cloud
 	//-----------------------------------
-	else if (strcmpi(token, "heavyrainfog") == 0)
+	else if (Q_stricmp(token, "heavyrainfog") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -2172,7 +2127,7 @@ void R_WorldEffectCommand(const char *command)
 
 	// Create Blowing Clouds Of Fog
 	//------------------------------
-	else if (strcmpi(token, "light_fog") == 0)
+	else if (Q_stricmp(token, "light_fog") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -2197,11 +2152,11 @@ void R_WorldEffectCommand(const char *command)
 
 		nCloud.mRotationChangeNext	= 0;
 	}
-	else if (strcmpi(token, "outsideshake") == 0)
+	else if (Q_stricmp(token, "outsideshake") == 0)
 	{
 		mOutside.mOutsideShake = !mOutside.mOutsideShake;
 	}
-	else if (strcmpi(token, "outsidepain") == 0)
+	else if (Q_stricmp(token, "outsidepain") == 0)
 	{
 		mOutside.mOutsidePain = !mOutside.mOutsidePain;
 	}

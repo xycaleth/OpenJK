@@ -198,7 +198,7 @@ int CTaskManager::Free( void )
 	tasks_l::iterator		ti;
 
 	//Clear out all pending tasks
-	for ( ti = m_tasks.begin(); ti != m_tasks.end(); ti++ )
+	for ( ti = m_tasks.begin(); ti != m_tasks.end(); ++ti )
 	{
 		(*ti)->Free();
 	}
@@ -206,7 +206,7 @@ int CTaskManager::Free( void )
 	m_tasks.clear();
 
 	//Clear out all taskGroups
-	for ( gi = m_taskGroups.begin(); gi != m_taskGroups.end(); gi++ )
+	for ( gi = m_taskGroups.begin(); gi != m_taskGroups.end(); ++gi )
 	{
 		delete (*gi);
 	}
@@ -914,7 +914,7 @@ int CTaskManager::Completed( int id )
 	taskGroup_v::iterator	tgi;
 
 	//Mark the task as completed
-	for ( tgi = m_taskGroups.begin(); tgi != m_taskGroups.end(); tgi++ )
+	for ( tgi = m_taskGroups.begin(); tgi != m_taskGroups.end(); ++tgi )
 	{
 		//If this returns true, then the task was marked properly
 		if ( (*tgi)->MarkTaskComplete( id ) )
@@ -1625,15 +1625,15 @@ int CTaskManager::SaveCommand( CBlock *block )
 	
 	//Save out the block ID
 	bID = block->GetBlockID();
-	(m_owner->GetInterface())->I_WriteSaveData( 'BLID', &bID, sizeof ( bID ) );
+	(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','L','I','D'), &bID, sizeof ( bID ) );
 
 	//Save out the block's flags
 	flags = block->GetFlags();
-	(m_owner->GetInterface())->I_WriteSaveData( 'BFLG', &flags, sizeof ( flags ) );
+	(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','F','L','G'), &flags, sizeof ( flags ) );
 
 	//Save out the number of members to read
 	numMembers = block->GetNumMembers();
-	(m_owner->GetInterface())->I_WriteSaveData( 'BNUM', &numMembers, sizeof ( numMembers ) );
+	(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','N','U','M'), &numMembers, sizeof ( numMembers ) );
 
 	for ( int i = 0; i < numMembers; i++ )
 	{
@@ -1641,14 +1641,14 @@ int CTaskManager::SaveCommand( CBlock *block )
 
 		//Save the block id
 		bID = bm->GetID();
-		(m_owner->GetInterface())->I_WriteSaveData( 'BMID', &bID, sizeof ( bID ) );
+		(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','M','I','D'), &bID, sizeof ( bID ) );
 		
 		//Save out the data size
 		size = bm->GetSize();
-		(m_owner->GetInterface())->I_WriteSaveData( 'BSIZ', &size, sizeof( size ) );
+		(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','S','I','Z'), &size, sizeof( size ) );
 		
 		//Save out the raw data
-		(m_owner->GetInterface())->I_WriteSaveData( 'BMEM', bm->GetData(), size );
+		(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','M','E','M'), bm->GetData(), size );
 	}
 
 	return true;
@@ -1666,7 +1666,7 @@ void CTaskManager::Save( void )
 	CTaskGroup	*taskGroup;
 	const char	*name;
 	CBlock		*block;
-	DWORD		timeStamp;
+	unsigned int		timeStamp;
 	bool		completed;
 	int			id, numCommands;
 	int			numWritten;
@@ -1794,7 +1794,7 @@ void CTaskManager::Load( void )
 	CTaskGroup		*taskGroup;
 	CBlock			*block;
 	CTask			*task;
-	DWORD			timeStamp;
+	unsigned int			timeStamp;
 	bool			completed;
 	void			*bData;
 	int				id, numTasks, numMembers;

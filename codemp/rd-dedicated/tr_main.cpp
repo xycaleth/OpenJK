@@ -12,16 +12,7 @@
 
 trGlobals_t		tr;
 
-static float	s_flipMatrix[16] = {
-	// convert from our coordinate system (looking down X)
-	// to OpenGL's coordinate system (looking down -Z)
-	0, 0, -1, 0,
-	-1, 0, 0, 0,
-	0, 1, 0, 0,
-	0, 0, 0, 1
-};
-
-refimport_t	ri;
+refimport_t	*ri = NULL;
 
 void R_AddTerrainSurfaces(void);
 

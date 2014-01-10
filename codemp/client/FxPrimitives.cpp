@@ -3,11 +3,8 @@
 #include "qcommon/exe_headers.h"
 
 #include "client.h"
+#include "cl_cgameapi.h"
 #include "FxScheduler.h"
-
-#ifdef VV_LIGHTING
-#include "renderer/tr_lightmanager.h"
-#endif
 
 extern int		drawnFx;
 
@@ -17,11 +14,11 @@ extern int		drawnFx;
 //
 //--------------------------
 CEffect::CEffect(void) :
+	mFlags(0),
 	mMatImpactFX(MATIMPACTFX_NONE),
 	mMatImpactParm(-1),
-	mSoundVolume(-1),
 	mSoundRadius(-1),
-	mFlags(0)
+	mSoundVolume(-1)
 {
 	memset( &mRefEnt, 0, sizeof( mRefEnt ));
 }
@@ -111,7 +108,7 @@ void CParticle::Draw(void)
 		color[2] = mRefEnt.shaderRGBA[2] / 255.0;
 		color[3] = mRefEnt.shaderRGBA[3] / 255.0;
 
-		// add this 2D effect to the proper list. it will get drawn after the cgi.RenderScene call
+		// add this 2D effect to the proper list. it will get drawn after the trap->RenderScene call
 		theFxScheduler.Add2DEffect(mOrigin1[0], mOrigin1[1], mRefEnt.radius, mRefEnt.radius, color, mRefEnt.customShader);
 	}
 	else
@@ -143,7 +140,7 @@ bool CParticle::Update(void)
 		}
 
 		vec3_t	org;
-		vec3_t	ax[3];
+		matrix3_t	ax;
 
 		// Get our current position and direction
 		if (!theFxHelper.GetOriginAxisFromBolt(&mGhoul2, mEntNum, mModelNum, mBoltNum, org, ax))
@@ -229,7 +226,7 @@ bool CParticle::UpdateOrigin(void)
 				data->mPassEntityNum = ENTITYNUM_WORLD;
 
 				// if this returns solid, we need to do a trace
-				solid = !!(VM_Call( cgvm, CG_POINT_CONTENTS ) & MASK_SOLID); 
+				solid = !!(CGVM_PointContents() & MASK_SOLID); 
 			}
 			else
 			{
@@ -412,37 +409,20 @@ void CParticle::UpdateSize(void)
 	mRefEnt.radius = (mSizeStart * perc1) + (mSizeEnd * (1.0f - perc1));
 }
 
-inline int VectorToInt(vec3_t vec)
+void ClampRGB( const vec3_t in, byte *out )
 {
-	int			tmp, retval;
+	int r;
 
-	// FIXME: unix compatibility needed
-#ifdef _WIN32
-	_asm
-	{
-		push	edx
-		mov		edx, [vec]
-		fld		dword ptr[edx + 0]
-		fld		dword ptr[edx + 4]
-		fld		dword ptr[edx + 8]
+	for ( int i=0; i<3; i++ ) {
+		r = Q_ftol(in[i] * 255.0f);
 
-		mov		eax, 0xff00
+		if ( r < 0 )
+			r = 0;
+		else if ( r > 255 )
+			r = 255;
 
-		fistp	tmp	   
-		mov		al, byte ptr [tmp]
-		shl		eax, 16
-		
-		fistp	tmp
-		mov		ah, byte ptr [tmp]
-
-		fistp	tmp
-		mov		al, byte ptr [tmp]
-
-		mov		[retval], eax
-		pop		edx
-	}
-#endif
-	return(retval);
+		out[i] = (byte)r;
+	}	
 }
 
 //----------------------------
@@ -520,18 +500,7 @@ void CParticle::UpdateRGB(void)
 	VectorScale( mRGBStart, perc1, res );
 	VectorMA( res, 1.0f - perc1, mRGBEnd, res );
 
-	res[0] = Com_Clamp(0.0f, 1.0f, res[0]) * 255.0f;
-	res[1] = Com_Clamp(0.0f, 1.0f, res[1]) * 255.0f;
-	res[2] = Com_Clamp(0.0f, 1.0f, res[2]) * 255.0f;
-
-#ifdef _WIN32
-	*(int *)mRefEnt.shaderRGBA = VectorToInt(res);
-#else
-    mRefEnt.shaderRGBA[0] = (char)res[0];
-    mRefEnt.shaderRGBA[1] = (char)res[1];
-    mRefEnt.shaderRGBA[2] = (char)res[2];
-#endif
-
+	ClampRGB( res, (byte*)(&mRefEnt.shaderRGBA) );
 }
 
 //----------------------------
@@ -714,7 +683,7 @@ bool COrientedParticle::Update(void)
 			return false;
 		}
 		vec3_t	org;
-		vec3_t	ax[3];
+		matrix3_t	ax;
 
 		// Get our current position and direction
 		if (!theFxHelper.GetOriginAxisFromBolt(&mGhoul2, mEntNum, mModelNum, mBoltNum, org, ax))
@@ -753,7 +722,7 @@ bool COrientedParticle::Update(void)
 		//vec3_t	offsetAngles;
 		//VectorSet( offsetAngles, 0, 90, 90 );
 
-		vec3_t	offsetAxis[3];
+		matrix3_t	offsetAxis;
 		//NOTE: mNormal is actually PITCH YAW and ROLL offsets
 		AnglesToAxis( mNormal, offsetAxis );
 		MatrixMultiply( offsetAxis, ax, mRefEnt.axis );
@@ -820,7 +789,7 @@ bool CLine::Update(void)
 			return false;
 		}
 
-		vec3_t	ax[3];
+		matrix3_t	ax;
 		// Get our current position and direction
 		if (!theFxHelper.GetOriginAxisFromBolt(&mGhoul2, mEntNum, mModelNum, mBoltNum, mOrigin1, ax))
 		{	//could not get bolt
@@ -912,7 +881,7 @@ bool CElectricity::Update(void)
 			return false;
 		}
 
-		vec3_t	ax[3];
+		matrix3_t	ax;
 		// Get our current position and direction
 		if (!theFxHelper.GetOriginAxisFromBolt(&mGhoul2, mEntNum, mModelNum, mBoltNum, mOrigin1, ax))
 		{	//could not get bolt
@@ -980,7 +949,7 @@ bool CTail::Update(void)
 			return false;
 		}
 		vec3_t	org;
-		vec3_t	ax[3];
+		matrix3_t	ax;
 		if (mModelNum>=0 && mBoltNum>=0)	//bolt style
 		{
 			if (!theFxHelper.GetOriginAxisFromBolt(&mGhoul2, mEntNum, mModelNum, mBoltNum, org, ax))
@@ -1277,7 +1246,7 @@ bool CCylinder::Update(void)
 			return false;
 		}
 
-		vec3_t	ax[3];
+		matrix3_t	ax;
 		// Get our current position and direction
 		if (!theFxHelper.GetOriginAxisFromBolt(&mGhoul2, mEntNum, mModelNum, mBoltNum, mOrigin1, ax))
 		{	//could not get bolt
@@ -1443,7 +1412,7 @@ bool CEmitter::Update(void)
 
 	if ( mFlags & FX_PAPER_PHYSICS )
 	{
-		// do this in a more framerate independant manner
+		// do this in a more framerate independent manner
 		float sc = ( 20.0f / theFxHelper.mFrameTime);
 
 		// bah, evil clamping
@@ -1495,11 +1464,7 @@ void CEmitter::UpdateAngles(void)
 //----------------------------
 void CLight::Draw(void)
 {
-#ifdef VV_LIGHTING
-	VVLightMan.RE_AddLightToScene( mOrigin1, mRefEnt.radius, mRefEnt.origin[0], mRefEnt.origin[1], mRefEnt.origin[2] );
-#else
 	theFxHelper.AddLightToScene( mOrigin1, mRefEnt.radius, mRefEnt.origin[0], mRefEnt.origin[1], mRefEnt.origin[2] );
-#endif
 	drawnFx++;	
 }
 
@@ -1521,7 +1486,7 @@ bool CLight::Update(void)
 			return false;
 		}
 
-		vec3_t	ax[3];
+		matrix3_t	ax;
 		// Get our current position and direction
 		if (!theFxHelper.GetOriginAxisFromBolt(&mGhoul2, mEntNum, mModelNum, mBoltNum, mOrigin1, ax))
 		{	//could not get bolt
@@ -2302,7 +2267,7 @@ void CFlash::Draw( void )
 		color[2] = mRefEnt.shaderRGBA[2] / 255.0;
 		color[3] = mRefEnt.shaderRGBA[3] / 255.0;
 
-		// add this 2D effect to the proper list. it will get drawn after the cgi.RenderScene call
+		// add this 2D effect to the proper list. it will get drawn after the trap->RenderScene call
 		theFxScheduler.Add2DEffect(mScreenX, mScreenY, mRefEnt.radius, mRefEnt.radius, color, mRefEnt.customShader);
 	}
 	else

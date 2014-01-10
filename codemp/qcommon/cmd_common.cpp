@@ -7,7 +7,7 @@
 #define	MAX_CMD_BUFFER	128*1024
 #define	MAX_CMD_LINE	1024
 
-typedef struct {
+typedef struct cmd_s {
 	byte	*data;
 	int		maxsize;
 	int		cursize;
@@ -16,7 +16,6 @@ typedef struct {
 int			cmd_wait;
 cmd_t		cmd_text;
 byte		cmd_text_buf[MAX_CMD_BUFFER];
-
 
 //=============================================================================
 
@@ -340,7 +339,7 @@ Cmd_Argv
 ============
 */
 char	*Cmd_Argv( int arg ) {
-	if ( (unsigned)arg >= cmd_argc ) {
+	if ( (unsigned)arg >= (unsigned)cmd_argc ) {
 		return "";
 	}
 	return cmd_argv[arg];	
@@ -419,6 +418,18 @@ void	Cmd_ArgsBuffer( char *buffer, int bufferLength ) {
 
 /*
 ============
+Cmd_ArgsFromBuffer
+
+The interpreted versions use this because
+they can't have pointers returned to them
+============
+*/
+void	Cmd_ArgsFromBuffer( int arg, char *buffer, int bufferLength ) {
+	Q_strncpyz( buffer, Cmd_ArgsFrom(arg), bufferLength );
+}
+
+/*
+============
 Cmd_Cmd
 
 Retrieve the unmodified command string
@@ -459,7 +470,7 @@ Cmd_TokenizeString
 
 Parses the given string into command line tokens.
 The text is copied to a seperate buffer and 0 characters
-are inserted in the apropriate place, The argv array
+are inserted in the appropriate place, The argv array
 will point into this temporary buffer.
 ============
 */
@@ -493,7 +504,7 @@ static void Cmd_TokenizeString2( const char *text_in, qboolean ignoreQuotes ) {
 
 		while ( 1 ) {
 			// skip whitespace
-			while ( *text && *text <= ' ' ) {
+			while ( *text && *(const unsigned char* /*eurofix*/)text <= ' ' ) {
 				text++;
 			}
 			if ( !*text ) {
@@ -586,6 +597,17 @@ void Cmd_TokenizeStringIgnoreQuotes( const char *text_in ) {
 }
 
 /*
+==================
+Cmd_CompleteCfgName
+==================
+*/
+void Cmd_CompleteCfgName( char *args, int argNum ) {
+	if( argNum == 2 ) {
+		Field_CompleteFilename( "", "cfg", qfalse, qtrue );
+	}
+}
+
+/*
 ============
 Cmd_Init
 ============
@@ -595,7 +617,10 @@ void Cmd_Init (void) {
 	Cmd_AddCommand ("cmdlist",Cmd_List_f);
 	Cmd_AddCommand ("exec",Cmd_Exec_f);
 	Cmd_AddCommand ("execq",Cmd_Exec_f);
+	Cmd_SetCommandCompletionFunc( "exec", Cmd_CompleteCfgName );
+	Cmd_SetCommandCompletionFunc( "execq", Cmd_CompleteCfgName );
 	Cmd_AddCommand ("vstr",Cmd_Vstr_f);
+	Cmd_SetCommandCompletionFunc( "vstr", Cvar_CompleteCvarName );
 	Cmd_AddCommand ("echo",Cmd_Echo_f);
 	Cmd_AddCommand ("wait", Cmd_Wait_f);
 }

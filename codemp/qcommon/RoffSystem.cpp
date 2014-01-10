@@ -2,7 +2,11 @@
 #include "qcommon/exe_headers.h"
 
 #include "RoffSystem.h"
-#include "client/client.h"
+//#include "client/client.h"
+#ifndef DEDICATED
+#include "client/cl_cgameapi.h"
+#endif
+#include "server/sv_gameapi.h"
 
 // The one and only instance...
 CROFFSystem theROFFSystem;
@@ -420,7 +424,7 @@ qboolean CROFFSystem::Unload( int id )
 		// darn stl differences
 		TROFFList::iterator titr;
 		titr = itr;
-		itr++;
+		++itr;
 		mROFFList.erase(titr);
 #endif
 
@@ -459,7 +463,7 @@ qboolean CROFFSystem::Clean(qboolean isClient)
 	while ( itr != mROFFList.end() )
 	{
 		next = itr;
-		next++;
+		++next;
 
 		if (isClient)
 		{
@@ -481,7 +485,7 @@ qboolean CROFFSystem::Clean(qboolean isClient)
 	while ( entI != mROFFEntList.end() )
 	{
 		nextEnt = entI;
-		nextEnt++;
+		++nextEnt;
 
 		if ((*entI)->mIsClient == isClient)
 		{
@@ -822,7 +826,7 @@ qboolean CROFFSystem::ApplyROFF( SROFFEntity *roff_ent, CROFFSystem::CROFF *roff
 	vec3_t			f, r, u, result;
 	sharedEntity_t	*ent = NULL;
 	trajectory_t	*originTrajectory, *angleTrajectory;
-	vec_t			*origin, *angle;
+	float			*origin, *angle;
 
 
 	if ( svs.time < roff_ent->mNextROFFTime )
@@ -834,11 +838,11 @@ qboolean CROFFSystem::ApplyROFF( SROFFEntity *roff_ent, CROFFSystem::CROFF *roff
 	{
 #ifndef DEDICATED
 		vec3_t		originTemp, angleTemp;
-		originTrajectory = (trajectory_t *)VM_Call( cgvm, CG_GET_ORIGIN_TRAJECTORY, roff_ent->mEntID );
-		angleTrajectory = (trajectory_t *)VM_Call( cgvm, CG_GET_ANGLE_TRAJECTORY, roff_ent->mEntID );
-		VM_Call( cgvm, CG_GET_ORIGIN, roff_ent->mEntID, originTemp );
+		originTrajectory = CGVM_GetOriginTrajectory( roff_ent->mEntID );
+		angleTrajectory = CGVM_GetAngleTrajectory( roff_ent->mEntID );
+		CGVM_GetOrigin( roff_ent->mEntID, originTemp );
 		origin = originTemp;
-		VM_Call( cgvm, CG_GET_ANGLES, roff_ent->mEntID, angleTemp );
+		CGVM_GetAngles( roff_ent->mEntID, angleTemp );
 		angle = angleTemp;
 #endif
 	}
@@ -949,12 +953,12 @@ void CROFFSystem::ProcessNote(SROFFEntity *roff_ent, char *note)
 			if (roff_ent->mIsClient)
 			{
 #ifndef DEDICATED
-				VM_Call( cgvm, CG_ROFF_NOTETRACK_CALLBACK, roff_ent->mEntID, temp );
+				CGVM_ROFF_NotetrackCallback( roff_ent->mEntID, temp );
 #endif
 			}
 			else
 			{
-				VM_Call( gvm, GAME_ROFF_NOTETRACK_CALLBACK, roff_ent->mEntID, temp );
+				GVM_ROFF_NotetrackCallback( roff_ent->mEntID, temp );
 			}
 		}
 	}
@@ -973,18 +977,18 @@ void CROFFSystem::ProcessNote(SROFFEntity *roff_ent, char *note)
 qboolean CROFFSystem::ClearLerp( SROFFEntity *roff_ent )
 {
 	sharedEntity_t	*ent;
-	trajectory_t	*originTrajectory, *angleTrajectory;
-	vec_t			*origin, *angle;
+	trajectory_t	*originTrajectory = NULL, *angleTrajectory = NULL;
+	float			*origin = NULL, *angle = NULL;
 
 	if (roff_ent->mIsClient)
 	{
 #ifndef DEDICATED
 		vec3_t		originTemp, angleTemp;
-		originTrajectory = (trajectory_t *)VM_Call( cgvm, CG_GET_ORIGIN_TRAJECTORY, roff_ent->mEntID );
-		angleTrajectory = (trajectory_t *)VM_Call( cgvm, CG_GET_ANGLE_TRAJECTORY, roff_ent->mEntID );
-		VM_Call( cgvm, CG_GET_ORIGIN, roff_ent->mEntID, originTemp );
+		originTrajectory = CGVM_GetOriginTrajectory( roff_ent->mEntID );
+		angleTrajectory = CGVM_GetAngleTrajectory( roff_ent->mEntID );
+		CGVM_GetOrigin( roff_ent->mEntID, originTemp );
 		origin = originTemp;
-		VM_Call( cgvm, CG_GET_ANGLES, roff_ent->mEntID, angleTemp );
+		CGVM_GetAngles( roff_ent->mEntID, angleTemp );
 		angle = angleTemp;
 #endif
 	}

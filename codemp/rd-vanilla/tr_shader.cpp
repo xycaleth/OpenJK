@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "tr_local.h"
 
 // tr_shader.c -- this file deals with the parsing and definition of shaders
@@ -208,7 +205,7 @@ static int Shader_CompressBracedSection( char **data_p, char **name, char **text
 				if( c == '{' && !*name ) {
 					*name = *data_p;
 					if( *(*name) <= ' ' ) (*name)++;
-					*nameLength = (int)out - (int)*name;
+					*nameLength = out - *name;
 					if( (*name)[*nameLength-1] <= ' ' ) (*nameLength)--;
 					*text = out;
 				}
@@ -240,9 +237,9 @@ static int Shader_CompressBracedSection( char **data_p, char **name, char **text
 
 	if( *text && *(*text) <= ' ' ) (*text)++;			// remove begining white char
 	if( out > *data_p && out[-1] <= ' ' ) out--;		// remove ending white char
-	if( *text ) *textLength = (int)out - (int)*text;	// compressed text length
+	if( *text ) *textLength = out - *text;	// compressed text length
 
-	c = (int)out - (int)*data_p;						// uncompressed chars parsed
+	c = out - *data_p;						// uncompressed chars parsed
 
 	*data_p = in;
 
@@ -366,7 +363,9 @@ static void Shader_SkipRestOfLine ( const char **data ) {
 #endif
 
 
+#ifndef USE_NEW_SHADER_HASH
 static char *s_shaderText;
+#endif
 
 // the shader is parsed into these global variables, then copied into
 // dynamically allocated memory if it is valid.
@@ -1218,7 +1217,7 @@ static void ParseSurfaceSprites( const char *_text, shaderStage_t *stage )
 	stage->ss->facing = SURFSPRITE_FACING_NORMAL;
 
 	// A vertical parameter that needs a default regardless
-	stage->ss->vertSkew;
+	stage->ss->vertSkew = 0.0f;
 
 	// These are effect parameters that need defaults nonetheless.
 	stage->ss->fxDuration = 1000;		// 1 second
@@ -1627,32 +1626,6 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				}
 			}
 		}
-#ifdef VV_LIGHTING
-		//
-		// specularmap <name>
-		//
-		else if ( !Q_stricmp( token, "specularmap" ) )
-		{
-			token = Shader_ParseExt( text, qfalse );
-			if ( !token[0] )
-			{
-				Com_Printf( S_COLOR_YELLOW "WARNING: missing parameter for 'specularmap' keyword in shader '%s'\n", shader.name );
-				return qfalse;
-			}
-
-			stage->bundle[0].image = R_FindImageFile( token, !shader.noMipMaps, !shader.noPicMip, !shader.noTC, GL_REPEAT );
-			if ( !stage->bundle[0].image )
-			{
-				Com_Printf( S_COLOR_YELLOW "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
-				return qfalse;
-			}
-
-			stage->isSpecular = qtrue;
-
-			shader.needsNormal = true;
-			shader.needsTangent = true;
-		}
-#endif // VV_LIGHTING
 		//
 		// clampmap <name>
 		//
@@ -1721,7 +1694,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				Com_Printf (S_COLOR_YELLOW  "WARNING: missing parameter for 'videoMap' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
-			stage->bundle[0].videoMapHandle = ri.CIN_PlayCinematic( token, 0, 0, 256, 256, (CIN_loop | CIN_silent | CIN_shader));
+			stage->bundle[0].videoMapHandle = ri->CIN_PlayCinematic( token, 0, 0, 256, 256, (CIN_loop | CIN_silent | CIN_shader));
 			if (stage->bundle[0].videoMapHandle != -1) {
 				stage->bundle[0].isVideoMap = qtrue;
 				assert (stage->bundle[0].videoMapHandle<NUM_SCRATCH_IMAGES);
@@ -2446,50 +2419,48 @@ void ParseMaterial( const char **text )
 
 // this table is also present in q3map
 
-typedef struct {
-	char	*name;
-	int		clearSolid, surfaceFlags, contents;
+typedef struct infoParm_s {
+	const char	*name;
+	uint32_t	clearSolid, surfaceFlags, contents;
 } infoParm_t;
-
 
 infoParm_t	infoParms[] = {
 	// Game content Flags
-	{"nonsolid", 	~CONTENTS_SOLID,	0, 				0 },						// special hack to clear solid flag
-	{"nonopaque", 	~CONTENTS_OPAQUE,	0, 				0 },						// special hack to clear opaque flag
-	{"lava",		~CONTENTS_SOLID,	0,				CONTENTS_LAVA },			// very damaging
-	{"slime",		~CONTENTS_SOLID,	0,				CONTENTS_SLIME },			// mildly damaging
-	{"water",		~CONTENTS_SOLID,	0,				CONTENTS_WATER },
-	{"fog",			~CONTENTS_SOLID,	0,				CONTENTS_FOG},				// carves surfaces entering
-	{"shotclip",	~CONTENTS_SOLID,	0,				CONTENTS_SHOTCLIP },		/* block shots, but not people */
-	{"playerclip",	~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_PLAYERCLIP },	   	/* block only the player */ 
-	{"monsterclip",	~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_MONSTERCLIP },		
-	{"botclip",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_BOTCLIP },		   	/* for bots */															
-	{"trigger",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_TRIGGER },
-	{"nodrop",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_NODROP },			// don't drop items or leave bodies (death fog, lava, etc)
-	{"terrain",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_TERRAIN },		   	/* use special terrain collsion */										
-	{"ladder",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_LADDER },			// climb up in it like water
-	{"abseil",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_ABSEIL },			// can abseil down this brush
-	{"outside",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_OUTSIDE },			// volume is considered to be in the outside (i.e. not indoors)
-	{"inside",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),0,CONTENTS_INSIDE },			// volume is considered to be inside (i.e. indoors)
+	{ "nonsolid",		~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_NONE },		// special hack to clear solid flag
+	{ "nonopaque",		~CONTENTS_OPAQUE,					SURF_NONE,			CONTENTS_NONE },		// special hack to clear opaque flag
+	{ "lava",			~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_LAVA },		// very damaging
+	{ "slime",			~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_SLIME },		// mildly damaging
+	{ "water",			~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_WATER },		// 
+	{ "fog",			~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_FOG},			// carves surfaces entering
+	{ "shotclip",		~CONTENTS_SOLID,					SURF_NONE,			CONTENTS_SHOTCLIP },	// block shots, but not people
+	{ "playerclip",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_PLAYERCLIP },	// block only the player
+	{ "monsterclip",	~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_MONSTERCLIP },	// 
+	{ "botclip",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_BOTCLIP },		// for bots
+	{ "trigger",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_TRIGGER },		// 
+	{ "nodrop",			~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_NODROP },		// don't drop items or leave bodies (death fog, lava, etc)
+	{ "terrain",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_TERRAIN },		// use special terrain collsion
+	{ "ladder",			~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_LADDER },		// climb up in it like water
+	{ "abseil",			~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_ABSEIL },		// can abseil down this brush
+	{ "outside",		~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_OUTSIDE },		// volume is considered to be in the outside (i.e. not indoors)
+	{ "inside",			~(CONTENTS_SOLID|CONTENTS_OPAQUE),	SURF_NONE,			CONTENTS_INSIDE },		// volume is considered to be inside (i.e. indoors)
 
-																		
-	{"detail",		-1,					0,				CONTENTS_DETAIL },			// don't include in structural bsp
-	{"trans",		-1,					0,				CONTENTS_TRANSLUCENT },		// surface has an alpha component
-	
+	{ "detail",			CONTENTS_ALL,						SURF_NONE,			CONTENTS_DETAIL },		// don't include in structural bsp
+	{ "trans",			CONTENTS_ALL,						SURF_NONE,			CONTENTS_TRANSLUCENT },	// surface has an alpha component
+
 	/* Game surface flags */
-	{"sky",			-1,					SURF_SKY,		0 },					   	/* emit light from an environment map */
-	{"slick",		-1,					SURF_SLICK,		0 },
+	{ "sky",			CONTENTS_ALL,						SURF_SKY,			CONTENTS_NONE },		// emit light from an environment map
+	{ "slick",			CONTENTS_ALL,						SURF_SLICK,			CONTENTS_NONE },		// 
 
-	{"nodamage",	-1,					SURF_NODAMAGE,	0 },					   	   																	
-	{"noimpact",	-1,					SURF_NOIMPACT,	0 },					   	/* don't make impact explosions or marks */
-	{"nomarks",		-1,					SURF_NOMARKS,	0 },					   	/* don't make impact marks, but still explode */
-	{"nodraw",		-1,					SURF_NODRAW,	0 },					   	/* don't generate a drawsurface (or a lightmap) */
-	{"nosteps",		-1,					SURF_NOSTEPS,	0 },
-	{"nodlight",	-1,					SURF_NODLIGHT,	0 },					   	/* don't ever add dynamic lights */
-	{"metalsteps",	-1,					SURF_METALSTEPS,0 },
-	{"nomiscents",	-1,					SURF_NOMISCENTS,0 },						/* No misc ents on this surface */
-	{"forcefield",	-1,					SURF_FORCEFIELD,0 },
-	{"forcesight",	-1,					SURF_FORCESIGHT,0 },						// only visible with force sight
+	{ "nodamage",		CONTENTS_ALL,						SURF_NODAMAGE,		CONTENTS_NONE },		// 
+	{ "noimpact",		CONTENTS_ALL,						SURF_NOIMPACT,		CONTENTS_NONE },		// don't make impact explosions or marks
+	{ "nomarks",		CONTENTS_ALL,						SURF_NOMARKS,		CONTENTS_NONE },		// don't make impact marks, but still explode
+	{ "nodraw",			CONTENTS_ALL,						SURF_NODRAW,		CONTENTS_NONE },		// don't generate a drawsurface (or a lightmap)
+	{ "nosteps",		CONTENTS_ALL,						SURF_NOSTEPS,		CONTENTS_NONE },		// 
+	{ "nodlight",		CONTENTS_ALL,						SURF_NODLIGHT,		CONTENTS_NONE },		// don't ever add dynamic lights
+	{ "metalsteps",		CONTENTS_ALL,						SURF_METALSTEPS,	CONTENTS_NONE },		// 
+	{ "nomiscents",		CONTENTS_ALL,						SURF_NOMISCENTS,	CONTENTS_NONE },		// No misc ents on this surface
+	{ "forcefield",		CONTENTS_ALL,						SURF_FORCEFIELD,	CONTENTS_NONE },		// 
+	{ "forcesight",		CONTENTS_ALL,						SURF_FORCESIGHT,	CONTENTS_NONE },		// only visible with force sight
 };
 
 
@@ -2557,7 +2528,7 @@ static qboolean ParseShader( const char **text )
 		else if ( token[0] == '{' )
 		{
 			if ( s >= MAX_SHADER_STAGES ) {
-				ri.Printf( PRINT_WARNING, "WARNING: too many stages in shader %s\n", shader.name );
+				ri->Printf( PRINT_WARNING, "WARNING: too many stages in shader %s\n", shader.name );
 				return qfalse;
 			}
 
@@ -2787,7 +2758,7 @@ SHADER OPTIMIZATION AND FOGGING
 ========================================================================================
 */
 
-typedef struct {
+typedef struct collapse_s {
 	int		blendA;
 	int		blendB;
 
@@ -2995,7 +2966,7 @@ static void FixRenderCommandList( int newShader ) {
 						sortedIndex = (( drawSurf->sort >> QSORT_SHADERNUM_SHIFT ) & (MAX_SHADERS-1));
 						if( sortedIndex >= newShader ) {
 							sortedIndex++;
-							drawSurf->sort = (sortedIndex << QSORT_SHADERNUM_SHIFT) | entityNum | ( fogNum << QSORT_FOGNUM_SHIFT ) | (int)dlightMap;
+							drawSurf->sort = (sortedIndex << QSORT_SHADERNUM_SHIFT) | (entityNum << QSORT_REFENTITYNUM_SHIFT) | ( fogNum << QSORT_FOGNUM_SHIFT ) | (int)dlightMap;
 						}
 					}
 					curCmd = (const void *)(ds_cmd + 1);
@@ -3076,7 +3047,7 @@ static shader_t *GeneratePermanentShader( void ) {
 		return tr.defaultShader;
 	}
 
-	newShader = (struct shader_s *)ri.Hunk_Alloc( sizeof( shader_t ), h_low );
+	newShader = (struct shader_s *)ri->Hunk_Alloc( sizeof( shader_t ), h_low );
 
 	*newShader = shader;
 
@@ -3131,7 +3102,7 @@ static shader_t *GeneratePermanentShader( void ) {
 VertexLightingCollapse
 
 If vertex lighting is enabled, only render a single
-pass, trying to guess which is the correct one to best aproximate
+pass, trying to guess which is the correct one to best approximate
 what it is supposed to look like.
 
   OUTPUT:  Number of stages after the collapse (in the case of surfacesprites this isn't one).
@@ -3548,7 +3519,7 @@ static shader_t *FinishShader( void ) {
 	{
 		if (vertexLightmap) 
 		{
-//			ri.DPrintf( "WARNING: shader '%s' has VERTEX forced lightmap!\n", shader.name );
+//			ri->DPrintf( "WARNING: shader '%s' has VERTEX forced lightmap!\n", shader.name );
 		} 
 		else 
 		{
@@ -3736,18 +3707,18 @@ be defined for every single image used in the game, three default
 shader behaviors can be auto-created for any image:
 
 If lightmapIndex == LIGHTMAP_NONE, then the image will have
-dynamic diffuse lighting applied to it, as apropriate for most
+dynamic diffuse lighting applied to it, as appropriate for most
 entity skin surfaces.
 
 If lightmapIndex == LIGHTMAP_2D, then the image will be used
 for 2D rendering unless an explicit shader is found
 
 If lightmapIndex == LIGHTMAP_BY_VERTEX, then the image will use
-the vertex rgba modulate values, as apropriate for misc_model
+the vertex rgba modulate values, as appropriate for misc_model
 pre-lit surfaces.
 
 Other lightmapIndex values will have a lightmap stage created
-and src*dest blending applied with the texture, as apropriate for
+and src*dest blending applied with the texture, as appropriate for
 most world construction surfaces.
 
 ===============
@@ -3774,7 +3745,7 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 	else if ( lightmapIndex[0] < LIGHTMAP_2D )
 	{
 		// negative lightmap indexes cause stray pointers (think tr.lightmaps[lightmapIndex])
-		ri.Printf( PRINT_WARNING, "WARNING: shader '%s' has invalid lightmap index of %d\n", name, lightmapIndex[0] );
+		ri->Printf( PRINT_WARNING, "WARNING: shader '%s' has invalid lightmap index of %d\n", name, lightmapIndex[0] );
 		lightmapIndex = lightmapsVertex;
 	}
 
@@ -3823,7 +3794,7 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 	COM_StripExtension(name,fileName, sizeof( fileName ));
 	image = R_FindImageFile( fileName, mipRawImage, mipRawImage, qtrue, mipRawImage ? GL_REPEAT : GL_CLAMP );
 	if ( !image ) {
-		ri.Printf( PRINT_DEVELOPER, S_COLOR_RED "Couldn't find image for shader %s\n", name );
+		ri->Printf( PRINT_DEVELOPER, S_COLOR_RED "Couldn't find image for shader %s\n", name );
 		shader.defaultShader = true;
 		return FinishShader();
 	}
@@ -4159,7 +4130,7 @@ void	R_ShaderList_f (void) {
 
 	count = 0;
 	for ( i = 0 ; i < tr.numShaders ; i++ ) {
-		if ( ri.Cmd_Argc() > 1 ) {
+		if ( ri->Cmd_Argc() > 1 ) {
 			shader = tr.sortedShaders[i];
 		} else {
 			shader = tr.shaders[i];
@@ -4228,7 +4199,7 @@ static void LoadShaderFromBuffer( char *buff )
 		if( nameLength >= MAX_SHADERNAME_LENGTH ) {
 			strncpy( shadername, name, MAX_SHADERNAME_LENGTH );
 			shadername[MAX_SHADERNAME_LENGTH] = '\0';
-			ri.Printf( PRINT_DEVELOPER, "Warning: Shader name too long '%s'...\n", shadername );
+			ri->Printf( PRINT_DEVELOPER, "Warning: Shader name too long '%s'...\n", shadername );
 			continue;
 		}
 
@@ -4252,7 +4223,7 @@ static void LoadShaderFromBuffer( char *buff )
 
 		// create the new shader
 		size = sizeof(shaderText_t) + (textLength) + (nameLength+1);
-		st = (shaderText_t *)ri.Hunk_Alloc( size, h_low );
+		st = (shaderText_t *)ri->Hunk_Alloc( size, h_low );
 
 		// copy shader name and shader text
 		memcpy( st->text, text, textLength );
@@ -4277,7 +4248,7 @@ static void ScanAndLoadShaderFiles( const char *path ) // drakkar - using LoadSh
 	int    i, numShaderFiles;
 
 	// scan for shader files
-	shaderFiles = ri.FS_ListFiles( path, ".shader", &numShaderFiles );
+	shaderFiles = ri->FS_ListFiles( path, ".shader", &numShaderFiles );
 	if ( !shaderFiles || !numShaderFiles )
 	{
 		Com_Error(ERR_FATAL, "ERROR: no shader files found\n");
@@ -4288,19 +4259,19 @@ static void ScanAndLoadShaderFiles( const char *path ) // drakkar - using LoadSh
 	for( i = numShaderFiles-1; i >= 0; i-- ) // parse shaders in reverse order
 	{
 		Com_sprintf( filename, sizeof(filename), "%s/%s", path, shaderFiles[i] );
-		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
-		ri.FS_ReadFile( filename, (void**)&buffer );
+		ri->Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
+		ri->FS_ReadFile( filename, (void**)&buffer );
 		if( !buffer ) Com_Error( ERR_DROP, "Couldn't load %s", filename );
 
 		LoadShaderFromBuffer( buffer ); // extract and index all shaders from the buffer
 
-		ri.FS_FreeFile( buffer );
+		ri->FS_FreeFile( buffer );
 
 		fileShaderCount++;
 	}
 
 	// free up memory
-	ri.FS_FreeFileList( shaderFiles );
+	ri->FS_FreeFileList( shaderFiles );
 
 	return;
 
@@ -4321,7 +4292,7 @@ files if we want to be like SP.
 
 bto (VV) - Rather than keeping all the buffer pointers around forever and
 creating more bugs, do the hash creation with the finalized shadertext.
-Previous code only really worked if ri.FS_ReadFile returned contiguous buffers
+Previous code only really worked if ri->FS_ReadFile returned contiguous buffers
 in ascending order on consecutive calls.
 =====================
 */
@@ -4338,7 +4309,7 @@ static void ScanAndLoadShaderFiles( const char *path )
 
 	long sum = 0, summand;
 	// scan for shader files
-	shaderFiles = ri.FS_ListFiles( path, ".shader", &numShaderFiles );
+	shaderFiles = ri->FS_ListFiles( path, ".shader", &numShaderFiles );
 
 	if ( !shaderFiles || !numShaderFiles )
 	{
@@ -4356,10 +4327,10 @@ static void ScanAndLoadShaderFiles( const char *path )
 		char filename[MAX_QPATH];
 
 		Com_sprintf( filename, sizeof( filename ), "%s/%s", path, shaderFiles[i] );
-		ri.Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
-		summand = ri.FS_ReadFile( filename, (void **)&buffers[i] );
+		ri->Printf( PRINT_DEVELOPER, "...loading '%s'\n", filename );
+		summand = ri->FS_ReadFile( filename, (void **)&buffers[i] );
 		if ( !buffers[i] ) {
-			ri.Com_Error( ERR_DROP, "Couldn't load %s", filename );
+			ri->Com_Error( ERR_DROP, "Couldn't load %s", filename );
 		}
 
 		// Do a simple check on the shader structure in that file to make sure one bad shader file cannot fuck up all other shaders.
@@ -4377,7 +4348,7 @@ static void ScanAndLoadShaderFiles( const char *path )
 			if(token[0] != '{' && token[1] != '\0')
 			{
 				Com_Printf(S_COLOR_YELLOW "WARNING: Bad shader file %s has incorrect syntax.\n", filename);
-				ri.FS_FreeFile(buffers[i]);
+				ri->FS_FreeFile(buffers[i]);
 				buffers[i] = NULL;
 				break;
 			}
@@ -4391,7 +4362,7 @@ static void ScanAndLoadShaderFiles( const char *path )
 	}
 
 	// build single large buffer
-	s_shaderText = (char *)ri.Hunk_Alloc( sum + numShaderFiles*2, h_low );
+	s_shaderText = (char *)ri->Hunk_Alloc( sum + numShaderFiles*2, h_low );
 	s_shaderText[ 0 ] = '\0';
 	textEnd = s_shaderText;
  
@@ -4404,13 +4375,13 @@ static void ScanAndLoadShaderFiles( const char *path )
 		strcat( textEnd, buffers[i] );
 		strcat( textEnd, "\n" );
 		textEnd += strlen( textEnd );
-		ri.FS_FreeFile( buffers[i] );
+		ri->FS_FreeFile( buffers[i] );
 	}
 
 	Shader_Compress( s_shaderText );
 
 	// free up memory
-	ri.FS_FreeFileList( shaderFiles );
+	ri->FS_FreeFileList( shaderFiles );
 
 	memset(shaderTextHashTableSizes, 0, sizeof(shaderTextHashTableSizes));
 	size = 0;
@@ -4431,7 +4402,7 @@ static void ScanAndLoadShaderFiles( const char *path )
 
 	size += MAX_SHADERTEXT_HASH;
 
-	hashMem = (char *)ri.Hunk_Alloc( size * sizeof(char *), h_low );
+	hashMem = (char *)ri->Hunk_Alloc( size * sizeof(char *), h_low );
 
 	for (i = 0; i < MAX_SHADERTEXT_HASH; i++) {
 		shaderTextHashTable[i] = (char **) hashMem;
@@ -4502,7 +4473,7 @@ static qhandle_t R_MergeShaders(const char *blendedName, qhandle_t a, qhandle_t 
 	shader_t	*work;
 	int			current, i;
 
-	R_SyncRenderThread();
+	R_IssuePendingRenderCommands();
 
 	// Set up default parameters
 	ClearGlobalShader();
@@ -4740,7 +4711,7 @@ void R_InitShaders(qboolean server)
 	if (!server)
 	{
 		Shader_BeginParseSession( "R_InitShaders" );
-		time = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
+		time = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" );
 		mem = Hunk_MemoryRemaining();
 		fileShaderCount = 0;
 		shaderCount = 0;
@@ -4768,7 +4739,7 @@ void R_InitShaders(qboolean server)
 // drakkar - print profiling info
 	if (!server)
 	{
-		time = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" ) - time;
+		time = ri->Milliseconds()*ri->Cvar_VariableValue( "timescale" ) - time;
 		mem = mem - Hunk_MemoryRemaining();
 		Com_Printf( "-------------------------\n" );
 		Com_Printf( "%d shader files read \n", fileShaderCount );

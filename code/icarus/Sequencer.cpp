@@ -1167,7 +1167,7 @@ int CSequencer::EvaluateConditional( CBlock *block , CIcarus* icarus)
 
 	case CIcarus::TK_VECTOR:
 
-		tempString1[0] = NULL;
+		tempString1[0] = '\0';
 
 		for ( i = 0; i < 3; i++ )
 		{
@@ -1337,7 +1337,7 @@ int CSequencer::EvaluateConditional( CBlock *block , CIcarus* icarus)
 
 	case CIcarus::TK_VECTOR:
 
-		tempString2[0] = NULL;
+		tempString2[0] = '\0';
 
 		for ( i = 0; i < 3; i++ )
 		{
@@ -2314,7 +2314,6 @@ Pops a command off the current sequence
 CBlock *CSequencer::PopCommand( int flag )
 {
 	//Make sure everything is ok
-	assert( m_curSequence );
 	if ( m_curSequence == NULL )
 		return NULL;
 

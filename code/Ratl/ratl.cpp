@@ -16,7 +16,7 @@ This file is part of Jedi Academy.
 */
 // Copyright 2002-2013 Activision
 
-#include "../game/q_shared.h"
+#include "../qcommon/q_shared.h"
 
 #if !defined(RATL_COMMON_INC)
 	#include "ratl_common.h"
@@ -59,7 +59,7 @@ This file is part of Jedi Academy.
 #endif
 
 
-void*	ratl::ratl_base::OutputPrint = 0;
+void (*ratl::ratl_base::OutputPrint)(const char*) = 0;
 
 
 
@@ -72,7 +72,6 @@ namespace ratl
 #endif
 
 
-#ifndef _XBOX
 void	ratl_base::save(hfile& file)
 {
 }
@@ -80,7 +79,6 @@ void	ratl_base::save(hfile& file)
 void	ratl_base::load(hfile& file)
 {
 }
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // A Profile Print Function 
@@ -112,7 +110,7 @@ void	ratl_base::ProfilePrint(const char * format, ...)
 	//----------------------------------
 	if (OutputPrint!=0)
 	{
-		void (*OutputPrintFcn)(const char* text) = (void (__cdecl*)(const char*))OutputPrint;
+		void (*OutputPrintFcn)(const char* text) = (void (*)(const char*))OutputPrint;
 		OutputPrintFcn(buf);
 	}
 }

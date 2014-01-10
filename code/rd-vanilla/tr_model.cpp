@@ -23,7 +23,7 @@ This file is part of Jedi Academy.
 #include "../server/exe_headers.h"
 
 #include "tr_local.h"
-#include "matcomp.h"
+#include "qcommon/matcomp.h"
 #include "../qcommon/sstring.h"
 
 #define	LL(x) x=LittleLong(x)
@@ -286,8 +286,8 @@ qboolean RE_RegisterModels_LevelLoadEnd(qboolean bDeleteEverythingNotUsedThisLev
 			{
 	#ifdef _DEBUG
 //				LPCSTR psModelName = (*itModel).first.c_str();
-//				VID_Printf( PRINT_DEVELOPER, "Dumping \"%s\"", psModelName);
-//				VID_Printf( PRINT_DEVELOPER, ", used on lvl %d\n",CachedModel.iLastLevelUsedOn);
+//				ri.Printf( PRINT_DEVELOPER, "Dumping \"%s\"", psModelName);
+//				ri.Printf( PRINT_DEVELOPER, ", used on lvl %d\n",CachedModel.iLastLevelUsedOn);
 	#endif				
 
 				if (CachedModel.pModelDiskImage) {
@@ -310,7 +310,7 @@ qboolean RE_RegisterModels_LevelLoadEnd(qboolean bDeleteEverythingNotUsedThisLev
 		}
 	}
 
-	//VID_Printf( PRINT_DEVELOPER, "RE_RegisterModels_LevelLoadEnd(): Ok\n");	
+	//ri.Printf( PRINT_DEVELOPER, "RE_RegisterModels_LevelLoadEnd(): Ok\n");	
 
 	return bAtLeastoneModelFreed;	
 }
@@ -330,15 +330,15 @@ void RE_RegisterModels_Info_f( void )
 	{	
 		CachedEndianedModelBinary_t &CachedModel = (*itModel).second;
 
-		VID_Printf( PRINT_ALL, "%d/%d: \"%s\" (%d bytes)",iModel,iModels,(*itModel).first.c_str(),CachedModel.iAllocSize );
+		ri.Printf( PRINT_ALL, "%d/%d: \"%s\" (%d bytes)",iModel,iModels,(*itModel).first.c_str(),CachedModel.iAllocSize );
 
 		#ifdef _DEBUG
-		VID_Printf( PRINT_ALL, ", lvl %d\n",CachedModel.iLastLevelUsedOn);
+		ri.Printf( PRINT_ALL, ", lvl %d\n",CachedModel.iLastLevelUsedOn);
 		#endif
 
 		iTotalBytes += CachedModel.iAllocSize;
 	}
-	VID_Printf( PRINT_ALL, "%d bytes total (%.2fMB)\n",iTotalBytes, (float)iTotalBytes / 1024.0f / 1024.0f);
+	ri.Printf( PRINT_ALL, "%d bytes total (%.2fMB)\n",iTotalBytes, (float)iTotalBytes / 1024.0f / 1024.0f);
 }
 
 
@@ -402,6 +402,8 @@ void RE_RegisterMedia_LevelLoadBegin(const char *psMapName, ForceReload_e eForce
 			// models...
 			//
 			RE_RegisterModels_DeleteAll();
+			break;
+		default:
 			break;
 	}
 
@@ -558,12 +560,12 @@ Ghoul2 Insert End
 */
 
 	if ( !name || !name[0] ) {
-		VID_Printf( PRINT_WARNING, "RE_RegisterModel: NULL name\n" );
+		ri.Printf( PRINT_WARNING, "RE_RegisterModel: NULL name\n" );
 		return 0;
 	}
 
 	if ( strlen( name ) >= MAX_QPATH ) {
-		VID_Printf( PRINT_DEVELOPER, "Model name exceeds MAX_QPATH\n" );
+		ri.Printf( PRINT_DEVELOPER, "Model name exceeds MAX_QPATH\n" );
 		return 0;
 	}
 
@@ -571,7 +573,7 @@ Ghoul2 Insert End
 Ghoul2 Insert Start
 */
 //	if (!tr.registered) {
-//		VID_Printf( PRINT_WARNING, "RE_RegisterModel (%s) called before ready!\n",name );
+//		ri.Printf( PRINT_WARNING, "RE_RegisterModel (%s) called before ready!\n",name );
 //		return 0;
 //	}
 	//
@@ -621,7 +623,7 @@ Ghoul2 Insert End
 	// allocate a new model_t
 
 	if ( ( mod = R_AllocModel() ) == NULL ) {
-		VID_Printf( PRINT_WARNING, "RE_RegisterModel: R_AllocModel() failed for '%s'\n", name);
+		ri.Printf( PRINT_WARNING, "RE_RegisterModel: R_AllocModel() failed for '%s'\n", name);
 		return 0;
 	}
 
@@ -701,7 +703,7 @@ Ghoul2 Insert End
 
 			default:
 
-				VID_Printf (PRINT_WARNING,"RE_RegisterModel: unknown fileid for %s\n", filename);
+				ri.Printf (PRINT_WARNING,"RE_RegisterModel: unknown fileid for %s\n", filename);
 				goto fail;
 		}
 		
@@ -711,7 +713,7 @@ Ghoul2 Insert End
 
 		if ( !loaded ) {
 			if ( lod == 0 ) {
-				VID_Printf (PRINT_WARNING,"RE_RegisterModel: cannot load %s\n", filename);
+				ri.Printf (PRINT_WARNING,"RE_RegisterModel: cannot load %s\n", filename);
 				goto fail;
 			} else {
 				break;
@@ -769,9 +771,9 @@ qhandle_t RE_RegisterModel( const char *name )
 
 		qhandle_t q = RE_RegisterModel_Actual( name );
 
-if (stricmp(&name[strlen(name)-4],".gla")){
-	gbInsideRegisterModel = qfalse;		// GLA files recursively call this, so don't turn off half way. A reference count would be nice, but if any ERR_DROP ever occurs within the load then the refcount will be knackered from then on
-}
+	if (Q_stricmp(&name[strlen(name)-4],".gla")){
+		gbInsideRegisterModel = qfalse;		// GLA files recursively call this, so don't turn off half way. A reference count would be nice, but if any ERR_DROP ever occurs within the load then the refcount will be knackered from then on
+	}
 
 	return q;
 }
@@ -790,7 +792,7 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 	int					version;
 	int					size;
 
-#ifndef _M_IX86
+#if 0 //#ifndef _M_IX86
 	md3Frame_t			*frame;
 	md3Triangle_t		*tri;
 	md3St_t				*st;
@@ -813,7 +815,7 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 	}
 	
 	if (version != MD3_VERSION) {
-		VID_Printf( PRINT_WARNING, "R_LoadMD3: %s has wrong version (%i should be %i)\n",
+		ri.Printf( PRINT_WARNING, "R_LoadMD3: %s has wrong version (%i should be %i)\n",
 				 mod_name, version, MD3_VERSION);
 		return qfalse;
 	}
@@ -850,7 +852,7 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 	}
 
 	if ( mod->md3[lod]->numFrames < 1 ) {
-		VID_Printf( PRINT_WARNING, "R_LoadMD3: %s has no frames\n", mod_name );
+		ri.Printf( PRINT_WARNING, "R_LoadMD3: %s has no frames\n", mod_name );
 		return qfalse;
 	}
 
@@ -859,7 +861,7 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 		return qtrue;	// All done. Stop, go no further, do not pass Go...
 	}
 
-#ifndef _M_IX86
+#if 0 //#ifndef _M_IX86
 	//
 	// optimisation, we don't bother doing this for standard intel case since our data's already in that format...
 	//
@@ -938,7 +940,7 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
         }
 
 
-#ifndef _M_IX86
+#if 0 //#ifndef _M_IX86
 //
 // optimisation, we don't bother doing this for standard intel case since our data's already in that format...
 //
@@ -1053,25 +1055,25 @@ void R_Modellist_f( void ) {
 		{
 			default:
 				assert(0);
-				VID_Printf( PRINT_ALL, "UNKNOWN  :      %s\n", mod->name );
+				ri.Printf( PRINT_ALL, "UNKNOWN  :      %s\n", mod->name );
 				break;
 
 			case MOD_BAD:
-				VID_Printf( PRINT_ALL, "MOD_BAD  :      %s\n", mod->name );
+				ri.Printf( PRINT_ALL, "MOD_BAD  :      %s\n", mod->name );
 				break;
 
 			case MOD_BRUSH:
-				VID_Printf( PRINT_ALL, "%8i : (%i) %s\n", mod->dataSize, mod->numLods, mod->name );
+				ri.Printf( PRINT_ALL, "%8i : (%i) %s\n", mod->dataSize, mod->numLods, mod->name );
 				break;
 
 			case MOD_MDXA:
 
-				VID_Printf( PRINT_ALL, "%8i : (%i) %s\n", mod->dataSize, mod->numLods, mod->name );								
+				ri.Printf( PRINT_ALL, "%8i : (%i) %s\n", mod->dataSize, mod->numLods, mod->name );								
 				break;
 		
 			case MOD_MDXM:
 				
-				VID_Printf( PRINT_ALL, "%8i : (%i) %s\n", mod->dataSize, mod->numLods, mod->name );								
+				ri.Printf( PRINT_ALL, "%8i : (%i) %s\n", mod->dataSize, mod->numLods, mod->name );								
 				break;
 
 			case MOD_MESH:
@@ -1082,16 +1084,16 @@ void R_Modellist_f( void ) {
 						lods++;
 					}
 				}				
-				VID_Printf( PRINT_ALL, "%8i : (%i) %s\n",mod->dataSize, lods, mod->name );
+				ri.Printf( PRINT_ALL, "%8i : (%i) %s\n",mod->dataSize, lods, mod->name );
 				break;		
 		}
 		total += mod->dataSize;
 	}
-	VID_Printf( PRINT_ALL, "%8i : Total models\n", total );
+	ri.Printf( PRINT_ALL, "%8i : Total models\n", total );
 
 /*	this doesn't work with the new hunks
 	if ( tr.world ) {
-		VID_Printf( PRINT_ALL, "%8i : %s\n", tr.world->dataSize, tr.world->name );
+		ri.Printf( PRINT_ALL, "%8i : %s\n", tr.world->dataSize, tr.world->name );
 	} */
 }
 
@@ -1201,16 +1203,3 @@ void R_ModelBounds( qhandle_t handle, vec3_t mins, vec3_t maxs ) {
 		return;
 	}
 }
-
-
-#ifdef _XBOX
-void R_ModelFree(void)
-{
-	if (CachedModels)
-	{
-		RE_RegisterModels_DeleteAll();
-		delete CachedModels;
-		CachedModels = NULL;
-	}
-}
-#endif

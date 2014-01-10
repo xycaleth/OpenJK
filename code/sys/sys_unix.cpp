@@ -6,8 +6,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <libgen.h>
 
-#include "../game/q_shared.h"
+#include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
 #include "sys_local.h"
 
@@ -119,10 +120,10 @@ qboolean Sys_LowPhysicalMemory( void )
 
 void Conbuf_AppendText( const char *pMsg )
 {
-	char		msg[4096];
-	strcpy(msg, pMsg);
-	printf(Q_CleanStr(msg));
-	printf("\n");
+	char msg[4096] = {0};
+	Q_strncpyz(msg, pMsg, sizeof(msg));
+	Q_StripColor(msg);
+	printf("%s", msg);
 }
 
 void Sys_Print( const char *msg ) {
@@ -136,6 +137,27 @@ void Sys_Print( const char *msg ) {
 	}
 	Conbuf_AppendText( msg );
 }
+
+/*
+ ==================
+ Sys_Basename
+ ==================
+ */
+const char *Sys_Basename( char *path )
+{
+	return basename( path );
+}
+
+/*
+ ==================
+ Sys_Dirname
+ ==================
+ */
+const char *Sys_Dirname( char *path )
+{
+	return dirname( path );
+}
+
 
 /*
 ========================================================================
@@ -156,17 +178,12 @@ sysEvent_t Sys_GetEvent( void ) {
 	sysEvent_t	ev;
 	char		*s;
 	msg_t		netmsg;
-	netadr_t	adr;
 
 	// return if we have data
 	if ( eventHead > eventTail ) {
 		eventTail++;
 		return eventQue[ ( eventTail - 1 ) & MASK_QUED_EVENTS ];
 	}
-
-	// pump the message loop
-	// in vga this calls KBD_Update, under X, it calls GetEvent
-	Sys_SendKeyEvents ();
 
 	// check for console commands
 	s = Sys_ConsoleInput();
@@ -179,9 +196,6 @@ sysEvent_t Sys_GetEvent( void ) {
 		strcpy( b, s );
 		Sys_QueEvent( 0, SE_CONSOLE, 0, 0, len, b );
 	}
-
-	// check for other input devices
-	IN_Frame();
 
 	// check for network packets
 	MSG_Init( &netmsg, sys_packetReceived, sizeof( sys_packetReceived ) );
@@ -201,27 +215,102 @@ sysEvent_t Sys_GetEvent( void ) {
 }
 
 /*
+==============================================================
+
+DIRECTORY SCANNING
+
+==============================================================
+*/
+
+#define MAX_FOUND_FILES 0x1000
+
+/*
 ==================
 Sys_ListFiles
 ==================
 */
-#define	MAX_FOUND_FILES	0x1000
+void Sys_ListFilteredFiles( const char *basedir, char *subdirs, char *filter, char **list, int *numfiles ) {
+	char		search[MAX_OSPATH], newsubdirs[MAX_OSPATH];
+	char		filename[MAX_OSPATH];
+	DIR			*fdir;
+	struct dirent *d;
+	struct stat st;
 
-char **Sys_ListFiles( const char *directory, const char *extension, int *numfiles, qboolean wantsubs )
+	if ( *numfiles >= MAX_FOUND_FILES - 1 ) {
+		return;
+	}
+
+	if (strlen(subdirs)) {
+		Com_sprintf( search, sizeof(search), "%s/%s", basedir, subdirs );
+	}
+	else {
+		Com_sprintf( search, sizeof(search), "%s", basedir );
+	}
+
+	if ((fdir = opendir(search)) == NULL) {
+		return;
+	}
+
+	while ((d = readdir(fdir)) != NULL) {
+		Com_sprintf(filename, sizeof(filename), "%s/%s", search, d->d_name);
+		if (stat(filename, &st) == -1)
+			continue;
+
+		if (st.st_mode & S_IFDIR) {
+			if (Q_stricmp(d->d_name, ".") && Q_stricmp(d->d_name, "..")) {
+				if (strlen(subdirs)) {
+					Com_sprintf( newsubdirs, sizeof(newsubdirs), "%s/%s", subdirs, d->d_name);
+				}
+				else {
+					Com_sprintf( newsubdirs, sizeof(newsubdirs), "%s", d->d_name);
+				}
+				Sys_ListFilteredFiles( basedir, newsubdirs, filter, list, numfiles );
+			}
+		}
+		if ( *numfiles >= MAX_FOUND_FILES - 1 ) {
+			break;
+		}
+		Com_sprintf( filename, sizeof(filename), "%s/%s", subdirs, d->d_name );
+		if (!Com_FilterPath( filter, filename, qfalse ))
+			continue;
+		list[ *numfiles ] = CopyString( filename );
+		(*numfiles)++;
+	}
+
+	closedir(fdir);
+}
+
+char **Sys_ListFiles( const char *directory, const char *extension, char *filter, int *numfiles, qboolean wantsubs )
 {
 	struct dirent *d;
-	// char *p; // bk001204 - unused
 	DIR		*fdir;
 	qboolean dironly = wantsubs;
 	char		search[MAX_OSPATH];
 	int			nfiles;
 	char		**listCopy;
 	char		*list[MAX_FOUND_FILES];
-	//int			flag; // bk001204 - unused
 	int			i;
 	struct stat st;
 
-	int			extLen;
+	if (filter) {
+
+		nfiles = 0;
+		Sys_ListFilteredFiles( directory, "", filter, list, &nfiles );
+
+		list[ nfiles ] = 0;
+		*numfiles = nfiles;
+
+		if (!nfiles)
+			return NULL;
+
+		listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ), TAG_FILESYS, qfalse );
+		for ( i = 0 ; i < nfiles ; i++ ) {
+			listCopy[i] = list[i];
+		}
+		listCopy[i] = NULL;
+
+		return listCopy;
+	}
 
 	if ( !extension)
 		extension = "";
@@ -231,7 +320,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, int *numfile
 		dironly = qtrue;
 	}
 
-	extLen = strlen( extension );
+	size_t extLen = strlen( extension );
 
 	// search
 	nfiles = 0;
@@ -250,9 +339,9 @@ char **Sys_ListFiles( const char *directory, const char *extension, int *numfile
 			continue;
 
 		if (*extension) {
-			if ( strlen( d->d_name ) < strlen( extension ) ||
+			if ( strlen( d->d_name ) < extLen ||
 				Q_stricmp(
-					d->d_name + strlen( d->d_name ) - strlen( extension ),
+					d->d_name + strlen( d->d_name ) - extLen,
 					extension ) ) {
 				continue; // didn't match
 			}
@@ -284,18 +373,18 @@ char **Sys_ListFiles( const char *directory, const char *extension, int *numfile
 	return listCopy;
 }
 
-void	Sys_FreeFileList( char **list ) {
+void	Sys_FreeFileList( char **fileList ) {
 	int		i;
 
-	if ( !list ) {
+	if ( !fileList ) {
 		return;
 	}
 
-	for ( i = 0 ; list[i] ; i++ ) {
-		Z_Free( list[i] );
+	for ( i = 0 ; fileList[i] ; i++ ) {
+		Z_Free( fileList[i] );
 	}
 
-	Z_Free( list );
+	Z_Free( fileList );
 }
 
 /*
@@ -344,14 +433,14 @@ void Sys_Sleep( int msec )
 Sys_Mkdir
 ==================
 */
-/*qboolean*/void Sys_Mkdir( const char *path )
+qboolean Sys_Mkdir( const char *path )
 {
 	int result = mkdir( path, 0750 );
 
-/*	if( result != 0 )
+	if( result != 0 )
 		return (qboolean)(errno == EEXIST);
 
-	return qtrue;*/
+	return qtrue;
 }
 
 char *Sys_Cwd( void )
@@ -362,6 +451,28 @@ char *Sys_Cwd( void )
 	cwd[MAX_OSPATH-1] = 0;
 
 	return cwd;
+}
+
+/* Resolves path names and determines if they are the same */
+/* For use with full OS paths not quake paths */
+/* Returns true if resulting paths are valid and the same, otherwise false */
+bool Sys_PathCmp( const char *path1, const char *path2 )
+{
+	char *r1, *r2;
+
+	r1 = realpath(path1, NULL);
+	r2 = realpath(path2, NULL);
+
+	if(r1 && r2 && !Q_stricmp(r1, r2))
+	{
+		free(r1);
+		free(r2);
+		return true;
+	}
+
+	free(r1);
+	free(r2);
+	return false;
 }
 
 /*
@@ -406,40 +517,77 @@ void Sys_Error( const char *error, ... )
 }
 
 void Sys_Quit (void) {
-  CL_Shutdown ();
-  fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
-  Sys_Exit(0);
+	IN_Shutdown();
+
+	Com_ShutdownZoneMemory();
+	Com_ShutdownHunkMemory();
+
+	Sys_Exit(0);
 }
 
 void	Sys_Init (void) {
 }
 
 /*
- ==================
- Sys_DefaultHomePath
- ==================
- */
+==================
+Sys_DefaultHomePath
+==================
+*/
+#ifdef MACOS_X
 char *Sys_DefaultHomePath(void)
 {
 	char *p;
     
-	if( !*homePath)
+	if( !*homePath && com_homepath != NULL )
 	{
 		if( ( p = getenv( "HOME" ) ) != NULL )
 		{
 			Com_sprintf(homePath, sizeof(homePath), "%s%c", p, PATH_SEP);
-#ifdef MACOS_X
 			Q_strcat(homePath, sizeof(homePath),
                      "Library/Application Support/");
-			Q_strcat(homePath, sizeof(homePath), HOMEPATH_NAME_MACOSX);
-#else
-			Q_strcat(homePath, sizeof(homePath), HOMEPATH_NAME_UNIX);
-#endif
+            
+			if(com_homepath->string[0])
+				Q_strcat(homePath, sizeof(homePath), com_homepath->string);
+			else
+				Q_strcat(homePath, sizeof(homePath), HOMEPATH_NAME_MACOSX);
 		}
 	}
     
 	return homePath;
 }
+#else
+char *Sys_DefaultHomePath(void)
+{
+	char *p;
+    
+	if( !*homePath && com_homepath != NULL )
+	{
+		if( ( p = getenv( "XDG_DATA_HOME" ) ) != NULL )
+		{
+			Com_sprintf(homePath, sizeof(homePath), "%s%c", p, PATH_SEP);
+			if(com_homepath->string[0])
+				Q_strcat(homePath, sizeof(homePath), com_homepath->string);
+			else
+				Q_strcat(homePath, sizeof(homePath), HOMEPATH_NAME_UNIX);
+
+			return homePath;
+		}
+
+		if( ( p = getenv( "HOME" ) ) != NULL )
+		{
+			Com_sprintf(homePath, sizeof(homePath), "%s%c.local%cshare%c", p, PATH_SEP, PATH_SEP, PATH_SEP);
+			if(com_homepath->string[0])
+				Q_strcat(homePath, sizeof(homePath), com_homepath->string);
+			else
+				Q_strcat(homePath, sizeof(homePath), HOMEPATH_NAME_UNIX);
+
+			return homePath;
+		}
+	}
+    
+	return homePath;
+}
+#endif
 
 char *Sys_ConsoleInput(void)
 {

@@ -1,9 +1,4 @@
-// leave this as first line for PCH reasons...
-//
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
- #include "client/client.h"	//FIXME!! EVIL - just include the definitions needed 
+#include "client/client.h"	//FIXME!! EVIL - just include the definitions needed 
 #include "tr_local.h"
 #include "qcommon/matcomp.h"
 #include "qcommon/qcommon.h"
@@ -13,11 +8,9 @@
 #include "ghoul2/G2_gore.h"
 #endif
 
-#ifdef VV_LIGHTING
-#include "tr_lightmanager.h"
-#endif
-
+#ifdef _MSC_VER
 #pragma warning (disable: 4512)	//default assignment operator could not be gened
+#endif
 #include "qcommon/disablewarnings.h"
 
 #define	LL(x) x=LittleLong(x)
@@ -97,7 +90,7 @@ extern cvar_t	*r_Ghoul2UnSqashAfterSmooth;
 
 static inline int G2_Find_Bone_ByNum(const model_t *mod, boneInfo_v &blist, const int boneNum)
 {
-	int i = 0;
+	size_t i = 0;
 
 	while (i < blist.size())
 	{
@@ -113,9 +106,11 @@ static inline int G2_Find_Bone_ByNum(const model_t *mod, boneInfo_v &blist, cons
 
 const static mdxaBone_t		identityMatrix = 
 { 
-	0.0f, -1.0f, 0.0f, 0.0f,
-	1.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f
+	{
+		{ 0.0f, -1.0f, 0.0f, 0.0f },
+		{ 1.0f, 0.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f, 1.0f, 0.0f }
+	}
 };
 
 // I hate doing this, but this is the simplest way to get this into the routines it needs to be
@@ -190,11 +185,11 @@ class CBoneCache
 
 	void EvalLow(int index)
 	{
-		assert(index>=0&&index<mBones.size());
+		assert(index>=0&&index<(int)mBones.size());
 		if (mFinalBones[index].touch!=mCurrentTouch)
 		{
 			// need to evaluate the bone
-			assert((mFinalBones[index].parent>=0&&mFinalBones[index].parent<mFinalBones.size())||(index==0&&mFinalBones[index].parent==-1));
+			assert((mFinalBones[index].parent>=0&&mFinalBones[index].parent<(int)mFinalBones.size())||(index==0&&mFinalBones[index].parent==-1));
 			if (mFinalBones[index].parent>=0)
 			{
 				EvalLow(mFinalBones[index].parent); // make sure parent is evaluated
@@ -288,7 +283,7 @@ class CBoneCache
 		{
 			for ( int j = 0; j < 4; j++ )
 			{
-				assert( !_isnan(mSmoothBones[index].boneMatrix.matrix[i][j]));
+				assert( !Q_isnan(mSmoothBones[index].boneMatrix.matrix[i][j]));
 			}
 		}
 #endif// _DEBUG
@@ -323,8 +318,8 @@ public:
 	float			mSmoothFactor;
 
 	CBoneCache(const model_t *amod,const mdxaHeader_t *aheader) :
-		mod(amod),
-		header(aheader)
+		header(aheader),
+		mod(amod)
 	{
 		assert(amod);
 		assert(aheader);
@@ -428,7 +423,7 @@ public:
 		*/
 
 		//Hey, this is what sof2 does. Let's try it out.
-		assert(index>=0&&index<mBones.size());
+		assert(index>=0&&index<(int)mBones.size());
 		if (mFinalBones[index].touch!=mCurrentTouch)
 		{
 			EvalLow(index);
@@ -438,7 +433,7 @@ public:
 	//rww - RAGDOLL_BEGIN
 	const inline mdxaBone_t &EvalRender(int index)
 	{
-		assert(index>=0&&index<mBones.size());
+		assert(index>=0&&index<(int)mBones.size());
 		if (mFinalBones[index].touch!=mCurrentTouch)
 		{
 			mFinalBones[index].touchRender=mCurrentTouchRender;
@@ -458,7 +453,7 @@ public:
 	//rww - RAGDOLL_BEGIN
 	bool WasRendered(int index)
 	{
-		assert(index>=0&&index<mBones.size());
+		assert(index>=0&&index<(int)mBones.size());
 		return mFinalBones[index].touchRender==mCurrentTouchRender;
 	}
 	int GetParent(int index)
@@ -467,7 +462,7 @@ public:
 		{
 			return -1;
 		}
-		assert(index>=0&&index<mBones.size());
+		assert(index>=0&&index<(int)mBones.size());
 		return mFinalBones[index].parent;
 	}
 	//rww - RAGDOLL_END
@@ -678,7 +673,7 @@ void G2_GetBoneMatrixLow(CGhoul2Info &ghoul2,int boneNum,const vec3_t scale,mdxa
 	{
 		for ( int j = 0; j < 4; j++ )
 		{
-			assert( !_isnan(retMatrix.matrix[i][j]));
+			assert( !Q_isnan(retMatrix.matrix[i][j]));
 		}
 	}
 #endif// _DEBUG
@@ -1187,7 +1182,7 @@ void G2_TimingModel(boneInfo_t &bone,int currentTime,int numFramesInFile,int &cu
 					}
 				}
 				// sanity check
-				assert ((newFrame < endFrame) && (newFrame >= bone.startFrame) || (animSize < 10)); 
+				assert (((newFrame < endFrame) && (newFrame >= bone.startFrame)) || (animSize < 10)); 
 			}
 			else
 			{
@@ -1681,7 +1676,7 @@ void G2_TransformBone (int child,CBoneCache &BC)
 	//rww - removed mSkels
 
 	int parent=BC.mFinalBones[child].parent;
-	assert((parent==-1&&child==0)||(parent>=0&&parent<BC.mBones.size()));
+	assert((parent==-1&&child==0)||(parent>=0&&parent<(int)BC.mBones.size()));
 	if (angleOverride & BONE_ANGLES_REPLACE)
 	{
 		bool isRag=!!(angleOverride & BONE_ANGLES_RAGDOLL);
@@ -1703,9 +1698,11 @@ void G2_TransformBone (int child,CBoneCache &BC)
 			float	matrixScale = VectorLength((float*)&temp);
 			static mdxaBone_t		toMatrix = 
 			{ 
-				1.0f, 0.0f, 0.0f, 0.0f,
-				0.0f, 1.0f, 0.0f, 0.0f,
-				0.0f, 0.0f, 1.0f, 0.0f
+				{
+					{ 1.0f, 0.0f, 0.0f, 0.0f },
+					{ 0.0f, 1.0f, 0.0f, 0.0f },
+					{ 0.0f, 0.0f, 1.0f, 0.0f }
+				}
 			};
 			toMatrix.matrix[0][0]=matrixScale;
 			toMatrix.matrix[1][1]=matrixScale;
@@ -1960,7 +1957,7 @@ void G2_SetUpBolts( mdxaHeader_t *header, CGhoul2Info &ghoul2, mdxaBone_v &boneP
 	mdxaSkelOffsets_t *offsets;
 	offsets = (mdxaSkelOffsets_t *)((byte *)header + sizeof(mdxaHeader_t));
 
-	for (int i=0; i<boltList.size(); i++)
+	for (size_t i=0; i<boltList.size(); i++)
 	{
 		if (boltList[i].boneNumber != -1)
 		{
@@ -2020,13 +2017,13 @@ void G2_TransformGhoulBones(boneInfo_v &rootBoneList,mdxaBone_t &rootMatrix, CGh
 	}
 	ghoul2.mBoneCache->mod=currentModel;
 	ghoul2.mBoneCache->header=aHeader; 
-	assert(ghoul2.mBoneCache->mBones.size()==aHeader->numBones);
+	assert(ghoul2.mBoneCache->mBones.size()==(unsigned)aHeader->numBones);
 
 	ghoul2.mBoneCache->mSmoothingActive=false;
 	ghoul2.mBoneCache->mUnsquash=false;
 
 	// master smoothing control
-	if (HackadelicOnClient && smooth && !ri.Cvar_VariableIntegerValue( "dedicated" ))
+	if (HackadelicOnClient && smooth && !ri->Cvar_VariableIntegerValue( "dedicated" ))
 	{
 		ghoul2.mBoneCache->mLastTouch=ghoul2.mBoneCache->mLastLastTouch;
 		/*
@@ -2063,8 +2060,7 @@ void G2_TransformGhoulBones(boneInfo_v &rootBoneList,mdxaBone_t &rootMatrix, CGh
 			}
 			else if(ghoul2.mFlags & GHOUL2_RAG_STARTED)
 			{
-				int k;
-				for (k=0;k<rootBoneList.size();k++)
+				for (size_t k=0;k<rootBoneList.size();k++)
 				{
 					boneInfo_t &bone=rootBoneList[k];
 					if (bone.flags&BONE_ANGLES_RAGDOLL)
@@ -2150,7 +2146,7 @@ void G2_TransformGhoulBones(boneInfo_v &rootBoneList,mdxaBone_t &rootMatrix, CGh
 void G2_ProcessSurfaceBolt(mdxaBone_v &bonePtr, mdxmSurface_t *surface, int boltNum, boltInfo_v &boltList, surfaceInfo_t *surfInfo, model_t *mod)
 {
  	mdxmVertex_t 	*v, *vert0, *vert1, *vert2;
- 	vec3_t			axes[3], sides[3];
+ 	matrix3_t		axes, sides;
  	float			pTri[3][3], d;
  	int				j, k;
 
@@ -2358,7 +2354,7 @@ void G2_ProcessGeneratedSurfaceBolts(CGhoul2Info &ghoul2, mdxaBone_v &bonePtr, m
 	G2PerformanceTimer_G2_ProcessGeneratedSurfaceBolts.Start();
 #endif
 	// look through the surfaces off the end of the pre-defined model surfaces
-	for (int i=0; i< ghoul2.mSlist.size(); i++)
+	for (size_t i=0; i< ghoul2.mSlist.size(); i++)
 	{
 		// only look for bolts if we are actually a generated surface, and not just an overriden one
 		if (ghoul2.mSlist[i].offFlags & G2SURFACEFLAG_GENERATED)
@@ -2494,10 +2490,10 @@ void RenderSurfaces(CRenderSurface &RS) //also ended up just ripping right from 
 				for (k=range.first;k!=range.second;)
 				{
 					kcur=k;
-					k++;
+					++k;
 					GoreTextureCoordinates *tex=FindGoreRecord((*kcur).second.mGoreTag);
 					if (!tex ||											 // it is gone, lets get rid of it
-						(*kcur).second.mDeleteTime && curTime>=(*kcur).second.mDeleteTime) // out of time
+						(kcur->second.mDeleteTime && curTime>=kcur->second.mDeleteTime)) // out of time
 					{
 						if (tex)
 						{
@@ -2807,7 +2803,7 @@ void *G2_FindSurface_BC(const model_s *mod, int index, int lod)
 	assert(mod->mdxm);
 
 	// point at first lod list
-	byte	*current = (byte*)((int)mod->mdxm + (int)mod->mdxm->ofsLODs);
+	byte	*current = (byte*)((intptr_t)mod->mdxm + (intptr_t)mod->mdxm->ofsLODs);
 	int i;
 
 	//walk the lods
@@ -2835,7 +2831,7 @@ void *G2_FindSurface_BC(const model_s *mod, int index, int lod)
 void G2_ProcessSurfaceBolt2(CBoneCache &boneCache, const mdxmSurface_t *surface, int boltNum, boltInfo_v &boltList, const surfaceInfo_t *surfInfo, const model_t *mod,mdxaBone_t &retMatrix)
 {
  	mdxmVertex_t 	*v, *vert0, *vert1, *vert2;
- 	vec3_t			axes[3], sides[3];
+ 	matrix3_t		axes, sides;
  	float			pTri[3][3], d;
  	int				j, k;
 
@@ -3076,7 +3072,7 @@ void G2_GetBoltMatrixLow(CGhoul2Info &ghoul2,int boltNum,const vec3_t scale,mdxa
 		return;
 	}
 
-	assert(boltNum>=0&&boltNum<boltList.size());
+	assert(boltNum>=0&&boltNum<(int)boltList.size());
 #if 0 //rwwFIXMEFIXME: Disable this before release!!!!!! I am just trying to find a crash bug.
 	if (boltNum < 0 || boltNum >= boltList.size())
 	{
@@ -3117,8 +3113,7 @@ void G2_GetBoltMatrixLow(CGhoul2Info &ghoul2,int boltNum,const vec3_t scale,mdxa
 	{
 		const surfaceInfo_t *surfInfo=0;
 		{
-			int i;
-			for (i=0;i<ghoul2.mSlist.size();i++)
+			for (size_t i=0;i<ghoul2.mSlist.size();i++)
 			{
 				surfaceInfo_t &t=ghoul2.mSlist[i];
 				if (t.surface==boltList[boltNum].surfaceNumber)
@@ -3248,13 +3243,8 @@ void R_AddGhoulSurfaces( trRefEntity_t *ent ) {
 	modelList[255]=548;
 
 	// set up lighting now that we know we aren't culled
-#ifdef VV_LIGHTING
-	if ( !personalModel ) {
-		VVLightMan.R_SetupEntityLighting( &tr.refdef, ent );
-#else
 	if ( !personalModel || r_shadows->integer > 1 ) {
 		R_SetupEntityLighting( &tr.refdef, ent );
-#endif
 	}
 
 	// see if we are in a fog volume
@@ -3586,12 +3576,6 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 
 #ifndef _G2_GORE //we use this later, for gore
 	delete surf;
-#endif
-
-#ifdef VV_LIGHTING
-	// Set any dynamic lighting needed
-	if(backEnd.currentEntity->dlightBits)
-		tess.dlightBits = backEnd.currentEntity->dlightBits;
 #endif
 
 	// first up, sanity check our numbers
@@ -4189,7 +4173,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 	int					size;
 	mdxmSurfHierarchy_t	*surfInfo;
 
-#ifndef _M_IX86
+#if 0 //#ifndef _M_IX86
 	int					k;
 	int					frameSize;
 	mdxmTag_t			*tag;
@@ -4208,8 +4192,8 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 
 	if (!bAlreadyCached)
 	{
-		version = LittleLong(version);
-		size	= LittleLong(size);
+		LL(version);
+		LL(size);
 	}
 
 	if (version != MDXM_VERSION) {
@@ -4230,7 +4214,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 	if (!bAlreadyFound)
 	{
 		// horrible new hackery, if !bAlreadyFound then we've just done a tag-morph, so we need to set the 
-		//	bool reference passed into this function to true, to tell the caller NOT to do an ri.FS_Freefile since
+		//	bool reference passed into this function to true, to tell the caller NOT to do an ri->FS_Freefile since
 		//	we've hijacked that memory block...
 		//
 		// Aaaargh. Kill me now...
@@ -4342,7 +4326,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, qboolean 
 			// change to surface identifier
 			surf->ident = SF_MDX;
 			// register the shaders
-#ifndef _M_IX86
+#if 0 //#ifndef _M_IX86
 //
 // optimisation, we don't bother doing this for standard intel case since our data's already in that format...
 //
@@ -4628,7 +4612,7 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 	byte				*sizeMarker;
 #endif
 
-#ifndef _M_IX86
+#if 0 //#ifndef _M_IX86
 	int					j, k, i;
 	int					frameSize;
 	mdxaFrame_t			*cframe;
@@ -4644,8 +4628,8 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 
 	if (!bAlreadyCached)
 	{
-		version = LittleLong(version);
-		size	= LittleLong(size);
+		LL(version);
+		LL(size);
 	}
 	
 	if (version != MDXA_VERSION) {
@@ -4683,7 +4667,7 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 		memcpy( mdxa, buffer, oSize );
 #else
 		// horrible new hackery, if !bAlreadyFound then we've just done a tag-morph, so we need to set the 
-		//	bool reference passed into this function to true, to tell the caller NOT to do an ri.FS_Freefile since
+		//	bool reference passed into this function to true, to tell the caller NOT to do an ri->FS_Freefile since
 		//	we've hijacked that memory block...
 		//
 		// Aaaargh. Kill me now...
@@ -4704,7 +4688,7 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 	if (!bAlreadyFound)
 	{
 		mdxaSkel_t			*boneParent;
-#ifdef _M_IX86
+#if 0 //#ifdef _M_IX86
 		mdxaSkel_t			*boneInfo;
 		int i, k;
 #endif
@@ -4823,7 +4807,7 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name, qboolean 
 		return qtrue;	// All done, stop here, do not LittleLong() etc. Do not pass go...
 	}
 
-#ifndef _M_IX86
+#if 0 //#ifndef _M_IX86
 
 	//
 	// optimisation, we don't bother doing this for standard intel case since our data's already in that format...

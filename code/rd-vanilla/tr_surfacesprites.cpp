@@ -296,7 +296,7 @@ static void R_SurfaceSpriteFrameUpdate(void)
 	{// Make sure not to get infinitly small number here
 		curWindPointForce = r_windPointForce->value - (ratio * (r_windPointForce->value - curWindPointForce));
 	}
-	assert(!_isnan(curWindPointForce));
+	assert(!Q_isnan(curWindPointForce));
 	if (curWindPointForce < 0.01)
 	{
 		curWindPointActive = qfalse;
@@ -1438,7 +1438,7 @@ extern void R_InvertMatrix(float *sourcemat, float *destmat);
 
 void RB_DrawSurfaceSprites( shaderStage_t *stage, shaderCommands_t *input) 
 {
-	unsigned long	glbits=stage->stateBits;
+	uint32_t	glbits=stage->stateBits;
 	
 	R_SurfaceSpriteFrameUpdate();
 

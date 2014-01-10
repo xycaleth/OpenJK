@@ -28,8 +28,9 @@ This file is part of Jedi Academy.
 //
 //
 ////////////////////////////////////////////////////////////////////////////////////////
-#include "g_headers.h"
 #include "b_local.h"
+#include "../Ravl/CVec.h"
+#include "../cgame/cg_main.h"
 
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -145,7 +146,7 @@ void	Boba_Printf(const char * format, ...)
 
 	va_list		argptr;
 	va_start (argptr, format);
-	Q_vsnprintf (buf, sizeof(buf), nFormat, argptr);
+	Q_vsnprintf (buf, sizeof(*string), nFormat, argptr);
 	va_end (argptr);
 
 	// Print It To Debug Output Console

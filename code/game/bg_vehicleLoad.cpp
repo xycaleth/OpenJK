@@ -25,7 +25,7 @@ This file is part of Jedi Academy.
 #endif
 
 #ifdef _JK2MP
-	#include "q_shared.h"
+	#include "../qcommon/q_shared.h"
 	#include "bg_public.h"
 	#include "bg_vehicles.h"
 	#include "bg_weapons.h"
@@ -90,7 +90,7 @@ extern stringID_table_t animTable [MAX_ANIMATIONS+1];
 #define MAX_VEH_WEAPON_DATA_SIZE 0x40000
 #define MAX_VEHICLE_DATA_SIZE 0x100000
 
-#if !defined(_XBOX) || defined(QAGAME)
+#if defined(QAGAME)
 	char	VehWeaponParms[MAX_VEH_WEAPON_DATA_SIZE];
 	char	VehicleParms[MAX_VEHICLE_DATA_SIZE];
 
@@ -148,7 +148,7 @@ typedef enum {
 
 typedef struct
 {
-	char	*name;
+	const char	*name;
 	int		ofs;
 	vehFieldType_t	type;
 } vehField_t;
@@ -700,7 +700,7 @@ stringID_table_t VehicleTable[VH_NUM_VEHICLES+1] =
 	ENUM2STRING(VH_SPEEDER),	//something you ride on that hovers, like a speeder or swoop
 	ENUM2STRING(VH_ANIMAL),		//animal you ride on top of that walks, like a tauntaun
 	ENUM2STRING(VH_FLIER),		//animal you ride on top of that flies, like a giant mynoc?
-	0,	-1
+	{ 0,	-1 }
 };
 
 // Setup the shared functions (one's that all vehicles would generally use).
@@ -725,6 +725,8 @@ void BG_SetSharedVehicleFunctions( vehicleInfo_t *pVehInfo )
 			break;
 		case VH_WALKER:
 			G_SetWalkerVehicleFunctions( pVehInfo );
+			break;
+		default:
 			break;
 	}
 #endif
@@ -860,7 +862,7 @@ void BG_VehicleClampData( vehicleInfo_t *vehicle )
 	}
 }
 
-static qboolean BG_ParseVehicleParm( vehicleInfo_t *vehicle, char *parmName, char *pValue )
+static qboolean BG_ParseVehicleParm( vehicleInfo_t *vehicle, const char *parmName, char *pValue )
 {
 	int		i;
 	vec3_t	vec;
@@ -1268,6 +1270,8 @@ int VEH_LoadVehicle( const char *vehicleName )
 		}
 	}
 
+	COM_EndParseSession(  );
+
 #ifdef _JK2MP
 	//let's give these guys some defaults
 	if (!vehicle->health_front)
@@ -1387,7 +1391,6 @@ int VEH_LoadVehicle( const char *vehicleName )
 	}
 #endif
 
-	COM_EndParseSession(  );
 	return (numVehicles++);
 }
 

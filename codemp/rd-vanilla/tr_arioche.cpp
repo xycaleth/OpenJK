@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "tr_local.h"
 #include "tr_WorldEffects.h"
 
@@ -13,7 +10,6 @@ void R_RMGInit(void)
 {
 	char			newSky[MAX_QPATH];
 	char			newFog[MAX_QPATH];
-	shader_t		*sky;
 	shader_t		*fog;
 	fog_t			*gfog;
 	mgrid_t			*grid;
@@ -21,9 +17,9 @@ void R_RMGInit(void)
 	int				i;
 	unsigned short	*pos;
 
-	ri.Cvar_VariableStringBuffer("RMG_sky", newSky, MAX_QPATH);
+	ri->Cvar_VariableStringBuffer("RMG_sky", newSky, MAX_QPATH);
 	// Get sunlight - this should set up all the sunlight data
-	sky = R_FindShader( newSky, lightmapsNone, stylesDefault, qfalse );
+	R_FindShader( newSky, lightmapsNone, stylesDefault, qfalse );
 
 	// Remap sky
 	R_RemapShader("textures/tools/_sky", newSky, NULL);
@@ -55,7 +51,7 @@ void R_RMGInit(void)
 	// Override the global fog with the defined one
 	if(tr.world->globalFog != -1)
 	{
-		ri.Cvar_VariableStringBuffer("RMG_fog", newFog, MAX_QPATH);
+		ri->Cvar_VariableStringBuffer("RMG_fog", newFog, MAX_QPATH);
 		fog = R_FindShader( newFog, lightmapsNone, stylesDefault, qfalse);
 		if (fog != tr.defaultShader)
 		{
@@ -66,7 +62,7 @@ void R_RMGInit(void)
 				gfog->tcScale = 1.0f / ( gfog->parms.depthForOpaque * 8.0f );
 				tr.distanceCull = gfog->parms.depthForOpaque;
 				tr.distanceCullSquared = tr.distanceCull * tr.distanceCull;
-				ri.Cvar_Set("RMG_distancecull", va("%f", tr.distanceCull));
+				ri->Cvar_Set("RMG_distancecull", va("%f", tr.distanceCull));
 			}
 			else
 			{
@@ -78,7 +74,7 @@ void R_RMGInit(void)
 		}
 	}
 
-	ri.Cvar_VariableStringBuffer("RMG_weather", temp, MAX_QPATH);
+	ri->Cvar_VariableStringBuffer("RMG_weather", temp, MAX_QPATH);
 
 	// Set up any weather effects
 	switch(atol(temp))

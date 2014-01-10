@@ -3166,7 +3166,7 @@ qboolean QGL_Init( const char *dllname )
 
 //	Com_Printf ("...calling LoadLibrary( '%s.dll' ): ", dllname );
 
-	if ( ( glw_state.hinstOpenGL = LoadLibraryEx( dllname, 0, 0 ) ) == 0 )
+	if ( ( glw_state.hinstOpenGL = LoadLibrary( dllname ) ) == 0 )
 	{
 	    DWORD dw = GetLastError();
 		Com_Printf ("failed %u\n", dw );
@@ -3550,7 +3550,7 @@ void QGL_EnableLogging( qboolean enable )
 	// return if we're already active
 	if ( isEnabled && enable ) {
 		// decrement log counter and stop if it has reached 0
-		ri.Cvar_Set( "r_logFile", va("%d", r_logFile->integer - 1 ) );
+		ri->Cvar_Set( "r_logFile", va("%d", r_logFile->integer - 1 ) );
 		if ( r_logFile->integer ) {
 			return;
 		}
@@ -3575,7 +3575,7 @@ void QGL_EnableLogging( qboolean enable )
 			time( &aclock );
 			newtime = localtime( &aclock );
 
-			basedir = ri.Cvar_Get( "fs_basepath", "", 0 );
+			basedir = ri->Cvar_Get( "fs_basepath", "", 0 );
 			Com_sprintf( buffer, sizeof(buffer), "%s/gl.log", basedir->string ); 
 			glw_state.log_fp = fopen( buffer, "wt" );
 

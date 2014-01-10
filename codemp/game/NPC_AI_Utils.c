@@ -36,7 +36,7 @@ int	AI_GetGroupSize( vec3_t origin, int radius, team_t playerTeam, gentity_t *av
 	}
 
 	//Get the number of entities in a given space
-	numEnts = trap_EntitiesInBox( mins, maxs, radiusEnts, MAX_RADIUS_ENTS );
+	numEnts = trap->EntitiesInBox( mins, maxs, radiusEnts, MAX_RADIUS_ENTS );
 
 	//Cull this list
 	for ( j = 0; j < numEnts; j++ )
@@ -52,7 +52,7 @@ int	AI_GetGroupSize( vec3_t origin, int radius, team_t playerTeam, gentity_t *av
 			continue;
 
 		//Must be on the same team
-		if ( check->client->playerTeam != playerTeam )
+		if ( check->client->playerTeam != (npcteam_t)playerTeam )
 			continue;
 
 		//Must be alive
@@ -72,7 +72,7 @@ int AI_GetGroupSize2( gentity_t *ent, int radius )
 	if ( ( ent == NULL ) || ( ent->client == NULL ) )
 		return -1;
 
-	return AI_GetGroupSize( ent->r.currentOrigin, radius, ent->client->playerTeam, ent );
+	return AI_GetGroupSize( ent->r.currentOrigin, radius, (team_t)ent->client->playerTeam, ent );
 }
 
 extern int NAV_FindClosestWaypointForPoint( gentity_t *ent, vec3_t point );
@@ -97,7 +97,7 @@ int AI_ClosestGroupEntityNumToPoint( AIGroupInfo_t *group, vec3_t point )
 
 	for ( i = 0; i < group->numGroup; i++ )
 	{
-		cost = trap_Nav_GetPathCost( group->member[i].waypoint, markerWP );
+		cost = trap->Nav_GetPathCost( group->member[i].waypoint, markerWP );
 		if ( cost < bestCost )
 		{
 			bestCost = cost;
@@ -157,7 +157,7 @@ void AI_SortGroupByPathCostToEnemy( AIGroupInfo_t *group )
 			group->member[i].waypoint = NAV_FindClosestWaypointForEnt( group->enemy, WAYPOINT_NONE );
 			if ( group->member[i].waypoint != WAYPOINT_NONE )
 			{
-				group->member[i].pathCostToEnemy = trap_Nav_GetPathCost( group->member[i].waypoint, group->enemyWP );
+				group->member[i].pathCostToEnemy = trap->Nav_GetPathCost( group->member[i].waypoint, group->enemyWP );
 				//at least one of us has a path, so do sorting
 				sort = qtrue;
 			}
@@ -331,7 +331,7 @@ qboolean AI_ValidateNoEnemyGroupMember( AIGroupInfo_t *group, gentity_t *member 
 	{
 		return qfalse;
 	}
-	if ( !trap_InPVS( member->r.currentOrigin, center ) )
+	if ( !trap->InPVS( member->r.currentOrigin, center ) )
 	{//not within PVS of the group enemy
 		return qfalse;
 	}
@@ -376,7 +376,7 @@ qboolean AI_ValidateGroupMember( AIGroupInfo_t *group, gentity_t *member )
 	//rwwFIXMEFIXME: support this flag
 
 	//Must be on the same team
-	if ( member->client->playerTeam != group->team )
+	if ( member->client->playerTeam != (npcteam_t)group->team )
 		return qfalse;
 
 	if ( member->client->ps.weapon == WP_SABER ||//!= self->s.weapon )
@@ -414,7 +414,7 @@ qboolean AI_ValidateGroupMember( AIGroupInfo_t *group, gentity_t *member )
 		{//he's fighting someone else, leave him out
 			return qfalse;
 		}
-		if ( !trap_InPVS( member->r.currentOrigin, group->enemy->r.currentOrigin ) )
+		if ( !trap->InPVS( member->r.currentOrigin, group->enemy->r.currentOrigin ) )
 		{//not within PVS of the group enemy
 			return qfalse;
 		}
@@ -438,7 +438,6 @@ qboolean AI_ValidateGroupMember( AIGroupInfo_t *group, gentity_t *member )
 AI_GetGroup
 -------------------------
 */
-//#define MAX_WAITERS	128
 void AI_GetGroup( gentity_t *self )
 {
 	int	i;
@@ -483,7 +482,7 @@ void AI_GetGroup( gentity_t *self )
 	memset( self->NPC->group, 0, sizeof( AIGroupInfo_t ) );
 
 	self->NPC->group->enemy = self->enemy;
-	self->NPC->group->team = self->client->playerTeam;
+	self->NPC->group->team = (team_t)self->client->playerTeam;
 	self->NPC->group->processed = qfalse;
 	self->NPC->group->commander = self;
 	self->NPC->group->memberValidateTime = level.time + 2000;
@@ -532,7 +531,7 @@ void AI_GetGroup( gentity_t *self )
 		{
 			member = &g_entities[self->NPC->group->member[j];
 
-			if ( trap_InPVS( waiter->r.currentOrigin, member->r.currentOrigin ) )
+			if ( trap->InPVS( waiter->r.currentOrigin, member->r.currentOrigin ) )
 			{//this waiter is within PVS of a current member
 			}
 		}
@@ -809,7 +808,7 @@ qboolean AI_RefreshGroup( AIGroupInfo_t *group )
 		}
 		if ( j < group->numGroup )
 		{//found a dupe!
-			gi.Printf( S_COLOR_RED"ERROR: member %s(%d) a duplicate group member!!!\n", g_entities[group->member[i].number].targetname, group->member[i].number );
+			trap->Printf( S_COLOR_RED"ERROR: member %s(%d) a duplicate group member!!!\n", g_entities[group->member[i].number].targetname, group->member[i].number );
 			AI_DeleteGroupMember( group, i );
 			i--;
 			continue;
@@ -1104,7 +1103,7 @@ gentity_t *AI_DistributeAttack( gentity_t *attacker, gentity_t *enemy, team_t te
 	}
 
 	//Get the number of entities in a given space
-	numEnts = trap_EntitiesInBox( mins, maxs, radiusEnts, MAX_RADIUS_ENTS );
+	numEnts = trap->EntitiesInBox( mins, maxs, radiusEnts, MAX_RADIUS_ENTS );
 
 	//Cull this list
 	for ( j = 0; j < numEnts; j++ )
@@ -1116,7 +1115,7 @@ gentity_t *AI_DistributeAttack( gentity_t *attacker, gentity_t *enemy, team_t te
 			continue;
 
 		//Skip the requested avoid ent if present
-		if ( ( check == enemy ) )
+		if ( check == enemy )
 			continue;
 
 		//Must be on the same team

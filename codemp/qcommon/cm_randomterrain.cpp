@@ -118,7 +118,7 @@ static void lerp(float t, float a0, float a1, vec4_t p0, vec4_t p1, int m, vec4_
     n+1 of them are provided. The work array must have room for n+1 points.
  */
 static int DialASpline(float t, float a[], vec4_t p[], int m, int n, vec4_t work[],
-                    unsigned int Cn, bool interp, vec4_t val)
+                    int Cn, bool interp, vec4_t val)
 {
     register int i, j, k, h, lo, hi;
 
@@ -159,7 +159,7 @@ static int DialASpline(float t, float a[], vec4_t p[], int m, int n, vec4_t work
 
 #define BIG (1.0e12)
 
-static vec_t Vector2Normalize( vec2_t v ) 
+static float Vector2Normalize( vec2_t v ) 
 {
 	float	length, ilength;
 
@@ -180,11 +180,9 @@ CPathInfo::CPathInfo(CCMLandScape *landscape, int numPoints, float bx, float by,
 					 float minWidth, float maxWidth, float depth, float deviation, float breadth,
 					 CPathInfo *Connected, unsigned CreationFlags) :
 	mNumPoints(numPoints),
-	mMinWidth(minWidth),
-	mMaxWidth(maxWidth),
 	mDepth(depth),
-	mDeviation(deviation),
-	mBreadth(breadth)
+	mBreadth(breadth),
+	mDeviation(deviation)
 {
 	int		i, numConnected, index;
 	float	position, goal, deltaGoal;
@@ -194,7 +192,7 @@ CPathInfo::CPathInfo(CCMLandScape *landscape, int numPoints, float bx, float by,
 	float	currentWidth;
 	float	currentPosition;
 	vec2_t	testPoint, percPoint, diffPoint, normalizedPath;
-	float	distance, length;
+	float	distance;
 	
 	CreateCircle();
 
@@ -214,9 +212,8 @@ CPathInfo::CPathInfo(CCMLandScape *landscape, int numPoints, float bx, float by,
 
 	mPoints = (vec4_t *)malloc(sizeof(vec4_t) * mNumPoints);
 	mWork = (vec4_t *)malloc(sizeof(vec4_t) * (mNumPoints+1));
-	mWeights = (vec_t *)malloc(sizeof(vec_t) * (mNumPoints+1));
+	mWeights = (float *)malloc(sizeof(float) * (mNumPoints+1));
 
-	length = sqrt((ex-bx)*(ex-bx) + (ey-by)*(ey-by));
 	if (fabs(ex - bx) >= fabs(ey - by))
 	{	// this appears to be a horizontal path
 		mInc = 1.0 / fabs(ex - bx);
@@ -394,11 +391,11 @@ void CPathInfo::Stamp(int x, int y, int size, int depth, unsigned char *Data, in
 //	int xPos;
 //	float yPos;
 	int		dx, dy, fx, fy;
-	float	offset;
+	//float	offset;
 	byte	value;
 	byte	invDepth;
 
-	offset = (float)(CIRCLE_STAMP_SIZE-1) / size;
+	//offset = (float)(CIRCLE_STAMP_SIZE-1) / size;
 	invDepth = 255-depth;
 
 	for(dx = -size; dx <= size; dx++)
@@ -483,21 +480,21 @@ void CPathInfo::GetInfo(float PercentInto, vec4_t Coord, vec4_t Vector)
 	vec4_t	before, after;
 	float	testPercent;
 
-	DialASpline(PercentInto, mWeights, mPoints, sizeof(vec4_t) / sizeof(vec_t), mNumPoints-1, mWork, 2, true, Coord);
+	DialASpline(PercentInto, mWeights, mPoints, sizeof(vec4_t) / sizeof(float), mNumPoints-1, mWork, 2, true, Coord);
 
 	testPercent = PercentInto - 0.01;
 	if (testPercent < 0)
 	{
 		testPercent = 0;
 	}
-	DialASpline(testPercent, mWeights, mPoints, sizeof(vec4_t) / sizeof(vec_t), mNumPoints-1, mWork, 2, true, before);
+	DialASpline(testPercent, mWeights, mPoints, sizeof(vec4_t) / sizeof(float), mNumPoints-1, mWork, 2, true, before);
 
 	testPercent = PercentInto + 0.01;
 	if (testPercent > 1.0)
 	{
 		testPercent = 1.0;
 	}
-	DialASpline(testPercent, mWeights, mPoints, sizeof(vec4_t) / sizeof(vec_t), mNumPoints-1, mWork, 2, true, after);
+	DialASpline(testPercent, mWeights, mPoints, sizeof(vec4_t) / sizeof(float), mNumPoints-1, mWork, 2, true, after);
 
 	Coord[2] = mDepth;
 
@@ -714,8 +711,8 @@ void CRandomTerrain::Smooth ( void )
 	int		xx, yy, dx, dy;
 	float	total, num;
 
-	re.Resample(mGrid, mWidth, mHeight, temp, mWidth >> 1, mHeight >> 1, 1);
-	re.Resample(temp, mWidth >> 1, mHeight >> 1, mGrid, mWidth, mHeight, 1);
+	re->Resample(mGrid, mWidth, mHeight, temp, mWidth >> 1, mHeight >> 1, 1);
+	re->Resample(temp, mWidth >> 1, mHeight >> 1, mGrid, mWidth, mHeight, 1);
 
 	// now lets filter it.
 	memcpy(temp, mGrid, mWidth * mHeight);
@@ -838,7 +835,7 @@ typedef enum
 
 typedef struct SCharacterPiece
 {
-	char	*mPiece;
+	const char	*mPiece;
 	int		mCommonality;
 } TCharacterPiece;
 

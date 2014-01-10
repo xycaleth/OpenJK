@@ -15,11 +15,7 @@ This file is part of Jedi Academy.
     along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
 */
 // Copyright 2001-2013 Raven Software
-
-// leave this line at the top for all g_xxxx.cpp files...
-#include "g_headers.h"
-
-#include "q_shared.h"
+#include "../qcommon/q_shared.h"
 #include "g_local.h"
 
 #ifdef _JK2 //SP does not have this preprocessor for game like MP does
@@ -1468,14 +1464,9 @@ static void DeathUpdate( Vehicle_t *pVeh )
 #endif
 			if ( pVeh->m_pVehicleInfo->iExplodeFX )
 			{
-#ifdef _JK2MP
-				vec3_t fxAng;
+				vec3_t fxAng = { -90.0f, 0.0f, 0.0f };
+				G_PlayEffect( pVeh->m_pVehicleInfo->iExplodeFX, parent->currentOrigin, fxAng );
 
-				VectorSet(fxAng, -90.0f, 0.0f, 0.0f);
-				G_PlayEffectID( pVeh->m_pVehicleInfo->iExplodeFX, parent->currentOrigin, fxAng );
-#else
-				G_PlayEffect( pVeh->m_pVehicleInfo->iExplodeFX, parent->currentOrigin, vec3_origin );
-#endif
 				//trace down and place mark
 				VectorCopy( parent->currentOrigin, bottom );
 				bottom[2] -= 80;

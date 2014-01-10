@@ -1,11 +1,3 @@
-// leave this as first line for PCH reasons...
-//
-
-
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
-
 #include "qcommon/matcomp.h"
 #include "ghoul2/G2.h"
 #include "qcommon/MiniHeap.h"
@@ -123,17 +115,9 @@ CGoreSet *FindGoreSet(int goreSetTag)
 	return 0;
 }
 
-#ifdef _DEBUG
-int g_goreAllocs = 0;
-int g_goreTexAllocs = 0;
-#endif
-
 CGoreSet *NewGoreSet()
 {
 	CGoreSet *ret=new CGoreSet(CurrentGoreSet++);
-#ifdef _DEBUG
-	g_goreAllocs++;
-#endif
 	GoreSets[ret->mMyGoreSetTag]=ret;
 	ret->mRefCount = 1;
 	return ret;
@@ -146,9 +130,6 @@ void DeleteGoreSet(int goreSetTag)
 	{
 		if ( (*f).second->mRefCount == 0 || (*f).second->mRefCount - 1 == 0 )
 		{
-#ifdef _DEBUG
-			g_goreAllocs--;
-#endif
 			delete (*f).second;
 			GoreSets.erase(f);
 		}
@@ -163,7 +144,7 @@ void DeleteGoreSet(int goreSetTag)
 CGoreSet::~CGoreSet()
 {
 	multimap<int,SGoreSurface>::iterator i;
-	for (i=mGoreRecords.begin();i!=mGoreRecords.end();i++)
+	for (i=mGoreRecords.begin();i!=mGoreRecords.end();++i)
 	{
 		DeleteGoreRecord((*i).second.mGoreTag);
 	}
@@ -172,7 +153,9 @@ CGoreSet::~CGoreSet()
 
 const mdxaBone_t &EvalBoneCache(int index,CBoneCache *boneCache);
 
+#ifdef _MSC_VER
 #pragma warning(disable : 4512)		//assignment op could not be genereated
+#endif
 class CTraceSurface
 {
 public:
@@ -243,8 +226,8 @@ public:
 	modelIndex(initmodelIndex),
 	skin(initskin),
 	cust_shader(initcust_shader),
-	traceFlags(inittraceFlags),
 	TransformedVertsArray(initTransformedVertsArray),
+	traceFlags(inittraceFlags),
 #ifdef _G2_GORE
 	m_fRadius(fRadius),
 	ssize(initssize),
@@ -552,7 +535,7 @@ void G2_TransformModel(CGhoul2Info_v &ghoul2, const int frameNum, vec3_t scale, 
 
 	if ( cg_g2MarksAllModels == NULL )
 	{
-		cg_g2MarksAllModels = ri.Cvar_Get( "cg_g2MarksAllModels", "0", 0 );
+		cg_g2MarksAllModels = ri->Cvar_Get( "cg_g2MarksAllModels", "0", 0 );
 	}
 
 	if (cg_g2MarksAllModels == NULL
@@ -620,14 +603,14 @@ void G2_TransformModel(CGhoul2Info_v &ghoul2, const int frameNum, vec3_t scale, 
 		// give us space for the transformed vertex array to be put in
 		if (!(g.mFlags & GHOUL2_ZONETRANSALLOC))
 		{ //do not stomp if we're using zone space
-			g.mTransformedVertsArray = (size_t*)G2VertSpace->MiniHeapAlloc(g.currentModel->mdxm->numSurfaces * 4);
+			g.mTransformedVertsArray = (size_t*)G2VertSpace->MiniHeapAlloc(g.currentModel->mdxm->numSurfaces * sizeof (size_t));
 			if (!g.mTransformedVertsArray)
 			{
 				Com_Error(ERR_DROP, "Ran out of transform space for Ghoul2 Models. Adjust MiniHeapSize in SV_SpawnServer.\n");
 			}
 		}
 
-		memset(g.mTransformedVertsArray, 0,(g.currentModel->mdxm->numSurfaces * 4)); 
+		memset(g.mTransformedVertsArray, 0,g.currentModel->mdxm->numSurfaces * sizeof (size_t)); 
 
 		G2_FindOverrideSurface(-1,g.mSlist); //reset the quick surface override lookup;
 		// recursively call the model surface transform
@@ -1003,16 +986,10 @@ void G2_GorePolys( const mdxmSurface_t *surface, CTraceSurface &TS, const mdxmSu
 
 		int *data=(int *)Z_Malloc ( sizeof(int)*size, TAG_GHOUL2_GORE, qtrue );
 
-#ifdef _DEBUG
-		g_goreTexAllocs++;
-#endif
 
 		if ( gore->tex[TS.lod] )
 		{
 			Z_Free(gore->tex[TS.lod]);
-#ifdef _DEBUG
-			g_goreTexAllocs--;
-#endif
 		}
 
 		gore->tex[TS.lod]=(float *)data;
@@ -1507,7 +1484,7 @@ void G2_TraceModels(CGhoul2Info_v &ghoul2, vec3_t rayStart, vec3_t rayEnd, Colli
 
 	if ( cg_g2MarksAllModels == NULL )
 	{
-		cg_g2MarksAllModels = ri.Cvar_Get( "cg_g2MarksAllModels", "0", 0 );
+		cg_g2MarksAllModels = ri->Cvar_Get( "cg_g2MarksAllModels", "0", 0 );
 	}
 
 	if (cg_g2MarksAllModels == NULL
@@ -1613,7 +1590,7 @@ void TransformAndTranslatePoint (const vec3_t in, vec3_t out, mdxaBone_t *mat) {
 // create a matrix using a set of angles
 void Create_Matrix(const float *angle, mdxaBone_t *matrix)
 {
-	vec3_t		axis[3];
+	matrix3_t	axis;
 
 	// convert angles to axis
 	AnglesToAxis( angle, axis );
@@ -1759,8 +1736,7 @@ qboolean G2_SaveGhoul2Models(CGhoul2Info_v &ghoul2, char **buffer, int *size)
 		tempBuffer +=4;
 
 		// now save the all the surface list info
-		int x;
-		for (x=0; x<ghoul2[i].mSlist.size(); x++)
+		for (size_t x=0; x<ghoul2[i].mSlist.size(); x++)
 		{
 			memcpy(tempBuffer, &ghoul2[i].mSlist[x], SURFACE_SAVE_BLOCK_SIZE);
 			tempBuffer += SURFACE_SAVE_BLOCK_SIZE;
@@ -1771,7 +1747,7 @@ qboolean G2_SaveGhoul2Models(CGhoul2Info_v &ghoul2, char **buffer, int *size)
 		tempBuffer +=4;
 
 		// now save the all the bone list info
-		for (x=0; x<ghoul2[i].mBlist.size(); x++)
+		for (size_t x=0; x<ghoul2[i].mBlist.size(); x++)
 		{
 			memcpy(tempBuffer, &ghoul2[i].mBlist[x], BONE_SAVE_BLOCK_SIZE);
 			tempBuffer += BONE_SAVE_BLOCK_SIZE;
@@ -1782,7 +1758,7 @@ qboolean G2_SaveGhoul2Models(CGhoul2Info_v &ghoul2, char **buffer, int *size)
 		tempBuffer +=4;
 
 		// lastly save the all the bolt list info
-		for (x=0; x<ghoul2[i].mBltlist.size(); x++)
+		for (size_t x=0; x<ghoul2[i].mBltlist.size(); x++)
 		{
 			memcpy(tempBuffer, &ghoul2[i].mBltlist[x], BOLT_SAVE_BLOCK_SIZE);
 			tempBuffer += BOLT_SAVE_BLOCK_SIZE;
@@ -1804,18 +1780,18 @@ int G2_FindConfigStringSpace(char *name, int start, int max)
 	int i;
 	for ( i=1 ; i<max ; i++ ) 
 	{
-		ri.SV_GetConfigstring( start + i, s, sizeof( s ) );
+		ri->SV_GetConfigstring( start + i, s, sizeof( s ) );
 		if ( !s[0] ) 
 		{
 			break;
 		}
-		if ( !stricmp( s, name ) ) 
+		if ( !Q_stricmp( s, name ) ) 
 		{
 			return i;
 		}
 	}
 
-	ri.SV_SetConfigstring(start + i, name);
+	ri->SV_SetConfigstring(start + i, name);
 	return i;
 }
 
@@ -1862,8 +1838,7 @@ void G2_LoadGhoul2Model(CGhoul2Info_v &ghoul2, char *buffer)
 		buffer +=4;
 
 		// now load all the surfaces
-		int x;
-		for (x=0; x<ghoul2[i].mSlist.size(); x++)
+		for (size_t x=0; x<ghoul2[i].mSlist.size(); x++)
 		{
 			memcpy(&ghoul2[i].mSlist[x], buffer, SURFACE_SAVE_BLOCK_SIZE);
 			buffer += SURFACE_SAVE_BLOCK_SIZE;
@@ -1874,7 +1849,7 @@ void G2_LoadGhoul2Model(CGhoul2Info_v &ghoul2, char *buffer)
 		buffer +=4;
 
 		// now load all the bones
-		for (x=0; x<ghoul2[i].mBlist.size(); x++)
+		for (size_t x=0; x<ghoul2[i].mBlist.size(); x++)
 		{
 			memcpy(&ghoul2[i].mBlist[x], buffer, BONE_SAVE_BLOCK_SIZE);
 			buffer += BONE_SAVE_BLOCK_SIZE;
@@ -1885,7 +1860,7 @@ void G2_LoadGhoul2Model(CGhoul2Info_v &ghoul2, char *buffer)
 		buffer +=4;
 
 		// now load all the bolts
-		for (x=0; x<ghoul2[i].mBltlist.size(); x++)
+		for (size_t x=0; x<ghoul2[i].mBltlist.size(); x++)
 		{
 			memcpy(&ghoul2[i].mBltlist[x], buffer, BOLT_SAVE_BLOCK_SIZE);
 			buffer += BOLT_SAVE_BLOCK_SIZE;
@@ -1901,7 +1876,7 @@ void G2_LerpAngles(CGhoul2Info_v &ghoul2,CGhoul2Info_v &nextGhoul2, float interp
 		if (ghoul2[i].mModelindex != -1)
 		{
 			// now walk the bone list
-			for (int x = 0; x < ghoul2[i].mBlist.size(); x++)
+			for (size_t x = 0; x < ghoul2[i].mBlist.size(); x++)
 			{
 				boneInfo_t	&bone = ghoul2[i].mBlist[x];
 				// sure we have one to lerp to?
@@ -1933,7 +1908,7 @@ void G2_LerpAngles(CGhoul2Info_v &ghoul2,CGhoul2Info_v &nextGhoul2, float interp
 	}
 }
 
-//Raz: Chucking this in here from ghoul2_shared
+//Chucking this in here from ghoul2_shared
 IGhoul2InfoArray &TheGhoul2InfoArray();
 IGhoul2InfoArray &_TheGhoul2InfoArray( void ) {
 	return TheGhoul2InfoArray();

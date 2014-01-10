@@ -3,18 +3,22 @@
 /*
 Ghoul2 Insert Start
 */
+#ifdef _MSC_VER
 #pragma warning (push, 3)	//go back down to 3 for the stl include
+#endif
 #include <vector>
 #include <map>
+#ifdef _MSC_VER
 #pragma warning (pop)
+#endif
 using namespace std;
 /*
 Ghoul2 Insert End
 */
 
 #define MDXABONEDEF
-#include "renderer/mdx_format.h"
-#include "renderer/tr_types.h"
+#include "rd-common/mdx_format.h"
+#include "rd-common/tr_types.h"
 #include "qcommon/matcomp.h"
 #include "ghoul2/G2_gore.h"
 
@@ -25,8 +29,6 @@ struct model_s;
 #define G2T_CG_TIME (1)
 #define NUM_G2T_TIME (2)
 
-//void		G2API_SetTime(int currentTime,int clock);
-//int		G2API_GetTime(int argTime); // this may or may not return arg depending on ghoul2_time cvar
 //rww - RAGDOLL_END
 
 //===================================================================
@@ -282,29 +284,29 @@ public:
 	mCustomShader(0),
 	mCustomSkin(0),
 	mModelBoltLink(0),
-	mModel(0),
 	mSurfaceRoot(0),
+	mLodBias(0),
+	mNewOrigin(-1),
+#ifdef _G2_GORE
+	mGoreSetTag(0),
+#endif
+	mModel(0),
 	mAnimFrameDefault(0),
 	mSkelFrameNum(-1),
 	mMeshFrameNum(-1),
 	mFlags(0),
 	mTransformedVertsArray(0),
-	mLodBias(0),
-	mSkin(0),
-	mNewOrigin(-1),
-#ifdef _G2_GORE
-	mGoreSetTag(0),
-#endif
 	mBoneCache(0),
+	mSkin(0),
+	mValid(false),
 	currentModel(0),
 	currentModelSize(0),
 	animModel(0),
 	currentAnimModelSize(0),
-	aHeader(0),
+	aHeader(0)
 #ifdef _G2_LISTEN_SERVER_OPT
-	entityNum(ENTITYNUM_NONE),
+	, entityNum(ENTITYNUM_NONE)
 #endif
-	mValid(false)
 	{
 		mFileName[0] = 0;
 	}
@@ -315,6 +317,8 @@ class CGhoul2Info_v;
 class IGhoul2InfoArray
 {
 public:
+	virtual ~IGhoul2InfoArray() {}
+
 	virtual int New()=0;
 	virtual void Delete(int handle)=0;
 	virtual bool IsValid(int handle) const=0;
@@ -322,9 +326,10 @@ public:
 	virtual const vector<CGhoul2Info> &Get(int handle) const=0;
 };
 
-//Raz: externing this out of headers for re access :/
+//externing this out of headers for re access :/
 IGhoul2InfoArray &_TheGhoul2InfoArray();
 
+extern const CGhoul2Info NullG2;
 class CGhoul2Info_v
 {
 	IGhoul2InfoArray &InfoArray() const
@@ -398,15 +403,17 @@ public:
 	}
 	CGhoul2Info &operator[](int idx)
 	{
-		assert(mItem);
-		assert(idx>=0&&idx<size());
-		return Array()[idx];
+		if ( IsValid() && idx >= 0 && idx < size() /*&& mItem */ )
+			return Array()[idx];
+		else
+			return const_cast<CGhoul2Info&>( NullG2 );
 	}
 	const CGhoul2Info &operator[](int idx) const
 	{
-		assert(mItem);
-		assert(idx>=0&&idx<size());
-		return Array()[idx];
+		if ( idx >=0 && idx < size() /*&& mItem */ )
+			return Array()[idx];
+		else
+			return NullG2;
 	}
 	void resize(int num)
 	{

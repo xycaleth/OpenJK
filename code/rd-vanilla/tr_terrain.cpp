@@ -545,7 +545,6 @@ void CTRLandScape::SetShaders(const int height, const qhandle_t shader)
 
 void CTRLandScape::LoadTerrainDef(const char *td)
 {
-#ifndef PRE_RELEASE_DEMO
 	char			terrainDef[MAX_QPATH];
 	CGenericParser2	parse;
 	CGPGroup		*basegroup, *classes, *items;
@@ -554,7 +553,7 @@ void CTRLandScape::LoadTerrainDef(const char *td)
 	Com_Printf("R_Terrain: Loading and parsing terrainDef %s.....\n", td);
 
 	mWaterShader = NULL;
-	mFlatShader  = NULL;
+	mFlatShader  = NULL_HANDLE;
 
 	if(!Com_ParseTextFile(terrainDef, parse))
 	{
@@ -577,7 +576,7 @@ void CTRLandScape::LoadTerrainDef(const char *td)
 		{
 			const char* type = items->GetName ( );
 
-			if(!stricmp( type, "altitudetexture"))
+			if(!Q_stricmp( type, "altitudetexture"))
 			{
 				int			height;
 				const char	*shaderName;
@@ -597,11 +596,11 @@ void CTRLandScape::LoadTerrainDef(const char *td)
 					}
 				}
 			}
-			else if(!stricmp(type, "water"))
+			else if(!Q_stricmp(type, "water"))
 			{
 				mWaterShader = R_GetShaderByHandle(RE_RegisterShader(items->FindPairValue("shader", "")));
 			}
-			else if(!stricmp(type, "flattexture"))
+			else if(!Q_stricmp(type, "flattexture"))
 			{
 				mFlatShader = RE_RegisterShader ( items->FindPairValue("shader", "") );
 			}
@@ -612,7 +611,6 @@ void CTRLandScape::LoadTerrainDef(const char *td)
 	}
 	
 	Com_ParseTextFileDestroy(parse);
-#endif // PRE_RELEASE_DEMO
 }
 
 qhandle_t R_CreateBlendedShader(qhandle_t a, qhandle_t b, qhandle_t c, bool surfaceSprites );
@@ -667,7 +665,6 @@ static int ComparePatchInfo(const TPatchInfo *arg1, const TPatchInfo *arg2)
 
 void CTRLandScape::CalculateShaders(void)
 {
-#ifndef PRE_RELEASE_DEMO
 	int						x, y;
 	int						width, height;
 	int						offset;
@@ -744,9 +741,9 @@ void CTRLandScape::CalculateShaders(void)
 				}
 
 #ifdef _DEBUG
-				OutputDebugString ( va("Flat Area:  %f %f\n", 
+				Com_DPrintf ("Flat Area:  %f %f\n", 
 									GetMins()[0] + (GetMaxs()[0]-GetMins()[0])/width * x,
-									GetMins()[1] + (GetMaxs()[1]-GetMins()[1])/height * y) );
+									GetMins()[1] + (GetMaxs()[1]-GetMins()[1])/height * y);
 #endif
 			}
 		}
@@ -807,9 +804,8 @@ void CTRLandScape::CalculateShaders(void)
 	// Cleanup our temporary array
 	delete[] shaders;
 
-	qsort(mSortedPatches, mSortedCount, sizeof(*mSortedPatches), (int (__cdecl *)(const void *,const void *))ComparePatchInfo);
+	qsort(mSortedPatches, mSortedCount, sizeof(*mSortedPatches), (int (*)(const void *,const void *))ComparePatchInfo);
 
-#endif // PRE_RELEASE_DEMO
 }
 
 void CTRPatch::SetRenderMap(const int x, const int y) 
@@ -883,7 +879,6 @@ qhandle_t R_GetShaderByNum(int shaderNum, world_t &worldData);
 
 CTRLandScape::CTRLandScape(const char *configstring)
 {
-#ifndef PRE_RELEASE_DEMO
 	int					shaderNum;
 	const CCMLandScape	*common;
 
@@ -944,7 +939,6 @@ CTRLandScape::CTRLandScape(const char *configstring)
 #if	_DEBUG
 	mCycleCount = 0;
 #endif
-#endif // PRE_RELEASE_DEMO
 }
 
 // ---------------------------------------------------------------------
@@ -1013,7 +1007,7 @@ void R_AddTerrainSurfaces(void)
 
 void RE_InitRendererTerrain( const char *info )
 {
-	CTRLandScape	*ls;
+	//CTRLandScape	*ls;
 
 	if ( !info || !info[0] )
 	{
@@ -1024,7 +1018,7 @@ void RE_InitRendererTerrain( const char *info )
 	Com_Printf("R_Terrain: Creating RENDERER data.....\n");
 
 	// Create and register a new landscape structure
-	ls = new CTRLandScape(info);
+	/*ls = */new CTRLandScape(info);
 }
 
 void R_TerrainInit(void)

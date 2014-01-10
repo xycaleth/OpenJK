@@ -15,20 +15,15 @@ This file is part of Jedi Knight 2.
     along with Jedi Knight 2.  If not, see <http://www.gnu.org/licenses/>.
 */
 // Copyright 2001-2013 Raven Software
-
-// this line must stay at top so the whole PCH thing works...
-#include "cg_headers.h"
-//#include "../ui/ui_shared.h"
-
-//#include "cg_local.h"
+#include "cg_local.h"
 #include "cg_media.h"
 #include "FxScheduler.h"
 
-#include "..\client\vmachine.h"
-#include "..\game\characters.h"
+#include "../../code/client/vmachine.h"
+#include "../game/characters.h"
 #include "cg_lights.h"
 
-#include "../qcommon/sstring.h"
+#include "../../code/qcommon/sstring.h"
 //NOTENOTE: Be sure to change the mirrored code in g_shared.h
 typedef	map< sstring_t, unsigned char, less<sstring_t>, allocator< unsigned char >  >	namePrecache_m;
 extern namePrecache_m	*as_preCacheMap;
@@ -102,7 +97,7 @@ This is the only way control passes into the cgame module.
 This must be the very first function compiled into the .q3vm file
 ================
 */
-int vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7 ) {
+extern "C" Q_EXPORT intptr_t vmMain( intptr_t command, intptr_t arg0, intptr_t arg1, intptr_t arg2, intptr_t arg3, intptr_t arg4, intptr_t arg5, intptr_t arg6, intptr_t arg7 ) {
 	centity_t		*cent;
 
 	switch ( command ) {
@@ -1119,41 +1114,40 @@ void CG_RegisterClientModels (int entityNum)
 
 forceTicPos_t forceTicPos[] = 
 {
+ 11,  41,  20,  10,	"gfx/hud/force_tick1", NULL_HANDLE,		// Left Top
+ 12,  45,  20,  10, "gfx/hud/force_tick2", NULL_HANDLE,
+ 14,  49,  20,  10, "gfx/hud/force_tick3", NULL_HANDLE,
+ 17,  52,  20,  10, "gfx/hud/force_tick4", NULL_HANDLE,
+ 22,  55,  10,  10, "gfx/hud/force_tick5", NULL_HANDLE,
+ 28,  57,  10,  20, "gfx/hud/force_tick6", NULL_HANDLE,
+ 34,  59,  10,  10,	"gfx/hud/force_tick7", NULL_HANDLE,		// Left bottom
 
- 11,  41,  20,  10,	"gfx/hud/force_tick1", NULL,		// Left Top
- 12,  45,  20,  10, "gfx/hud/force_tick2", NULL,
- 14,  49,  20,  10, "gfx/hud/force_tick3", NULL,
- 17,  52,  20,  10, "gfx/hud/force_tick4", NULL,
- 22,  55,  10,  10, "gfx/hud/force_tick5", NULL,
- 28,  57,  10,  20, "gfx/hud/force_tick6", NULL,
- 34,  59,  10,  10,	"gfx/hud/force_tick7", NULL,		// Left bottom
-
- 46,  59, -10,  10, "gfx/hud/force_tick7", NULL,		// Right bottom
- 52,  57, -10,  20, "gfx/hud/force_tick6", NULL,
- 58,  55, -10,  10, "gfx/hud/force_tick5", NULL,
- 63,  52, -20,  10, "gfx/hud/force_tick4", NULL,
- 66,  49, -20,  10, "gfx/hud/force_tick3", NULL,
- 68,  45, -20,  10, "gfx/hud/force_tick2", NULL,
- 69,  41, -20,  10,	"gfx/hud/force_tick1", NULL,		// Right top
+ 46,  59, -10,  10, "gfx/hud/force_tick7", NULL_HANDLE,		// Right bottom
+ 52,  57, -10,  20, "gfx/hud/force_tick6", NULL_HANDLE,
+ 58,  55, -10,  10, "gfx/hud/force_tick5", NULL_HANDLE,
+ 63,  52, -20,  10, "gfx/hud/force_tick4", NULL_HANDLE,
+ 66,  49, -20,  10, "gfx/hud/force_tick3", NULL_HANDLE,
+ 68,  45, -20,  10, "gfx/hud/force_tick2", NULL_HANDLE,
+ 69,  41, -20,  10,	"gfx/hud/force_tick1", NULL_HANDLE,		// Right top
 };
 
 forceTicPos_t ammoTicPos[] = 
 {
- 12,  34,  10,  10, "gfx/hud/ammo_tick7-l", NULL, 	// Bottom
- 13,  28,  10,  10, "gfx/hud/ammo_tick6-l", NULL,
- 15,  23,  10,  10, "gfx/hud/ammo_tick5-l", NULL,
- 19,  19,  10,  10, "gfx/hud/ammo_tick4-l", NULL,
- 23,  15,  10,  10, "gfx/hud/ammo_tick3-l", NULL,
- 29,  12,  10,  10, "gfx/hud/ammo_tick2-l", NULL,
- 34,  11,  10,  10, "gfx/hud/ammo_tick1-l", NULL,
+ 12,  34,  10,  10, "gfx/hud/ammo_tick7-l", NULL_HANDLE, 	// Bottom
+ 13,  28,  10,  10, "gfx/hud/ammo_tick6-l", NULL_HANDLE,
+ 15,  23,  10,  10, "gfx/hud/ammo_tick5-l", NULL_HANDLE,
+ 19,  19,  10,  10, "gfx/hud/ammo_tick4-l", NULL_HANDLE,
+ 23,  15,  10,  10, "gfx/hud/ammo_tick3-l", NULL_HANDLE,
+ 29,  12,  10,  10, "gfx/hud/ammo_tick2-l", NULL_HANDLE,
+ 34,  11,  10,  10, "gfx/hud/ammo_tick1-l", NULL_HANDLE,
 
- 47,  11, -10,  10, "gfx/hud/ammo_tick1-r", NULL,
- 52,  12, -10,  10, "gfx/hud/ammo_tick2-r", NULL,
- 58,  15, -10,  10, "gfx/hud/ammo_tick3-r", NULL,
- 62,  19, -10,  10, "gfx/hud/ammo_tick4-r", NULL,
- 66,  23, -10,  10, "gfx/hud/ammo_tick5-r", NULL,
- 68,  28, -10,  10, "gfx/hud/ammo_tick6-r", NULL,
- 69,  34, -10,  10, "gfx/hud/ammo_tick7-r", NULL,
+ 47,  11, -10,  10, "gfx/hud/ammo_tick1-r", NULL_HANDLE,
+ 52,  12, -10,  10, "gfx/hud/ammo_tick2-r", NULL_HANDLE,
+ 58,  15, -10,  10, "gfx/hud/ammo_tick3-r", NULL_HANDLE,
+ 62,  19, -10,  10, "gfx/hud/ammo_tick4-r", NULL_HANDLE,
+ 66,  23, -10,  10, "gfx/hud/ammo_tick5-r", NULL_HANDLE,
+ 68,  28, -10,  10, "gfx/hud/ammo_tick6-r", NULL_HANDLE,
+ 69,  34, -10,  10, "gfx/hud/ammo_tick7-r", NULL_HANDLE,
 };
 
 
@@ -1523,8 +1517,10 @@ void CG_StartMusic( qboolean bForceStart ) {
 
 	// start the background music
 	s = (char *)CG_ConfigString( CS_MUSIC );
+	COM_BeginParseSession();
 	Q_strncpyz( parm1, COM_Parse( &s ), sizeof( parm1 ) );
 	Q_strncpyz( parm2, COM_Parse( &s ), sizeof( parm2 ) );
+	COM_EndParseSession();
 
 	cgi_S_StartBackgroundTrack( parm1, parm2, !bForceStart );
 }
@@ -1646,14 +1642,14 @@ Ghoul2 Insert End
 
 void CG_WriteTheEvilCGHackStuff(void)
 {
-	gi.AppendToSaveGame('FPSL', &cg.forcepowerSelect, sizeof(cg.forcepowerSelect));
-	gi.AppendToSaveGame('IVSL', &cg.inventorySelect,  sizeof(cg.inventorySelect));
+	gi.AppendToSaveGame(INT_ID('F','P','S','L'), &cg.forcepowerSelect, sizeof(cg.forcepowerSelect));
+	gi.AppendToSaveGame(INT_ID('I','V','S','L'), &cg.inventorySelect,  sizeof(cg.inventorySelect));
 
 }
 void CG_ReadTheEvilCGHackStuff(void)
 {
-	gi.ReadFromSaveGame('FPSL', (void *)&gi_cg_forcepowerSelect, sizeof(gi_cg_forcepowerSelect), NULL);
-	gi.ReadFromSaveGame('IVSL', (void *)&gi_cg_inventorySelect,  sizeof(gi_cg_inventorySelect), NULL);
+	gi.ReadFromSaveGame(INT_ID('F','P','S','L'), (void *)&gi_cg_forcepowerSelect, sizeof(gi_cg_forcepowerSelect), NULL);
+	gi.ReadFromSaveGame(INT_ID('I','V','S','L'), (void *)&gi_cg_inventorySelect,  sizeof(gi_cg_inventorySelect), NULL);
 	gbUseTheseValuesFromLoadSave = qtrue;
 }
 
@@ -2373,6 +2369,7 @@ void CG_LoadMenus(const char *menuFile)
 
 	p = buf;
 
+	COM_BeginParseSession();
 	while ( 1 ) 
 	{
 		token = COM_ParseExt( &p, qtrue );
@@ -2398,6 +2395,7 @@ void CG_LoadMenus(const char *menuFile)
 			}
 		}
 	}
+	COM_EndParseSession();
 
 	Com_Printf("UI menu load time = %d milli seconds\n", cgi_Milliseconds() - start);
 }
@@ -3638,6 +3636,7 @@ CG_DrawDataPadForceSelect
 */
 void CG_DrawDataPadForceSelect( void ) 
 {
+  	gentity_t	*player = &g_entities[0];
 	int		i;
 	int		count;
 	int		smallIconSize,bigIconSize;

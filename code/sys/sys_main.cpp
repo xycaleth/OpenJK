@@ -1,13 +1,10 @@
 #include <dlfcn.h>
-#include "../game/q_shared.h"
+#include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
-#include "../qcommon/platform.h"
-#include "../qcommon/files.h"
 
 #include "sys_loadlib.h"
 #include "sys_local.h"
 
-static char cdPath[ MAX_OSPATH ] = { 0 };
 static char binaryPath[ MAX_OSPATH ] = { 0 };
 static char installPath[ MAX_OSPATH ] = { 0 };
 
@@ -80,16 +77,6 @@ void Sys_UnloadDll( void *dllHandle )
 	Sys_UnloadLibrary(dllHandle);
 }
 
-void Sys_SetDefaultCDPath(const char *path)
-{
-	Q_strncpyz(cdPath, path, sizeof(cdPath));
-}
-
-char *Sys_DefaultCDPath(void)
-{
-        return cdPath;
-}
-
 /*
 =================
 Sys_LoadDll
@@ -98,7 +85,6 @@ First try to load library name from system library path,
 from executable path, then fs_basepath.
 =================
 */
-extern char		*FS_BuildOSPath( const char *base, const char *game, const char *qpath );
 
 void *Sys_LoadDll(const char *name, qboolean useSystemLib)
 {
@@ -136,22 +122,7 @@ void *Sys_LoadDll(const char *name, qboolean useSystemLib)
 			
 			if(!dllhandle)
 			{
-				const char *cdPath = Cvar_VariableString("fs_cdpath");
-
-				if(!basePath || !*basePath)
-					basePath = ".";
-
-				if(FS_FilenameCompare(topDir, cdPath))
-				{
-					Com_Printf("Trying to load \"%s\" from \"%s\"...\n", name, cdPath);
-					Com_sprintf(libPath, sizeof(libPath), "%s%c%s", cdPath, PATH_SEP, name);
-					dllhandle = Sys_LoadLibrary(libPath);
-				}
-
-				if(!dllhandle)
-				{
-					Com_Printf("Loading \"%s\" failed\n", name);
-				}
+				Com_Printf("Loading \"%s\" failed\n", name);
 			}
 		}
 	}
@@ -187,35 +158,36 @@ void *Sys_GetGameAPI (void *parms)
 {
 	void	*(*GetGameAPI) (void *);
 	
-	char	name[MAX_OSPATH];
-	char	*path;
-	char	*basepath;
-	char	*cdpath;
-	char	*gamedir;
-	char	*homepath;
-	char	*fn;
+	const char	*basepath;
+	const char	*cdpath;
+	const char	*gamedir;
+	const char	*homepath;
+#ifdef MACOS_X
+    const char  *apppath;
+#endif
+	const char	*fn;
 	
 	const char *gamename;
 	if(Cvar_VariableIntegerValue("com_jk2"))
 	{
-		gamename = "jk2game" ARCH DLL_EXT;
+		gamename = "jk2game" ARCH_STRING DLL_EXT;
 	}
 	else
 	{
-		gamename = "jagame" ARCH DLL_EXT;
+		gamename = "jagame" ARCH_STRING DLL_EXT;
 	}
 	
 	if (game_library)
-		Com_Error (ERR_FATAL, "Sys_GetGameAPI without Sys_UnloadingGame");
+		Com_Error (ERR_FATAL, "Sys_GetGameAPI without calling Sys_UnloadGame");
 	
 	// check the current debug directory first for development purposes
 	homepath = Cvar_VariableString( "fs_homepath" );
 	basepath = Cvar_VariableString( "fs_basepath" );
 	cdpath = Cvar_VariableString( "fs_cdpath" );
 	gamedir = Cvar_VariableString( "fs_game" );
-	
-	if(!gamedir || !gamedir[0])
-		gamedir = BASEGAME;
+#ifdef MACOS_X
+    apppath = Cvar_VariableString( "fs_apppath" );
+#endif
 	
 	fn = FS_BuildOSPath( basepath, gamedir, gamename );
 	
@@ -231,6 +203,17 @@ void *Sys_GetGameAPI (void *parms)
 		}
 	}
 	
+#ifdef MACOS_X
+    if (!game_library) {
+		if( apppath[0] ) {
+			Com_Printf( "Sys_GetGameAPI(%s) failed: \"%s\"\n", fn, Sys_LibraryError() );
+			
+			fn = FS_BuildOSPath( apppath, gamedir, gamename );
+			game_library = Sys_LoadLibrary( fn );
+		}
+	}
+#endif
+    
 	if (!game_library) {
 		if( cdpath[0] ) {
 			Com_Printf( "Sys_GetGameAPI(%s) failed: \"%s\"\n", fn, Sys_LibraryError() );
@@ -256,6 +239,17 @@ void *Sys_GetGameAPI (void *parms)
 			game_library = Sys_LoadLibrary( fn );
 		}
 	}
+    
+#ifdef MACOS_X
+    if (!game_library) {
+		if( apppath[0] ) {
+			Com_Printf( "Sys_GetGameAPI(%s) failed: \"%s\"\n", fn, Sys_LibraryError() );
+			
+			fn = FS_BuildOSPath( apppath, BASEGAME, gamename );
+			game_library = Sys_LoadLibrary( fn );
+		}
+	}
+#endif
 	
 	if (!game_library) {
 		if( cdpath[0] ) {
@@ -291,12 +285,12 @@ void *Sys_GetGameAPI (void *parms)
  Used to hook up a development dll
  =================
  */
-void * Sys_LoadCgame( int (**entryPoint)(int, ...), int (*systemcalls)(int, ...) )
+void * Sys_LoadCgame( intptr_t (**entryPoint)(int, ...), intptr_t (*systemcalls)(intptr_t, ...) )
 {
-	void	(*dllEntry)( int (*syscallptr)(int, ...) );
+	void	(*dllEntry)( intptr_t (*syscallptr)(intptr_t, ...) );
     
-	dllEntry = ( void (*)( int (*)( int, ... ) ) )Sys_LoadFunction( game_library, "dllEntry" );
-	*entryPoint = (int (*)(int,...))Sys_LoadFunction( game_library, "vmMain" );
+	dllEntry = ( void (*)( intptr_t (*)( intptr_t, ... ) ) )Sys_LoadFunction( game_library, "dllEntry" );
+	*entryPoint = (intptr_t (*)(int,...))Sys_LoadFunction( game_library, "vmMain" );
 	if ( !*entryPoint || !dllEntry ) {
 		Sys_UnloadLibrary( game_library );
 		return NULL;
@@ -306,28 +300,75 @@ void * Sys_LoadCgame( int (**entryPoint)(int, ...), int (*systemcalls)(int, ...)
 	return game_library;
 }
 
+#ifdef MACOS_X
+/*
+ =================
+ Sys_StripAppBundle
+ 
+ Discovers if passed dir is suffixed with the directory structure of a Mac OS X
+ .app bundle. If it is, the .app directory structure is stripped off the end and
+ the result is returned. If not, dir is returned untouched.
+ =================
+ */
+char *Sys_StripAppBundle( char *dir )
+{
+	static char cwd[MAX_OSPATH];
+	
+	Q_strncpyz(cwd, dir, sizeof(cwd));
+	if(strcmp(Sys_Basename(cwd), "MacOS"))
+		return dir;
+	Q_strncpyz(cwd, Sys_Dirname(cwd), sizeof(cwd));
+	if(strcmp(Sys_Basename(cwd), "Contents"))
+		return dir;
+	Q_strncpyz(cwd, Sys_Dirname(cwd), sizeof(cwd));
+	if(!strstr(Sys_Basename(cwd), ".app"))
+		return dir;
+	Q_strncpyz(cwd, Sys_Dirname(cwd), sizeof(cwd));
+	return cwd;
+}
+#endif
+
+#ifndef DEFAULT_BASEDIR
+#	ifdef MACOS_X
+#		define DEFAULT_BASEDIR Sys_StripAppBundle(Sys_BinaryPath())
+#	else
+#		define DEFAULT_BASEDIR Sys_BinaryPath()
+#	endif
+#endif
+
 int main (int argc, char **argv)
 {
-	int 	oldtime, newtime;
-	int		len, i;
-	char	*cmdline;
-	void SetProgramPath(char *path);
-	
+	int		i;
+	char	commandLine[ MAX_STRING_CHARS ] = { 0 };	
 	
 	// get the initial time base
 	Sys_Milliseconds();
+
+#ifdef MACOS_X
+	// This is passed if we are launched by double-clicking
+	if ( argc >= 2 && Q_strncmp ( argv[1], "-psn", 4 ) == 0 )
+		argc = 1;
+#endif
 	
-	// merge the command line, this is kinda silly
-	for (len = 1, i = 1; i < argc; i++)
-		len += strlen(argv[i]) + 1;
-	cmdline = (char *)malloc(len);
-	*cmdline = 0;
-	for (i = 1; i < argc; i++) {
-		if (i > 1)
-			strcat(cmdline, " ");
-		strcat(cmdline, argv[i]);
+	Sys_SetBinaryPath( Sys_Dirname( argv[ 0 ] ) );
+	Sys_SetDefaultInstallPath( DEFAULT_BASEDIR );
+
+	// Concatenate the command line for passing to Com_Init
+	for( i = 1; i < argc; i++ )
+	{
+		const bool containsSpaces = (strchr(argv[i], ' ') != NULL);
+		if (containsSpaces)
+			Q_strcat( commandLine, sizeof( commandLine ), "\"" );
+
+		Q_strcat( commandLine, sizeof( commandLine ), argv[ i ] );
+
+		if (containsSpaces)
+			Q_strcat( commandLine, sizeof( commandLine ), "\"" );
+
+		Q_strcat( commandLine, sizeof( commandLine ), " " );
 	}
-	Com_Init(cmdline);
+
+	Com_Init(commandLine);
 		
     while (1)
     {

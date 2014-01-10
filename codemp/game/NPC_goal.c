@@ -124,7 +124,7 @@ void NPC_ReachedGoal( void )
 	NPCS.NPCInfo->aiFlags &= ~NPCAI_MOVING;
 	NPCS.ucmd.forwardmove = 0;
 	//Return that the goal was reached
-	trap_ICARUS_TaskIDComplete( NPCS.NPC, TID_MOVE_NAV );
+	trap->ICARUS_TaskIDComplete( (sharedEntity_t *)NPCS.NPC, TID_MOVE_NAV );
 //MCG - End
 }
 /*
@@ -233,7 +233,7 @@ qboolean ReachedGoal( gentity_t *goal )
 /*
 static gentity_t *UpdateGoal( void ) 
 
-Id removed a lot of shit here... doesn't seem to handle waypoints independantly of goalentity
+Id removed a lot of shit here... doesn't seem to handle waypoints independently of goalentity
 
 In fact, doesn't seem to be any waypoint info on entities at all any more?
 

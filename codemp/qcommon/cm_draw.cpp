@@ -399,14 +399,20 @@ void CDraw32::DrawLineAveNC(long x1, long y1, long x2, long y2, CPixel32 color)
 			dest = &buffer[row_off[y1] + x1];
 			int i = dx+1;
 			while (i--)
-				*dest++ = AVE_PIX(*dest, color);
+			{
+				*dest = AVE_PIX(*dest, color);
+				dest++;
+			}
 		}
 		else
 		{
 			dest = &buffer[row_off[y1] + x1 + dx];
 			int i = -dx+1;
 			while (i--)
-				*dest++ = AVE_PIX(*dest, color);
+			{
+				*dest = AVE_PIX(*dest, color);
+				dest++;
+			}
 		}
 		return;
 	}
@@ -1066,7 +1072,7 @@ void CDraw32::DrawCircleAve(long xc, long yc, long r, CPixel32 edge, CPixel32 fi
 //			pixel_write(x, y, pixelvalue);
 //	}
 
-typedef struct
+typedef struct POLYEDGE_s
 {	   	        // a polygon edge
              	// these are fixed point long ints for some accuracy & speed
 	long   x;		// x coordinate of edge's intersection with current scanline
@@ -1079,7 +1085,7 @@ typedef struct
 
 // global for speed
 static long   	 n;				// number of vertices
-static POINT  	*pt;		  	// vertices
+static Point  	*pt;		  	// vertices
 
 static long	    nact;	  		// number of active edges
 static POLYEDGE active[256];	// active edge list:edges crossing scanline y
@@ -1109,8 +1115,8 @@ static void ins_edge(long i, long y)
 {
 	int 		j;
 	long    dx;
-	POINT   *p;
-	POINT   *q;
+	Point   *p;
+	Point   *q;
 
 	j = i < n - 1 ? i + 1 : 0;
 	if (pt[i].y < pt[j].y)
@@ -1188,7 +1194,7 @@ void shell_sort(void *vec, long n, long siz,
 	}
 }
 
-void CDraw32::DrawPolygon(long nvert, POINT *point, CPixel32 edge, CPixel32 fill)
+void CDraw32::DrawPolygon(long nvert, Point *point, CPixel32 edge, CPixel32 fill)
 //USE:    Scan convert a polygon
 //IN:     nvert:        Number of vertices
 //        point:        Vertices of polygon

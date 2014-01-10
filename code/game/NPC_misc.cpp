@@ -20,14 +20,8 @@ This file is part of Jedi Academy.
 // NPC_misc.cpp
 //
 
-// leave this line at the top for all NPC_xxxx.cpp files...
-#include "g_headers.h"
-
-
-
-
 #include "b_local.h"
-#include "q_shared.h"
+#include "../qcommon/q_shared.h"
 /*
 Debug_Printf
 */

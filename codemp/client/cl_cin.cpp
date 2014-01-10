@@ -17,6 +17,7 @@
  *****************************************************************************/
 
 #include "client.h"
+#include "cl_uiapi.h"
 #include "snd_local.h"
 #ifndef _WIN32
 #include <cmath>
@@ -61,7 +62,7 @@ static	unsigned short		vq4[256*64*4];
 static	unsigned short		vq8[256*256*4];
 
 
-typedef struct {
+typedef struct cinematics_s {
 	byte				linbuf[DEFAULT_CIN_WIDTH*DEFAULT_CIN_HEIGHT*4*2];
 	byte				file[65536];
 	short				sqrTable[256];
@@ -74,7 +75,7 @@ typedef struct {
 	int					currentHandle;
 } cinematics_t;
 
-typedef struct {
+typedef struct cin_cache_s {
 	char				fileName[MAX_OSPATH];
 	int					CIN_WIDTH, CIN_HEIGHT;
 	int					xpos, ypos, width, height;
@@ -112,10 +113,10 @@ typedef struct {
 	int					playonwalls;
 	byte*				buf;
 	long				drawX, drawY;
-} cin_cache;
+} cin_cache_t;
 
 static cinematics_t		cin;
-static cin_cache		cinTable[MAX_VIDEO_HANDLES];
+static cin_cache_t		cinTable[MAX_VIDEO_HANDLES];
 static int				currentHandle = -1;
 static int				CL_handle = -1;
 
@@ -181,7 +182,8 @@ static void RllSetupTable( void )
 //
 // Returns:		Number of samples placed in output buffer
 //-----------------------------------------------------------------------------
-long RllDecodeMonoToMono(unsigned char *from,short *to,unsigned int size,char signedOutput ,unsigned short flag)
+/*
+static long RllDecodeMonoToMono(unsigned char *from,short *to,unsigned int size,char signedOutput ,unsigned short flag)
 {
 	unsigned int z;
 	int prev;
@@ -196,6 +198,7 @@ long RllDecodeMonoToMono(unsigned char *from,short *to,unsigned int size,char si
 	}
 	return size;	//*sizeof(short));
 }
+*/
 
 
 //-----------------------------------------------------------------------------
@@ -212,7 +215,7 @@ long RllDecodeMonoToMono(unsigned char *from,short *to,unsigned int size,char si
 //
 // Returns:		Number of samples placed in output buffer
 //-----------------------------------------------------------------------------
-long RllDecodeMonoToStereo(unsigned char *from,short *to,unsigned int size,char signedOutput,unsigned short flag)
+static long RllDecodeMonoToStereo(unsigned char *from,short *to,unsigned int size,char signedOutput,unsigned short flag)
 {
 	unsigned int z;
 	int prev;
@@ -244,7 +247,7 @@ long RllDecodeMonoToStereo(unsigned char *from,short *to,unsigned int size,char 
 //
 // Returns:		Number of samples placed in output buffer
 //-----------------------------------------------------------------------------
-long RllDecodeStereoToStereo(unsigned char *from,short *to,unsigned int size,char signedOutput, unsigned short flag)
+static long RllDecodeStereoToStereo(unsigned char *from,short *to,unsigned int size,char signedOutput, unsigned short flag)
 {
 	unsigned int z;
 	unsigned char *zz = from;
@@ -282,7 +285,8 @@ long RllDecodeStereoToStereo(unsigned char *from,short *to,unsigned int size,cha
 //
 // Returns:		Number of samples placed in output buffer
 //-----------------------------------------------------------------------------
-long RllDecodeStereoToMono(unsigned char *from,short *to,unsigned int size,char signedOutput, unsigned short flag)
+/*
+static long RllDecodeStereoToMono(unsigned char *from,short *to,unsigned int size,char signedOutput, unsigned short flag)
 {
 	unsigned int z;
 	int prevL,prevR;
@@ -303,7 +307,7 @@ long RllDecodeStereoToMono(unsigned char *from,short *to,unsigned int size,char 
 
 	return size;
 }
-
+*/
 /******************************************************************************
 *
 * Function:		
@@ -912,7 +916,7 @@ static void setupQuad( long xOff, long yOff )
 	long numQuadCels, i,x,y;
 	byte *temp;
 
-	if (xOff == cin.oldXOff && yOff == cin.oldYOff && cinTable[currentHandle].ysize == cin.oldysize && cinTable[currentHandle].xsize == cin.oldxsize) {
+	if (xOff == cin.oldXOff && yOff == cin.oldYOff && cinTable[currentHandle].ysize == (unsigned)cin.oldysize && cinTable[currentHandle].xsize == (unsigned)cin.oldxsize) {
 		return;
 	}
 
@@ -976,8 +980,8 @@ static void readQuadInfo( byte *qData )
 	cinTable[currentHandle].t[0] = cinTable[currentHandle].screenDelta;
 	cinTable[currentHandle].t[1] = -cinTable[currentHandle].screenDelta;
 
-    cinTable[currentHandle].drawX = cinTable[currentHandle].CIN_WIDTH;
-    cinTable[currentHandle].drawY = cinTable[currentHandle].CIN_HEIGHT;
+	cinTable[currentHandle].drawX = cinTable[currentHandle].CIN_WIDTH;
+	cinTable[currentHandle].drawY = cinTable[currentHandle].CIN_HEIGHT;
 	// jic the card sucks
 	if ( cls.glconfig.maxTextureSize <= 256) {
         if (cinTable[currentHandle].drawX>256) {
@@ -1362,7 +1366,7 @@ e_status CIN_RunCinematic (int handle)
 		&& (cinTable[currentHandle].status == FMV_PLAY) ) 
 	{
 		RoQInterrupt();
-		if (start != cinTable[currentHandle].startTime) {
+		if ((unsigned)start != cinTable[currentHandle].startTime) {
 		  cinTable[currentHandle].tfps = ((((Sys_Milliseconds()*com_timescale->value)
 							  - cinTable[currentHandle].startTime)*cinTable[currentHandle].roqFPS)/1000);
 			start = cinTable[currentHandle].startTime;
@@ -1442,8 +1446,8 @@ int CIN_PlayCinematic( const char *arg, int x, int y, int w, int h, int systemBi
 
 	if (cinTable[currentHandle].alterGameState) {
 		// close the menu
-		if ( uivm ) {
-			VM_Call( uivm, UI_SET_ACTIVE_MENU, UIMENU_NONE );
+		if ( cls.uiStarted ) {
+			UIVM_SetActiveMenu( UIMENU_NONE );
 		}
 	} else {
 		cinTable[currentHandle].playonwalls = cl_inGameVideo->integer;
@@ -1580,13 +1584,13 @@ void CIN_DrawCinematic (int handle) {
 
 		CIN_ResampleCinematic(handle, buf2);
 
-		re.DrawStretchRaw( x, y, w, h, 256, 256, (byte *)buf2, handle, qtrue);
+		re->DrawStretchRaw( x, y, w, h, 256, 256, (byte *)buf2, handle, qtrue);
 		cinTable[handle].dirty = qfalse;
 		Hunk_FreeTempMemory(buf2);
 		return;
 	}
 
-	re.DrawStretchRaw( x, y, w, h, cinTable[handle].drawX, cinTable[handle].drawY, buf, handle, cinTable[handle].dirty);
+	re->DrawStretchRaw( x, y, w, h, cinTable[handle].drawX, cinTable[handle].drawY, buf, handle, cinTable[handle].dirty);
 	cinTable[handle].dirty = qfalse;
 }
 
@@ -1670,12 +1674,12 @@ void CIN_UploadCinematic(int handle) {
 
 			CIN_ResampleCinematic(handle, buf2);
 
-			re.UploadCinematic( 256, 256, (byte *)buf2, handle, qtrue);
+			re->UploadCinematic( 256, 256, (byte *)buf2, handle, qtrue);
 			cinTable[handle].dirty = qfalse;
 			Hunk_FreeTempMemory(buf2);
 		} else {
 			// Upload video at normal resolution
-			re.UploadCinematic( cinTable[handle].drawX, cinTable[handle].drawY,
+			re->UploadCinematic( cinTable[handle].drawX, cinTable[handle].drawY,
 					cinTable[handle].buf, handle, cinTable[handle].dirty);
 			cinTable[handle].dirty = qfalse;
 		}

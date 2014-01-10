@@ -15,7 +15,7 @@ short	*snd_out;
 
 
 // FIXME: proper fix for that ?
-#if defined __linux__ || defined MACOS_X
+#if defined __linux__ || defined MACOS_X || !id386
 void S_WriteLinearBlastStereo16 (void)
 {
 	int		i;
@@ -40,38 +40,7 @@ void S_WriteLinearBlastStereo16 (void)
 			snd_out[i+1] = val;
 	}
 }
-#endif
-
-
-#if !((defined __linux__ || defined MACOS_X) && defined __i386__)
-#if	!id386
-
-
-void S_WriteLinearBlastStereo16 (void)
-{
-	int		i;
-	int		val;
-
-	for (i=0 ; i<snd_linear_count ; i+=2)
-	{
-		val = snd_p[i]>>8;
-		if (val > 0x7fff)
-			snd_out[i] = 0x7fff;
-		else if (val < (short)0x8000)
-			snd_out[i] = (short)0x8000;
-		else
-			snd_out[i] = val;
-
-		val = snd_p[i+1]>>8;
-		if (val > 0x7fff)
-			snd_out[i+1] = 0x7fff;
-		else if (val < (short)0x8000)
-			snd_out[i+1] = (short)0x8000;
-		else
-			snd_out[i+1] = val;
-	}
-}
-#elif !defined(__linux__)
+#else
 unsigned int uiMMXAvailable = 0;	// leave as 32 bit
 __declspec( naked ) void S_WriteLinearBlastStereo16 (void)
 {
@@ -159,7 +128,6 @@ LExit:
 	}
 }
 
-#endif
 #endif
 
 
@@ -282,7 +250,7 @@ static void S_PaintChannelFrom16( channel_t *ch, const sfx_t *sfx, int count, in
 {
 	portable_samplepair_t	*pSamplesDest;	
 	int iData;
-
+	float ofst = sampleOffset;
 
 	int iLeftVol	= ch->leftvol  * snd_vol;
 	int iRightVol	= ch->rightvol * snd_vol;
@@ -291,10 +259,15 @@ static void S_PaintChannelFrom16( channel_t *ch, const sfx_t *sfx, int count, in
 	
 	for ( int i=0 ; i<count ; i++ ) 
 	{
-		iData = sfx->pSoundData[ sampleOffset++ ];
+		iData = sfx->pSoundData[ (int)ofst ];
 
 		pSamplesDest[i].left  += (iData * iLeftVol )>>8;
 		pSamplesDest[i].right += (iData * iRightVol)>>8;
+		if (ch->doppler && ch->dopplerScale > 1) {
+			ofst += 1 * ch->dopplerScale;
+		} else {
+			ofst++;
+		}
 	}
 }
 

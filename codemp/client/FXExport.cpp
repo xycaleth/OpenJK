@@ -62,7 +62,7 @@ void FX_PlayBoltedEffectID( int id, vec3_t org,
 }
 
 void FX_PlayEntityEffectID( int id, vec3_t org, 
-						vec3_t axis[3], const int boltInfo, const int entNum, int vol, int rad )
+						matrix3_t axis, const int boltInfo, const int entNum, int vol, int rad )
 {
 #ifdef __FXCHECKER
 	if (_isnan(org[0]) || _isnan(org[1]) || _isnan(org[2]))
@@ -71,7 +71,7 @@ void FX_PlayEntityEffectID( int id, vec3_t org,
 	}
 #endif // __FXCHECKER
 
-	theFxScheduler.PlayEffect(id, org, axis, boltInfo, NULL, -1, vol, rad );
+	theFxScheduler.PlayEffect(id, org, axis, boltInfo, 0, -1, vol, rad );
 }
 
 void FX_AddScheduledEffects( qboolean portal )

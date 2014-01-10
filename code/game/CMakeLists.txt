@@ -1,18 +1,15 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.8)
 
 # Make sure the user is not executing this script directly
 if(NOT InOpenJK)
 	message(FATAL_ERROR "Use the top-level cmake script!")
 endif(NOT InOpenJK)
 
+set(SPGameDefines ${SharedDefines})
 set(SPGameIncludeDirectories "${SPDir}/game")
 if(WIN32)
 	set(SPGameLibraries "winmm")
-else(WIN32)
-	message("code/game/CMakeLists.txt might need some libraries to link properly on your platform.")
 endif(WIN32)
-# TODO do we actually want _IMMERSION? I thought we don't have those files?
-set(SPGameDefines ${SharedDefines} "_IMMERSION" "_NO_PCH")
 
 set(SPGameGameFiles
 	"${SPDir}/game/AI_Animal.cpp"
@@ -23,7 +20,6 @@ set(SPGameGameFiles
 	"${SPDir}/game/AI_Default.cpp"
 	"${SPDir}/game/AI_Droid.cpp"
 	"${SPDir}/game/AI_GalakMech.cpp"
-	"${SPDir}/game/AI_Glider.cpp"
 	"${SPDir}/game/AI_Grenadier.cpp"
 	"${SPDir}/game/AI_HazardTrooper.cpp"
 	"${SPDir}/game/AI_Howler.cpp"
@@ -54,7 +50,6 @@ set(SPGameGameFiles
 	"${SPDir}/game/g_emplaced.cpp"
 	"${SPDir}/game/g_functions.cpp"
 	"${SPDir}/game/g_fx.cpp"
-	"${SPDir}/game/g_headers.cpp"
 	"${SPDir}/game/g_inventory.cpp"
 	"${SPDir}/game/g_itemLoad.cpp"
 	"${SPDir}/game/g_items.cpp"
@@ -98,8 +93,6 @@ set(SPGameGameFiles
 	"${SPDir}/game/NPC_stats.cpp"
 	"${SPDir}/game/NPC_utils.cpp"
 	"${SPDir}/game/Q3_Interface.h"
-	"${SPDir}/game/q_math.cpp"
-	"${SPDir}/game/q_shared.cpp"
 	"${SPDir}/game/wp_atst.cpp"
 	"${SPDir}/game/wp_blaster_pistol.cpp"
 	"${SPDir}/game/wp_blaster_rifle.cpp"
@@ -147,7 +140,6 @@ set(SPGameGameFiles
 	"${SPDir}/game/events.h"
 	"${SPDir}/game/fields.h"
 	"${SPDir}/game/g_functions.h"
-	"${SPDir}/game/g_headers.h"
 	"${SPDir}/game/g_items.h"
 	"${SPDir}/game/g_local.h"
 	"${SPDir}/game/g_nav.h"
@@ -160,7 +152,6 @@ set(SPGameGameFiles
 	"${SPDir}/game/hitlocs.h"
 	"${SPDir}/game/npc_headers.h"
 	"${SPDir}/game/objectives.h"
-	"${SPDir}/game/q_shared.h"
 	"${SPDir}/game/say.h"
 	"${SPDir}/game/statindex.h"
 	"${SPDir}/game/surfaceflags.h"
@@ -223,7 +214,6 @@ set(SPGameCGameFiles
 	"${SPDir}/cgame/cg_media.h"
 	"${SPDir}/cgame/cg_public.h"
 	"${SPDir}/cgame/common_headers.h"
-	"${SPDir}/cgame/FxParsing.h"
 	"${SPDir}/cgame/FxPrimitives.h"
 	"${SPDir}/cgame/FxScheduler.h"
 	"${SPDir}/cgame/FxSystem.h"
@@ -245,6 +235,10 @@ set(SPGameCommonFiles
 	"${SPDir}/qcommon/sstring.h"
 	"${SPDir}/qcommon/tags.h"
 	"${SPDir}/qcommon/timing.h"
+	"${SPDir}/qcommon/q_math.cpp"
+	"${SPDir}/qcommon/q_shared.cpp"
+	"${SPDir}/qcommon/q_shared.h"
+	"${SPDir}/qcommon/q_platform.h"
 	)
 source_group("common" FILES ${SPGameCommonFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameCommonFiles})
@@ -324,10 +318,10 @@ source_group("ghoul2" FILES ${SPGameG2Files})
 set(SPGameFiles ${SPGameFiles} ${SPGameG2Files})
 
 set(SPGameRendererFiles
-	"${SPDir}/renderer/mdx_format.h"
-	"${SPDir}/renderer/tr_types.h"
+	"${SPDir}/rd-common/mdx_format.h"
+	"${SPDir}/rd-common/tr_types.h"
 	)
-source_group("rufl" FILES ${SPGameRendererFiles})
+source_group("renderer" FILES ${SPGameRendererFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameRendererFiles})
 
 set(SPGameClientFiles
@@ -338,8 +332,7 @@ set(SPGameFiles ${SPGameFiles} ${SPGameClientFiles})
 
 if(WIN32)
 	set(SPGameWin32Files
-		"${SPDir}/win32/game.rc"
-		"${SPDir}/game/game.def")
+		"${SPDir}/win32/game.rc")
 	source_group("win32" FILES ${SPGameWin32Files})
 	set(SPGameFiles ${SPGameFiles} ${SPGameWin32Files})
 endif(WIN32)
@@ -361,6 +354,7 @@ set_target_properties(${SPGame} PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "${SPG
 set_target_properties(${SPGame} PROPERTIES COMPILE_DEFINITIONS_RELEASE "${SPGameDefines};${ReleaseDefines}")
 set_target_properties(${SPGame} PROPERTIES COMPILE_DEFINITIONS_DEBUG "${SPGameDefines};${DebugDefines}")
 set_target_properties(${SPGame} PROPERTIES INCLUDE_DIRECTORIES "${SPGameIncludeDirectories}")
+set_target_properties(${SPGame} PROPERTIES PROJECT_LABEL "SP Game Library")
 # no libraries used
 if(SPGameLibraries)
 	target_link_libraries(${SPGame} ${SPGameLibraries})

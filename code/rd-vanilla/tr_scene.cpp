@@ -24,10 +24,6 @@ This file is part of Jedi Academy.
 
 #include "tr_local.h"
 
-#ifdef VV_LIGHTING
-#include "tr_lightmanager.h"
-#endif
-
 int			r_firstSceneDrawSurf;
 
 int			r_numdlights;
@@ -46,11 +42,11 @@ int			drawskyboxportal;
 
 /*
 ====================
-R_ToggleSmpFrame
+R_InitNextFrame
 
 ====================
 */
-void R_ToggleSmpFrame( void ) {
+void R_InitNextFrame( void ) {
 
 	backEndData->commands.used = 0;
 
@@ -58,10 +54,6 @@ void R_ToggleSmpFrame( void ) {
 
 	r_numdlights = 0;
 	r_firstSceneDlight = 0;
-
-#ifdef VV_LIGHTING
-	VVLightMan.num_dlights = 0;
-#endif
 
 	r_numentities = 0;
 	r_firstSceneEntity = 0;
@@ -107,8 +99,8 @@ void R_AddPolygonSurfaces( void ) {
 	shader_t	*sh;
 	srfPoly_t	*poly;
 
-	tr.currentEntityNum = TR_WORLDENT;
-	tr.shiftedEntityNum = tr.currentEntityNum << QSORT_ENTITYNUM_SHIFT;
+	tr.currentEntityNum = REFENTITYNUM_WORLD;
+	tr.shiftedEntityNum = tr.currentEntityNum << QSORT_REFENTITYNUM_SHIFT;
 
 	for ( i = 0, poly = tr.refdef.polys; i < tr.refdef.numPolys ; i++, poly++ ) {
 		sh = R_GetShaderByHandle( poly->hShader );
@@ -140,10 +132,14 @@ void RE_AddPolyToScene( qhandle_t hShader , int numVerts, const polyVert_t *vert
 		return;
 	}
 
-	if ( r_numpolyverts + numVerts > MAX_POLYVERTS || r_numpolys >= MAX_POLYS ) {
-#if defined(_DEBUG)
-		Com_Printf(S_COLOR_RED"Poly overflow!  Tell Brian.\n");
-#endif
+	if ( r_numpolyverts + numVerts >= MAX_POLYVERTS || r_numpolys >= MAX_POLYS ) {
+      /*
+      NOTE TTimo this was initially a PRINT_WARNING
+      but it happens a lot with high fighting scenes and particles
+      since we don't plan on changing the const and making for room for those effects
+      simply cut this message to developer only
+      */
+		ri.Printf( PRINT_DEVELOPER, S_COLOR_YELLOW  "WARNING: RE_AddPolyToScene: r_max_polys or r_max_polyverts reached\n");
 		return;
 	}
 
@@ -213,9 +209,9 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 	if ( !tr.registered ) {
 		return;
 	}
-	if ( r_numentities >= TR_WORLDENT ) {
+	if ( r_numentities >= MAX_REFENTITIES ) {
 #ifndef FINAL_BUILD
-		VID_Printf( PRINT_WARNING, "WARNING: RE_AddRefEntityToScene: too many entities\n");
+		ri.Printf( PRINT_WARNING, "WARNING: RE_AddRefEntityToScene: too many entities\n");
 #endif
 		return;
 	}
@@ -237,7 +233,6 @@ RE_AddLightToScene
 =====================
 */
 void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, float b ) {
-#ifndef VV_LIGHTING
 	dlight_t	*dl;
 
 	if ( !tr.registered ) {
@@ -255,7 +250,6 @@ void RE_AddLightToScene( const vec3_t org, float intensity, float r, float g, fl
 	dl->color[0] = r;
 	dl->color[1] = g;
 	dl->color[2] = b;
-#endif // VV_LIGHTING
 }
 
 
@@ -361,23 +355,18 @@ void RE_RenderScene( const refdef_t *fd ) {
 
 	tr.refdef.num_entities = r_numentities - r_firstSceneEntity;
 	tr.refdef.entities = &backEndData->entities[r_firstSceneEntity];
-
-#ifndef VV_LIGHTING
 	tr.refdef.num_dlights = r_numdlights - r_firstSceneDlight;
 	tr.refdef.dlights = &backEndData->dlights[r_firstSceneDlight];
-#endif
 
 	tr.refdef.numPolys = r_numpolys - r_firstScenePoly;
 	tr.refdef.polys = &backEndData->polys[r_firstScenePoly];
 
 	// turn off dynamic lighting globally by clearing all the
 	// dlights if it needs to be disabled or if vertex lighting is enabled
-#ifndef VV_LIGHTING
 	if ( r_dynamiclight->integer == 0 ||
 		 r_vertexLight->integer == 1 ) {
 		tr.refdef.num_dlights = 0;
 	}
-#endif
 
 	// a single frame may have multiple scenes draw inside it --
 	// a 3D game view, 3D status bar renderings, 3D menus, etc.

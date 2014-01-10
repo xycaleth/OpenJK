@@ -16,8 +16,6 @@ This file is part of OpenJK.
 */
 // Copyright 2013 OpenJK
 
-#include "g_headers.h"
-
 #include "g_local.h"
 #include "b_local.h"
 #include "g_functions.h"
@@ -81,6 +79,8 @@ void rocketThink( gentity_t *ent )
 				break;
 			case CLASS_PROBE:
 				org[2] += 60;
+				break;
+			default:
 				break;
 			}
 			if ( !TIMER_Done( ent->enemy, "flee" ) )
@@ -222,7 +222,7 @@ void WP_FireRocket( gentity_t *ent, qboolean alt_fire )
 			lockTime = g_rocketLockTime;
 		}
 		// we'll consider attempting to lock this little poochie onto some baddie.
-		if ( (lockEntNum > 0||ent->NPC&&lockEntNum>=0) && lockEntNum < ENTITYNUM_WORLD && lockTime > 0 )
+		if ( (lockEntNum > 0 || (ent->NPC && lockEntNum >= 0)) && lockEntNum < ENTITYNUM_WORLD && lockTime > 0 )
 		{
 			// take our current lock time and divide that by 8 wedge slices to get the current lock amount
 			int dif = ( level.time - lockTime ) / ( 1200.0f / 8.0f );

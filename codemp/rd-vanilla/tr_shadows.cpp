@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "tr_local.h"
 
 
@@ -18,7 +15,7 @@
 
 #define _STENCIL_REVERSE
 
-typedef struct {
+typedef struct edgeDef_s {
 	int		i2;
 	int		facing;
 } edgeDef_t;
@@ -47,8 +44,8 @@ void R_RenderShadowEdges( void ) {
 	int		c;
 	int		j;
 	int		i2;
-	int		c_edges, c_rejected;
 #if 0
+	int		c_edges, c_rejected;
 	int		c2, k;
 	int		hit[2];
 #endif
@@ -61,8 +58,10 @@ void R_RenderShadowEdges( void ) {
 	// or if it has a reverse paired edge that also faces the light.
 	// A well behaved polyhedron would have exactly two faces for each edge,
 	// but lots of models have dangling edges or overfanned edges
+#if 0
 	c_edges = 0;
 	c_rejected = 0;
+#endif
 
 	for ( i = 0 ; i < tess.numVertexes ; i++ ) {
 		c = numEdgeDefs[ i ];

@@ -187,7 +187,7 @@ void CG_CaptionTextStop(void)
 //
 // returns 0 if failed, else strlen...
 //
-static int cg_SP_GetStringTextStringWithRetry( LPCSTR psReference, char *psDest, int iSizeofDest)
+static int cg_SP_GetStringTextStringWithRetry( const char *psReference, char *psDest, int iSizeofDest)
 {
 	int iReturn;
 
@@ -240,7 +240,7 @@ void CG_CaptionText( const char *str, int sound)
 	{	
 #ifndef FINAL_BUILD
 		// we only care about some sound dirs...
-		if (!strnicmp(str,"sound/chars/",12))	// whichever language it is, it'll be pathed as english at this point
+		if (!Q_stricmpn(str,"sound/chars/",12))	// whichever language it is, it'll be pathed as english at this point
 		{
 			Com_Printf("WARNING: CG_CaptionText given invalid text key :'%s'\n",str);
 		}
@@ -559,8 +559,8 @@ void CG_ScrollText( const char *str, int iPixelWidth )
 			//
 			cg.printText[i][ strlen(cg.printText[i])-1 ] = '\0';	// kill the CR
 			i++;
-			assert (i < (sizeof(cg.printText)/sizeof(cg.printText[0])) );
-			if (i >= (sizeof(cg.printText)/sizeof(cg.printText[0])) )
+			assert (i < (int)(sizeof(cg.printText)/sizeof(cg.printText[0])) );
+			if (i >= (int)(sizeof(cg.printText)/sizeof(cg.printText[0])) )
 			{
 				break;
 			}
@@ -587,7 +587,7 @@ void CG_ScrollText( const char *str, int iPixelWidth )
 			cg.printText[i][ psBestLineBreakSrcPos - holds ] = '\0';
 			holds = s = psBestLineBreakSrcPos;
 			i++;
-			assert (i < (sizeof(cg.printText)/sizeof(cg.printText[0])) );
+			assert (i < (int)(sizeof(cg.printText)/sizeof(cg.printText[0])) );
 			cg.scrollTextLines++;
 		}
 	}
@@ -716,7 +716,7 @@ CG_DrawCenterString
 void CG_DrawCenterString( void ) 
 {
 	char	*start;
-	int		l;
+	unsigned int l;
 	int		x, y, w;
 	float	*color;
 

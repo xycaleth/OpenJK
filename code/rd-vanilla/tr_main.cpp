@@ -36,17 +36,10 @@ trGlobals_t		tr;
 static float	s_flipMatrix[16] = {
 	// convert from our coordinate system (looking down X)
 	// to OpenGL's coordinate system (looking down -Z)
-#if defined (_XBOX)
-	0, 0, 1, 0,
-	-1, 0, 0, 0,
-	0, 1, 0, 0,
-	0, 0, 0, 1
-#else
 	0, 0, -1, 0,
 	-1, 0, 0, 0,
 	0, 1, 0, 0,
 	0, 0, 0, 1
-#endif
 };
 
 refimport_t ri;
@@ -146,7 +139,7 @@ int R_CullPointAndRadius( const vec3_t pt, float radius )
 
 	// check against frustum planes
 #ifndef __NO_JK2
-	if( com_jk2 && !com_jk2->integer )
+	if( com_jk2 && com_jk2->integer )
 	{
 		// They used 4 frustrum planes in JK2, and 5 in JKA --eez
 		for (i = 0 ; i < 4 ; i++) 
@@ -559,27 +552,6 @@ void R_SetupProjection( void ) {
 	height = ymax - ymin;
 	depth = zFar - zNear;
 
-#if defined (_XBOX)
-	tr.viewParms.projectionMatrix[0] = 2 * zNear / width;
-	tr.viewParms.projectionMatrix[4] = 0;
-	tr.viewParms.projectionMatrix[8] = ( xmax + xmin ) / width;	// normally 0
-	tr.viewParms.projectionMatrix[12] = 0;
-
-	tr.viewParms.projectionMatrix[1] = 0;
-	tr.viewParms.projectionMatrix[5] = 2 * zNear / height;
-	tr.viewParms.projectionMatrix[9] = ( ymax + ymin ) / height;	// normally 0
-	tr.viewParms.projectionMatrix[13] = 0;
-
-	tr.viewParms.projectionMatrix[2] = 0;
-	tr.viewParms.projectionMatrix[6] = 0;
-	tr.viewParms.projectionMatrix[10] = ( zFar + zNear ) / depth;
-	tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
-
-	tr.viewParms.projectionMatrix[3] = 0;
-	tr.viewParms.projectionMatrix[7] = 0;
-	tr.viewParms.projectionMatrix[11] = 1;
-	tr.viewParms.projectionMatrix[15] = 0;
-#else
 	tr.viewParms.projectionMatrix[0] = 2 * zNear / width;
 	tr.viewParms.projectionMatrix[4] = 0;
 	tr.viewParms.projectionMatrix[8] = ( xmax + xmin ) / width;	// normally 0
@@ -599,7 +571,6 @@ void R_SetupProjection( void ) {
 	tr.viewParms.projectionMatrix[7] = 0;
 	tr.viewParms.projectionMatrix[11] = -1;
 	tr.viewParms.projectionMatrix[15] = 0;
-#endif
 }
 
 /*
@@ -760,7 +731,7 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 	R_PlaneForSurface( drawSurf->surface, &originalPlane );
 
 	// rotate the plane if necessary
-	if ( entityNum != TR_WORLDENT ) {
+	if ( entityNum != REFENTITYNUM_WORLD ) {
 		tr.currentEntityNum = entityNum;
 		tr.currentEntity = &tr.refdef.entities[entityNum];
 
@@ -852,7 +823,7 @@ qboolean R_GetPortalOrientations( drawSurf_t *drawSurf, int entityNum,
 	// to see a surface before the server has communicated the matching
 	// portal surface entity, so we don't want to print anything here...
 
-	//VID_Printf( PRINT_ALL, "Portal surface without a portal entity\n" );
+	//ri.Printf( PRINT_ALL, "Portal surface without a portal entity\n" );
 
 	return qfalse;
 }
@@ -868,7 +839,7 @@ static qboolean IsMirror( const drawSurf_t *drawSurf, int entityNum )
 	R_PlaneForSurface( drawSurf->surface, &originalPlane );
 
 	// rotate the plane if necessary
-	if ( entityNum != TR_WORLDENT ) 
+	if ( entityNum != REFENTITYNUM_WORLD ) 
 	{
 		tr.currentEntityNum = entityNum;
 		tr.currentEntity = &tr.refdef.entities[entityNum];
@@ -1033,7 +1004,7 @@ qboolean R_MirrorViewBySurface (drawSurf_t *drawSurf, int entityNum) {
 	// don't recursively mirror
 	if (tr.viewParms.isPortal) 
 	{
-		VID_Printf( PRINT_DEVELOPER, "WARNING: recursive mirror/portal found\n" );
+		ri.Printf( PRINT_DEVELOPER, "WARNING: recursive mirror/portal found\n" );
 		return qfalse;
 	}
 
@@ -1137,197 +1108,55 @@ DRAWSURF SORTING
 */
 
 /*
-=================
-qsort replacement
-
-=================
+===============
+R_Radix
+===============
 */
-#define	SWAP_DRAW_SURF(a,b) temp=((int *)a)[0];((int *)a)[0]=((int *)b)[0];((int *)b)[0]=temp; temp=((int *)a)[1];((int *)a)[1]=((int *)b)[1];((int *)b)[1]=temp;
-
-/* this parameter defines the cutoff between using quick sort and
-   insertion sort for arrays; arrays with lengths shorter or equal to the
-   below value use insertion sort */
-
-#define CUTOFF 8            /* testing shows that this is good value */
-
-static void shortsort( drawSurf_t *lo, drawSurf_t *hi ) {
-    drawSurf_t	*p, *max;
-	int			temp;
-
-    while (hi > lo) {
-        max = lo;
-        for (p = lo + 1; p <= hi; p++ ) {
-            if ( p->sort > max->sort ) {
-                max = p;
-            }
-        }
-        SWAP_DRAW_SURF(max, hi);
-        hi--;
-    }
-}
-
-
-/* sort the array between lo and hi (inclusive)
-FIXME: this was lifted and modified from the microsoft lib source...
- */
-
-void qsortFast (
-    void *base,
-    unsigned num,
-    unsigned width
-    )
+static QINLINE void R_Radix( int byte, int size, drawSurf_t *source, drawSurf_t *dest )
 {
-    char *lo, *hi;              /* ends of sub-array currently sorting */
-    char *mid;                  /* points to middle of subarray */
-    char *loguy, *higuy;        /* traveling pointers for partition step */
-    unsigned size;              /* size of the sub-array */
-    char *lostk[30], *histk[30];
-    int stkptr;                 /* stack for saving sub-array to be processed */
-	int	temp;
+  int           count[ 256 ] = { 0 };
+  int           index[ 256 ];
+  int           i;
+  unsigned char *sortKey = NULL;
+  unsigned char *end = NULL;
 
-	if ( sizeof(drawSurf_t) != 8 ) {
-		Com_Error( ERR_DROP, "change SWAP_DRAW_SURF macro" );
-	}
+  sortKey = ( (unsigned char *)&source[ 0 ].sort ) + byte;
+  end = sortKey + ( size * sizeof( drawSurf_t ) );
+  for( ; sortKey < end; sortKey += sizeof( drawSurf_t ) )
+    ++count[ *sortKey ];
 
-    /* Note: the number of stack entries required is no more than
-       1 + log2(size), so 30 is sufficient for any array */
+  index[ 0 ] = 0;
 
-    if (num < 2 || width == 0)
-        return;                 /* nothing to do */
+  for( i = 1; i < 256; ++i )
+    index[ i ] = index[ i - 1 ] + count[ i - 1 ];
 
-    stkptr = 0;                 /* initialize stack */
-
-    lo = (char *) base;
-    hi = (char *) base + width * (num-1);        /* initialize limits */
-
-    /* this entry point is for pseudo-recursion calling: setting
-       lo and hi and jumping to here is like recursion, but stkptr is
-       prserved, locals aren't, so we preserve stuff on the stack */
-recurse:
-
-    size = (hi - lo) / width + 1;        /* number of el's to sort */
-
-    /* below a certain size, it is faster to use a O(n^2) sorting method */
-    if (size <= CUTOFF) {
-         shortsort((drawSurf_t *)lo, (drawSurf_t *)hi);
-    }
-    else {
-        /* First we pick a partititioning element.  The efficiency of the
-           algorithm demands that we find one that is approximately the
-           median of the values, but also that we select one fast.  Using
-           the first one produces bad performace if the array is already
-           sorted, so we use the middle one, which would require a very
-           wierdly arranged array for worst case performance.  Testing shows
-           that a median-of-three algorithm does not, in general, increase
-           performance. */
-
-        mid = lo + (size / 2) * width;      /* find middle element */
-        SWAP_DRAW_SURF(mid, lo);               /* swap it to beginning of array */
-
-        /* We now wish to partition the array into three pieces, one
-           consisiting of elements <= partition element, one of elements
-           equal to the parition element, and one of element >= to it.  This
-           is done below; comments indicate conditions established at every
-           step. */
-
-        loguy = lo;
-        higuy = hi + width;
-
-        /* Note that higuy decreases and loguy increases on every iteration,
-           so loop must terminate. */
-        for (;;) {
-            /* lo <= loguy < hi, lo < higuy <= hi + 1,
-               A[i] <= A[lo] for lo <= i <= loguy,
-               A[i] >= A[lo] for higuy <= i <= hi */
-
-            do  {
-                loguy += width;
-            } while (loguy <= hi &&  
-				( ((drawSurf_t *)loguy)->sort <= ((drawSurf_t *)lo)->sort ) );
-
-            /* lo < loguy <= hi+1, A[i] <= A[lo] for lo <= i < loguy,
-               either loguy > hi or A[loguy] > A[lo] */
-
-            do  {
-                higuy -= width;
-            } while (higuy > lo && 
-				( ((drawSurf_t *)higuy)->sort >= ((drawSurf_t *)lo)->sort ) );
-
-            /* lo-1 <= higuy <= hi, A[i] >= A[lo] for higuy < i <= hi,
-               either higuy <= lo or A[higuy] < A[lo] */
-
-            if (higuy < loguy)
-                break;
-
-            /* if loguy > hi or higuy <= lo, then we would have exited, so
-               A[loguy] > A[lo], A[higuy] < A[lo],
-               loguy < hi, highy > lo */
-
-            SWAP_DRAW_SURF(loguy, higuy);
-
-            /* A[loguy] < A[lo], A[higuy] > A[lo]; so condition at top
-               of loop is re-established */
-        }
-
-        /*     A[i] >= A[lo] for higuy < i <= hi,
-               A[i] <= A[lo] for lo <= i < loguy,
-               higuy < loguy, lo <= higuy <= hi
-           implying:
-               A[i] >= A[lo] for loguy <= i <= hi,
-               A[i] <= A[lo] for lo <= i <= higuy,
-               A[i] = A[lo] for higuy < i < loguy */
-
-        SWAP_DRAW_SURF(lo, higuy);     /* put partition element in place */
-
-        /* OK, now we have the following:
-              A[i] >= A[higuy] for loguy <= i <= hi,
-              A[i] <= A[higuy] for lo <= i < higuy
-              A[i] = A[lo] for higuy <= i < loguy    */
-
-        /* We've finished the partition, now we want to sort the subarrays
-           [lo, higuy-1] and [loguy, hi].
-           We do the smaller one first to minimize stack usage.
-           We only sort arrays of length 2 or more.*/
-
-        if ( higuy - 1 - lo >= hi - loguy ) {
-            if (lo + width < higuy) {
-                lostk[stkptr] = lo;
-                histk[stkptr] = higuy - width;
-                ++stkptr;
-            }                           /* save big recursion for later */
-
-            if (loguy < hi) {
-                lo = loguy;
-                goto recurse;           /* do small recursion */
-            }
-        }
-        else {
-            if (loguy < hi) {
-                lostk[stkptr] = loguy;
-                histk[stkptr] = hi;
-                ++stkptr;               /* save big recursion for later */
-            }
-
-            if (lo + width < higuy) {
-                hi = higuy - width;
-                goto recurse;           /* do small recursion */
-            }
-        }
-    }
-
-    /* We have sorted the array, except for any pending sorts on the stack.
-       Check if there are any, and do them. */
-
-    --stkptr;
-    if (stkptr >= 0) {
-        lo = lostk[stkptr];
-        hi = histk[stkptr];
-        goto recurse;           /* pop subarray from stack */
-    }
-    else
-        return;                 /* all subarrays done */
+  sortKey = ( (unsigned char *)&source[ 0 ].sort ) + byte;
+  for( i = 0; i < size; ++i, sortKey += sizeof( drawSurf_t ) )
+    dest[ index[ *sortKey ]++ ] = source[ i ];
 }
 
+/*
+===============
+R_RadixSort
+
+Radix sort with 4 byte size buckets
+===============
+*/
+static void R_RadixSort( drawSurf_t *source, int size )
+{
+  static drawSurf_t scratch[ MAX_DRAWSURFS ];
+#ifdef Q3_LITTLE_ENDIAN
+  R_Radix( 0, size, source, scratch );
+  R_Radix( 1, size, scratch, source );
+  R_Radix( 2, size, source, scratch );
+  R_Radix( 3, size, scratch, source );
+#else
+  R_Radix( 3, size, source, scratch );
+  R_Radix( 2, size, scratch, source );
+  R_Radix( 1, size, source, scratch );
+  R_Radix( 0, size, scratch, source );
+#endif //Q3_LITTLE_ENDIAN
+}
 
 //==========================================================================================
 
@@ -1371,7 +1200,7 @@ void R_DecomposeSort( unsigned sort, int *entityNum, shader_t **shader,
 					 int *fogNum, int *dlightMap ) {
 	*fogNum = ( sort >> QSORT_FOGNUM_SHIFT ) & 31;
 	*shader = tr.sortedShaders[ ( sort >> QSORT_SHADERNUM_SHIFT ) & (MAX_SHADERS-1) ];
-	*entityNum = ( sort >> QSORT_ENTITYNUM_SHIFT ) & (MAX_ENTITIES-1);
+	*entityNum = ( sort >> QSORT_REFENTITYNUM_SHIFT ) & REFENTITYNUM_MASK;
 	*dlightMap = sort & 3;
 }
 
@@ -1398,13 +1227,10 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	// the first surfaces, not the last ones
 	if ( numDrawSurfs > MAX_DRAWSURFS ) {
 		numDrawSurfs = MAX_DRAWSURFS;
-#if defined(_DEBUG) && defined(_XBOX)
-		Com_Printf(S_COLOR_RED"Draw surface overflow!  Tell Brian.\n");
-#endif
 	}
 
 	// sort the drawsurfs by sort type, then orientation, then shader
-	qsortFast ( drawSurfs, numDrawSurfs, sizeof(drawSurf_t) );
+	R_RadixSort( drawSurfs, numDrawSurfs );
 
 	// check for any pass through drawing, which
 	// may cause another view to be rendered first
@@ -1430,10 +1256,6 @@ void R_SortDrawSurfs( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 	}
 
-#ifdef _XBOX
-	qsortFast (drawSurfs, numDrawSurfs, sizeof(drawSurf_t) );
-#endif
-
 	R_AddDrawSurfCmd( drawSurfs, numDrawSurfs );
 }
 
@@ -1458,7 +1280,7 @@ void R_AddEntitySurfaces (void) {
 		ent->needDlights = qfalse;
 
 		// preshift the value we are going to OR into the drawsurf sort
-		tr.shiftedEntityNum = tr.currentEntityNum << QSORT_ENTITYNUM_SHIFT;
+		tr.shiftedEntityNum = tr.currentEntityNum << QSORT_REFENTITYNUM_SHIFT;
 
 		if ((ent->e.renderfx & RF_ALPHA_FADE))
 		{
@@ -1563,32 +1385,6 @@ Ghoul2 Insert End
 R_GenerateDrawSurfs
 ====================
 */
-#ifdef _XBOX
-extern void R_MarkLeaves(mleaf_s*);
-void R_GenerateDrawSurfs( bool isPortal ) {
-	// determine which leaves are in the PVS / areamask
-	if ( !(tr.refdef.rdflags & RDF_NOWORLDMODEL) ) {
-		R_MarkLeaves (NULL);
-	}
-
-	R_AddWorldSurfaces ();
-
-	R_AddPolygonSurfaces();
-
-//	R_AddTerrainSurfaces();
-
-	// set the projection matrix with the minimum zfar
-	// now that we have the world bounded
-	// this needs to be done before entities are
-	// added, because they use the projection
-	// matrix for lod calculation
-	R_SetupProjection ();
-
-	R_AddEntitySurfaces ();
-}
-
-#else 
-
 void R_GenerateDrawSurfs( void ) {
 	R_AddWorldSurfaces ();
 
@@ -1605,7 +1401,6 @@ void R_GenerateDrawSurfs( void ) {
 
 	R_AddEntitySurfaces ();
 }
-#endif
 
 /*
 ================

@@ -6,25 +6,10 @@
 //
 //
 ////////////////////////////////////////////////////////////////////////////////////////
-#include "qcommon/exe_headers.h"
-#pragma warning( disable : 4512 )
-
-// Returns a float min <= x < max (exclusive; will get max - 0.00001; but never max)
-inline float WE_flrand(float min, float max) {
-	return ((rand() * (max - min)) / (RAND_MAX)) + min;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////
-// Externs & Fwd Decl.
-////////////////////////////////////////////////////////////////////////////////////////
-extern void			SetViewportAndScissor( void );
-
-
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Includes
 ////////////////////////////////////////////////////////////////////////////////////////
-#include "qcommon/platform.h"
 #include "tr_local.h"
 #include "tr_WorldEffects.h"
 
@@ -32,7 +17,9 @@ extern void			SetViewportAndScissor( void );
 #include "Ratl/vector_vs.h"
 #include "Ratl/bits_vs.h"
 
+#ifdef _WIN32
 #include "glext.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // Defines
@@ -63,6 +50,20 @@ int			mParticlesRendered;
 ////////////////////////////////////////////////////////////////////////////////////////
 // Handy Functions
 ////////////////////////////////////////////////////////////////////////////////////////
+#ifdef _MSC_VER
+#pragma warning( disable : 4512 )
+#endif
+
+// Returns a float min <= x < max (exclusive; will get max - 0.00001; but never max)
+inline float WE_flrand(float min, float max) {
+	return ((rand() * (max - min)) / (RAND_MAX)) + min;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+// Externs & Fwd Decl.
+////////////////////////////////////////////////////////////////////////////////////////
+extern void			SetViewportAndScissor( void );
+
 inline void VectorFloor(vec3_t in)
 {
 	in[0] = floorf(in[0]);
@@ -379,7 +380,7 @@ private:
 	struct SWeatherZone
 	{
 		static bool	mMarkedOutside;
-		ulong*		mPointCache;
+		uint32_t*		mPointCache;
 		SVecRange	mExtents;
 		SVecRange	mSize;
 		int			mWidth;
@@ -512,7 +513,7 @@ public:
 			Wz.mDepth		= ((int)(Wz.mSize.mMaxs[2] - Wz.mSize.mMins[2]) + 31) >> 5;
 			
 			int arraySize	= (Wz.mWidth * Wz.mHeight * Wz.mDepth);
-			Wz.mPointCache  = (ulong *)Z_Malloc(arraySize*sizeof(ulong), TAG_POINTCACHE, qtrue);
+			Wz.mPointCache  = (uint32_t *)Z_Malloc(arraySize*sizeof(uint32_t), TAG_POINTCACHE, qtrue);
 		}
 	}
 
@@ -533,8 +534,8 @@ public:
 		CVec3		Mins;
 		int			x, y, z, q, zbase;
 		bool		curPosOutside;
-		ulong		contents;
-		ulong		bit;
+		uint32_t		contents;
+		uint32_t		bit;
 
 
 		// Record The Extents Of The World Incase No Other Weather Zones Exist
@@ -578,7 +579,7 @@ public:
 							CurPos[2] = (zbase + q)	* POINTCACHE_CELL_SIZE;
 							CurPos	  += Mins;
 
-							contents = ri.CM_PointContents(CurPos.v, 0);
+							contents = ri->CM_PointContents(CurPos.v, 0);
 							if (contents&CONTENTS_INSIDE || contents&CONTENTS_OUTSIDE)
 							{
 								curPosOutside = ((contents&CONTENTS_OUTSIDE)!=0);
@@ -625,7 +626,7 @@ public:
 	{
 		if (!mCacheInit)
 		{
-			return ContentsOutside(ri.CM_PointContents(pos.v, 0));
+			return ContentsOutside(ri->CM_PointContents(pos.v, 0));
 		}
 		for (int zone=0; zone<mWeatherZones.size(); zone++)
 		{
@@ -1356,7 +1357,7 @@ ratl::vector_vs<CWeatherParticleCloud, MAX_PARTICLE_CLOUDS>	mParticleClouds;
 ////////////////////////////////////////////////////////////////////////////////////////
 void R_InitWorldEffects(void)
 {
-	srand(ri.Milliseconds());
+	srand(ri->Milliseconds());
 
 	for (int i=0; i<mParticleClouds.size(); i++)
 	{
@@ -1451,7 +1452,7 @@ void RB_RenderWorldEffects(void)
 void R_WorldEffect_f(void)
 {
 	char temp[2048] = {0};
-	ri.Cmd_ArgsBuffer( temp, sizeof( temp ) );
+	ri->Cmd_ArgsBuffer( temp, sizeof( temp ) );
 	RE_WorldEffectCommand( temp );
 }
 
@@ -1467,14 +1468,14 @@ qboolean WE_ParseVector( const char **text, int count, float *v ) {
 	// FIXME: spaces are currently required after parens, should change parseext...
 	token = COM_ParseExt( text, qfalse );
 	if ( strcmp( token, "(" ) ) {
-		ri.Printf (PRINT_WARNING, "WARNING: missing parenthesis in weather effect\n" );
+		ri->Printf (PRINT_WARNING, "WARNING: missing parenthesis in weather effect\n" );
 		return qfalse;
 	}
 
 	for ( i = 0 ; i < count ; i++ ) {
 		token = COM_ParseExt( text, qfalse );
 		if ( !token[0] ) {
-			ri.Printf (PRINT_WARNING, "WARNING: missing vector element in weather effect\n" );
+			ri->Printf (PRINT_WARNING, "WARNING: missing vector element in weather effect\n" );
 			return qfalse;
 		}
 		v[i] = atof( token );
@@ -1482,7 +1483,7 @@ qboolean WE_ParseVector( const char **text, int count, float *v ) {
 
 	token = COM_ParseExt( text, qfalse );
 	if ( strcmp( token, ")" ) ) {
-		ri.Printf (PRINT_WARNING, "WARNING: missing parenthesis in weather effect\n" );
+		ri->Printf (PRINT_WARNING, "WARNING: missing parenthesis in weather effect\n" );
 		return qfalse;
 	}
 
@@ -1496,6 +1497,8 @@ void RE_WorldEffectCommand(const char *command)
 		return;
 	}
 
+	COM_BeginParseSession ("RE_WorldEffectCommand");
+
 	const char	*token;//, *origCommand;
 
 	token = COM_ParseExt(&command, qfalse);
@@ -1507,7 +1510,7 @@ void RE_WorldEffectCommand(const char *command)
 
 
 	//Die - clean up the whole weather system -rww
-	if (strcmpi(token, "die") == 0)
+	if (Q_stricmp(token, "die") == 0)
 	{
 		R_ShutdownWorldEffects();
 		return;
@@ -1515,7 +1518,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Clear - Removes All Particle Clouds And Wind Zones
 	//----------------------------------------------------
-	else if (strcmpi(token, "clear") == 0)
+	else if (Q_stricmp(token, "clear") == 0)
 	{
 		for (int p=0; p<mParticleClouds.size(); p++)
 		{
@@ -1527,14 +1530,14 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Freeze / UnFreeze - Stops All Particle Motion Updates
 	//--------------------------------------------------------
-	else if (strcmpi(token, "freeze") == 0)
+	else if (Q_stricmp(token, "freeze") == 0)
 	{
 		mFrozen = !mFrozen;
 	}
 
 	// Add a zone
 	//---------------
-	else if (strcmpi(token, "zone") == 0)
+	else if (Q_stricmp(token, "zone") == 0)
 	{
 		vec3_t	mins;
 		vec3_t	maxs;
@@ -1546,7 +1549,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Basic Wind
 	//------------
-	else if (strcmpi(token, "wind") == 0)
+	else if (Q_stricmp(token, "wind") == 0)
 	{
 		if (mWindZones.full())
 		{
@@ -1558,7 +1561,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Constant Wind
 	//---------------
-	else if (strcmpi(token, "constantwind") == 0)
+	else if (Q_stricmp(token, "constantwind") == 0)
 	{
 		if (mWindZones.full())
 		{
@@ -1576,7 +1579,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Gusting Wind
 	//--------------
-	else if (strcmpi(token, "gustingwind") == 0)
+	else if (Q_stricmp(token, "gustingwind") == 0)
 	{
 		if (mWindZones.full())
 		{
@@ -1603,7 +1606,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create A Rain Storm
 	//---------------------
-	else if (strcmpi(token, "lightrain") == 0)
+	else if (Q_stricmp(token, "lightrain") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1624,7 +1627,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create A Rain Storm
 	//---------------------
-	else if (strcmpi(token, "rain") == 0)
+	else if (Q_stricmp(token, "rain") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1645,7 +1648,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create A Rain Storm
 	//---------------------
-	else if (strcmpi(token, "acidrain") == 0)
+	else if (Q_stricmp(token, "acidrain") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1673,7 +1676,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create A Rain Storm
 	//---------------------
-	else if (strcmpi(token, "heavyrain") == 0)
+	else if (Q_stricmp(token, "heavyrain") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1694,7 +1697,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create A Snow Storm
 	//---------------------
-	else if (strcmpi(token, "snow") == 0)
+	else if (Q_stricmp(token, "snow") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1710,7 +1713,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create A Some stuff
 	//---------------------
-	else if (strcmpi(token, "spacedust") == 0)
+	else if (Q_stricmp(token, "spacedust") == 0)
 	{
 		int count;
 		if (mParticleClouds.full())
@@ -1741,7 +1744,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create A Sand Storm
 	//---------------------
-	else if (strcmpi(token, "sand") == 0)
+	else if (Q_stricmp(token, "sand") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1768,7 +1771,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create Blowing Clouds Of Fog
 	//------------------------------
-	else if (strcmpi(token, "fog") == 0)
+	else if (Q_stricmp(token, "fog") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1792,7 +1795,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create Heavy Rain Particle Cloud
 	//-----------------------------------
-	else if (strcmpi(token, "heavyrainfog") == 0)
+	else if (Q_stricmp(token, "heavyrainfog") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1819,7 +1822,7 @@ void RE_WorldEffectCommand(const char *command)
 
 	// Create Blowing Clouds Of Fog
 	//------------------------------
-	else if (strcmpi(token, "light_fog") == 0)
+	else if (Q_stricmp(token, "light_fog") == 0)
 	{
 		if (mParticleClouds.full())
 		{
@@ -1844,11 +1847,11 @@ void RE_WorldEffectCommand(const char *command)
 		nCloud.mRotationChangeNext	= 0;
 	}
 
-	else if (strcmpi(token, "outsideshake") == 0)
+	else if (Q_stricmp(token, "outsideshake") == 0)
 	{
 		mOutside.mOutsideShake = !mOutside.mOutsideShake;
 	}
-	else if (strcmpi(token, "outsidepain") == 0)
+	else if (Q_stricmp(token, "outsidepain") == 0)
 	{
 		mOutside.mOutsidePain = !mOutside.mOutsidePain;
 	}

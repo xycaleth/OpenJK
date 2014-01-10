@@ -21,9 +21,9 @@ This file is part of Jedi Academy.
 #ifndef __CLIENT_H__
 #define __CLIENT_H__
 
-#include "../game/q_shared.h"
+#include "../qcommon/q_shared.h"
 #include "../qcommon/qcommon.h"
-#include "../renderer/tr_public.h"
+#include "../rd-common/tr_public.h"
 #include "keys.h"
 #include "snd_public.h"
 #include "../cgame/cg_public.h"
@@ -182,15 +182,9 @@ typedef enum {
 	EXIT_LAUNCH			// quit all the way out of the game on disconnect
 } exitTo_t;
 
-#ifdef _XBOX
-#define	MAX_LOCAL_SERVERS	1
-#define	MAX_GLOBAL_SERVERS	1
-#define MAX_PINGREQUESTS	1
-#else
 #define	MAX_LOCAL_SERVERS	16
 #define	MAX_GLOBAL_SERVERS	256
 #define MAX_PINGREQUESTS	16
-#endif
 
 typedef struct {
 	netadr_t	adr;
@@ -210,7 +204,6 @@ typedef struct {
 
 typedef struct {
 	connstate_t	state;				// connection status
-	int			keyCatchers;		// bit flags
 
 	char		servername[MAX_OSPATH];		// name of server from original connect (used by reconnect)
 
@@ -237,10 +230,6 @@ typedef struct {
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;
-
-#ifdef _XBOX
-	short		mainGamepad;
-#endif
 } clientStatic_t;
 
 #define	CON_TEXTSIZE	0x30000 //was 32768
@@ -301,10 +290,7 @@ extern	cvar_t	*cl_freelook;
 extern	cvar_t	*cl_mouseAccel;
 extern	cvar_t	*cl_showMouseRate;
 
-extern	cvar_t	*cl_ingameVideo;
-extern  cvar_t  *cl_VideoQuality;
-extern	cvar_t	*cl_VidFadeUp;
-extern	cvar_t	*cl_VidFadeDown;
+extern	cvar_t	*cl_inGameVideo;
 
 extern	cvar_t	*m_pitch;
 extern	cvar_t	*m_yaw;
@@ -341,6 +327,8 @@ void CL_GetPing( int n, char *adrstr, int *pingtime );
 void CL_ClearPing( int n );
 int CL_GetPingQueueCount( void );
 
+qboolean CL_CheckPaused(void);
+
 //
 // cl_input
 //
@@ -372,16 +360,12 @@ const char *Key_KeynumToString( int keynum/*, qboolean bTranslate*/ ); //note: t
 //
 // cl_parse.c
 //
+extern int cl_connectedToCheatServer;
+
 void CL_SystemInfoChanged( void );
 void CL_ParseServerMessage( msg_t *msg );
 
 //====================================================================
-
-void	VID_MenuInit( void );
-void	VID_MenuDraw( void );
-const char *VID_MenuKey( int );
-void VID_Printf (int print_level, const char *fmt, ...);
-
 
 //
 // console
@@ -424,11 +408,6 @@ void	SCR_DrawSmallStringExt( int x, int y, const char *string, float *setColor, 
 void	SCR_DrawBigChar( int x, int y, int ch );
 void	SCR_DrawSmallChar( int x, int y, int ch );
 
-#ifdef _XBOX
-void	SCR_PrecacheScreenshot();
-#endif
-
-
 //
 // cl_cin.c
 //
@@ -450,12 +429,6 @@ void CIN_SetLooping (int handle, qboolean loop);
 void CIN_UploadCinematic(int handle);
 void CIN_CloseAllVideos(void);
 
-#ifdef _XBOX
-void CIN_Init(void);
-bool CIN_PlayAllFrames( const char *arg, int x, int y, int w, int h, int systemBits, bool keyBreakAllowed );
-#endif
-
-
 //
 // cl_cgame.c
 //
@@ -475,5 +448,7 @@ void CL_ShutdownUI( void );
 void CL_GenericMenu_f(void);
 void CL_DataPad_f(void);
 void CL_EndScreenDissolve_f(void);
+int Key_GetCatcher( void );
+void Key_SetCatcher( int catcher );
 
 #endif //__CLIENT_H__

@@ -17,10 +17,10 @@ void Rancor_SetBolts( gentity_t *self )
 	if ( self && self->client )
 	{
 		renderInfo_t *ri = &self->client->renderInfo;
-		ri->handRBolt = trap_G2API_AddBolt( self->ghoul2, 0, "*r_hand" );
-		ri->handLBolt = trap_G2API_AddBolt( self->ghoul2, 0, "*l_hand" );
-		ri->headBolt = trap_G2API_AddBolt( self->ghoul2, 0, "*head_eyes" );
-		ri->torsoBolt = trap_G2API_AddBolt( self->ghoul2, 0, "jaw_bone" );
+		ri->handRBolt = trap->G2API_AddBolt( self->ghoul2, 0, "*r_hand" );
+		ri->handLBolt = trap->G2API_AddBolt( self->ghoul2, 0, "*l_hand" );
+		ri->headBolt = trap->G2API_AddBolt( self->ghoul2, 0, "*head_eyes" );
+		ri->torsoBolt = trap->G2API_AddBolt( self->ghoul2, 0, "jaw_bone" );
 	}
 }
 
@@ -126,10 +126,8 @@ void Rancor_Move( qboolean visible )
 }
 
 //---------------------------------------------------------
-//extern void G_Knockdown( gentity_t *self, gentity_t *attacker, const vec3_t pushDir, float strength, qboolean breakSaberLock );
 extern void G_Knockdown( gentity_t *victim );
 extern void G_Dismember( gentity_t *ent, gentity_t *enemy, vec3_t point, int limbType, float limbRollBase, float limbPitchBase, int deathAnim, qboolean postDeath );
-//extern qboolean G_DoDismemberment( gentity_t *self, vec3_t point, int mod, int damage, int hitLoc, qboolean force );
 extern float NPC_EntRangeFromBolt( gentity_t *targEnt, int boltIndex );
 extern int NPC_GetEntsNearBolt( int *radiusEnts, float radius, int boltIndex, vec3_t boltOrg );
 
@@ -696,7 +694,6 @@ void Rancor_Combat( void )
 NPC_Rancor_Pain
 -------------------------
 */
-//void NPC_Rancor_Pain( gentity_t *self, gentity_t *inflictor, gentity_t *other, const vec3_t point, int damage, int mod,int hitLoc ) 
 void NPC_Rancor_Pain( gentity_t *self, gentity_t *attacker, int damage ) 
 {
 	qboolean hitByRancor = qfalse;
@@ -789,7 +786,7 @@ void Rancor_CheckDropVictim( void )
 	VectorSet( start, NPCS.NPC->activator->r.currentOrigin[0], NPCS.NPC->activator->r.currentOrigin[1], NPCS.NPC->activator->r.absmin[2] ); 
 	VectorSet( end, NPCS.NPC->activator->r.currentOrigin[0], NPCS.NPC->activator->r.currentOrigin[1], NPCS.NPC->activator->r.absmax[2]-1 ); 
 
-	trap_Trace( &trace, start, mins, maxs, end, NPCS.NPC->activator->s.number, NPCS.NPC->activator->clipmask );
+	trap->Trace( &trace, start, mins, maxs, end, NPCS.NPC->activator->s.number, NPCS.NPC->activator->clipmask, qfalse, 0, 0 );
 	if ( !trace.allsolid && !trace.startsolid && trace.fraction >= 1.0f )
 	{
 		Rancor_DropVictim( NPCS.NPC );

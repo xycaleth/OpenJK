@@ -15,11 +15,7 @@ This file is part of Jedi Academy.
     along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
 */
 // Copyright 2001-2013 Raven Software
-
-// leave this line at the top for all g_xxxx.cpp files...
-#include "g_headers.h"
-
-
+#include "../cgame/cg_local.h"
 #include "Q3_Interface.h"
 #include "g_local.h"
 #include "g_functions.h"
@@ -66,7 +62,7 @@ void AddSpawnField(char *field, char *value)
 
 qboolean	G_SpawnField( unsigned int uiField, char **ppKey, char **ppValue )
 {
-	if ( uiField >= numSpawnVars )
+	if ( (int)uiField >= numSpawnVars )
 		return qfalse;
 
 	(*ppKey) = spawnVars[uiField][0];
@@ -173,7 +169,7 @@ stringID_table_t flagTable [] =
 {
 	//"noTED", EF_NO_TED,
 	//stringID_table_t Must end with a null entry
-	"", NULL
+	{ "", 0 }
 };
 
 //
@@ -212,7 +208,7 @@ typedef enum {
 
 typedef struct
 {
-	char	*name;
+	const char	*name;
 	int		ofs;
 	fieldtype_t	type;
 	int		flags;
@@ -371,7 +367,7 @@ field_t fields[] = {
 
 
 typedef struct {
-	char	*name;
+	const char	*name;
 	void	(*spawn)(gentity_t *ent);
 } spawn_t;
 
@@ -1258,7 +1254,7 @@ qboolean G_ParseSpawnVars( const char **data ) {
 	return qtrue;
 }
 
-static	char *defaultStyles[LS_NUM_STYLES][3] = 
+static	const char *defaultStyles[LS_NUM_STYLES][3] = 
 {
 	{	// 0 normal
 		"z",

@@ -4,11 +4,12 @@
 // cl_parse.c  -- parse a message received from the server
 
 #include "client.h"
+#include "cl_cgameapi.h"
 #include "qcommon/stringed_ingame.h"
 #ifdef _DONETPROFILE_
 #include "qcommon/INetProfile.h"
 #endif
-#include "../zlib/zlib.h"
+#include "zlib/zlib.h"
 
 static char hiddenCvarVal[128];
 
@@ -31,8 +32,6 @@ void SHOWNET( msg_t *msg, char *s) {
 		Com_Printf ("%3i:%s\n", msg->readcount-1, s);
 	}
 }
-
-//void CL_SP_Print(const word ID, byte *Data); //, char* color)
 
 /*
 =========================================================================
@@ -255,7 +254,7 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	// read areamask
 	len = MSG_ReadByte( msg );
 
-	if(len > sizeof(newSnap.areamask))
+	if((unsigned)len > sizeof(newSnap.areamask))
 	{
 		Com_Error (ERR_DROP,"CL_ParseSnapshot: Invalid size %d for areamask", len);
 		return;
@@ -363,7 +362,13 @@ void CL_ParseSetGame( msg_t *msg )
 		return;
 	}
 
-	Cvar_Set("fs_game", newGameDir);
+	if(!FS_FilenameCompare(newGameDir, BASEGAME))
+		Cvar_Set("fs_game", "");
+	else
+		Cvar_Set("fs_game", newGameDir);
+
+	if(!(Cvar_Flags("fs_game") & CVAR_MODIFIED))
+		return;
 
 	//Update the search path for the mod dir
 	FS_UpdateGamedir();
@@ -378,9 +383,6 @@ void CL_ParseSetGame( msg_t *msg )
 
 int cl_connectedToPureServer;
 int cl_connectedToCheatServer;
-int cl_connectedGAME;
-int cl_connectedCGAME;
-int cl_connectedUI;
 
 /*
 ==================
@@ -430,8 +432,6 @@ void CL_SystemInfoChanged( void ) {
 	// scan through all the variables in the systeminfo and locally set cvars to match
 	s = systemInfo;
 	while ( s ) {
-		int cvar_flags;
-
 		Info_NextPair( &s, key, value );
 		if ( !key[0] ) {
 			break;
@@ -444,38 +444,21 @@ void CL_SystemInfoChanged( void ) {
 				continue;
 			}
 
-			gameSet = qtrue;
-		}
-
-		if((cvar_flags = Cvar_Flags(key)) == CVAR_NONEXISTENT)
-			Cvar_Get(key, value, CVAR_SERVER_CREATED | CVAR_ROM);
-		else
-		{
-			// If this cvar may not be modified by a server discard the value.
-			if(!(cvar_flags & (CVAR_SYSTEMINFO | CVAR_SERVER_CREATED | CVAR_USER_CREATED)))
+			if(!FS_FilenameCompare(value, BASEGAME))
 			{
-				if (Q_stricmp( key, "g_synchronousClients" ) &&
-					Q_stricmp( key, "pmove_fixed" ) &&
-					Q_stricmp( key, "pmove_msec" ) &&
-					Q_stricmp( key, "pmove_float" ) )
-				{
-					Com_Printf(S_COLOR_YELLOW "WARNING: server is not allowed to set %s=%s\n", key, value);
-					continue;
-				}
+				Com_Printf(S_COLOR_YELLOW "WARNING: Server sent \"%s\" fs_game value, clearing.\n", value);
+				Q_strncpyz(value, "", sizeof(value));
 			}
 
-			Cvar_SetSafe(key, value);
+			gameSet = qtrue;
 		}
+		Cvar_Server_Set( key, value );
 	}
 	// if game folder should not be set and it is set at the client side
 	if ( !gameSet && *Cvar_VariableString("fs_game") ) {
 		Cvar_Set( "fs_game", "" );
 	}
 	cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" );
-
-	cl_connectedGAME = atoi(Info_ValueForKey( systemInfo, "vm_game" ));
-	cl_connectedCGAME = atoi(Info_ValueForKey( systemInfo, "vm_cgame" ));
-	cl_connectedUI = atoi(Info_ValueForKey( systemInfo, "vm_ui" ));
 }
 
 void CL_ParseAutomapSymbols ( msg_t* msg )
@@ -731,7 +714,7 @@ void CL_ParseDownload ( msg_t *msg ) {
 	}
 
 	size = /*(unsigned short)*/MSG_ReadShort ( msg );
-	if (size < 0 || size > sizeof(data))
+	if (size < 0 || size > (int)sizeof(data))
 	{
 		Com_Error(ERR_DROP, "CL_ParseDownload: Invalid size %d for download chunk", size);
 		return;
@@ -775,7 +758,7 @@ void CL_ParseDownload ( msg_t *msg ) {
 			clc.download = 0;
 
 			// rename the file
-			FS_SV_Rename ( clc.downloadTempName, clc.downloadName );
+			FS_SV_Rename ( clc.downloadTempName, clc.downloadName, qfalse );
 		}
 
 		// send intentions now
@@ -947,15 +930,9 @@ void CL_ParseServerMessage( msg_t *msg ) {
 			CL_ParseDownload( msg );
 			break;
 		case svc_mapchange:
-			if (cgvm)
-			{
-				VM_Call( cgvm, CG_MAP_CHANGE );
-			}
+			if ( cls.cgameStarted )
+				CGVM_MapChange();
 			break;
 		}
 	}
 }
-
-
-extern int			scr_center_y;
-void SCR_CenterPrint (char *str);//, PalIdx_t colour)

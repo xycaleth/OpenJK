@@ -15,9 +15,6 @@ This file is part of OpenJK.
     along with OpenJK.  If not, see <http://www.gnu.org/licenses/>.
 */
 // Copyright 2013 OpenJK
-
-#include "g_headers.h"
-
 #include "g_local.h"
 #include "b_local.h"
 #include "g_functions.h"
@@ -233,7 +230,7 @@ void WP_ThermalThink( gentity_t *ent )
 	if ( (ent->s.eFlags&EF_HELD_BY_SAND_CREATURE) )
 	{//blow once creature is underground (done with anim)
 		//FIXME: chance of being spit out?  Especially if lots of delay left...
-		ent->e_TouchFunc = NULL;//don't impact on anything
+		ent->e_TouchFunc = touchF_NULL;//don't impact on anything
 		if ( !ent->activator 
 			|| !ent->activator->client
 			|| !ent->activator->client->ps.legsAnimTimer )

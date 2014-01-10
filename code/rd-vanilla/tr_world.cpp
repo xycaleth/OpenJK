@@ -22,42 +22,6 @@ This file is part of Jedi Academy.
 
 #include "tr_local.h"
 
-#ifdef VV_LIGHTING
-#include "tr_lightmanager.h"
-#endif
-
-#ifdef _XBOX
-#include "../qcommon/sparc.h"
-#endif
-
-static bool lookingForWorstLeaf = false;
-
-#ifdef _XBOX
-static bool GetCoordsForLeaf(int leafNum, vec3_t coords)
-{
-	srfSurfaceFace_t *face;
-	msurface_t *surf;
-	int i;
-
-	for(i=0; i<tr.world->leafs[leafNum].nummarksurfaces; i++) {
-		surf = *(tr.world->marksurfaces + 
-				tr.world->leafs[leafNum].firstMarkSurfNum + i);
-		
-		if(!surf->data || *surf->data != SF_FACE) {
-			continue;
-		}
-
-		face = (srfSurfaceFace_t*)surf->data;
-		Q_CastShort2Float(&coords[0], (short*)(face->srfPoints + 0));
-		Q_CastShort2Float(&coords[1], (short*)(face->srfPoints + 1));
-		Q_CastShort2Float(&coords[2], (short*)(face->srfPoints + 2));
-		return true;
-	}
-
-	return false;
-}
-#endif
-
 /*
 =================
 R_CullTriSurf
@@ -93,7 +57,7 @@ static qboolean	R_CullGrid( srfGridMesh_t *cv ) {
 		return qtrue;
 	}
 
-	if ( tr.currentEntityNum != TR_WORLDENT ) {
+	if ( tr.currentEntityNum != REFENTITYNUM_WORLD ) {
 		sphereCull = R_CullLocalPointAndRadius( cv->localOrigin, cv->meshRadius );
 	} else {
 		sphereCull = R_CullPointAndRadius( cv->localOrigin, cv->meshRadius );
@@ -194,8 +158,6 @@ static qboolean	R_CullSurface( surfaceType_t *surface, shader_t *shader ) {
 	return qfalse;
 }
 
-
-#ifndef VV_LIGHTING
 static int R_DlightFace( srfSurfaceFace_t *face, int dlightBits ) {
 	float		d;
 	int			i;
@@ -220,9 +182,7 @@ static int R_DlightFace( srfSurfaceFace_t *face, int dlightBits ) {
 	face->dlightBits = dlightBits;
 	return dlightBits;
 }
-#endif // VV_LIGHTING
 
-#ifndef VV_LIGHTING
 static int R_DlightGrid( srfGridMesh_t *grid, int dlightBits ) {
 	int			i;
 	dlight_t	*dl;
@@ -250,10 +210,7 @@ static int R_DlightGrid( srfGridMesh_t *grid, int dlightBits ) {
 	grid->dlightBits = dlightBits;
 	return dlightBits;
 }
-#endif // VV_LIGHTING
 
-
-#ifndef VV_LIGHTING
 static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
 	// FIXME: more dlight culling to trisurfs...
 	surf->dlightBits = dlightBits;
@@ -286,7 +243,6 @@ static int R_DlightTrisurf( srfTriangles_t *surf, int dlightBits ) {
 	return dlightBits;
 #endif
 }
-#endif // VV_LIGHTING
 
 /*
 ====================
@@ -297,7 +253,6 @@ that is touched by one or more dlights, so try to throw out
 more dlights if possible.
 ====================
 */
-#ifndef VV_LIGHTING
 static int R_DlightSurface( msurface_t *surf, int dlightBits ) {
 	if ( *surf->data == SF_FACE ) {
 		dlightBits = R_DlightFace( (srfSurfaceFace_t *)surf->data, dlightBits );
@@ -315,20 +270,13 @@ static int R_DlightSurface( msurface_t *surf, int dlightBits ) {
 
 	return dlightBits;
 }
-#endif // VV_LIGHTING
-
-
 
 /*
 ======================
 R_AddWorldSurface
 ======================
 */
-#ifdef VV_LIGHTING
-void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noViewCount ) {
-#else
 static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noViewCount = qfalse ) {
-#endif
 	/*
 	if ( surf->viewCount == tr.viewCount ) {
 		return;		// already in this view
@@ -371,11 +319,7 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noView
 
 	// check for dlighting
 	if ( dlightBits ) {
-#ifdef VV_LIGHTING
-		dlightBits = VVLightMan.R_DlightSurface( surf, dlightBits );
-#else
 		dlightBits = R_DlightSurface( surf, dlightBits );
-#endif
 		dlightBits = ( dlightBits != 0 );
 	}
 
@@ -412,18 +356,10 @@ void R_AddBrushModelSurfaces ( trRefEntity_t *ent ) {
 	
 	if(pModel->bspInstance)
 	{
-#ifdef VV_LIGHTING
-		VVLightMan.R_SetupEntityLighting(&tr.refdef, ent);
-#else
 		R_SetupEntityLighting(&tr.refdef, ent);
-#endif
 	}
 
-#ifdef VV_LIGHTING
-	VVLightMan.R_DlightBmodel( bmodel, qfalse );
-#else
 	R_DlightBmodel( bmodel, qfalse );
-#endif
 
 	for ( i = 0 ; i < bmodel->numSurfaces ; i++ ) {
 		R_AddWorldSurface( bmodel->firstSurface + i, tr.currentEntity->dlightBits, qtrue );
@@ -451,25 +387,6 @@ float GetQuadArea( vec3_t v1, vec3_t v2, vec3_t v3, vec3_t v4 )
 				dis2[0] * dis2[0] + dis2[1] * dis2[1] + dis2[2] * dis2[2] );
 }
 
-#ifdef _XBOX
-float GetQuadArea( unsigned short v1[3], unsigned short v2[3], unsigned short v3[3], unsigned short v4[3])
-{
-	vec3_t fv1;
-	vec3_t fv2;
-	vec3_t fv3;
-	vec3_t fv4;
-
-	for(int i=0; i<3; i++) {
-		Q_CastShort2Float(&fv1[i], (short*)&v1[i]);
-		Q_CastShort2Float(&fv2[i], (short*)&v2[i]);
-		Q_CastShort2Float(&fv3[i], (short*)&v3[i]);
-		Q_CastShort2Float(&fv4[i], (short*)&v4[i]);
-	}
-
-	return GetQuadArea(fv1, fv2, fv3, fv4);
-}
-#endif
-
 void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal )
 {
 	msurface_t			*surfs;
@@ -493,14 +410,7 @@ void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal )
 		face = ( srfSurfaceFace_t *)surfs->data;
 
 		// It seems that the safest way to handle this is by finding the area of the faces
-#ifdef _XBOX
-		int nextSurfPoint = NEXT_SURFPOINT(face->flags);
-		dist = GetQuadArea( face->srfPoints, face->srfPoints + nextSurfPoint, 
-				face->srfPoints + nextSurfPoint * 2, face->srfPoints +
-						 nextSurfPoint * 3 );
-#else
 		dist = GetQuadArea( face->points[0], face->points[1], face->points[2], face->points[3] );
-#endif
 
 		// Check against the highest max
 		if ( dist > maxDist[0] )
@@ -547,20 +457,10 @@ void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal )
 	surfs = bmodel->firstSurface + i;
 	face = ( srfSurfaceFace_t *)surfs->data;
 
-#ifdef _XBOX
-	int nextSurfPoint = NEXT_SURFPOINT(face->flags);
-	for ( int t = 0; t < 4; t++ )
-	{
-		Q_CastShort2Float(&verts[t][0], (short*)(face->srfPoints + nextSurfPoint * t + 0));
-		Q_CastShort2Float(&verts[t][1], (short*)(face->srfPoints + nextSurfPoint * t + 1));
-		Q_CastShort2Float(&verts[t][2], (short*)(face->srfPoints + nextSurfPoint * t + 2));
-	}
-#else
 	for ( int t = 0; t < 4; t++ )
 	{
 		VectorCopy(	face->points[t], verts[t] );
 	}
-#endif
 }
 
 /*
@@ -577,7 +477,6 @@ void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal )
 R_RecursiveWorldNode
 ================
 */
-#ifndef VV_LIGHTING
 static void R_RecursiveWorldNode( mnode_t *node, int planeBits, int dlightBits ) {
 
 	do {
@@ -731,8 +630,6 @@ static void R_RecursiveWorldNode( mnode_t *node, int planeBits, int dlightBits )
 	}
 
 }
-#endif // VV_LIGHTING
-
 
 /*
 ===============
@@ -753,11 +650,8 @@ static mnode_t *R_PointInLeaf( vec3_t p ) {
 		if (node->contents != -1) {
 			break;
 		}
-#ifdef _XBOX
-		plane = tr.world->planes + node->planeNum;
-#else
 		plane = node->plane;
-#endif
+
 		d = DotProduct (p,plane->normal) - plane->dist;
 		if (d > 0) {
 			node = node->children[0];
@@ -779,12 +673,7 @@ static const byte *R_ClusterPVS (int cluster) {
 		return tr.world->novis;
 	}
 
-#ifdef _XBOX
-	return tr.world->vis->Decompress(cluster * tr.world->clusterBytes,
-			tr.world->numClusters);
-#else
 	return tr.world->vis + cluster * tr.world->clusterBytes;
-#endif
 }
 
 /*
@@ -815,80 +704,6 @@ Mark the leaves and nodes that are in the PVS for the current
 cluster
 ===============
 */
-#ifdef _XBOX
-void R_MarkLeaves (mleaf_s *leafOverride) {
-	const byte	*vis;
-	mleaf_s	*leaf;
-   	mnode_s	*parent;
-	int		i;
-	int		cluster;
-
-	// lockpvs lets designers walk around to determine the
-	// extent of the current pvs
-	if ( r_lockpvs->integer ) {
-		return;
-	}
-
-	// current viewcluster
-	if(!leafOverride) {
-		leaf = (mleaf_s*)R_PointInLeaf( tr.viewParms.pvsOrigin );
-	} else {
-		leaf = leafOverride;
-	}
-	cluster = leaf->cluster;
-
-	assert(leaf->contents != -1);
-
-	// if the cluster is the same and the area visibility matrix
-	// hasn't changed, we don't need to mark everything again
-
-	if ( tr.viewCluster == cluster && !tr.refdef.areamaskModified ) {
-		return;
-	}
-
-	tr.visCount++;
-	tr.viewCluster = cluster;
-
-	if ( r_novis->integer || tr.viewCluster == -1 ) {
-		for (i=0 ; i<tr.world->numnodes ; i++) {
-			if (tr.world->nodes[i].contents != CONTENTS_SOLID) {
-				tr.world->nodes[i].visframe = tr.visCount;
-			}
-		}
-		return;
-	}
-
-	vis = R_ClusterPVS (tr.viewCluster);
-	
-	for (i=0,leaf=tr.world->leafs ; i<tr.world->numleafs ; i++, leaf++) {
-		cluster = leaf->cluster;
-		if ( cluster < 0 || cluster >= tr.world->numClusters ) {
-			continue;
-		}
-
-		// check general pvs
-		if ( !(vis[cluster>>3] & (1<<(cluster&7))) ) {
-			continue;
-		}
-
-		// check for door connection
-		if (!lookingForWorstLeaf &&
-			   (tr.refdef.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
-			continue;		// not visible
-		}
-
-		parent = (mnode_t*)leaf;
-		assert(leaf->contents != -1);
-		do {
-			if (parent->visframe == tr.visCount)
-				break;
-			parent->visframe = tr.visCount;
-			parent = parent->parent;
-		} while (parent);
-	}
-}
-#else // _XBOX
-
 static void R_MarkLeaves (void) {
 	const byte	*vis;
 	mnode_t	*leaf, *parent;
@@ -917,7 +732,7 @@ static void R_MarkLeaves (void) {
 	if ( r_showcluster->modified || r_showcluster->integer ) {
 		r_showcluster->modified = qfalse;
 		if ( r_showcluster->integer ) {
-			VID_Printf( PRINT_ALL, "cluster:%i  area:%i\n", cluster, leaf->area );
+			ri.Printf( PRINT_ALL, "cluster:%i  area:%i\n", cluster, leaf->area );
 		}
 	}
 
@@ -960,15 +775,12 @@ static void R_MarkLeaves (void) {
 		} while (parent);
 	}
 }
-#endif
-
 
 /*
 =============
 R_AddWorldSurfaces
 =============
 */
-#ifdef _XBOX
 void R_AddWorldSurfaces (void) {
 	if ( !r_drawworld->integer ) {
 		return;
@@ -978,33 +790,8 @@ void R_AddWorldSurfaces (void) {
 		return;
 	}
 
-	tr.currentEntityNum = TR_WORLDENT;//ENTITYNUM_WORLD;
-	tr.shiftedEntityNum = tr.currentEntityNum << QSORT_ENTITYNUM_SHIFT;
-
-	// clear out the visible min/max
-	ClearBounds( tr.viewParms.visBounds[0], tr.viewParms.visBounds[1] );
-
-	// perform frustum culling and add all the potentially visible surfaces
-	if ( VVLightMan.num_dlights > MAX_DLIGHTS ) {
-		VVLightMan.num_dlights = MAX_DLIGHTS ;
-	}
-
-	VVLightMan.R_RecursiveWorldNode( tr.world->nodes, 15, ( 1 << VVLightMan.num_dlights ) - 1 );
-}
-
-#else // _XBOX
-
-void R_AddWorldSurfaces (void) {
-	if ( !r_drawworld->integer ) {
-		return;
-	}
-
-	if ( tr.refdef.rdflags & RDF_NOWORLDMODEL ) {
-		return;
-	}
-
-	tr.currentEntityNum = TR_WORLDENT;
-	tr.shiftedEntityNum = tr.currentEntityNum << QSORT_ENTITYNUM_SHIFT;
+	tr.currentEntityNum = REFENTITYNUM_WORLD;
+	tr.shiftedEntityNum = tr.currentEntityNum << QSORT_REFENTITYNUM_SHIFT;
 
 	// determine which leaves are in the PVS / areamask
 	R_MarkLeaves ();
@@ -1019,5 +806,3 @@ void R_AddWorldSurfaces (void) {
 
 	R_RecursiveWorldNode( tr.world->nodes, 31, ( 1 << tr.refdef.num_dlights ) - 1 );
 }
-
-#endif // _XBOX

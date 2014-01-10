@@ -229,7 +229,6 @@ extern qboolean BG_ParseLiteral( const char **data, const char *string );
 //
 #define MAX_NPC_DATA_SIZE 0x40000
 char	NPCParms[MAX_NPC_DATA_SIZE];
-char	NPCFile[MAX_QPATH];
 
 /*
 team_t TranslateTeamName( const char *name ) 
@@ -394,7 +393,7 @@ void SpewDebugStuffToFile(animation_t *anims)
 	fileHandle_t f;
 	int i = 0;
 
-	trap_FS_FOpenFile("file_of_debug_stuff_SP.txt", &f, FS_WRITE);
+	trap->FS_Open("file_of_debug_stuff_SP.txt", &f, FS_WRITE);
 
 	if (!f)
 	{
@@ -409,8 +408,8 @@ void SpewDebugStuffToFile(animation_t *anims)
 		i++;
 	}
 
-	trap_FS_Write(BGPAFtext, strlen(BGPAFtext), f);
-	trap_FS_FCloseFile(f);
+	trap->FS_Write(BGPAFtext, strlen(BGPAFtext), f);
+	trap->FS_Close(f);
 }
 #endif
 
@@ -512,10 +511,10 @@ void NPC_PrecacheAnimationCFG( const char *NPC_type )
 			char	*slash = NULL;
 			char	*strippedName;
 			
-			int handle = gi.G2API_PrecacheGhoul2Model( va( "models/players/%s/model.glm", value ) );
+			int handle = trap->G2API_PrecacheGhoul2Model( va( "models/players/%s/model.glm", value ) );
 			if ( handle > 0 )//FIXME: isn't 0 a valid handle?
 			{
-				GLAName = gi.G2API_GetAnimFileNameIndex( handle );
+				GLAName = trap->G2API_GetAnimFileNameIndex( handle );
 				if ( GLAName )
 				{
 					Q_strncpyz( animName, GLAName, sizeof( animName ), qtrue );
@@ -577,7 +576,7 @@ void NPC_PrecacheWeapons( team_t playerTeam, int spawnflags, char *NPCtype )
 				}
 				strcat (weaponModel, ".glm");	//and change to ghoul2
 			}
-			gi.G2API_PrecacheGhoul2Model( weaponModel ); // correct way is item->world_model
+			trap->G2API_PrecacheGhoul2Model( weaponModel ); // correct way is item->world_model
 		}
 	}
 #endif
@@ -600,6 +599,7 @@ void NPC_Precache ( gentity_t *spawner )
 	qboolean	md3Model = qfalse;
 	char	playerModel[MAX_QPATH];
 	char	customSkin[MAX_QPATH];
+	char	sessionName[MAX_QPATH+15];
 
 	if ( !Q_stricmp( "random", spawner->NPC_type ) )
 	{//sorry, can't precache a random just yet
@@ -608,7 +608,8 @@ void NPC_Precache ( gentity_t *spawner )
 	strcpy(customSkin,"default");
 
 	p = NPCParms;
-	COM_BeginParseSession(NPCFile);
+	Com_sprintf( sessionName, sizeof(sessionName), "NPC_Precache(%s)", spawner->NPC_type );
+	COM_BeginParseSession(sessionName);
 
 	// look for the right NPC
 	while ( p ) 
@@ -734,7 +735,7 @@ void NPC_Precache ( gentity_t *spawner )
 			}
 			//playerTeam = TranslateTeamName(value);
 			Com_sprintf(tk, sizeof(tk), "NPC%s", token);
-			playerTeam = (team_t)GetIDForString( TeamTable, tk );
+			playerTeam = GetIDForString( TeamTable, tk );
 			continue;
 		}
 
@@ -857,7 +858,7 @@ void NPC_Precache ( gentity_t *spawner )
 	}
 
 	//precache this NPC's possible weapons
-	NPC_PrecacheWeapons( playerTeam, spawner->spawnflags, spawner->NPC_type );
+	NPC_PrecacheWeapons( (team_t)playerTeam, spawner->spawnflags, spawner->NPC_type );
 
 //	CG_RegisterNPCCustomSounds( &ci );
 //	CG_RegisterNPCEffects( playerTeam );
@@ -975,6 +976,7 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 	char	sound[MAX_QPATH];
 	char	playerModel[MAX_QPATH];
 	char	customSkin[MAX_QPATH];
+	char	sessionName[MAX_QPATH+17];
 	renderInfo_t	*ri = &NPC->client->renderInfo;
 	gNPCstats_t		*stats = NULL;
 	qboolean	md3Model = qtrue;
@@ -1102,7 +1104,8 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 		int fp;
 
 		p = NPCParms;
-		COM_BeginParseSession(NPCFile);
+		Com_sprintf( sessionName, sizeof(sessionName), "NPC_ParseParms(%s)", NPCName );
+		COM_BeginParseSession(sessionName);
 
 		// look for the right NPC
 		while ( p ) 
@@ -1823,7 +1826,7 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 					continue;
 				}
 				Com_sprintf(tk, sizeof(tk), "NPC%s", token);
-				NPC->client->enemyTeam = (team_t)GetIDForString( TeamTable, tk );//TranslateTeamName(value);
+				NPC->client->enemyTeam = GetIDForString( TeamTable, tk );//TranslateTeamName(value);
 				continue;
 			}
 
@@ -1976,16 +1979,16 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 					VectorCopy(NPC->s.origin, NPC->client->ps.origin);
 					VectorCopy(NPC->s.origin, NPC->r.currentOrigin);
 					G_SetOrigin( NPC, NPC->s.origin );
-					trap_LinkEntity(NPC);
+					trap->LinkEntity((sharedEntity_t *)NPC);
 					//now trace down
 					/*
 					VectorCopy( NPC->s.origin, bottom );
 					bottom[2] -= adjust;
-					trap_Trace( &tr, NPC->s.origin, NPC->r.mins, NPC->r.maxs, bottom, NPC->s.number, MASK_NPCSOLID );
+					trap->Trace( &tr, NPC->s.origin, NPC->r.mins, NPC->r.maxs, bottom, NPC->s.number, MASK_NPCSOLID );
 					if ( !tr.allsolid && !tr.startsolid )
 					{
 						G_SetOrigin( NPC, tr.endpos );
-						trap_LinkEntity(NPC);
+						trap->LinkEntity((sharedEntity_t *)NPC);
 					}
 					*/
 				}
@@ -2393,6 +2396,8 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 					for ( n = 0; n < MAX_BLADES; n++ )
 					{
 						NPC->client->saber[0].blade[n].color = color;
+						NPC->s.boltToPlayer = NPC->s.boltToPlayer & 0x38;//(111000)
+						NPC->s.boltToPlayer += (color + 1);
 					}
 				}
 				continue;
@@ -2501,6 +2506,8 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 					for ( n = 0; n < MAX_BLADES; n++ )
 					{
 						NPC->client->saber[1].blade[n].color = color;
+						NPC->s.boltToPlayer = NPC->s.boltToPlayer & 0x7;//(000111)
+						NPC->s.boltToPlayer += ((color + 1) << 3);
 					}
 				}
 				continue;
@@ -3173,7 +3180,7 @@ Ghoul2 Insert Start
 		if (npcSaber1 == 0)
 		{ //use "kyle" for a default then
 			npcSaber1 = G_ModelIndex("@Kyle");
-			WP_SaberParseParms( "Kyle", &NPC->client->saber[0] );
+			WP_SaberParseParms( DEFAULT_SABER, &NPC->client->saber[0] );
 		}
 
 		NPC->s.npcSaber1 = npcSaber1;
@@ -3229,7 +3236,7 @@ char npcParseBuffer[MAX_NPC_DATA_SIZE];
 
 void NPC_LoadParms( void ) 
 {
-	int			len, totallen, npcExtFNLen, mainBlockLen, fileCnt, i;
+	int			len, totallen, npcExtFNLen, fileCnt, i;
 //	const char	*filename = "ext_data/NPC2.cfg";
 	char		/**buffer,*/ *holdChar, *marker;
 	char		npcExtensionListBuf[2048];			//	The list of file names read in
@@ -3237,12 +3244,12 @@ void NPC_LoadParms( void )
 	len = 0;
 
 	//remember where to store the next one
-	totallen = mainBlockLen = len;
+	totallen = len;
 	marker = NPCParms+totallen;
 	*marker = 0;
 
 	//now load in the extra .npc extensions
-	fileCnt = trap_FS_GetFileList("ext_data/NPCs", ".npc", npcExtensionListBuf, sizeof(npcExtensionListBuf) );
+	fileCnt = trap->FS_GetFileList("ext_data/NPCs", ".npc", npcExtensionListBuf, sizeof(npcExtensionListBuf) );
 
 	holdChar = npcExtensionListBuf;
 	for ( i = 0; i < fileCnt; i++, holdChar += npcExtFNLen + 1 ) 
@@ -3251,7 +3258,7 @@ void NPC_LoadParms( void )
 
 //		Com_Printf( "Parsing %s\n", holdChar );
 
-		len = trap_FS_FOpenFile(va( "ext_data/NPCs/%s", holdChar), &f, FS_READ);
+		len = trap->FS_Open(va( "ext_data/NPCs/%s", holdChar), &f, FS_READ);
 
 		if ( len == -1 ) 
 		{
@@ -3260,9 +3267,9 @@ void NPC_LoadParms( void )
 		else
 		{
 			if ( totallen + len >= MAX_NPC_DATA_SIZE ) {
-				G_Error( "NPC extensions (*.npc) are too large" );
+				trap->Error( ERR_DROP, "NPC extensions (*.npc) are too large" );
 			}
-			trap_FS_Read(npcParseBuffer, len, f);
+			trap->FS_Read(npcParseBuffer, len, f);
 			npcParseBuffer[len] = 0;
 
 			len = COM_Compress( npcParseBuffer );
@@ -3270,7 +3277,7 @@ void NPC_LoadParms( void )
 			strcat( marker, npcParseBuffer );
 			strcat(marker, "\n");
 			len++;
-			trap_FS_FCloseFile(f);
+			trap->FS_Close(f);
 
 			totallen += len;
 			marker = NPCParms+totallen;

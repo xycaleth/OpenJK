@@ -90,13 +90,13 @@ CRMMission::~CRMMission ( )
 //	mCheckedEnts.clear();
 
 	// Cleanup the objectives
-	for (oit = mObjectives.begin(); oit != mObjectives.end(); oit++)
+	for (oit = mObjectives.begin(); oit != mObjectives.end(); ++oit)
 	{
 		delete (*oit);
 	}
 
 	// Cleanup the instances
-	for (iit = mInstances.begin(); iit != mInstances.end(); iit++)
+	for (iit = mInstances.begin(); iit != mInstances.end(); ++iit)
 	{
 		delete (*iit);
 	}
@@ -129,10 +129,10 @@ CRMObjective* CRMMission::FindObjective ( const char* name )
 {
 	rmObjectiveIter_t it;
 
-	for (it = mObjectives.begin(); it != mObjectives.end(); it++)
+	for (it = mObjectives.begin(); it != mObjectives.end(); ++it)
 	{
 		// Does it match?
-		if (!stricmp ((*it)->GetName(), name ))
+		if (!Q_stricmp ((*it)->GetName(), name ))
 		{
 			return (*it);
 		}
@@ -738,8 +738,8 @@ bool CRMMission::ParseInstancesOnPath ( CGPGroup* group )
 	for ( defenseGroup = group->GetSubGroups(); 
 		  defenseGroup; 
 		  defenseGroup=defenseGroup->GetNext() )
-	if (stricmp ( defenseGroup->GetName ( ), "defenses" )==0 ||
-		stricmp ( defenseGroup->GetName(), "instanceonpath")==0)
+	if (Q_stricmp ( defenseGroup->GetName ( ), "defenses" )==0 ||
+		Q_stricmp ( defenseGroup->GetName(), "instanceonpath")==0)
 	{
 		const char* defName = defenseGroup->FindPairValue ( "instance", "" );
 		if ( *defName )
@@ -1194,7 +1194,7 @@ CGPGroup* CRMMission::ParseRandom ( CGPGroup* randomGroup )
 		  group; 
 		  group = group->GetNext ( ) )
 	{
-		if ( stricmp ( group->GetName ( ), "random_choice" ) )
+		if ( Q_stricmp ( group->GetName ( ), "random_choice" ) )
 		{
 			continue;
 		}
@@ -1371,7 +1371,7 @@ bool CRMMission::Load ( const char* mission, const char* instances, const char* 
 	// Grab the root parser groop and make sure its mission, otherwise this
 	// isnt a valid mission file
 	root = parser.GetBaseParseGroup()->GetSubGroups();
-	if(stricmp(root->GetName(), "mission"))
+	if(Q_stricmp(root->GetName(), "mission"))
 	{
 		Com_Printf("ERROR: '%s' is not a valid mission file\n", mission );
 		parser.Clean();
@@ -1438,7 +1438,7 @@ bool CRMMission::Spawn ( CRandomTerrain* terrain, qboolean IsServer )
 	if ( IsServer )
 	{
 		// Prespawn all instances, this is mainly for flattening
-		for(it = mInstances.begin(); it != mInstances.end(); it++)
+		for(it = mInstances.begin(); it != mInstances.end(); ++it)
 		{
 			CRMInstance* instance = *it;
 
@@ -1472,7 +1472,7 @@ bool CRMMission::Spawn ( CRandomTerrain* terrain, qboolean IsServer )
 	if ( IsServer )
 	{
 		// Spawn all instances
-		for(it = mInstances.begin(); it != mInstances.end(); it++)
+		for(it = mInstances.begin(); it != mInstances.end(); ++it)
 		{
 			CRMInstance* instance = *it;
 
@@ -1519,7 +1519,7 @@ bool CRMMission::Spawn ( CRandomTerrain* terrain, qboolean IsServer )
 		Cvar_VariableStringBuffer("RMG_mission", missionName, MAX_QPATH);
 
 #ifndef DEDICATED
-		for(it = mInstances.begin(); it != mInstances.end(); it++)
+		for(it = mInstances.begin(); it != mInstances.end(); ++it)
 		{
 			(*it)->DrawAutomapSymbol();
 		}
@@ -1656,7 +1656,7 @@ void CRMMission::CompleteObjective ( CRMObjective* objective )
 	mCurrentObjective = NULL;
 
 	// Find the next objective
-	for (it = mObjectives.begin(); it != mObjectives.end(); it++)
+	for (it = mObjectives.begin(); it != mObjectives.end(); ++it)
 	{
 		objective = (*it);
 
@@ -1705,7 +1705,7 @@ void CRMMission::Preview ( const vec3_t from )
 	rmInstanceIter_t	it;
 
 	// Look for settlements close to the player and put up some debug stuff
-	for(it = mInstances.begin(); it != mInstances.end(); it++)
+	for(it = mInstances.begin(); it != mInstances.end(); ++it)
 	{
 		CRMInstance* instance = *it;
 

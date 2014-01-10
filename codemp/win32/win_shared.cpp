@@ -11,6 +11,7 @@
 #include <direct.h>
 #include <io.h>
 #include <conio.h>
+#include <wincrypt.h>
 #include <shlobj.h>
 
 // Used to determine where to store user-specific files
@@ -153,6 +154,29 @@ int Sys_Milliseconds2( void )
 	return sys_curtime;
 }
 
+/*
+================
+Sys_RandomBytes
+================
+*/
+qboolean Sys_RandomBytes( byte *string, int len )
+{
+	HCRYPTPROV  prov;
+
+	if( !CryptAcquireContext( &prov, NULL, NULL,
+		PROV_RSA_FULL, CRYPT_VERIFYCONTEXT ) )  {
+
+		return qfalse;
+	}
+
+	if( !CryptGenRandom( prov, len, (BYTE *)string ) )  {
+		CryptReleaseContext( prov, 0 );
+		return qfalse;
+	}
+	CryptReleaseContext( prov, 0 );
+	return qtrue;
+}
+
 //============================================
 
 char *Sys_GetCurrentUser( void )
@@ -172,14 +196,13 @@ char *Sys_GetCurrentUser( void )
 	return s_userName;
 }
 
-#ifdef _PORTABLE_VERSION
 char	*Sys_DefaultHomePath(void) {
+#ifdef _PORTABLE_VERSION
 	Com_Printf("Portable install requested, skipping homepath support\n");
 	return NULL;
-}
 #else
-typedef HRESULT (__stdcall * GETFOLDERPATH)(HWND, int, HANDLE, DWORD, LPSTR); 
-char	*Sys_DefaultHomePath(void) {
+	typedef HRESULT (__stdcall * GETFOLDERPATH)(HWND, int, HANDLE, DWORD, LPSTR); 
+
 	TCHAR szPath[MAX_PATH];
 	GETFOLDERPATH qSHGetFolderPath;
 	HMODULE shfolder = LoadLibrary("shfolder.dll");
@@ -218,5 +241,5 @@ char	*Sys_DefaultHomePath(void) {
 
 	FreeLibrary(shfolder);
 	return homePath;
-}
 #endif
+}

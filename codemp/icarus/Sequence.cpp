@@ -70,7 +70,7 @@ void CSequence::Delete( void )
 			(*iterSeq).second->SetParent( NULL );
 		}*/
 		
-		for ( si = m_children.begin(); si != m_children.end(); si++ )
+		for ( si = m_children.begin(); si != m_children.end(); ++si )
 		{
 			(*si)->SetParent( NULL );
 		}
@@ -78,7 +78,7 @@ void CSequence::Delete( void )
 	m_children.clear();
 
 	//Clear all held commands
-	for ( bi = m_commands.begin(); bi != m_commands.end(); bi++ )
+	for ( bi = m_commands.begin(); bi != m_commands.end(); ++bi )
 	{
 		delete (*bi);	//Free() handled internally
 	}
@@ -128,7 +128,7 @@ bool CSequence::HasChild( CSequence *sequence )
 {
 	sequence_l::iterator	ci;
 
-	for ( ci = m_children.begin(); ci != m_children.end(); ci++ )
+	for ( ci = m_children.begin(); ci != m_children.end(); ++ci )
 	{
 		if ( (*ci) == sequence )
 			return true;
@@ -262,7 +262,7 @@ void CSequence::RemoveFlag( int flag, bool children )
 	{
 		sequence_l::iterator	si;
 
-		for ( si = m_children.begin(); si != m_children.end(); si++ )
+		for ( si = m_children.begin(); si != m_children.end(); ++si )
 		{
 			(*si)->RemoveFlag( flag, true );
 		}
@@ -325,15 +325,15 @@ int CSequence::SaveCommand( CBlock *block )
 	
 	//Save out the block ID
 	bID = block->GetBlockID();
-	(m_owner->GetInterface())->I_WriteSaveData( 'BLID', &bID, sizeof ( bID ) );
+	(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','L','I','D'), &bID, sizeof ( bID ) );
 
 	//Save out the block's flags
 	flags = block->GetFlags();
-	(m_owner->GetInterface())->I_WriteSaveData( 'BFLG', &flags, sizeof ( flags ) );
+	(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','F','L','G'), &flags, sizeof ( flags ) );
 
 	//Save out the number of members to read
 	numMembers = block->GetNumMembers();
-	(m_owner->GetInterface())->I_WriteSaveData( 'BNUM', &numMembers, sizeof ( numMembers ) );
+	(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','N','U','M'), &numMembers, sizeof ( numMembers ) );
 
 	for ( int i = 0; i < numMembers; i++ )
 	{
@@ -341,14 +341,14 @@ int CSequence::SaveCommand( CBlock *block )
 
 		//Save the block id
 		bID = bm->GetID();
-		(m_owner->GetInterface())->I_WriteSaveData( 'BMID', &bID, sizeof ( bID ) );
+		(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','M','I','D'), &bID, sizeof ( bID ) );
 		
 		//Save out the data size
 		size = bm->GetSize();
-		(m_owner->GetInterface())->I_WriteSaveData( 'BSIZ', &size, sizeof( size ) );
+		(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','S','I','Z'), &size, sizeof( size ) );
 		
 		//Save out the raw data
-		(m_owner->GetInterface())->I_WriteSaveData( 'BMEM', bm->GetData(), size );
+		(m_owner->GetInterface())->I_WriteSaveData( INT_ID('B','M','E','M'), bm->GetData(), size );
 	}
 
 	return true;
