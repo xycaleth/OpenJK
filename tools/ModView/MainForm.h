@@ -51,6 +51,8 @@ private slots:
     void OnPicmipTo1();
     void OnPicmipTo2();
     void OnPicmipTo3();
+	void OnToggleVertexNormals();
+	void OnToggleWireframe();
 
     void OnDoubleClickedTreeView ( const QModelIndex& index );
     void OnClickedTreeView ( const QModelIndex& index );

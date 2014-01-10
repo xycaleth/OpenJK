@@ -122,6 +122,8 @@
     <addaction name="actionStatus_Bar"/>
     <addaction name="separator"/>
     <addaction name="actionReset_view_position"/>
+    <addaction name="actionShow_Vertex_Normals"/>
+    <addaction name="actionWireframe"/>
     <addaction name="actionOptions"/>
     <addaction name="separator"/>
     <addaction name="actionScreenshot_to_File"/>
@@ -412,6 +414,22 @@
    </property>
    <property name="text">
     <string>No files recently used</string>
+   </property>
+  </action>
+  <action name="actionShow_Vertex_Normals">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Vertex Normals</string>
+   </property>
+  </action>
+  <action name="actionWireframe">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Wireframe</string>
    </property>
   </action>
  </widget>
@@ -873,6 +891,38 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionShow_Vertex_Normals</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToggleVertexNormals()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionWireframe</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToggleWireframe()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -903,5 +953,7 @@
   <slot>OnRefreshTextures()</slot>
   <slot>OnDoubleClickedTreeView(QModelIndex)</slot>
   <slot>OnClickedTreeView(QModelIndex)</slot>
+  <slot>OnToggleVertexNormals()</slot>
+  <slot>OnToggleWireframe()</slot>
  </slots>
 </ui>

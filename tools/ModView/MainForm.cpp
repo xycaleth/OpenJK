@@ -374,3 +374,15 @@ void MainForm::OnRightClickTreeView ( const QPoint& point )
     SceneTreeItem *item = static_cast<SceneTreeItem *>(selectedIndex.internalPointer());
     item->Accept (&treeItemRightClickAction);
 }
+
+void MainForm::OnToggleVertexNormals()
+{
+	AppVars.bVertexNormals = !AppVars.bVertexNormals;
+	ModelList_ForceRedraw();
+}
+
+void MainForm::OnToggleWireframe()
+{
+	AppVars.bWireFrame = !AppVars.bWireFrame;
+	ModelList_ForceRedraw();
+}

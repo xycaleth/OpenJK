@@ -336,7 +336,7 @@ void AppVars_OnceOnlyInit(void)
 	AppVars.bFinished			=	false;
 	AppVars.bBilinear			=	true;	
 	AppVars.bInterpolate		=	true;
-	AppVars.bUseAlpha			=	false;
+	AppVars.bUseAlpha			=	true;
 	AppVars.bWireFrame			=	false;
 	AppVars.bOriginLines		=	false;
 	AppVars.bBBox				=	false;
@@ -360,7 +360,7 @@ void AppVars_OnceOnlyInit(void)
 	AppVars.bCrackHighlight		=	false;
 	AppVars.bShowUnshadowableSurfaces = false;
 	AppVars.bAllowGLAOverrides	=	false;
-	AppVars.bShowPolysAsDoubleSided = true;
+	AppVars.bShowPolysAsDoubleSided = false;
 	
 	// crap...
 	//
