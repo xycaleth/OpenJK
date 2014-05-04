@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "win_local.h"
 #include <lmerr.h>
 #include <lmcons.h>
@@ -13,6 +10,7 @@
 #include <conio.h>
 #include <wincrypt.h>
 #include <shlobj.h>
+#include "qcommon/qcommon.h"
 
 // Used to determine where to store user-specific files
 static char homePath[ MAX_OSPATH ] = { 0 };
@@ -201,7 +199,7 @@ char	*Sys_DefaultHomePath(void) {
 	Com_Printf("Portable install requested, skipping homepath support\n");
 	return NULL;
 #else
-	typedef HRESULT (__stdcall * GETFOLDERPATH)(HWND, int, HANDLE, DWORD, LPSTR); 
+	typedef HRESULT (__stdcall * GETFOLDERPATH)(HWND, int, HANDLE, DWORD, LPSTR);
 
 	TCHAR szPath[MAX_PATH];
 	GETFOLDERPATH qSHGetFolderPath;
@@ -230,7 +228,7 @@ char	*Sys_DefaultHomePath(void) {
 			FreeLibrary(shfolder);
 			return NULL;
 		}
-		
+
 		Com_sprintf(homePath, sizeof(homePath), "%s%cMy Games%c", szPath, PATH_SEP, PATH_SEP);
 
 		if(com_homepath->string[0])
@@ -242,4 +240,38 @@ char	*Sys_DefaultHomePath(void) {
 	FreeLibrary(shfolder);
 	return homePath;
 #endif
+}
+
+static const char *GetErrorString( DWORD error ) {
+	static char buf[MAX_STRING_CHARS];
+	buf[0] = '\0';
+
+	if ( error ) {
+		LPVOID lpMsgBuf;
+		DWORD bufLen = FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, error, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPTSTR)&lpMsgBuf, 0, NULL );
+		if ( bufLen ) {
+			LPCSTR lpMsgStr = (LPCSTR)lpMsgBuf;
+			Q_strncpyz( buf, lpMsgStr, min( (size_t)(lpMsgStr + bufLen), sizeof(buf) ) );
+			LocalFree( lpMsgBuf );
+		}
+	}
+	return buf;
+}
+
+void Sys_SetProcessorAffinity( void ) {
+	DWORD processMask, dummy;
+	HANDLE handle = GetCurrentProcess();
+
+	if ( !GetProcessAffinityMask( handle, &dummy, &dummy ) )
+		return;
+
+	if ( sscanf( com_affinity->string, "%X", &processMask ) != 1 )
+		processMask = 1; // set to first core only
+
+	if ( !processMask )
+		return;
+
+	if ( !SetProcessAffinityMask( handle, processMask ) )
+		Com_DPrintf( "Setting affinity mask failed (%s)\n", GetErrorString( GetLastError() ) );
 }

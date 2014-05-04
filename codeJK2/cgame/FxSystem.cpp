@@ -16,9 +16,6 @@ This file is part of Jedi Knight 2.
 */
 // Copyright 2001-2013 Raven Software
 
-// this include must remain at the top of every FXxxxx.CPP file
-#include "common_headers.h"
-
 #if !defined(FX_SCHEDULER_H_INC)
 	#include "FxScheduler.h"
 #endif
@@ -46,7 +43,7 @@ void SFxHelper::Print( const char *msg, ... )
 	char		text[1024];
 
 	va_start( argptr, msg );
-	vsprintf( text, msg, argptr );
+	Q_vsnprintf (text, sizeof(text), msg, argptr);
 	va_end( argptr );
  
 	gi.Printf( text );

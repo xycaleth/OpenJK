@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 #include "client.h"
 
 // TTimo: unused, commenting out to make gcc happy
@@ -28,11 +25,11 @@ static void CL_Netchan_Encode( msg_t *msg ) {
         srdc = msg->readcount;
         sbit = msg->bit;
         soob = msg->oob;
-        
+
         msg->bit = 0;
         msg->readcount = 0;
         msg->oob = (qboolean)0;
-        
+
         serverId = MSG_ReadLong(msg);
 	messageAcknowledge = MSG_ReadLong(msg);
 	reliableAcknowledge = MSG_ReadLong(msg);
@@ -40,7 +37,7 @@ static void CL_Netchan_Encode( msg_t *msg ) {
         msg->oob = (qboolean)soob;
         msg->bit = sbit;
         msg->readcount = srdc;
-        
+
 	string = (byte *)clc.serverCommands[ reliableAcknowledge & (MAX_RELIABLE_COMMANDS-1) ];
 	index = 0;
 	//
@@ -50,7 +47,7 @@ static void CL_Netchan_Encode( msg_t *msg ) {
 		if (!string[index])
 			index = 0;
 		if (/*string[index] > 127 || */	// eurofix: remove this so we can chat in european languages...	-ste
-			string[index] == '%') 
+			string[index] == '%')
 		{
 			key ^= '.' << (i & 1);
 		}
@@ -80,9 +77,9 @@ static void CL_Netchan_Decode( msg_t *msg ) {
         srdc = msg->readcount;
         sbit = msg->bit;
         soob = msg->oob;
-        
+
         msg->oob = (qboolean)0;
-        
+
 	reliableAcknowledge = MSG_ReadLong(msg);
 
         msg->oob = (qboolean)soob;
@@ -98,7 +95,7 @@ static void CL_Netchan_Decode( msg_t *msg ) {
 		if (!string[index])
 			index = 0;
 		if (/*string[index] > 127 || */	// eurofix: remove this so we can chat in european languages...	-ste
-			string[index] == '%') 
+			string[index] == '%')
 		{
 			key ^= '.' << (i & 1);
 		}

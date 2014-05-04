@@ -1218,7 +1218,7 @@ static void CG_PlayerAnimEvents( int animFileIndex, qboolean torso, int oldFrame
 		{
 			//more precise, slower
 			oldAnim = PM_LegsAnimForFrame( &g_entities[entNum], oldFrame );
-			anim = PM_TorsoAnimForFrame( &g_entities[entNum], frame );
+			anim = PM_LegsAnimForFrame( &g_entities[entNum], frame );
 		}
 
 		if ( anim != oldAnim )
@@ -4551,7 +4551,7 @@ void CG_AddForceSightShell( refEntity_t *ent, centity_t *cent )
 		{
 			team = cent->gent->client->playerTeam;
 		}
-		else if ( cent->gent->owner )
+		else if ( cent->gent && cent->gent->owner )
 		{
 			if ( cent->gent->owner->client )
 			{

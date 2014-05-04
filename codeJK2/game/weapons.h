@@ -149,20 +149,19 @@ typedef struct weaponData_s
 	int		damage;
 	int		altDamage;
 	int		splashDamage;
-	int		splashRadius;
 	int		altSplashDamage;
-	int		altSplashRadius;
+	float	splashRadius;
+	float	altSplashRadius;
 
 } weaponData_t;
 
 
 typedef struct ammoData_s
 {
-	char	icon[32];	// Name of ammo icon file
+	char	icon[64];	// Name of ammo icon file
 	int		max;		// Max amount player can hold of ammo
 } ammoData_t;
 
-// Moved from g_weapons.cpp. Seems like a much nicer place to have these here --eez
 // Bryar Pistol
 //--------
 #define BRYAR_PISTOL_VEL			1800

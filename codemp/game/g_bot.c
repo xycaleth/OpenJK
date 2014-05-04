@@ -9,12 +9,10 @@
 
 #define BOT_SPAWN_QUEUE_DEPTH	16
 
-typedef struct botSpawnQueue_s {
+static struct botSpawnQueue_s {
 	int		clientNum;
 	int		spawnTime;
-} botSpawnQueue_t;
-
-static botSpawnQueue_t	botSpawnQueue[BOT_SPAWN_QUEUE_DEPTH];
+} botSpawnQueue[BOT_SPAWN_QUEUE_DEPTH];
 
 vmCvar_t bot_minplayers;
 
@@ -246,7 +244,7 @@ const char *G_RefreshNextMap(int gametype, qboolean forced)
 		}
 
 		type = Info_ValueForKey(level.arenas.infos[n], "type");
-		
+
 		typeBits = G_GetMapTypeBits(type);
 		if (typeBits & (1 << gametype))
 		{
@@ -278,12 +276,11 @@ G_LoadArenas
 */
 
 #define MAX_MAPS 256
-#define MAPSBUFSIZE (MAX_MAPS * 32)
+#define MAPSBUFSIZE (MAX_MAPS * 64)
 
 void G_LoadArenas( void ) {
 #if 0
 	int			numdirs;
-	char		filename[128];
 	char		filename[MAX_QPATH];
 	char		dirlist[1024];
 	char*		dirptr;
@@ -297,13 +294,12 @@ void G_LoadArenas( void ) {
 	dirptr  = dirlist;
 	for (i = 0; i < numdirs; i++, dirptr += dirlen+1) {
 		dirlen = strlen(dirptr);
-		strcpy(filename, "scripts/");
 		Q_strncpyz( filename, "scripts/", sizeof( filename ) );
 		strcat(filename, dirptr);
 		G_LoadArenasFromFile(filename);
 	}
 //	trap->Print( "%i arenas parsed\n", level.arenas.num );
-	
+
 	for( n = 0; n < level.arenas.num; n++ ) {
 		Info_SetValueForKey( level.arenas.infos[n], "num", va( "%i", n ) );
 	}
@@ -337,7 +333,7 @@ void G_LoadArenas( void ) {
 		fileptr += len + 1;
 	}
 //	trap->Print( "%i arenas parsed\n", level.arenas.num );
-	
+
 	for( n = 0; n < level.arenas.num; n++ ) {
 		Info_SetValueForKey( level.arenas.infos[n], "num", va( "%i", n ) );
 	}

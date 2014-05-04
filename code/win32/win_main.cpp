@@ -701,14 +701,11 @@ void *Sys_GetGameAPI (void *parms)
 	void	*(*GetGameAPI) (void *);
 
 	const char *gamename;
-	if(Cvar_VariableIntegerValue("com_jk2"))
-	{
-		gamename = "jk2game" ARCH_STRING DLL_EXT;
-	}
-	else
-	{
-		gamename = "jagame" ARCH_STRING DLL_EXT;
-	}
+#ifdef JK2_MODE
+	gamename = "jospgame" ARCH_STRING DLL_EXT;
+#else
+	gamename = "jagame" ARCH_STRING DLL_EXT;
+#endif
 
 	if (game_library)
 		Com_Error (ERR_FATAL, "Sys_GetGameAPI without Sys_UnloadingGame");
@@ -917,29 +914,7 @@ void Sys_Init( void ) {
 	if (g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32s)
 		Sys_Error ("This game doesn't run on Win32s");
 
-	if ( g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32_NT )
-	{
-		Cvar_Set( "arch", "winnt" );
-	}
-	else if ( g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS )
-	{
-		if ( LOWORD( g_wv.osversion.dwBuildNumber ) >= WIN98_BUILD_NUMBER )
-		{
-			Cvar_Set( "arch", "win98" );
-		}
-		else if ( LOWORD( g_wv.osversion.dwBuildNumber ) >= OSR2_BUILD_NUMBER )
-		{
-			Cvar_Set( "arch", "win95 osr2.x" );
-		}
-		else
-		{
-			Cvar_Set( "arch", "win95" );
-		}
-	}
-	else
-	{
-		Cvar_Set( "arch", "unknown Windows variant" );
-	}
+	Cvar_Set( "arch", OS_STRING " " ARCH_STRING );
 
 	// save out a couple things in rom cvars for the renderer to access
 	Cvar_Get( "win_hinstance", va("%i", (int)g_wv.hInstance), CVAR_ROM );

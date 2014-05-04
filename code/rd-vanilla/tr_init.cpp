@@ -35,11 +35,6 @@ glstate_t	glState;
 
 static void GfxInfo_f( void );
 
-void R_TerrainInit(void);
-void R_TerrainShutdown(void);
-
-cvar_t	*com_jk2;
-
 cvar_t	*r_verbose;
 cvar_t	*r_ignore;
 
@@ -104,10 +99,6 @@ cvar_t	*r_DynamicGlowIntensity;
 cvar_t	*r_DynamicGlowSoft;
 cvar_t	*r_DynamicGlowWidth;
 cvar_t	*r_DynamicGlowHeight;
-
-// Point sprite support.
-cvar_t	*r_ext_point_parameters;
-cvar_t	*r_ext_nv_point_sprite;
 
 cvar_t	*r_ignoreGLErrors;
 cvar_t	*r_logFile;
@@ -203,7 +194,7 @@ cvar_t	*broadsword_dircap=0;
 cvar_t	*sv_mapname;
 cvar_t	*sv_mapChecksum;
 cvar_t	*se_language;			// JKA
-#ifndef __NO_JK2
+#ifdef JK2_MODE
 cvar_t	*sp_language;			// JK2
 #endif
 cvar_t	*com_buildScript;
@@ -223,14 +214,7 @@ void ( APIENTRY * qglClientActiveTextureARB )( GLenum texture );
 
 void ( APIENTRY * qglLockArraysEXT)( GLint, GLint);
 void ( APIENTRY * qglUnlockArraysEXT) ( void );
-
-void ( APIENTRY * qglPointParameterfEXT)( GLenum, GLfloat);
-void ( APIENTRY * qglPointParameterfvEXT)( GLenum, GLfloat *);
 #endif
-
-// Added 10/23/02 by Aurelio Reis.
-void ( APIENTRY * qglPointParameteriNV)( GLenum, GLint);
-void ( APIENTRY * qglPointParameterivNV)( GLenum, const GLint *);
 
 #ifdef _WIN32	// GLOWXXX
 // Declare Register Combiners function pointers.
@@ -352,7 +336,9 @@ static void InitOpenGL( void )
 		// print info the first time only
 		// set default state
 		GL_SetDefaultState();
+#ifndef JK2_MODE
 		R_Splash();	//get something on screen asap
+#endif
 		GfxInfo_f();
 	}
 	else
@@ -1154,9 +1140,6 @@ void R_Register( void )
 	//
 	// latched and archived variables
 	//
-#ifndef __NO_JK2
-	com_jk2 = ri.Cvar_Get( "com_jk2", "0", CVAR_INIT );
-#endif
 
 	r_allowExtensions = ri.Cvar_Get( "r_allowExtensions", "1", CVAR_ARCHIVE | CVAR_LATCH );
 	r_ext_compressed_textures = ri.Cvar_Get( "r_ext_compress_textures", "1", CVAR_ARCHIVE | CVAR_LATCH );
@@ -1175,10 +1158,6 @@ void R_Register( void )
 	r_DynamicGlowSoft = ri.Cvar_Get( "r_DynamicGlowSoft", "1", CVAR_ARCHIVE );
 	r_DynamicGlowWidth = ri.Cvar_Get( "r_DynamicGlowWidth", "320", CVAR_ARCHIVE | CVAR_LATCH );
 	r_DynamicGlowHeight = ri.Cvar_Get( "r_DynamicGlowHeight", "240", CVAR_ARCHIVE | CVAR_LATCH );
-
-	// Register point sprite stuff here.
-	r_ext_point_parameters = ri.Cvar_Get( "r_ext_point_parameters", "1", CVAR_ARCHIVE );
-	r_ext_nv_point_sprite = ri.Cvar_Get( "r_ext_nv_point_sprite", "1", CVAR_ARCHIVE );
 
 	r_picmip = ri.Cvar_Get ("r_picmip", "0", CVAR_ARCHIVE | CVAR_LATCH );
 	ri.Cvar_CheckRange( r_picmip, 0, 16, qtrue );
@@ -1325,7 +1304,7 @@ Ghoul2 Insert End
 	sv_mapname = ri.Cvar_Get ( "mapname", "nomap", CVAR_SERVERINFO | CVAR_ROM );
 	sv_mapChecksum = ri.Cvar_Get ( "sv_mapChecksum", "", CVAR_ROM );
 	se_language = ri.Cvar_Get ( "se_language", "english", CVAR_ARCHIVE | CVAR_NORESTART );
-#ifndef __NO_JK2
+#ifdef JK2_MODE
 	sp_language = ri.Cvar_Get ( "sp_language", va("%d", SP_LANGUAGE_ENGLISH), CVAR_ARCHIVE | CVAR_NORESTART );
 #endif
 	com_buildScript = ri.Cvar_Get ( "com_buildScript", "0", 0 );
@@ -1402,7 +1381,7 @@ void R_Init( void ) {
 
 #ifndef FINAL_BUILD
 	if ( (intptr_t)tess.xyz & 15 ) {
-		Com_Printf( "WARNING: tess.xyz not 16 byte aligned (%x)\n",(intptr_t)tess.xyz & 15 );
+		Com_Printf( "WARNING: tess.xyz not 16 byte aligned\n" );
 	}
 #endif
 
@@ -1453,7 +1432,6 @@ void R_Init( void ) {
 	R_InitImages();
 	R_InitShaders();
 	R_InitSkins();
-	R_TerrainInit();
 	R_ModelInit();
 	R_InitWorldEffects();
 	R_InitFonts();
@@ -1461,6 +1439,8 @@ void R_Init( void ) {
 	err = qglGetError();
 	if ( err != GL_NO_ERROR )
 		ri.Printf (PRINT_ALL, "glGetError() = 0x%x\n", err);
+
+	RestoreGhoul2InfoArray();
 
 	//ri.Printf( PRINT_ALL, "----- finished R_Init -----\n" );
 }
@@ -1471,8 +1451,12 @@ RE_Shutdown
 ===============
 */
 extern void R_ShutdownWorldEffects(void);
-void RE_Shutdown( qboolean destroyWindow ) {	
-	//ri.Printf( PRINT_ALL, "RE_Shutdown( %i )\n", destroyWindow );
+void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {	
+
+	// Need this temporarily.
+#ifdef _WIN32
+	tr.wv = ri.GetWinVars();
+#endif
 
 	ri.Cmd_RemoveCommand ("imagelist");
 	ri.Cmd_RemoveCommand ("shaderlist");
@@ -1494,7 +1478,6 @@ void RE_Shutdown( qboolean destroyWindow ) {
 	ri.Cmd_RemoveCommand ("minimize");
 
 	R_ShutdownWorldEffects();
-	R_TerrainShutdown();
 	R_ShutdownFonts();
 
 	if ( tr.registered ) {
@@ -1535,6 +1518,11 @@ void RE_Shutdown( qboolean destroyWindow ) {
 		if (destroyWindow)
 		{
 			R_DeleteTextures();	// only do this for vid_restart now, not during things like map load
+
+			if ( restarting )
+			{
+				SaveGhoul2InfoArray();
+			}
 		}
 	}
 
@@ -1633,7 +1621,6 @@ void RE_SetRangedFog( float dist )
 bool inServer = false;
 void RE_SVModelInit( void )
 {
-	//ri.CM_ShaderTableCleanup();
 	tr.numModels = 0;
 	tr.numShaders = 0;
 	tr.numSkins = 0;
@@ -1658,7 +1645,6 @@ extern void R_CreateAutomapImage( const char *name, const byte *pic, int width, 
 extern void R_InvertImage(byte *data, int width, int height, int depth);
 extern void R_WorldEffectCommand(const char *command);
 extern qboolean R_inPVS( vec3_t p1, vec3_t p2 );
-extern void RE_InitRendererTerrain( const char *info );
 extern void RE_GetModelBounds(refEntity_t *refEnt, vec3_t bounds1, vec3_t bounds2);
 extern void G2API_AnimateG2Models(CGhoul2Info_v &ghoul2, int AcurrentTime,CRagDollUpdateParams *params);
 extern qboolean G2API_GetRagBonePos(CGhoul2Info_v &ghoul2, const char *boneName, vec3_t pos, vec3_t entAngles, vec3_t entPos, vec3_t entScale);
@@ -1676,7 +1662,7 @@ extern void G2Time_ReportTimers(void);
 #endif
 extern IGhoul2InfoArray &TheGhoul2InfoArray();
 
-#ifndef __NO_JK2
+#ifdef JK2_MODE
 unsigned int AnyLanguage_ReadCharFromString_JK2 ( char **text, qboolean *pbIsTrailingPunctuation ) {
 	return AnyLanguage_ReadCharFromString (text, pbIsTrailingPunctuation);
 }
@@ -1767,20 +1753,13 @@ extern "C" Q_EXPORT refexport_t* QDECL GetRefAPI ( int apiVersion, refimport_t *
 	re.Language_IsAsian = Language_IsAsian;
 	re.Language_UsesSpaces = Language_UsesSpaces;
 	re.AnyLanguage_ReadCharFromString = AnyLanguage_ReadCharFromString;
-#ifndef __NO_JK2
+#ifdef JK2_MODE
 	re.AnyLanguage_ReadCharFromString2 = AnyLanguage_ReadCharFromString_JK2;
 #endif
 
-	re.R_Resample = R_Resample;
-	re.R_LoadDataImage = R_LoadDataImage;
-	re.R_InvertImage = R_InvertImage;
-	re.SavePNG = RE_SavePNG;
 	re.R_InitWorldEffects = R_InitWorldEffects;
-	re.R_CreateAutomapImage = R_CreateAutomapImage;
 	re.R_ClearStuffToStopGhoul2CrashingThings = R_ClearStuffToStopGhoul2CrashingThings;
 	re.R_inPVS = R_inPVS;
-
-	REX(InitRendererTerrain);
 
 	re.tr_distortionAlpha = get_tr_distortionAlpha;
 	re.tr_distortionStretch = get_tr_distortionStretch;

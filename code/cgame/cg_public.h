@@ -42,7 +42,6 @@ This file is part of Jedi Academy.
 struct snapshot_s 
 {
 	int				snapFlags;			// SNAPFLAG_RATE_DELAYED, SNAPFLAG_DROPPED_COMMANDS
-	int				ping;
 
 	int				serverTime;		// server time the message is valid for (in msec)
 
@@ -219,7 +218,7 @@ Ghoul2 Insert End
 	CG_OPENJK_GETMENU_BYNAME,
 } cgameImport_t;
 
-#ifndef __NO_JK2
+#ifdef JK2_MODE
 typedef enum {
 	CG_PRINT_JK2,
 	CG_ERROR_JK2,

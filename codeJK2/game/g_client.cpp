@@ -271,7 +271,7 @@ gentity_t *SelectSpawnPoint ( vec3_t avoidPoint, team_t team, vec3_t origin, vec
 	{//we have a spawnpoint specified, try to find it
 		if ( (nearestSpot = spot = G_Find( NULL, FOFS(targetname), level.spawntarget )) == NULL )
 		{//you HAVE to be able to find the desired spot
-			G_Error( "Couldn't find spawntarget %s\n", level.spawntarget );
+			G_Error( "Couldn't find spawntarget %s", level.spawntarget );
 			return NULL;
 		}
 	}
@@ -288,7 +288,7 @@ gentity_t *SelectSpawnPoint ( vec3_t avoidPoint, team_t team, vec3_t origin, vec
 
 	// find a single player start spot
 	if (!spot) {
-		G_Error( "Couldn't find a spawn point\n" );
+		G_Error( "Couldn't find a spawn point" );
 	}
 
 
@@ -483,11 +483,6 @@ void ClientUserinfoChanged( int clientNum ) {
 				oldname[34]={0};
 
 	gi.GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
-
-	// check for malformed or illegal info strings
-	/*if ( !Info_Validate(userinfo) ) {
-		strcpy (userinfo, "\\name\\badinfo");
-	}*/
 
 	// set name
 	Q_strncpyz ( oldname, client->pers.netname, sizeof( oldname ) );

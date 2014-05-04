@@ -16,7 +16,7 @@
 typedef struct svEntity_s {
 	struct worldSector_s *worldSector;
 	struct svEntity_s *nextEntityInWorldSector;
-	
+
 	entityState_t	baseline;		// for delta compression of initial sighting
 	int			numClusters;		// if -1, use headnode instead
 	int			clusternums[MAX_ENT_CLUSTERS];
@@ -40,7 +40,6 @@ typedef struct server_s {
 	int				snapshotCounter;	// incremented for each snapshot built
 	int				timeResidual;		// <= 1000 / sv_frame->value
 	int				nextFrameTime;		// when time > nextFrameTime, process world
-	struct cmodel_s	*models[MAX_MODELS];
 	char			*configstrings[MAX_CONFIGSTRINGS];
 	svEntity_t		svEntities[MAX_GENTITIES];
 
@@ -63,11 +62,9 @@ typedef struct server_s {
 	char			*mLocalSubBSPEntityParsePoint;
 
 	char			*mSharedMemory;
+
+	time_t			realMapTimeStarted;	// time the current map was started
 } server_t;
-
-
-
-
 
 typedef struct clientSnapshot_s {
 	int				areabytes;
@@ -97,6 +94,18 @@ typedef enum {
 	CS_PRIMED,		// gamestate has been sent, but client hasn't sent a usercmd
 	CS_ACTIVE		// client is fully in game
 } clientState_t;
+
+
+// struct to hold demo data for a single demo
+typedef struct {
+	char		demoName[MAX_OSPATH];
+	qboolean	demorecording;
+	qboolean	demowaiting;	// don't record until a non-delta message is sent
+	int			minDeltaFrame;	// the first non-delta frame stored in the demo.  cannot delta against frames older than this
+	fileHandle_t	demofile;
+	qboolean	isBot;
+	int			botReliableAcknowledge; // for bots, need to maintain a separate reliableAcknowledge to record server messages into the demo file
+} demoInfo_t;
 
 
 typedef struct client_s {
@@ -154,8 +163,9 @@ typedef struct client_s {
 	int				lastUserInfoCount; //allow a certain number of changes within a certain time period -rww
 
 	int				oldServerTime;
-	qboolean		csUpdated[MAX_CONFIGSTRINGS+1];	
+	qboolean		csUpdated[MAX_CONFIGSTRINGS];
 
+	demoInfo_t		demo;
 } client_t;
 
 //=============================================================================
@@ -192,7 +202,7 @@ typedef struct serverStatic_s {
 	int			snapFlagServerBit;			// ^= SNAPFLAG_SERVERCOUNT every SV_SpawnServer()
 
 	client_t	*clients;					// [sv_maxclients->integer];
-	int			numSnapshotEntities;		// sv_maxclients->integer*PACKET_BACKUP*MAX_PACKET_ENTITIES
+	int			numSnapshotEntities;		// sv_maxclients->integer*PACKET_BACKUP*MAX_SNAPSHOT_ENTITIES
 	int			nextSnapshotEntities;		// next snapshotEntities to use
 	entityState_t	*snapshotEntities;		// [numSnapshotEntities]
 	int			nextHeartbeatTime;
@@ -211,8 +221,6 @@ extern	server_t		sv;					// cleared each map
 
 //FIXME: dedi server probably can't have this..
 extern	refexport_t		*re;					// interface to refresh .dll
-
-#define	MAX_MASTER_SERVERS	5
 
 extern	cvar_t	*sv_snapsMin;
 extern	cvar_t	*sv_snapsMax;
@@ -243,6 +251,10 @@ extern	cvar_t	*sv_floodProtect;
 extern	cvar_t	*sv_lanForceRate;
 extern	cvar_t	*sv_needpass;
 extern	cvar_t	*sv_filterCommands;
+extern	cvar_t	*sv_autoDemo;
+extern	cvar_t	*sv_autoDemoBots;
+extern	cvar_t	*sv_autoDemoMaxMaps;
+extern	cvar_t	*sv_blockJumpSelect;
 
 //===========================================================
 
@@ -255,7 +267,6 @@ struct leakyBucket_s {
 
 	union {
 		byte	_4[4];
-		byte	_x[10];
 	} ipv;
 
 	int					lastTime;
@@ -306,8 +317,6 @@ void SV_GetChallenge( netadr_t from );
 
 void SV_DirectConnect( netadr_t from );
 
-void SV_AuthorizeIpPacket( netadr_t from );
-
 void SV_SendClientMapChange( client_t *client );
 void SV_ExecuteClientMessage( client_t *cl, msg_t *msg );
 void SV_UserinfoChanged( client_t *cl );
@@ -324,6 +333,11 @@ void SV_WriteDownloadToClient( client_t *cl , msg_t *msg );
 // sv_ccmds.c
 //
 void SV_Heartbeat_f( void );
+void SV_RecordDemo( client_t *cl, char *demoName );
+void SV_StopRecordDemo( client_t *cl );
+void SV_AutoRecordDemo( client_t *cl );
+void SV_StopAutoRecordDemos();
+void SV_BeginAutoRecordDemos();
 
 //
 // sv_snapshot.c

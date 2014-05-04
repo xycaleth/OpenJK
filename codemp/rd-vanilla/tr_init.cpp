@@ -4,9 +4,10 @@
 #include "../rd-common/tr_common.h"
 #include "tr_WorldEffects.h"
 #include "qcommon/MiniHeap.h"
-#include "G2_local.h"
+#include "ghoul2/g2_local.h"
 
 glconfig_t	glConfig;
+glconfigExt_t glConfigExt;
 glstate_t	glState;
 static void GfxInfo_f( void );
 
@@ -147,6 +148,8 @@ cvar_t	*r_directedScale;
 cvar_t	*r_debugLight;
 cvar_t	*r_debugSort;
 
+cvar_t	*r_marksOnTriangleMeshes;
+
 cvar_t	*r_maxpolys;
 int		max_polys;
 cvar_t	*r_maxpolyverts;
@@ -201,13 +204,6 @@ void ( APIENTRY * qglClientActiveTextureARB )( GLenum texture );
 
 void ( APIENTRY * qglLockArraysEXT)( GLint, GLint);
 void ( APIENTRY * qglUnlockArraysEXT) ( void );
-
-void ( APIENTRY * qglPointParameterfEXT)( GLenum, GLfloat);
-void ( APIENTRY * qglPointParameterfvEXT)( GLenum, GLfloat *);
-
-//3d textures -rww
-void ( APIENTRY * qglTexImage3DEXT) (GLenum, GLint, GLenum, GLsizei, GLsizei, GLsizei, GLint, GLenum, GLenum, const GLvoid *);
-void ( APIENTRY * qglTexSubImage3DEXT) (GLenum, GLint, GLint, GLint, GLint, GLsizei, GLsizei, GLsizei, GLenum, GLenum, const GLvoid *);
 
 
 // Declare Register Combiners function pointers.
@@ -283,7 +279,7 @@ void R_Splash()
 */
 	pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
 	extern void	RB_SetGL2D (void);
-	RB_SetGL2D();	
+	RB_SetGL2D();
 	if (pImage )
 	{//invalid paths?
 		GL_Bind( pImage );
@@ -448,14 +444,14 @@ static void R_ModeList_f( void )
 {
 	int i;
 
-	Com_Printf ("\n" );
-	Com_Printf ("Mode -2: Use desktop resolution\n" );
-	Com_Printf ("Mode -1: Use r_customWidth and r_customHeight variables\n" );
+	ri->Printf( PRINT_ALL, "\n" );
+	ri->Printf( PRINT_ALL, "Mode -2: Use desktop resolution\n" );
+	ri->Printf( PRINT_ALL, "Mode -1: Use r_customWidth and r_customHeight variables\n" );
 	for ( i = 0; i < s_numVidModes; i++ )
 	{
-		Com_Printf ("%s\n", r_vidModes[i].description );
+		ri->Printf( PRINT_ALL, "%s\n", r_vidModes[i].description );
 	}
-	Com_Printf ("\n" );
+	ri->Printf( PRINT_ALL, "\n" );
 }
 
 /*
@@ -508,9 +504,9 @@ byte *RB_ReadPixels(int x, int y, int width, int height, size_t *offset, int *pa
 }
 
 /*
-================== 
+==================
 R_TakeScreenshot
-================== 
+==================
 */
 void R_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
 	byte *allbuf, *buffer;
@@ -567,11 +563,11 @@ void R_TakeScreenshot( int x, int y, int width, int height, char *fileName ) {
 	ri->Hunk_FreeTempMemory(allbuf);
 }
 
-/* 
-================== 
+/*
+==================
 R_TakeScreenshotPNG
-================== 
-*/  
+==================
+*/
 void R_TakeScreenshotPNG( int x, int y, int width, int height, char *fileName ) {
 	byte *buffer=NULL;
 	size_t offset=0;
@@ -582,11 +578,11 @@ void R_TakeScreenshotPNG( int x, int y, int width, int height, char *fileName ) 
 	ri->Hunk_FreeTempMemory( buffer );
 }
 
-/* 
-================== 
+/*
+==================
 R_TakeScreenshotJPEG
-================== 
-*/  
+==================
+*/
 void R_TakeScreenshotJPEG( int x, int y, int width, int height, char *fileName ) {
 	byte *buffer;
 	size_t offset = 0, memcount;
@@ -603,11 +599,11 @@ void R_TakeScreenshotJPEG( int x, int y, int width, int height, char *fileName )
 	ri->Hunk_FreeTempMemory(buffer);
 }
 
-/* 
-================== 
+/*
+==================
 R_ScreenshotFilename
-================== 
-*/  
+==================
+*/
 void R_ScreenshotFilename( char *buf, int bufSize, const char *ext ) {
 	time_t rawtime;
 	char timeStr[32] = {0}; // should really only reach ~19 chars
@@ -684,11 +680,11 @@ static void R_LevelShot( void ) {
 	ri->Hunk_FreeTempMemory( buffer );
 	ri->Hunk_FreeTempMemory( allsource );
 
-	Com_Printf ("Wrote %s\n", checkname );
+	ri->Printf( PRINT_ALL, "[skipnotify]Wrote %s\n", checkname );
 }
 
-/* 
-================== 
+/*
+==================
 R_ScreenShotTGA_f
 
 screenshot
@@ -697,7 +693,7 @@ screenshot [levelshot]
 screenshot [filename]
 
 Doesn't print the pacifier message if there is a second arg
-================== 
+==================
 */
 void R_ScreenShotTGA_f (void) {
 	char checkname[MAX_OSPATH] = {0};
@@ -720,7 +716,7 @@ void R_ScreenShotTGA_f (void) {
 		R_ScreenshotFilename( checkname, sizeof( checkname ), ".tga" );
 
 		if ( ri->FS_FileExists( checkname ) ) {
-			Com_Printf( "ScreenShot: Couldn't create a file\n"); 
+			ri->Printf( PRINT_ALL, "ScreenShot: Couldn't create a file\n");
 			return;
  		}
 	}
@@ -728,11 +724,11 @@ void R_ScreenShotTGA_f (void) {
 	R_TakeScreenshot( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname );
 
 	if ( !silent )
-		Com_Printf( "Wrote %s\n", checkname );
+		ri->Printf( PRINT_ALL, "[skipnotify]Wrote %s\n", checkname );
 }
 
-/* 
-================== 
+/*
+==================
 R_ScreenShotPNG_f
 
 screenshot
@@ -741,7 +737,7 @@ screenshot [levelshot]
 screenshot [filename]
 
 Doesn't print the pacifier message if there is a second arg
-================== 
+==================
 */
 void R_ScreenShotPNG_f (void) {
 	char checkname[MAX_OSPATH] = {0};
@@ -764,7 +760,7 @@ void R_ScreenShotPNG_f (void) {
 		R_ScreenshotFilename( checkname, sizeof( checkname ), ".png" );
 
 		if ( ri->FS_FileExists( checkname ) ) {
-			Com_Printf( "ScreenShot: Couldn't create a file\n"); 
+			ri->Printf( PRINT_ALL, "ScreenShot: Couldn't create a file\n");
 			return;
  		}
 	}
@@ -772,10 +768,9 @@ void R_ScreenShotPNG_f (void) {
 	R_TakeScreenshotPNG( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname );
 
 	if ( !silent )
-		Com_Printf( "Wrote %s\n", checkname );
-} 
+		ri->Printf( PRINT_ALL, "[skipnotify]Wrote %s\n", checkname );
+}
 
-//jpeg  vession
 void R_ScreenShot_f (void) {
 	char checkname[MAX_OSPATH] = {0};
 	qboolean silent = qfalse;
@@ -796,7 +791,7 @@ void R_ScreenShot_f (void) {
 		R_ScreenshotFilename( checkname, sizeof( checkname ), ".jpg" );
 
 		if ( ri->FS_FileExists( checkname ) ) {
-			Com_Printf( "ScreenShot: Couldn't create a file\n" );
+			ri->Printf( PRINT_ALL, "ScreenShot: Couldn't create a file\n" );
 			return;
  		}
 	}
@@ -804,8 +799,8 @@ void R_ScreenShot_f (void) {
 	R_TakeScreenshotJPEG( 0, 0, glConfig.vidWidth, glConfig.vidHeight, checkname );
 
 	if ( !silent )
-		Com_Printf( "Wrote %s\n", checkname );
-} 
+		ri->Printf( PRINT_ALL, "[skipnotify]Wrote %s\n", checkname );
+}
 
 /*
 ==================
@@ -819,9 +814,9 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 	size_t				memcount, linelen;
 	int				padwidth, avipadwidth, padlen, avipadlen;
 	GLint packAlign;
-	
+
 	cmd = (const videoFrameCommand_t *)data;
-	
+
 	qglGetIntegerv(GL_PACK_ALIGNMENT, &packAlign);
 
 	linelen = cmd->width * 3;
@@ -834,7 +829,7 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 	avipadlen = avipadwidth - linelen;
 
 	cBuf = (byte *)PADP(cmd->captureBuffer, packAlign);
-		
+
 	qglReadPixels(0, 0, cmd->width, cmd->height, GL_RGB,
 		GL_UNSIGNED_BYTE, cBuf);
 
@@ -855,11 +850,11 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 	{
 		byte *lineend, *memend;
 		byte *srcptr, *destptr;
-	
+
 		srcptr = cBuf;
 		destptr = cmd->encodeBuffer;
 		memend = srcptr + memcount;
-		
+
 		// swap R and B and remove line paddings
 		while(srcptr < memend)
 		{
@@ -871,17 +866,17 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 				*destptr++ = srcptr[0];
 				srcptr += 3;
 			}
-			
+
 			Com_Memset(destptr, '\0', avipadlen);
 			destptr += avipadlen;
-			
+
 			srcptr += padlen;
 		}
-		
+
 		ri->CL_WriteAVIVideoFrame(cmd->encodeBuffer, avipadwidth * cmd->height);
 	}
 
-	return (const void *)(cmd + 1);	
+	return (const void *)(cmd + 1);
 }
 
 //============================================================================
@@ -955,13 +950,13 @@ void R_PrintLongString(const char *string) {
 	while(size > 0)
 	{
 		Q_strncpyz(buffer, p, sizeof (buffer) );
-		Com_Printf( "%s", buffer );
+		ri->Printf( PRINT_ALL, "%s", buffer );
 		p += 1023;
 		size -= 1023;
 	}
 }
 
-void GfxInfo_f( void ) 
+void GfxInfo_f( void )
 {
 	const char *enablestrings[] =
 	{
@@ -979,37 +974,37 @@ void GfxInfo_f( void )
 		"noborder "
 	};
 
-	const char *tc_table[] = 
+	const char *tc_table[] =
 	{
 		"None",
 		"GL_S3_s3tc",
 		"GL_EXT_texture_compression_s3tc",
 	};
 
-	Com_Printf ("\nGL_VENDOR: %s\n", glConfig.vendor_string );
-	Com_Printf ("GL_RENDERER: %s\n", glConfig.renderer_string );
-	Com_Printf ("GL_VERSION: %s\n", glConfig.version_string );
-	R_PrintLongString( glConfig.extensions_string );
-	Com_Printf ("\n");
-	Com_Printf ("GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
-	Com_Printf ("GL_MAX_ACTIVE_TEXTURES_ARB: %d\n", glConfig.maxActiveTextures );
-	Com_Printf ("\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
-	Com_Printf ("MODE: %d, %d x %d %s%s hz:", r_mode->integer, glConfig.vidWidth, glConfig.vidHeight, r_fullscreen->integer == 0 ? noborderstrings[r_noborder->integer == 1] : noborderstrings[0] ,fsstrings[r_fullscreen->integer == 1] );
+	ri->Printf( PRINT_ALL, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
+	ri->Printf( PRINT_ALL, "GL_RENDERER: %s\n", glConfig.renderer_string );
+	ri->Printf( PRINT_ALL, "GL_VERSION: %s\n", glConfig.version_string );
+	R_PrintLongString( glConfigExt.originalExtensionString );
+	ri->Printf( PRINT_ALL, "\n");
+	ri->Printf( PRINT_ALL, "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
+	ri->Printf( PRINT_ALL, "GL_MAX_ACTIVE_TEXTURES_ARB: %d\n", glConfig.maxActiveTextures );
+	ri->Printf( PRINT_ALL, "\nPIXELFORMAT: color(%d-bits) Z(%d-bit) stencil(%d-bits)\n", glConfig.colorBits, glConfig.depthBits, glConfig.stencilBits );
+	ri->Printf( PRINT_ALL, "MODE: %d, %d x %d %s%s hz:", r_mode->integer, glConfig.vidWidth, glConfig.vidHeight, r_fullscreen->integer == 0 ? noborderstrings[r_noborder->integer == 1] : noborderstrings[0] ,fsstrings[r_fullscreen->integer == 1] );
 	if ( glConfig.displayFrequency )
 	{
-		Com_Printf ("%d\n", glConfig.displayFrequency );
+		ri->Printf( PRINT_ALL, "%d\n", glConfig.displayFrequency );
 	}
 	else
 	{
-		Com_Printf ("N/A\n" );
+		ri->Printf( PRINT_ALL, "N/A\n" );
 	}
 	if ( glConfig.deviceSupportsGamma )
 	{
-		Com_Printf ("GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
+		ri->Printf( PRINT_ALL, "GAMMA: hardware w/ %d overbright bits\n", tr.overbrightBits );
 	}
 	else
 	{
-		Com_Printf ("GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
+		ri->Printf( PRINT_ALL, "GAMMA: software w/ %d overbright bits\n", tr.overbrightBits );
 	}
 
 	// rendering primitives
@@ -1017,7 +1012,7 @@ void GfxInfo_f( void )
 		int		primitives;
 
 		// default is to use triangles if compiled vertex arrays are present
-		Com_Printf ("rendering primitives: " );
+		ri->Printf( PRINT_ALL, "rendering primitives: " );
 		primitives = r_primitives->integer;
 		if ( primitives == 0 ) {
 			if ( qglLockArraysEXT ) {
@@ -1027,51 +1022,51 @@ void GfxInfo_f( void )
 			}
 		}
 		if ( primitives == -1 ) {
-			Com_Printf ("none\n" );
+			ri->Printf( PRINT_ALL, "none\n" );
 		} else if ( primitives == 2 ) {
-			Com_Printf ("single glDrawElements\n" );
+			ri->Printf( PRINT_ALL, "single glDrawElements\n" );
 		} else if ( primitives == 1 ) {
-			Com_Printf ("multiple glArrayElement\n" );
+			ri->Printf( PRINT_ALL, "multiple glArrayElement\n" );
 		} else if ( primitives == 3 ) {
-			Com_Printf ("multiple glColor4ubv + glTexCoord2fv + glVertex3fv\n" );
+			ri->Printf( PRINT_ALL, "multiple glColor4ubv + glTexCoord2fv + glVertex3fv\n" );
 		}
 	}
 
-	Com_Printf ("texturemode: %s\n", r_textureMode->string );
-	Com_Printf ("picmip: %d\n", r_picmip->integer );
-	Com_Printf ("texture bits: %d\n", r_texturebits->integer );
-	Com_Printf ("lightmap texture bits: %d\n", r_texturebitslm->integer );
-	Com_Printf ("multitexture: %s\n", enablestrings[qglActiveTextureARB != 0] );
-	Com_Printf ("compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
-	Com_Printf ("texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
-	Com_Printf ("compressed textures: %s\n", enablestrings[glConfig.textureCompression != TC_NONE] );
-	Com_Printf ("compressed lightmaps: %s\n", enablestrings[(r_ext_compressed_lightmaps->integer != 0 && glConfig.textureCompression != TC_NONE)] );
-	Com_Printf ("texture compression method: %s\n", tc_table[glConfig.textureCompression] );
-	Com_Printf ("anisotropic filtering: %s  ", enablestrings[(r_ext_texture_filter_anisotropic->integer != 0) && glConfig.maxTextureFilterAnisotropy] );
+	ri->Printf( PRINT_ALL, "texturemode: %s\n", r_textureMode->string );
+	ri->Printf( PRINT_ALL, "picmip: %d\n", r_picmip->integer );
+	ri->Printf( PRINT_ALL, "texture bits: %d\n", r_texturebits->integer );
+	ri->Printf( PRINT_ALL, "lightmap texture bits: %d\n", r_texturebitslm->integer );
+	ri->Printf( PRINT_ALL, "multitexture: %s\n", enablestrings[qglActiveTextureARB != 0] );
+	ri->Printf( PRINT_ALL, "compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
+	ri->Printf( PRINT_ALL, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
+	ri->Printf( PRINT_ALL, "compressed textures: %s\n", enablestrings[glConfig.textureCompression != TC_NONE] );
+	ri->Printf( PRINT_ALL, "compressed lightmaps: %s\n", enablestrings[(r_ext_compressed_lightmaps->integer != 0 && glConfig.textureCompression != TC_NONE)] );
+	ri->Printf( PRINT_ALL, "texture compression method: %s\n", tc_table[glConfig.textureCompression] );
+	ri->Printf( PRINT_ALL, "anisotropic filtering: %s  ", enablestrings[(r_ext_texture_filter_anisotropic->integer != 0) && glConfig.maxTextureFilterAnisotropy] );
 	if (r_ext_texture_filter_anisotropic->integer != 0 && glConfig.maxTextureFilterAnisotropy)
 	{
 		if (Q_isintegral(r_ext_texture_filter_anisotropic->value))
-			Com_Printf ("(%i of ", (int)r_ext_texture_filter_anisotropic->value);
+			ri->Printf( PRINT_ALL, "(%i of ", (int)r_ext_texture_filter_anisotropic->value);
 		else
-			Com_Printf ("(%f of ", r_ext_texture_filter_anisotropic->value);
+			ri->Printf( PRINT_ALL, "(%f of ", r_ext_texture_filter_anisotropic->value);
 
 		if (Q_isintegral(glConfig.maxTextureFilterAnisotropy))
-			Com_Printf ("%i)\n", (int)glConfig.maxTextureFilterAnisotropy);
+			ri->Printf( PRINT_ALL, "%i)\n", (int)glConfig.maxTextureFilterAnisotropy);
 		else
-			Com_Printf ("%f)\n", glConfig.maxTextureFilterAnisotropy);
+			ri->Printf( PRINT_ALL, "%f)\n", glConfig.maxTextureFilterAnisotropy);
 	}
-	Com_Printf ("Dynamic Glow: %s\n", enablestrings[r_DynamicGlow->integer] );
-	if (g_bTextureRectangleHack) Com_Printf ("Dynamic Glow ATI BAD DRIVER HACK %s\n", enablestrings[g_bTextureRectangleHack] );
+	ri->Printf( PRINT_ALL, "Dynamic Glow: %s\n", enablestrings[r_DynamicGlow->integer] );
+	if (g_bTextureRectangleHack) ri->Printf( PRINT_ALL, "Dynamic Glow ATI BAD DRIVER HACK %s\n", enablestrings[g_bTextureRectangleHack] );
 
 	if ( r_finish->integer ) {
-		Com_Printf ("Forcing glFinish\n" );
+		ri->Printf( PRINT_ALL, "Forcing glFinish\n" );
 	}
 	if ( r_displayRefresh ->integer ) {
-		Com_Printf ("Display refresh set to %d\n", r_displayRefresh->integer );
+		ri->Printf( PRINT_ALL, "Display refresh set to %d\n", r_displayRefresh->integer );
 	}
 	if (tr.world)
 	{
-		Com_Printf ("Light Grid size set to (%.2f %.2f %.2f)\n", tr.world->lightGridSize[0], tr.world->lightGridSize[1], tr.world->lightGridSize[2] );
+		ri->Printf( PRINT_ALL, "Light Grid size set to (%.2f %.2f %.2f)\n", tr.world->lightGridSize[0], tr.world->lightGridSize[1], tr.world->lightGridSize[2] );
 	}
 }
 
@@ -1098,7 +1093,7 @@ void R_AtiHackToggle_f(void)
 R_Register
 ===============
 */
-void R_Register( void ) 
+void R_Register( void )
 {
 
 	//FIXME: lol badness
@@ -1156,8 +1151,9 @@ void R_Register( void )
 	r_lodbias							= ri->Cvar_Get( "r_lodbias",						"0",						CVAR_ARCHIVE );
 	r_autolodscalevalue					= ri->Cvar_Get( "r_autolodscalevalue",				"0",						CVAR_ROM );
 	r_flares							= ri->Cvar_Get( "r_flares",							"1",						CVAR_ARCHIVE );
-	r_znear								= ri->Cvar_Get( "r_znear",							"4",						CVAR_CHEAT );
-	ri->Cvar_CheckRange( r_znear, 0.001f, 10, qfalse ); // was qtrue in JA, is qfalse properly in ioq3
+
+	r_znear								= ri->Cvar_Get( "r_znear",							"4",						CVAR_ARCHIVE );
+	ri->Cvar_CheckRange( r_znear, 0.001f, 10, qfalse );
 	r_ignoreGLErrors					= ri->Cvar_Get( "r_ignoreGLErrors",					"1",						CVAR_ARCHIVE );
 	r_fastsky							= ri->Cvar_Get( "r_fastsky",						"0",						CVAR_ARCHIVE );
 	r_inGameVideo						= ri->Cvar_Get( "r_inGameVideo",					"1",						CVAR_ARCHIVE );
@@ -1223,6 +1219,7 @@ void R_Register( void )
 	r_noportals							= ri->Cvar_Get( "r_noportals",						"0",						CVAR_CHEAT );
 	r_shadows							= ri->Cvar_Get( "cg_shadows",						"1",						CVAR_NONE );
 	r_shadowRange						= ri->Cvar_Get( "r_shadowRange",					"1000",						CVAR_NONE );
+	r_marksOnTriangleMeshes				= ri->Cvar_Get( "r_marksOnTriangleMeshes",			"0",						CVAR_ARCHIVE );
 	r_maxpolys							= ri->Cvar_Get( "r_maxpolys",						XSTRING( MAX_POLYS ),		CVAR_NONE );
 	r_maxpolyverts						= ri->Cvar_Get( "r_maxpolyverts",					XSTRING( MAX_POLYVERTS ),	CVAR_NONE );
 /*
@@ -1270,11 +1267,11 @@ Ghoul2 Insert End
 	ri->Cmd_AddCommand( "screenshot_tga", R_ScreenShotTGA_f );
 	ri->Cmd_AddCommand( "gfxinfo", GfxInfo_f );
 	ri->Cmd_AddCommand( "r_atihack", R_AtiHackToggle_f );
-	ri->Cmd_AddCommand( "r_we", R_WorldEffect_f);
-	ri->Cmd_AddCommand( "imagecacheinfo", RE_RegisterImages_Info_f);
+	ri->Cmd_AddCommand( "r_we", R_WorldEffect_f );
+	ri->Cmd_AddCommand( "imagecacheinfo", RE_RegisterImages_Info_f );
 	ri->Cmd_AddCommand( "modellist", R_Modellist_f );
 	ri->Cmd_AddCommand( "modelist", R_ModeList_f );
-	ri->Cmd_AddCommand( "modelcacheinfo", RE_RegisterModels_Info_f);
+	ri->Cmd_AddCommand( "modelcacheinfo", RE_RegisterModels_Info_f );
 	ri->Cmd_AddCommand( "minimize", GLimp_Minimize );
 
 }
@@ -1286,11 +1283,11 @@ R_Init
 ===============
 */
 extern void R_InitWorldEffects(void); //tr_WorldEffects.cpp
-void R_Init( void ) {	
+void R_Init( void ) {
 	int i;
 	byte *ptr;
 
-//	Com_Printf ("----- R_Init -----\n" );
+//	ri->Printf( PRINT_ALL, "----- R_Init -----\n" );
 	// clear all our internal state
 	memset( &tr, 0, sizeof( tr ) );
 	memset( &backEnd, 0, sizeof( backEnd ) );
@@ -1304,7 +1301,7 @@ void R_Init( void ) {
 
 #ifndef FINAL_BUILD
 	if ( (intptr_t)tess.xyz & 15 ) {
-		Com_Printf( "WARNING: tess.xyz not 16 byte aligned (%x)\n",(intptr_t)tess.xyz & 15 );
+		ri->Printf( PRINT_ALL, "WARNING: tess.xyz not 16 byte aligned\n" );
 	}
 #endif
 	//
@@ -1364,21 +1361,21 @@ void R_Init( void ) {
 	R_InitShaders(qfalse);
 	R_InitSkins();
 
-	R_TerrainInit(); //rwwRMG - added
-
 	R_InitFonts();
 
 	R_ModelInit();
-//	re.G2VertSpaceServer = &CMiniHeap_singleton;
+//	re.G2VertSpaceServer = &IHeapAllocator_singleton;
 	R_InitDecals ( );
 
 	R_InitWorldEffects();
 
 	int	err = qglGetError();
 	if ( err != GL_NO_ERROR )
-		Com_Printf ( "glGetError() = 0x%x\n", err);
+		ri->Printf( PRINT_ALL,  "glGetError() = 0x%x\n", err);
 
-//	Com_Printf ("----- finished R_Init -----\n" );
+	RestoreGhoul2InfoArray();
+
+//	ri->Printf( PRINT_ALL, "----- finished R_Init -----\n" );
 }
 
 /*
@@ -1386,9 +1383,9 @@ void R_Init( void ) {
 RE_Shutdown
 ===============
 */
-void RE_Shutdown( qboolean destroyWindow ) {	
+void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 
-//	Com_Printf ("RE_Shutdown( %i )\n", destroyWindow );
+//	ri->Printf( PRINT_ALL, "RE_Shutdown( %i )\n", destroyWindow );
 
 	ri->Cmd_RemoveCommand ("imagelist");
 	ri->Cmd_RemoveCommand ("shaderlist");
@@ -1439,14 +1436,17 @@ void RE_Shutdown( qboolean destroyWindow ) {
 		qglDeleteTextures( 1, &tr.blurImage );
 	}
 
-	R_TerrainShutdown(); //rwwRMG - added
-
 	R_ShutdownFonts();
 	if ( tr.registered ) {
 		R_IssuePendingRenderCommands();
 		if (destroyWindow)
 		{
 			R_DeleteTextures();		// only do this for vid_restart now, not during things like map load
+
+			if ( restarting )
+			{
+				SaveGhoul2InfoArray();
+			}
 		}
 	}
 
@@ -1526,13 +1526,7 @@ extern void R_SVModelInit( void ); //tr_model.cpp
 extern void R_AutomapElevationAdjustment( float newHeight ); //tr_world.cpp
 extern qboolean R_InitializeWireframeAutomap( void ); //tr_world.cpp
 
-extern void R_LoadDataImage( const char *name, byte **pic, int *width, int *height);
-extern void R_InvertImage(byte *data, int width, int height, int depth);
-extern void R_Resample(byte *source, int swidth, int sheight, byte *dest, int dwidth, int dheight, int components);
-extern void R_CreateAutomapImage( const char *name, const byte *pic, int width, int height, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int glWrapClampMode );
 extern qhandle_t RE_RegisterServerSkin( const char *name );
-extern IGhoul2InfoArray &TheGhoul2InfoArray();
-const CGhoul2Info NullG2;
 
 /*
 @@@@@@@@@@@@@@@@@@@@@
@@ -1550,7 +1544,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	memset( &re, 0, sizeof( re ) );
 
 	if ( apiVersion != REF_API_VERSION ) {
-		Com_Printf ( "Mismatched REF_API_VERSION: expected %i, got %i\n", REF_API_VERSION, apiVersion );
+		ri->Printf( PRINT_ALL,  "Mismatched REF_API_VERSION: expected %i, got %i\n", REF_API_VERSION, apiVersion );
 		return NULL;
 	}
 
@@ -1616,7 +1610,6 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.InitializeWireframeAutomap			= R_InitializeWireframeAutomap; //tr_world.cpp
 	re.AddWeatherZone						= RE_AddWeatherZone;
 	re.WorldEffectCommand					= RE_WorldEffectCommand;
-	re.InitRendererTerrain					= RE_InitRendererTerrain;
 	re.RegisterMedia_LevelLoadBegin			= RE_RegisterMedia_LevelLoadBegin;
 	re.RegisterMedia_LevelLoadEnd			= RE_RegisterMedia_LevelLoadEnd;
 	re.RegisterMedia_GetLevel				= RE_RegisterMedia_GetLevel;
@@ -1662,6 +1655,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.G2API_GetBoneIndex					= G2API_GetBoneIndex;
 	re.G2API_GetGhoul2ModelFlags			= G2API_GetGhoul2ModelFlags;
 	re.G2API_GetGLAName						= G2API_GetGLAName;
+	re.G2API_GetModelName					= G2API_GetModelName;
 	re.G2API_GetParentSurface				= G2API_GetParentSurface;
 	re.G2API_GetRagBonePos					= G2API_GetRagBonePos;
 	re.G2API_GetSurfaceIndex				= G2API_GetSurfaceIndex;
@@ -1675,6 +1669,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.G2API_HaveWeGhoul2Models				= G2API_HaveWeGhoul2Models;
 	re.G2API_IKMove							= G2API_IKMove;
 	re.G2API_InitGhoul2Model				= G2API_InitGhoul2Model;
+	re.G2API_IsGhoul2InfovValid				= G2API_IsGhoul2InfovValid;
 	re.G2API_IsPaused						= G2API_IsPaused;
 	re.G2API_ListBones						= G2API_ListBones;
 	re.G2API_ListSurfaces					= G2API_ListSurfaces;
@@ -1725,15 +1720,6 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.G2API_ClearSkinGore					= G2API_ClearSkinGore;
 	#endif // _SOF2
 
-	// RMG / Terrain stuff
-	re.LoadDataImage						= R_LoadDataImage;
-	re.InvertImage							= R_InvertImage;
-	re.Resample								= R_Resample;
-	re.LoadImageJA							= R_LoadImage;
-	re.CreateAutomapImage					= R_CreateAutomapImage;
-	re.SavePNG								= RE_SavePNG;
-
-	re.TheGhoul2InfoArray					= TheGhoul2InfoArray;
 	// this is set in R_Init
 	//re.G2VertSpaceServer	= G2VertSpaceServer;
 

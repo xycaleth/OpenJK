@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 /*
 ** WIN_GAMMA.C
 */
@@ -155,7 +152,7 @@ void WG_RestoreGamma( void )
 	if ( glConfig.deviceSupportsGamma )
 	{
 		HDC hDC;
-		
+
 		hDC = GetDC( GetDesktopWindow() );
 		SetDeviceGammaRamp( hDC, s_oldHardwareGamma );
 		ReleaseDC( GetDesktopWindow(), hDC );

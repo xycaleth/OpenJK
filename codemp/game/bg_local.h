@@ -14,7 +14,7 @@
 // all of the locals will be zeroed before each
 // pmove, just to make damn sure we don't have
 // any differences when running on client or server
-typedef struct 
+typedef struct
 {
 	vec3_t		forward, right, up;
 	float		frametime;
@@ -90,7 +90,7 @@ void PM_ForceLegsAnim( int anim );
 void PM_BeginWeaponChange( int weapon );
 void PM_FinishWeaponChange( void );
 
-void PM_SetAnim(int setAnimParts,int anim,int setAnimFlags, int blendTime);
+void PM_SetAnim(int setAnimParts,int anim,int setAnimFlags);
 
 void PM_WeaponLightsaber(void);
 void PM_SetSaberMove(short newMove);

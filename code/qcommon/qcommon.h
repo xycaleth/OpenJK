@@ -216,11 +216,25 @@ enum clc_ops_e {
 	clc_clientCommand		// [string] message
 };
 
+/*
+==============================================================
+
+VIRTUAL MACHINE
+
+==============================================================
+*/
+
+typedef enum vmSlots_e {
+	VM_GAME=0,
+	VM_CGAME,
+	VM_UI,
+	MAX_VM
+} vmSlots_t;
 
 #define	VMA(x) ((void*)args[x])
 inline float _vmf(intptr_t x)
 {
-	floatint_t fi;
+	byteAlias_t fi;
 	fi.i = (int) x;
 	return fi.f;
 }
@@ -421,6 +435,8 @@ qboolean FS_Initialized();
 void	FS_InitFilesystem (void);
 void	FS_Shutdown( void );
 
+qboolean FS_ConditionalRestart( void );
+
 char	**FS_ListFiles( const char *directory, const char *extension, int *numfiles );
 // directory should not have either a leading or trailing /
 // if extension is "/", only subdirectories will be returned
@@ -483,7 +499,7 @@ int		FS_FTell( fileHandle_t f );
 
 void	FS_Flush( fileHandle_t f );
 
-void	FS_FilenameCompletion( const char *dir, const char *ext, qboolean stripExt, void(*callback)( const char *s ), qboolean allowNonPureFilesOnDisk );
+void	FS_FilenameCompletion( const char *dir, const char *ext, qboolean stripExt, callbackFunc_t callback, qboolean allowNonPureFilesOnDisk );
 
 const char *FS_GetCurrentGameDir(bool emptybase=false);
 
@@ -494,7 +510,7 @@ int		FS_FOpenFileByMode( const char *qpath, fileHandle_t *f, fsMode_t mode );
 // opens a file for reading, writing, or appending depending on the value of mode
 
 int		FS_Seek( fileHandle_t f, long offset, int origin );
-// seek on a file (doesn't work for zip files!!!!!!!!)
+// seek on a file
 
 qboolean FS_FilenameCompare( const char *s1, const char *s2 );
 
@@ -502,6 +518,8 @@ qboolean FS_FilenameCompare( const char *s1, const char *s2 );
 //
 void		FS_DeleteUserGenFile( const char *filename );
 qboolean	FS_MoveUserGenFile  ( const char *filename_src, const char *filename_dst );
+
+qboolean FS_CheckDirTraversal(const char *checkdir);
 
 /*
 ==============================================================
@@ -569,10 +587,6 @@ extern	cvar_t	*com_cl_running;
 extern	cvar_t	*com_viewlog;			// 0 = hidden, 1 = visible, 2 = minimized
 extern	cvar_t	*com_version;
 extern	cvar_t	*com_homepath;
-
-#ifndef __NO_JK2
-extern	cvar_t	*com_jk2;
-#endif
 
 // both client and server must agree to pause
 extern	cvar_t	*cl_paused;
@@ -663,10 +677,6 @@ void Com_Shutdown( void );
 void Com_ShutdownZoneMemory(void);
 void Com_ShutdownHunkMemory(void);
 
-bool Com_ParseTextFile(const char *file, class CGenericParser2 &parser, bool cleanFirst = true);
-CGenericParser2 *Com_ParseTextFile(const char *file, bool cleanFirst, bool writeable);
-void Com_ParseTextFileDestroy(class CGenericParser2 &parser);
-
 /*
 ==============================================================
 
@@ -716,7 +726,7 @@ void CL_FlushMemory( void );
 
 void CL_StartHunkUsers( void );
 
-void Key_KeynameCompletion ( void(*callback)( const char *s ) );
+void Key_KeynameCompletion ( callbackFunc_t callback );
 // for keyname autocompletion
 
 void Key_WriteBindings( fileHandle_t f );
@@ -848,5 +858,9 @@ inline int Round(float value)
 {
 	return((int)floorf(value + 0.5f));
 }
+
+// Persistent data store API
+bool PD_Store ( const char *name, const void *data, size_t size );
+const void *PD_Load ( const char *name, size_t *size );
 
 #endif //__QCOMMON_H__

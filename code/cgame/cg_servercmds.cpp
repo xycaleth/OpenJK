@@ -23,7 +23,6 @@ This file is part of Jedi Academy.
 
 #include "cg_media.h"
 #include "FxScheduler.h"
-#include "cg_lights.h"
 
 
 /*
@@ -230,6 +229,11 @@ Cmd_Argc() / Cmd_Argv()
 static void CG_ServerCommand( void ) {
 	const char		*cmd = CG_Argv( 0 );
 	serverCommand_t	*command = NULL;
+
+	if ( !cmd[0] ) {
+		// server claimed the command
+		return;
+	}
 
 	command = (serverCommand_t *)bsearch( cmd, commands, numCommands, sizeof( commands[0] ), svcmdcmp );
 

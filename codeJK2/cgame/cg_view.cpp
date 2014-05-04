@@ -22,7 +22,6 @@ This file is part of Jedi Knight 2.
 #include "cg_local.h"
 #include "cg_media.h"
 #include "FxScheduler.h"
-#include "cg_lights.h"
 #include "../game/wp_saber.h"
 #include "../game/anims.h"
 #include "../game/g_functions.h"
@@ -188,7 +187,7 @@ void CG_TestModelAnimate_f(void)
 	char	boneName[100];
 	CGhoul2Info_v	&ghoul2 = *((CGhoul2Info_v *)cg.testModelEntity.ghoul2);
 
-	strcpy(boneName, CG_Argv(1));
+	Q_strncpyz(boneName, CG_Argv(1), sizeof(boneName));
 	gi.G2API_SetBoneAnim(&ghoul2[cg.testModel], boneName, atoi(CG_Argv(2)), atoi(CG_Argv(3)), BONE_ANIM_OVERRIDE_LOOP, atof(CG_Argv(4)), cg.time, -1, -1);
 
 }
@@ -1246,6 +1245,16 @@ qboolean CG_CalcFOVFromX( float fov_x )
 	float	fov_y;
 	qboolean	inwater;
 
+	if ( cg_fovAspectAdjust.integer ) {
+		// Based on LordHavoc's code for Darkplaces
+		// http://www.quakeworld.nu/forum/topic/53/what-does-your-qw-look-like/page/30
+		const float baseAspect = 0.75f; // 3/4
+		const float aspect = (float)cgs.glconfig.vidWidth/(float)cgs.glconfig.vidHeight;
+		const float desiredFov = fov_x;
+
+		fov_x = atan( tan( desiredFov*M_PI / 360.0f ) * baseAspect*aspect )*360.0f / M_PI;
+	}
+
 	x = cg.refdef.width / tan( fov_x / 360 * M_PI );
 	fov_y = atan2( cg.refdef.height, x );
 	fov_y = fov_y * 360 / M_PI;
@@ -1434,9 +1443,7 @@ static qboolean	CG_CalcFov( void ) {
 			fov_x = cg_zoomFov;
 		} else {
 			f = ( cg.time - cg.zoomTime ) / ZOOM_OUT_TIME;
-			if ( f > 1.0 ) {
-				fov_x = fov_x;
-			} else {
+			if ( f <= 1.0 ) {
 				fov_x = cg_zoomFov + f * ( fov_x - cg_zoomFov );
 			}
 		}

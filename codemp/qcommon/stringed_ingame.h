@@ -1,5 +1,7 @@
 #pragma once
 
+#include "qcommon/q_shared.h"
+
 // Filename:-	stringed_ingame.h
 //
 
@@ -66,12 +68,12 @@ int		SE_GetFlagMask		( const char *psFlagName );
 //
 inline SE_BOOL Language_IsRussian(void)
 {
-	return (se_language && !Q_stricmp(se_language->string, "russian")) ? SE_TRUE : SE_FALSE;	
+	return (se_language && !Q_stricmp(se_language->string, "russian")) ? SE_TRUE : SE_FALSE;
 }
 
 inline SE_BOOL Language_IsPolish(void)
 {
-	return (se_language && !Q_stricmp(se_language->string, "polish")) ? SE_TRUE : SE_FALSE;	
+	return (se_language && !Q_stricmp(se_language->string, "polish")) ? SE_TRUE : SE_FALSE;
 }
 
 inline SE_BOOL Language_IsKorean(void)

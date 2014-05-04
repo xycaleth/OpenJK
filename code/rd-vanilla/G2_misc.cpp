@@ -648,13 +648,13 @@ void G2_TransformModel(CGhoul2Info_v &ghoul2, const int frameNum, vec3_t scale, 
 		}
 
 		// give us space for the transformed vertex array to be put in
-		g.mTransformedVertsArray = (intptr_t *)G2VertSpace->MiniHeapAlloc(g.currentModel->mdxm->numSurfaces * sizeof (intptr_t *));
+		g.mTransformedVertsArray = (intptr_t *)G2VertSpace->MiniHeapAlloc(g.currentModel->mdxm->numSurfaces * sizeof (intptr_t));
 		if (!g.mTransformedVertsArray)
 		{
 			Com_Error(ERR_DROP, "Ran out of transform space for Ghoul2 Models. Adjust G2_MINIHEAP_SIZE in sv_init.cpp.\n");
 		}
 
-		memset(g.mTransformedVertsArray, 0,(g.currentModel->mdxm->numSurfaces * sizeof (intptr_t *))); 
+		memset(g.mTransformedVertsArray, 0,(g.currentModel->mdxm->numSurfaces * sizeof (intptr_t))); 
 
 		G2_FindOverrideSurface(-1,g.mSlist); //reset the quick surface override lookup;
 		// recursively call the model surface transform
@@ -1851,27 +1851,6 @@ void G2_SaveGhoul2Models(CGhoul2Info_v &ghoul2)
 
 	ri.SG_Append(INT_ID('G','H','L','2'),pGhoul2Data, iGhoul2Size);
 	Z_Free(pGhoul2Data);
-}
-
-int G2_FindConfigStringSpace(char *name, int start, int max)
-{
-	char	s[MAX_STRING_CHARS];
-	int  i=1;
-	for ( ; i<max ; i++ ) 
-	{
-		ri.SV_GetConfigstring( start + i, s, sizeof( s ) );
-		if ( !s[0] ) 
-		{
-			break;
-		}
-		if ( !Q_stricmp( s, name ) ) 
-		{
-			return i;
-		}
-	}
-
-	ri.SV_SetConfigstring(start + i, name);
-	return i;
 }
 
 void G2_LoadGhoul2Model(CGhoul2Info_v &ghoul2, char *buffer)

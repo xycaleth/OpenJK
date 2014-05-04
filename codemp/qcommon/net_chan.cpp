@@ -1,8 +1,3 @@
-
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
-
 /*
 
 packet header
@@ -25,6 +20,8 @@ channel matches even if the IP port differs.  The IP port should be updated
 to the new value before sending out any replies.
 
 */
+
+#include "qcommon/qcommon.h"
 
 #define	MAX_PACKETLEN			1400		// max size of a network packet
 #define	FRAGMENT_SIZE			(MAX_PACKETLEN - 100)
@@ -63,7 +60,7 @@ called to open a channel to a remote system
 */
 void Netchan_Setup( netsrc_t sock, netchan_t *chan, netadr_t adr, int qport ) {
 	Com_Memset (chan, 0, sizeof(*chan));
-	
+
 	chan->sock = sock;
 	chan->remoteAddress = adr;
 	chan->qport = qport;
@@ -149,7 +146,7 @@ void Netchan_Transmit( netchan_t *chan, int length, const byte *data ) {
 		Com_Printf("[ISM] Stomping Unsent Fragments %s\n",netsrcString[ chan->sock ]);
 	}
 	// fragment large reliable messages
-	if ( length >= FRAGMENT_SIZE ) 
+	if ( length >= FRAGMENT_SIZE )
 	{
 		chan->unsentFragments = qtrue;
 		chan->unsentLength = length;
@@ -204,7 +201,7 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 	int			fragmentStart, fragmentLength;
 	qboolean	fragmented;
 
-	// get sequence numbers		
+	// get sequence numbers
 	MSG_BeginReadingOOB( msg );
 	sequence = MSG_ReadLong( msg );
 
@@ -270,14 +267,14 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 			, sequence );
 		}
 	}
-	
+
 
 	//
 	// if this is the final framgent of a reliable message,
-	// bump incoming_reliable_sequence 
+	// bump incoming_reliable_sequence
 	//
 	if ( fragmented ) {
-		// make sure we 
+		// make sure we
 		if ( sequence != chan->fragmentSequence ) {
 			chan->fragmentSequence = sequence;
 			chan->fragmentLength = 0;
@@ -317,7 +314,7 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 			return qfalse;
 		}
 
-		Com_Memcpy( chan->fragmentBuffer + chan->fragmentLength, 
+		Com_Memcpy( chan->fragmentBuffer + chan->fragmentLength,
 			msg->data + msg->readcount, fragmentLength );
 
 		chan->fragmentLength += fragmentLength;
@@ -345,7 +342,7 @@ qboolean Netchan_Process( netchan_t *chan, msg_t *msg ) {
 		msg->readcount = 4;	// past the sequence number
 		msg->bit = 32;	// past the sequence number
 
-		// but I am a wuss -mw 
+		// but I am a wuss -mw
 		// chan->incomingSequence = sequence;   // lets not accept any more with this sequence number -gil
 		return qtrue;
 	}
@@ -383,13 +380,6 @@ qboolean	NET_CompareBaseAdr (netadr_t a, netadr_t b)
 		return qfalse;
 	}
 
-	if (a.type == NA_IPX)
-	{
-		if ((memcmp(a.ipx, b.ipx, 10) == 0))
-			return qtrue;
-		return qfalse;
-	}
-
 	Com_Printf ("NET_CompareBaseAdr: bad address type\n");
 	return qfalse;
 }
@@ -407,10 +397,6 @@ const char	*NET_AdrToString (netadr_t a)
 			a.ip[0], a.ip[1], a.ip[2], a.ip[3], BigShort(a.port));
 	} else if (a.type == NA_BAD) {
 		Com_sprintf (s, sizeof(s), "BAD");
-	} else {
-		Com_sprintf (s, sizeof(s), "%02x%02x%02x%02x.%02x%02x%02x%02x%02x%02x:%hu",
-		a.ipx[0], a.ipx[1], a.ipx[2], a.ipx[3], a.ipx[4], a.ipx[5], a.ipx[6], a.ipx[7], a.ipx[8], a.ipx[9], 
-		BigShort(a.port));
 	}
 
 	return s;
@@ -428,13 +414,6 @@ qboolean	NET_CompareAdr (netadr_t a, netadr_t b)
 	if (a.type == NA_IP)
 	{
 		if ((memcmp(a.ip, b.ip, 4) == 0) && a.port == b.port)
-			return qtrue;
-		return qfalse;
-	}
-
-	if (a.type == NA_IPX)
-	{
-		if ((memcmp(a.ipx, b.ipx, 10) == 0) && a.port == b.port)
 			return qtrue;
 		return qfalse;
 	}

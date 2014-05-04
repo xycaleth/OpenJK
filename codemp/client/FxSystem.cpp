@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-// this include must remain at the top of every CPP file
 #include "client.h"
 #include "cl_cgameapi.h"
 #include "FxScheduler.h"
@@ -25,7 +22,7 @@ SFxHelper::SFxHelper(void) :
 	refdef(0)
 {
 }
- 
+
 void SFxHelper::ReInit(refdef_t* pRefdef)
 {
 	mTime = 0;
@@ -66,7 +63,7 @@ void SFxHelper::AdjustTime( int frametime )
 		mOldTime = mTime;
 		mTime = frametime;
 		mFrameTime = mTime - mOldTime;
-		
+
 		mRealTime = mFrameTime * 0.001f;
 
 
@@ -100,10 +97,10 @@ qboolean SFxHelper::GetOriginAxisFromBolt(CGhoul2Info_v *pGhoul2, int mEntNum, i
 	data->mEntityNum = mEntNum;
 	CGVM_GetLerpData();//this func will zero out pitch and roll for players, and ridable vehicles
 
-	//Fixme: optimize these VM calls away by storing 
+	//Fixme: optimize these VM calls away by storing
 
 	// go away and get me the bolt position for this frame please
-	doesBoltExist = re->G2API_GetBoltMatrix(*pGhoul2, modelNum, boltNum, 
+	doesBoltExist = re->G2API_GetBoltMatrix(*pGhoul2, modelNum, boltNum,
 		&boltMatrix, data->mAngles, data->mOrigin, theFxHelper.mOldTime, 0, data->mScale);
 
 	if (doesBoltExist)

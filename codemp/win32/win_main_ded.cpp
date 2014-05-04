@@ -1,6 +1,4 @@
 // win_main.c
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
 
 #include "client/client.h"
 #include "qcommon/qcommon.h"
@@ -21,10 +19,6 @@
 /* win_shared.cpp */
 void Sys_SetBinaryPath(const char *path);
 char *Sys_BinaryPath(void);
-
-//static char		sys_cmdline[MAX_STRING_CHARS];
-clientStatic_t	cls;
-
 
 void *Sys_GetBotAIAPI (void *parms ) {
 	return NULL;
@@ -80,13 +74,13 @@ char *Sys_ConsoleInput(void)
 
 	static int	len=0;
 	static bool bPendingExtended = false;
-	
+
 	if (!kbhit()) return NULL;
 
 	if (len == 0) memset(g_consoleField1,0,sizeof(g_consoleField1));
-	
+
 	g_consoleField1[len] = getch();
-	
+
 	if (bPendingExtended)
 	{
 		switch (g_consoleField1[len])
@@ -134,7 +128,7 @@ char *Sys_ConsoleInput(void)
 			printf( "\n%s", g_consoleField1);
 		}
 		break;
-	case 27: // esc	
+	case 27: // esc
 		// clear the line
 		printf(ClearLine);
 		len = 0;
@@ -178,17 +172,7 @@ char *Sys_ConsoleInput(void)
 	return NULL;
 }
 
-/*
-==================
-Sys_BeginProfiling
-==================
-*/
-void Sys_BeginProfiling( void ) {
-	// this is just used on the mac build
-}
-
-void Sys_ShowConsole( int visLevel, qboolean quitOnClose )
-{
+void Sys_ShowConsole( int visLevel, qboolean quitOnClose ) {
 }
 
 /*
@@ -422,7 +406,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 		if (!nfiles)
 			return NULL;
 
-		listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ), TAG_FILESYS );
+		listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ), TAG_LISTFILES );
 		for ( i = 0 ; i < nfiles ; i++ ) {
 			listCopy[i] = list[i];
 		}
@@ -475,7 +459,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 		return NULL;
 	}
 
-	listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ), TAG_FILESYS );
+	listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ), TAG_LISTFILES );
 	for ( i = 0 ; i < nfiles ; i++ ) {
 		listCopy[i] = list[i];
 	}
@@ -530,7 +514,7 @@ char *Sys_GetClipboardData( void ) {
 				data = (char *)Z_Malloc( GlobalSize( hClipboardData ) + 1, TAG_CLIPBOARD);
 				Q_strncpyz( data, cliptext, GlobalSize( hClipboardData )+1 );
 				GlobalUnlock( hClipboardData );
-				
+
 				strtok( data, "\n\r\b" );
 			}
 		}
@@ -620,41 +604,41 @@ void *Sys_LoadDll(const char *name, qboolean useSystemLib)
 
 	if(useSystemLib)
 		Com_Printf("Trying to load \"%s\"...\n", name);
-	
+
 	if(!useSystemLib || !(dllhandle = Sys_LoadLibrary(name)))
 	{
 		const char *topDir;
 		char libPath[MAX_OSPATH];
-        
+
 		topDir = Sys_BinaryPath();
-        
+
 		if(!*topDir)
 			topDir = ".";
-        
+
 		Com_Printf("Trying to load \"%s\" from \"%s\"...\n", name, topDir);
 		Com_sprintf(libPath, sizeof(libPath), "%s%c%s", topDir, PATH_SEP, name);
-        
+
 		if(!(dllhandle = Sys_LoadLibrary(libPath)))
 		{
 			const char *basePath = Cvar_VariableString("fs_basepath");
-			
+
 			if(!basePath || !*basePath)
 				basePath = ".";
-			
+
 			if(FS_FilenameCompare(topDir, basePath))
 			{
 				Com_Printf("Trying to load \"%s\" from \"%s\"...\n", name, basePath);
 				Com_sprintf(libPath, sizeof(libPath), "%s%c%s", basePath, PATH_SEP, name);
 				dllhandle = Sys_LoadLibrary(libPath);
 			}
-			
+
 			if(!dllhandle)
 			{
 				Com_Printf("Loading \"%s\" failed\n", name);
 			}
 		}
 	}
-	
+
 	return dllhandle;
 }
 
@@ -714,7 +698,7 @@ void * QDECL Sys_LoadLegacyGameDll( const char *name, intptr_t (QDECL **vmMain)(
 		}
 	}
 
-	dllEntry = ( void (QDECL *)( intptr_t (QDECL *)( intptr_t, ... ) ) )GetProcAddress( libHandle, "dllEntry" ); 
+	dllEntry = ( void (QDECL *)( intptr_t (QDECL *)( intptr_t, ... ) ) )GetProcAddress( libHandle, "dllEntry" );
 	*vmMain = (intptr_t (QDECL *)(int,...))GetProcAddress( libHandle, "vmMain" );
 	if ( !*vmMain || !dllEntry ) {
 		if ( com_developer->integer )
@@ -922,19 +906,6 @@ void Sys_In_Restart_f( void ) {
 	IN_Init();
 }
 
-
-/*
-=================
-Sys_Net_Restart_f
-
-Restart the network subsystem
-=================
-*/
-void Sys_Net_Restart_f( void ) {
-	NET_Restart();
-}
-
-
 /*
 ================
 Sys_Init
@@ -952,45 +923,8 @@ void Sys_Init( void ) {
 	timeBeginPeriod( 1 );
 
 	Cmd_AddCommand ("in_restart", Sys_In_Restart_f);
-	Cmd_AddCommand ("net_restart", Sys_Net_Restart_f);
 
-//	g_wv.osversion.dwOSVersionInfoSize = sizeof( g_wv.osversion );
-
-//	if (!GetVersionEx (&g_wv.osversion))
-//		Sys_Error ("Couldn't get OS info");
-
-//	if (g_wv.osversion.dwMajorVersion < 4)
-//		Sys_Error ("This game requires Windows version 4 or greater");
-//	if (g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32s)
-//		Sys_Error ("This game doesn't run on Win32s");
-
-//	if ( g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32_NT )
-//	{
-//		Cvar_Set( "arch", "winnt" );
-//	}
-//	else if ( g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS )
-//	{
-//		if ( LOWORD( g_wv.osversion.dwBuildNumber ) >= WIN98_BUILD_NUMBER )
-//		{
-//			Cvar_Set( "arch", "win98" );
-//		}
-//		else if ( LOWORD( g_wv.osversion.dwBuildNumber ) >= OSR2_BUILD_NUMBER )
-//		{
-//			Cvar_Set( "arch", "win95 osr2.x" );
-//		}
-//		else
-//		{
-//			Cvar_Set( "arch", "win95" );
-//		}
-//	}
-//	else
-//	{
-//		Cvar_Set( "arch", "unknown Windows variant" );
-//	}
-
-	// save out a couple things in rom cvars for the renderer to access
-//	Cvar_Get( "win_hinstance", va("%i", (int)g_wv.hInstance), CVAR_ROM );
-//	Cvar_Get( "win_wndproc", va("%i", (int)MainWndProc), CVAR_ROM );
+	Cvar_Set( "arch", OS_STRING " " ARCH_STRING );
 
 	Cvar_Set( "username", Sys_GetCurrentUser() );
 
@@ -1002,11 +936,7 @@ void Sys_Init( void ) {
 //int	totalMsec, countMsec;
 
 #ifndef DEFAULT_BASEDIR
-#	ifdef MACOS_X
-#		define DEFAULT_BASEDIR Sys_StripAppBundle(Sys_BinaryPath())
-#	else
-#		define DEFAULT_BASEDIR Sys_BinaryPath()
-#	endif
+#	define DEFAULT_BASEDIR Sys_BinaryPath()
 #endif
 
 int main( int argc, char **argv )

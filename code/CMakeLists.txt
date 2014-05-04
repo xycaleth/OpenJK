@@ -11,28 +11,27 @@ if(BuildSPGame)
 endif(BuildSPGame)
 
 #    Add Modular Renderer project
-if(BuildSPEngine)
-	add_subdirectory("${SPDir}/rd-vanilla")
-endif(BuildSPEngine)
+add_subdirectory("${SPDir}/rd-vanilla")
 
 #    Add Engine Project
-if(BuildSPEngine)
+if(BuildSPEngine OR BuildJK2SPEngine)
 	# Libraries
 	if(WIN32)
 		set(SPEngineLibraries "winmm")
 	endif(WIN32)
 	# Defines
-	set(SPEngineDefines ${SharedDefines} "_JK2EXE")
+	set(SPEngineDefines ${SharedDefines} "_JK2EXE") # it's called JK2EXE but it really just means Singleplayer Exe
 
 	set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OpenJKLibDir})
 	
 	#    Dependencies
 	
-	# OpenGL
-	# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
-	find_package(OpenGL REQUIRED)
-	set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OPENGL_INCLUDE_DIR})
-	set(SPEngineLibraries ${SPEngineLibraries} ${OPENGL_LIBRARIES})
+	if (NOT WIN32)
+		# OpenGL
+		find_package(OpenGL REQUIRED)
+		set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OPENGL_INCLUDE_DIR})
+		set(SPEngineLibraries ${SPEngineLibraries} ${OPENGL_LIBRARIES})
+	endif()
 
 	# OpenAL (is optionally included for Windows)
 	if(UseInternalOpenAL)
@@ -70,13 +69,6 @@ if(BuildSPEngine)
 
 	# Client files
 	set(SPEngineClientFiles
-		"${SPDir}/client/OpenAL/al.h"
-		"${SPDir}/client/OpenAL/alc.h"
-		"${SPDir}/client/OpenAL/alctypes.h"
-		"${SPDir}/client/OpenAL/altypes.h"
-		"${SPDir}/client/OpenAL/alu.h"
-		"${SPDir}/client/OpenAL/alut.h"
-
 		"${SPDir}/client/keys.h"
 		"${SPDir}/client/keycodes.h"
 
@@ -113,24 +105,15 @@ if(BuildSPEngine)
 
 	# qcommon files
 	set(SPEngineCommonFiles
-		"${SPDir}/qcommon/cm_draw.cpp"
 		"${SPDir}/qcommon/cm_load.cpp"
 		"${SPDir}/qcommon/cm_patch.cpp"
 		"${SPDir}/qcommon/cm_polylib.cpp"
-		"${SPDir}/qcommon/cm_randomterrain.cpp"
-		"${SPDir}/qcommon/cm_shader.cpp"
-		"${SPDir}/qcommon/cm_terrain.cpp"
-		"${SPDir}/qcommon/cm_terrainmap.cpp"
 		"${SPDir}/qcommon/cm_test.cpp"
 		"${SPDir}/qcommon/cm_trace.cpp"
-		"${SPDir}/qcommon/cm_draw.h"
-		"${SPDir}/qcommon/cm_landscape.h"
 		"${SPDir}/qcommon/cm_local.h"
 		"${SPDir}/qcommon/cm_patch.h"
 		"${SPDir}/qcommon/cm_polylib.h"
 		"${SPDir}/qcommon/cm_public.h"
-		"${SPDir}/qcommon/cm_randomterrain.h"
-		"${SPDir}/qcommon/cm_terrainmap.h"
 
 		"${SPDir}/qcommon/cmd.cpp"
 		"${SPDir}/qcommon/common.cpp"
@@ -155,13 +138,13 @@ if(BuildSPEngine)
 		"${SPDir}/qcommon/stringed_interface.h"
 
 		"${SPDir}/qcommon/strip.cpp"
+		"${SPDir}/qcommon/persistence.cpp"
 		"${SPDir}/qcommon/unzip.cpp"
 		"${SPDir}/qcommon/unzip.h"
 		"${OpenJKLibDir}/zlib/ioapi.c"
 		"${OpenJKLibDir}/zlib/ioapi.h"
 		"${SPDir}/qcommon/tags.h"
 		"${SPDir}/qcommon/z_memman_pc.cpp"
-		"${SPDir}/qcommon/chash.h"
 		"${SPDir}/qcommon/qfiles.h"
 		"${SPDir}/qcommon/files.h"
 		"${SPDir}/qcommon/qcommon.h"
@@ -279,38 +262,6 @@ if(BuildSPEngine)
 	set(SPEngineFiles ${SPEngineFiles} ${SPEngineUIFiles})
 
 
-	# RMG files
-	set(SPEngineRMGFiles
-		"${SPDir}/RMG/RM_Area.cpp"
-		"${SPDir}/RMG/RM_Instance.cpp"
-		"${SPDir}/RMG/RM_Instance_BSP.cpp"
-		"${SPDir}/RMG/RM_Instance_Group.cpp"
-		"${SPDir}/RMG/RM_Instance_Random.cpp"
-		"${SPDir}/RMG/RM_Instance_Void.cpp"
-		"${SPDir}/RMG/RM_InstanceFile.cpp"
-		"${SPDir}/RMG/RM_Manager.cpp"
-		"${SPDir}/RMG/RM_Mission.cpp"
-		"${SPDir}/RMG/RM_Objective.cpp"
-		"${SPDir}/RMG/RM_Path.cpp"
-		"${SPDir}/RMG/RM_Terrain.cpp"
-		"${SPDir}/RMG/RM_Area.h"
-		"${SPDir}/RMG/RM_Headers.h"
-		"${SPDir}/RMG/RM_Instance.h"
-		"${SPDir}/RMG/RM_Instance_BSP.h"
-		"${SPDir}/RMG/RM_Instance_Group.h"
-		"${SPDir}/RMG/RM_Instance_Random.h"
-		"${SPDir}/RMG/RM_Instance_Void.h"
-		"${SPDir}/RMG/RM_InstanceFile.h"
-		"${SPDir}/RMG/RM_Manager.h"
-		"${SPDir}/RMG/RM_Mission.h"
-		"${SPDir}/RMG/RM_Objective.h"
-		"${SPDir}/RMG/RM_Path.h"
-		"${SPDir}/RMG/RM_Terrain.h"
-		)
-	source_group("rmg" FILES ${SPEngineRMGFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineRMGFiles})
-
-
 	# Ghoul2 files
 	set(SPEngineGhoul2Files
 		"${SPDir}/ghoul2/G2.h"
@@ -379,31 +330,41 @@ if(BuildSPEngine)
 		set_source_files_properties(${SPDir}/macosx/OpenJK.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 		set(SPEngineFiles ${SPEngineFiles} ${SPDir}/macosx/OpenJK.icns)
 	endif(MakeApplicationBundles)
+	
+	# project macro so we can invoke it twice: for jk2 and for ja
+	function(add_sp_project ProjectName Label)
+		if(WIN32)
+			add_executable(${ProjectName} WIN32 ${SPEngineFiles})
+		else(WIN32)
+			if(MakeApplicationBundles)
+				add_executable(${ProjectName} MACOSX_BUNDLE ${SPEngineFiles})
+			else(MakeApplicationBundles)
+				add_executable(${ProjectName} ${SPEngineFiles})
+			endif(MakeApplicationBundles)
+		endif(WIN32)
 
-	if(WIN32)
-		add_executable(${SPEngine} WIN32 ${SPEngineFiles})
-	else(WIN32)
 		if(MakeApplicationBundles)
-			add_executable(${SPEngine} MACOSX_BUNDLE ${SPEngineFiles})
+			install(TARGETS ${ProjectName} BUNDLE DESTINATION ".")
 		else(MakeApplicationBundles)
-			add_executable(${SPEngine} ${SPEngineFiles})
+			install(TARGETS ${ProjectName} RUNTIME DESTINATION ".")
 		endif(MakeApplicationBundles)
-	endif(WIN32)
 
-	if(MakeApplicationBundles)
-		install(TARGETS ${SPEngine} BUNDLE DESTINATION ".")
-	else(MakeApplicationBundles)
-		install(TARGETS ${SPEngine} RUNTIME DESTINATION ".")
-	endif(MakeApplicationBundles)
+		set_target_properties(${ProjectName} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "${SPEngineDefines};${ReleaseDefines}")
+		set_target_properties(${ProjectName} PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "${SPEngineDefines};${ReleaseDefines}")
+		set_target_properties(${ProjectName} PROPERTIES COMPILE_DEFINITIONS_RELEASE "${SPEngineDefines};${ReleaseDefines}")
+		set_target_properties(${ProjectName} PROPERTIES COMPILE_DEFINITIONS_DEBUG "${SPEngineDefines};${DebugDefines}")
+		set_target_properties(${ProjectName} PROPERTIES INCLUDE_DIRECTORIES "${SPEngineIncludeDirectories}")
+		set_target_properties(${ProjectName} PROPERTIES PROJECT_LABEL ${Label})
+		if(SPEngineLibraries)
+			target_link_libraries(${ProjectName} ${SPEngineLibraries})
+		endif(SPEngineLibraries)
+	endfunction(add_sp_project)
+	if(BuildSPEngine)
+		add_sp_project(${SPEngine} "SP Client")
+	endif(BuildSPEngine)
+	if(BuildJK2SPEngine)
+		set(SPEngineDefines ${SPEngineDefines} "JK2_MODE")
+		add_sp_project(${JK2SPEngine} "JK2 SP Client")
+	endif(BuildJK2SPEngine)
 
-	set_target_properties(${SPEngine} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "${SPEngineDefines};${ReleaseDefines}")
-	set_target_properties(${SPEngine} PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "${SPEngineDefines};${ReleaseDefines}")
-	set_target_properties(${SPEngine} PROPERTIES COMPILE_DEFINITIONS_RELEASE "${SPEngineDefines};${ReleaseDefines}")
-	set_target_properties(${SPEngine} PROPERTIES COMPILE_DEFINITIONS_DEBUG "${SPEngineDefines};${DebugDefines}")
-	set_target_properties(${SPEngine} PROPERTIES INCLUDE_DIRECTORIES "${SPEngineIncludeDirectories}")
-	set_target_properties(${SPEngine} PROPERTIES PROJECT_LABEL "SP Client")
-	if(SPEngineLibraries)
-		target_link_libraries(${SPEngine} ${SPEngineLibraries})
-	endif(SPEngineLibraries)
-
-endif(BuildSPEngine)
+endif(BuildSPEngine OR BuildJK2SPEngine)

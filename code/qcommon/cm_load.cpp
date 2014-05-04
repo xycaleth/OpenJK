@@ -19,9 +19,6 @@ This file is part of Jedi Academy.
 // cmodel.c -- model loading
 
 #include "cm_local.h"
-#include "../RMG/RM_Headers.h"
-
-void CM_LoadShaderText(bool forceReload);
 
 #ifdef BSPC
 void SetPlaneSignbits (cplane_t *out) {
@@ -265,9 +262,9 @@ void CMod_LoadBrushes( lump_t *l, clipMap_t &cm ) {
 			Com_Error( ERR_DROP, "CMod_LoadBrushes: bad shaderNum: %i", out->shaderNum );
 		}
 		out->contents = cm.shaders[out->shaderNum].contentFlags;
-#ifndef __NO_JK2
+#ifdef JK2_MODE
 		//JK2 HACK: for water that cuts vis but is not solid!!! (used on yavin swamp)
-		if ( com_jk2->integer && cm.shaders[out->shaderNum].surfaceFlags & SURF_SLICK )
+		if ( cm.shaders[out->shaderNum].surfaceFlags & SURF_SLICK )
 		{
 			out->contents &= ~CONTENTS_SOLID;
 		}
@@ -574,27 +571,6 @@ void CM_FreeMap(void) {
 }
 #endif //BSPC
 
-unsigned CM_LumpChecksum(lump_t *lump) {
-	return LittleLong (Com_BlockChecksum (cmod_base + lump->fileofs, lump->filelen));
-}
-
-unsigned CM_Checksum(dheader_t *header) {
-	unsigned checksums[16];
-	checksums[0] = CM_LumpChecksum(&header->lumps[LUMP_SHADERS]);
-	checksums[1] = CM_LumpChecksum(&header->lumps[LUMP_LEAFS]);
-	checksums[2] = CM_LumpChecksum(&header->lumps[LUMP_LEAFBRUSHES]);
-	checksums[3] = CM_LumpChecksum(&header->lumps[LUMP_LEAFSURFACES]);
-	checksums[4] = CM_LumpChecksum(&header->lumps[LUMP_PLANES]);
-	checksums[5] = CM_LumpChecksum(&header->lumps[LUMP_BRUSHSIDES]);
-	checksums[6] = CM_LumpChecksum(&header->lumps[LUMP_BRUSHES]);
-	checksums[7] = CM_LumpChecksum(&header->lumps[LUMP_MODELS]);
-	checksums[8] = CM_LumpChecksum(&header->lumps[LUMP_NODES]);
-	checksums[9] = CM_LumpChecksum(&header->lumps[LUMP_SURFACES]);
-	checksums[10] = CM_LumpChecksum(&header->lumps[LUMP_DRAWVERTS]);
-
-	return LittleLong(Com_BlockChecksum(checksums, 11 * 4));
-}
-
 /*
 ==================
 CM_LoadMap
@@ -808,14 +784,7 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 
 		if (&cm == &cmg)
 		{
-#if !defined(BSPC)
-			CM_LoadShaderText(false);
-//			MAT_Init((bool)(!clientload));
-#endif
 			CM_InitBoxHull ();
-#if !defined(BSPC)
-			CM_SetupShaderProperties();
-#endif
 
 			Q_strncpyz( gsCachedMapDiskImage, name, sizeof(gsCachedMapDiskImage) );	// so the renderer can check it
 		}
@@ -876,16 +845,6 @@ qboolean CM_SameMap(const char *server)
 	return qtrue;
 }
 
-qboolean CM_HasTerrain(void)
-{
-	if (cmg.landScape)
-	{
-		return qtrue;
-	}
-
-	return qfalse;
-}
-
 /*
 ==================
 CM_ClearMap
@@ -896,23 +855,6 @@ void CM_ClearMap( void )
 	int		i;
 
 	CM_OrOfAllContentsFlagsInMap = CONTENTS_BODY;
-
-#if !defined(BSPC)
-	CM_ShutdownShaderProperties();
-//	MAT_Shutdown();
-#endif
-
-	if (TheRandomMissionManager)
-	{
-		delete TheRandomMissionManager;
-		TheRandomMissionManager = 0;
-	}
-
-	if (cmg.landScape)
-	{
-		delete cmg.landScape;
-		cmg.landScape = 0;
-	}
 
 	memset( &cmg, 0, sizeof( cmg ) );
 	CM_ClearLevelPatches();
@@ -995,10 +937,6 @@ clipHandle_t	CM_InlineModel( int index ) {
 		Com_Error( ERR_DROP, "CM_InlineModel: bad number: %d >= %d (may need to re-BSP map?)", index, TotalSubModels );
 	}
 	return index;
-}
-
-int		CM_NumClusters( void ) {
-	return cmg.numClusters;
 }
 
 int		CM_NumInlineModels( void ) {
@@ -1131,63 +1069,6 @@ void CM_ModelBounds( clipMap_t &cm, clipHandle_t model, vec3_t mins, vec3_t maxs
 	VectorCopy( cmod->mins, mins );
 	VectorCopy( cmod->maxs, maxs );
 }
-
-/*
-===================
-CM_RegisterTerrain
-
-Allows physics to examine the terrain data.
-===================
-*/
-#if !defined(BSPC)
-CCMLandScape *CM_RegisterTerrain(const char *config, bool server)
-{
-	thandle_t		terrainId;
-	CCMLandScape	*ls;
-
-	terrainId = atol(Info_ValueForKey(config, "terrainId"));
-	if(terrainId && cmg.landScape)
-	{
-		// Already spawned so just return
-		ls = cmg.landScape;
-		ls->IncreaseRefCount();
-		return(ls);
-	}
-	// Doesn't exist so create and link in
-	//cmg.numTerrains++;
-	ls = CM_InitTerrain(config, 1, server);
-
-	// Increment for the next instance
-	if (cmg.landScape)
-	{
-		Com_Error(ERR_DROP, "You can't have more than one terrain brush.");
-	}
-	cmg.landScape = ls;
-	return(ls);
-}
-
-/*
-===================
-CM_ShutdownTerrain
-===================
-*/
-
-void CM_ShutdownTerrain( thandle_t terrainId)
-{
-	CCMLandScape	*landscape;
-
-	landscape = cmg.landScape;
-	if (landscape)
-	{
-		landscape->DecreaseRefCount();
-		if(landscape->GetRefCount() <= 0)
-		{
-			delete landscape;
-			cmg.landScape = NULL;
-		}
-	}
-}
-#endif
 
 int CM_LoadSubBSP(const char *name, qboolean clientload)
 {

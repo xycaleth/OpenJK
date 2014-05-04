@@ -1,24 +1,15 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 // cl_main.c  -- client main loop
 
 #include "client.h"
-#include "qcommon/stringed_ingame.h"
+
 #include <limits.h>
-#include "snd_local.h"
+#include "ghoul2/G2.h"
+#include "qcommon/cm_public.h"
+#include "qcommon/MiniHeap.h"
+#include "qcommon/stringed_ingame.h"
 #include "cl_cgameapi.h"
 #include "cl_uiapi.h"
-
-//rwwRMG - added:
-#include "qcommon/cm_local.h"
-#include "qcommon/cm_landscape.h"
-#include "ghoul2/G2.h"
-#include "qcommon/MiniHeap.h"
-
-#ifdef _DONETPROFILE_
-#include "qcommon/INetProfile.h"
-#endif
+#include "snd_local.h"
 
 #ifndef _WIN32
 #include "sys/sys_loadlib.h"
@@ -48,6 +39,7 @@ cvar_t	*cl_showSend;
 cvar_t	*cl_timedemo;
 cvar_t	*cl_aviFrameRate;
 cvar_t	*cl_aviMotionJpeg;
+cvar_t	*cl_avi2GBLimit;
 cvar_t	*cl_forceavidemo;
 
 cvar_t	*cl_freelook;
@@ -100,12 +92,6 @@ char cl_reconnectArgs[MAX_OSPATH] = {0};
 refexport_t	*re = NULL;
 static void	*rendererLib = NULL;
 
-const CGhoul2Info NullG2;
-//FIXME: BAD BAD, maybe? had to move it out of ghoul2_shared.h -> CGhoul2Info_v at the least..
-IGhoul2InfoArray &_TheGhoul2InfoArray( void ) {
-	return re->TheGhoul2InfoArray();
-}
-
 ping_t	cl_pinglist[MAX_PINGREQUESTS];
 
 typedef struct serverStatus_s
@@ -121,13 +107,14 @@ typedef struct serverStatus_s
 serverStatus_t cl_serverStatusList[MAX_SERVERSTATUSREQUESTS];
 int serverStatusCount;
 
-CMiniHeap *G2VertSpaceClient = 0;
+IHeapAllocator *G2VertSpaceClient = 0;
 
 extern void SV_BotFrame( int time );
 void CL_CheckForResend( void );
 void CL_ShowIP_f(void);
 void CL_ServerStatus_f(void);
 void CL_ServerStatusResponse( netadr_t from, msg_t *msg );
+static void CL_ShutdownRef( qboolean restarting );
 
 /*
 =======================================================================
@@ -290,7 +277,7 @@ void CL_Record_f( void ) {
 		Com_sprintf (name, sizeof(name), "demos/%s.dm_%d", demoName, PROTOCOL_VERSION );
 
 		if ( FS_FileExists( name ) ) {
-			Com_Printf( "Record: Couldn't create a file\n"); 
+			Com_Printf( "Record: Couldn't create a file\n");
 			return;
  		}
 	}
@@ -343,12 +330,12 @@ void CL_Record_f( void ) {
 		if ( !ent->number ) {
 			continue;
 		}
-		MSG_WriteByte (&buf, svc_baseline);		
+		MSG_WriteByte (&buf, svc_baseline);
 		MSG_WriteDeltaEntity (&buf, &nullstate, ent, qtrue );
 	}
 
 	MSG_WriteByte( &buf, svc_EOF );
-	
+
 	// finished writing the gamestate stuff
 
 	// write the client num
@@ -356,38 +343,8 @@ void CL_Record_f( void ) {
 	// write the checksum feed
 	MSG_WriteLong(&buf, clc.checksumFeed);
 
-	// RMG stuff
-	if ( clc.rmgHeightMapSize )
-	{
-		int i;
-
-		// Height map
-		MSG_WriteShort ( &buf, (unsigned short)clc.rmgHeightMapSize );
-		MSG_WriteBits ( &buf, 0, 1 );
-		MSG_WriteData( &buf, clc.rmgHeightMap, clc.rmgHeightMapSize );
-
-		// Flatten map
-		MSG_WriteShort ( &buf, (unsigned short)clc.rmgHeightMapSize );
-		MSG_WriteBits ( &buf, 0, 1 );
-		MSG_WriteData( &buf, clc.rmgFlattenMap, clc.rmgHeightMapSize );
-
-		// Seed 
-		MSG_WriteLong ( &buf, clc.rmgSeed );
-
-		// Automap symbols
-		MSG_WriteShort ( &buf, (unsigned short)clc.rmgAutomapSymbolCount );
-		for ( i = 0; i < clc.rmgAutomapSymbolCount; i ++ )
-		{
-			MSG_WriteByte ( &buf, (unsigned char)clc.rmgAutomapSymbols[i].mType );
-			MSG_WriteByte ( &buf, (unsigned char)clc.rmgAutomapSymbols[i].mSide );
-			MSG_WriteLong ( &buf, (long)clc.rmgAutomapSymbols[i].mOrigin[0] );
-			MSG_WriteLong ( &buf, (long)clc.rmgAutomapSymbols[i].mOrigin[1] );
-		}
-	}
-	else
-	{
-		MSG_WriteShort ( &buf, 0 );
-	}
+	// Filler for old RMG system.
+	MSG_WriteShort ( &buf, 0 );
 
 	// finished writing the client packet
 	MSG_WriteByte( &buf, svc_EOF );
@@ -419,7 +376,7 @@ CL_DemoCompleted
 void CL_DemoCompleted( void ) {
 	if (cl_timedemo && cl_timedemo->integer) {
 		int	time;
-		
+
 		time = Sys_Milliseconds() - clc.timeDemoStart;
 		if ( time > 0 ) {
 			Com_Printf ("%i frames, %3.1f seconds: %3.1f fps\n", clc.timeDemoFrames,
@@ -542,7 +499,7 @@ void CL_PlayDemo_f( void ) {
 	} else {
 		Com_sprintf (name, sizeof(name), "demos/%s.dm_%d", arg, PROTOCOL_VERSION);
 	}
-	
+
 	FS_FOpenFileRead( name, &clc.demofile, qtrue );
 	if (!clc.demofile) {
 		if (!Q_stricmp(arg, "(null)"))
@@ -638,9 +595,9 @@ void CL_ShutdownAll( qboolean shutdownRef ) {
 
 	// shutdown the renderer
 	if(shutdownRef)
-		CL_ShutdownRef();
+		CL_ShutdownRef( qfalse );
 	if ( re && re->Shutdown ) {
-		re->Shutdown( qfalse );		// don't destroy window or context
+		re->Shutdown( qfalse, qfalse );		// don't destroy window or context
 	}
 
 	cls.uiStarted = qfalse;
@@ -751,7 +708,7 @@ static void CL_UpdateGUID( const char *prefix, int prefix_len )
 	len = FS_SV_FOpenFileRead( QKEY_FILE, &f );
 	FS_FCloseFile( f );
 
-	if( len != QKEY_SIZE ) 
+	if( len != QKEY_SIZE )
 		Cvar_Set( "ja_guid", "" );
 	else
 		Cvar_Set( "ja_guid", Com_MD5File( QKEY_FILE, QKEY_SIZE,
@@ -807,6 +764,10 @@ void CL_Disconnect( qboolean showMainMenu ) {
 		CL_WritePacket();
 		CL_WritePacket();
 	}
+
+	// Remove pure paks
+	FS_PureServerSetLoadedPaks("", "");
+	FS_PureServerSetReferencedPaks("", "");
 
 	CL_ClearState ();
 
@@ -883,7 +844,7 @@ void CL_RequestMotd( void ) {
 	cls.updateServer.port = BigShort( PORT_UPDATE );
 	Com_Printf( "%s resolved to %s\n", UPDATE_SERVER_NAME,
 		NET_AdrToString( cls.updateServer ) );
-	
+
 	info[0] = 0;
   // NOTE TTimo xoring against Com_Milliseconds, otherwise we may not have a true randomization
   // only srand I could catch before here is tr_noise.c l:26 srand(1001)
@@ -930,7 +891,7 @@ void CL_ForwardToServer_f( void ) {
 		Com_Printf ("Not connected to a server.\n");
 		return;
 	}
-	
+
 	// don't forward the first argument
 	if ( Cmd_Argc() > 1 ) {
 		CL_AddReliableCommand( Cmd_Args(), qfalse );
@@ -978,7 +939,7 @@ void CL_Connect_f( void ) {
 
 	if ( Cmd_Argc() != 2 ) {
 		Com_Printf( "usage: connect [server]\n");
-		return;	
+		return;
 	}
 
 	// save arguments for reconnect
@@ -1110,7 +1071,7 @@ void CL_Rcon_f( void ) {
 			rcon_address.port = BigShort (PORT_SERVER);
 		}
 	}
-	
+
 	NET_SendPacket (NS_CLIENT, strlen(message)+1, message, rcon_address);
 }
 
@@ -1169,7 +1130,7 @@ void CL_Vid_Restart_f( void ) {
 	// shutdown the CGame
 	CL_ShutdownCGame();
 	// shutdown the renderer and clear the renderer interface
-	CL_ShutdownRef();
+	CL_ShutdownRef( qtrue );
 	// client is no longer pure untill new checksums are sent
 	CL_ResetPureClientAtServer();
 	// clear pak references
@@ -1417,7 +1378,7 @@ void CL_NextDownload(void) {
 		if (*s == '@')
 			s++;
 		remoteName = s;
-		
+
 		if ( (s = strchr(s, '@')) == NULL ) {
 			CL_DownloadsComplete();
 			return;
@@ -1432,7 +1393,7 @@ void CL_NextDownload(void) {
 
 		if (!cl_allowDownload->integer) {
 			Com_Error(ERR_DROP, "UDP Downloads are disabled on your client. (cl_allowDownload is %d)", cl_allowDownload->integer);
-			return;	
+			return;
 		}
 		else {
 			CL_BeginDownload( localName, remoteName );
@@ -1459,13 +1420,13 @@ and determine if we need to download them
 */
 void CL_InitDownloads(void) {
   char missingfiles[1024];
-	
+
 	if ( !cl_allowDownload->integer )
 	{
 		// autodownload is disabled on the client
 		// but it's possible that some referenced files on the server are missing
 		if (FS_ComparePaks( missingfiles, sizeof( missingfiles ), qfalse ) )
-		{      
+		{
 			// NOTE TTimo I would rather have that printed as a modal message box
 			//   but at this point while joining the game we don't know wether we will successfully join or not
 			Com_Printf( "\nWARNING: You are missing some files referenced by the server:\n%s"
@@ -1474,9 +1435,9 @@ void CL_InitDownloads(void) {
 		}
 	}
 	else if ( FS_ComparePaks( clc.downloadList, sizeof( clc.downloadList ) , qtrue ) ) {
-		
+
 		Com_Printf("Need paks: %s\n", clc.downloadList );
-		
+
 		if ( *clc.downloadList ) {
 			// if autodownloading is not enabled on the server
 			cls.state = CA_CONNECTED;
@@ -1487,7 +1448,7 @@ void CL_InitDownloads(void) {
 			CL_NextDownload();
 			return;
 		}
-		
+
 	}
 	CL_DownloadsComplete();
 }
@@ -1531,7 +1492,7 @@ void CL_CheckForResend( void ) {
 
 		NET_OutOfBandPrint(NS_CLIENT, clc.serverAddress, data);
 		break;
-		
+
 	case CA_CHALLENGING:
 		// sending back the challenge
 		port = (int) Cvar_VariableValue ("net_qport");
@@ -1638,6 +1599,7 @@ void CL_InitServerInfo( serverInfo_t *server, netadr_t *address ) {
 	server->ping = -1;
 	server->game[0] = '\0';
 	server->gameType = 0;
+	server->humans = server->bots = 0;
 }
 
 #define MAX_SERVERSPERPACKET	256
@@ -1653,7 +1615,7 @@ void CL_ServersResponsePacket( const netadr_t *from, msg_t *msg ) {
 	int				numservers;
 	byte*			buffptr;
 	byte*			buffend;
-	
+
 	Com_Printf("CL_ServersResponsePacket\n");
 
 	if (cls.numglobalservers == -1) {
@@ -1672,7 +1634,7 @@ void CL_ServersResponsePacket( const netadr_t *from, msg_t *msg ) {
 	{
 		if(*buffptr == '\\')
 			break;
-		
+
 		buffptr++;
 	} while (buffptr < buffend);
 
@@ -1694,16 +1656,16 @@ void CL_ServersResponsePacket( const netadr_t *from, msg_t *msg ) {
 		else
 			// syntax error!
 			break;
-			
+
 		// parse out port
 		addresses[numservers].port = (*buffptr++) << 8;
 		addresses[numservers].port += *buffptr++;
 		addresses[numservers].port = BigShort( addresses[numservers].port );
 
 		// syntax check
-		if (*buffptr != '\\' && *buffptr != '/')
+		if (*buffptr != '\\')
 			break;
-	
+
 		numservers++;
 		if (numservers >= MAX_SERVERSPERPACKET)
 			break;
@@ -1942,7 +1904,7 @@ void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 	}
 
 	// echo request from server
-	if ( !Q_stricmp(c, "print") ) 
+	if ( !Q_stricmp(c, "print") )
 	{
 		// NOTE: we may have to add exceptions for auth and update servers
 		if (NET_CompareAdr(from, clc.serverAddress) || NET_CompareAdr(from, rcon_address))
@@ -2010,7 +1972,7 @@ void CL_PacketEvent( netadr_t from, msg_t *msg ) {
 	// the header is different lengths for reliable and unreliable messages
 	headerBytes = msg->readcount;
 
-	// track the last message received so it can be returned in 
+	// track the last message received so it can be returned in
 	// client messages, allowing the server to detect a dropped
 	// gamestate
 	clc.serverMessageSequence = LittleLong( *(int *)msg->data );
@@ -2037,7 +1999,7 @@ void CL_CheckTimeout( void ) {
 	//
 	// check timeout
 	//
-	if ( ( !CL_CheckPaused() || !sv_paused->integer ) 
+	if ( ( !CL_CheckPaused() || !sv_paused->integer )
 		&& cls.state >= CA_CONNECTED && cls.state != CA_CINEMATIC
 	    && cls.realtime - clc.lastPacketTime > cl_timeout->value*1000) {
 		if (++cl.timeoutcount > 5) {	// timeoutcount saves debugger
@@ -2079,7 +2041,7 @@ CL_CheckUserinfo
 */
 void CL_CheckUserinfo( void ) {
 	// don't add reliable commands when not yet connected
-	if ( cls.state < CA_CHALLENGING ) {
+	if ( cls.state < CA_CONNECTED ) {
 		return;
 	}
 	// don't overflow the reliable command buffer when paused
@@ -2104,6 +2066,7 @@ static unsigned int frameCount;
 static float avgFrametime=0.0;
 extern void SE_CheckForLanguageUpdates(void);
 void CL_Frame ( int msec ) {
+	qboolean takeVideoFrame = qfalse;
 
 	if ( !com_cl_running->integer ) {
 		return;
@@ -2121,11 +2084,10 @@ void CL_Frame ( int msec ) {
 
 	// if recording an avi, lock to a fixed fps
 	if ( CL_VideoRecording( ) && cl_aviFrameRate->integer && msec) {
-		// save the current screen
 		if ( cls.state == CA_ACTIVE || cl_forceavidemo->integer) {
 			float fps = min(cl_aviFrameRate->value * com_timescale->value, 1000.0f);
 			float frameDuration = max(1000.0f / fps, 1.0f) + clc.aviVideoFrameRemainder;
-			CL_TakeVideoFrame( );
+			takeVideoFrame = qtrue;
 
 			msec = (int)frameDuration;
 			clc.aviVideoFrameRemainder = frameDuration - msec;
@@ -2152,13 +2114,6 @@ void CL_Frame ( int msec ) {
 	}
 
 	cls.realtime += cls.frametime;
-
-#ifdef _DONETPROFILE_
-	if(cls.state==CA_ACTIVE)
-	{
-		ClReadProf().IncTime(cls.frametime);
-	}
-#endif
 
 	if ( cl_timegraph->integer ) {
 		SCR_DebugGraph ( cls.realFrametime * 0.25, 0 );
@@ -2198,6 +2153,11 @@ void CL_Frame ( int msec ) {
 	}
 
 	cls.framecount++;
+
+	if ( takeVideoFrame ) {
+		// save the current screen
+		CL_TakeVideoFrame( );
+	}
 }
 
 
@@ -2214,7 +2174,7 @@ DLL glue
 void QDECL CL_RefPrintf( int print_level, const char *fmt, ...) {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
-	
+
 	va_start (argptr,fmt);
 	Q_vsnprintf(msg, sizeof(msg), fmt, argptr);
 	va_end (argptr);
@@ -2235,12 +2195,12 @@ void QDECL CL_RefPrintf( int print_level, const char *fmt, ...) {
 CL_ShutdownRef
 ============
 */
-void CL_ShutdownRef( void ) {
+static void CL_ShutdownRef( qboolean restarting ) {
 	if ( re )
 	{
 		if ( re->Shutdown )
 		{
-			re->Shutdown( qtrue );
+			re->Shutdown( qtrue, restarting );
 		}
 	}
 
@@ -2334,15 +2294,11 @@ static void *CM_GetCachedMapDiskImage( void ) { return gpvCachedMapDiskImage; }
 static void CM_SetCachedMapDiskImage( void *ptr ) { gpvCachedMapDiskImage = ptr; }
 static void CM_SetUsingCache( qboolean usingCache ) { gbUsingCachedMapDataRightNow = usingCache; }
 
-// for listen servers
-extern void SV_GetConfigstring( int index, char *buffer, int bufferSize );
-extern void SV_SetConfigstring( int index, const char *val );
-
 #define G2_VERT_SPACE_SERVER_SIZE 256
-CMiniHeap *G2VertSpaceServer = NULL;
-CMiniHeap CMiniHeap_singleton(G2_VERT_SPACE_SERVER_SIZE * 1024);
+IHeapAllocator *G2VertSpaceServer = NULL;
+CMiniHeap IHeapAllocator_singleton(G2_VERT_SPACE_SERVER_SIZE * 1024);
 
-static CMiniHeap *GetG2VertSpaceServer( void ) {
+static IHeapAllocator *GetG2VertSpaceServer( void ) {
 	return G2VertSpaceServer;
 }
 
@@ -2424,17 +2380,12 @@ void CL_InitRef( void ) {
 	ri.CM_BoxTrace = CM_BoxTrace;
 	ri.CM_DrawDebugSurface = CM_DrawDebugSurface;
 	ri.CM_CullWorldBox = CM_CullWorldBox;
-	ri.CM_TerrainPatchIterate = CM_TerrainPatchIterate;
-	ri.CM_RegisterTerrain = CM_RegisterTerrain;
-	ri.CM_ShutdownTerrain = CM_ShutdownTerrain;
 	ri.CM_ClusterPVS = CM_ClusterPVS;
 	ri.CM_LeafArea = CM_LeafArea;
 	ri.CM_LeafCluster = CM_LeafCluster;
 	ri.CM_PointLeafnum = CM_PointLeafnum;
 	ri.CM_PointContents = CM_PointContents;
 	ri.Com_TheHunkMarkHasBeenMade = Com_TheHunkMarkHasBeenMade;
-	ri.SV_GetConfigstring = SV_GetConfigstring;
-	ri.SV_SetConfigstring = SV_SetConfigstring;
 	ri.S_RestartMusic = S_RestartMusic;
 	ri.SND_RegisterAudio_LevelLoadEnd = SND_RegisterAudio_LevelLoadEnd;
 	ri.CIN_RunCinematic = CIN_RunCinematic;
@@ -2465,7 +2416,10 @@ void CL_InitRef( void ) {
 
 	//FIXME: Might have to do something about this...
 	ri.GetG2VertSpaceServer = GetG2VertSpaceServer;
-	G2VertSpaceServer = &CMiniHeap_singleton;
+	G2VertSpaceServer = &IHeapAllocator_singleton;
+
+	ri.PD_Store = PD_Store;
+	ri.PD_Load = PD_Load;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
 
@@ -2505,7 +2459,7 @@ void CL_SetModel_f( void ) {
 			Com_Printf("You can only change your model every %i seconds.\n", (MODEL_CHANGE_DELAY/1000));
 			return;
 		}
-		
+
 		gCLModelDelay = curTime + MODEL_CHANGE_DELAY;
 		*/
 		//rwwFIXMEFIXME: This is currently broken and doesn't seem to work for connecting clients
@@ -2565,7 +2519,7 @@ void CL_Video_f( void )
 		CL_VideoFilename( filename, MAX_OSPATH );
 
 		if ( FS_FileExists( filename ) ) {
-			Com_Printf( "Video: Couldn't create a file\n"); 
+			Com_Printf( "Video: Couldn't create a file\n");
 			return;
  		}
 	}
@@ -2635,7 +2589,7 @@ CL_Init
 void CL_Init( void ) {
 //	Com_Printf( "----- Client Initialization -----\n" );
 
-	Con_Init ();	
+	Con_Init ();
 
 	CL_ClearState ();
 
@@ -2664,6 +2618,7 @@ void CL_Init( void ) {
 	cl_timedemo = Cvar_Get ("timedemo", "0", 0);
 	cl_aviFrameRate = Cvar_Get ("cl_aviFrameRate", "25", CVAR_ARCHIVE);
 	cl_aviMotionJpeg = Cvar_Get ("cl_aviMotionJpeg", "1", CVAR_ARCHIVE);
+	cl_avi2GBLimit = Cvar_Get ("cl_avi2GBLimit", "1", CVAR_ARCHIVE );
 	cl_forceavidemo = Cvar_Get ("cl_forceavidemo", "0", 0);
 
 	rconAddress = Cvar_Get ("rconAddress", "", 0);
@@ -2732,7 +2687,6 @@ void CL_Init( void ) {
 	Cvar_Get ("color1",  "4", CVAR_USERINFO | CVAR_ARCHIVE );
 	Cvar_Get ("color2", "4", CVAR_USERINFO | CVAR_ARCHIVE );
 	Cvar_Get ("handicap", "100", CVAR_USERINFO | CVAR_ARCHIVE );
-	Cvar_Get ("teamtask", "0", CVAR_USERINFO );
 	Cvar_Get ("sex", "male", CVAR_USERINFO | CVAR_ARCHIVE );
 	Cvar_Get ("password", "", CVAR_USERINFO);
 	Cvar_Get ("cg_predictItems", "1", CVAR_USERINFO | CVAR_ARCHIVE );
@@ -2787,7 +2741,7 @@ void CL_Init( void ) {
 
 	Cvar_Set( "cl_running", "1" );
 
-	G2VertSpaceClient = new CMiniHeap(G2_VERT_SPACE_CLIENT_SIZE * 1024);
+	G2VertSpaceClient = new CMiniHeap (G2_VERT_SPACE_CLIENT_SIZE * 1024);
 
 	CL_GenerateQKey();
 	Cvar_Get( "ja_guid", "", CVAR_USERINFO | CVAR_ROM );
@@ -2805,7 +2759,7 @@ CL_Shutdown
 */
 void CL_Shutdown( void ) {
 	static qboolean recursive = qfalse;
-	
+
 	//Com_Printf( "----- CL_Shutdown -----\n" );
 
 	if ( recursive ) {
@@ -2839,16 +2793,22 @@ void CL_Shutdown( void ) {
 	Cmd_RemoveCommand ("cinematic");
 	Cmd_RemoveCommand ("stoprecord");
 	Cmd_RemoveCommand ("connect");
+	Cmd_RemoveCommand ("reconnect");
 	Cmd_RemoveCommand ("localservers");
 	Cmd_RemoveCommand ("globalservers");
 	Cmd_RemoveCommand ("rcon");
 	Cmd_RemoveCommand ("ping");
 	Cmd_RemoveCommand ("serverstatus");
 	Cmd_RemoveCommand ("showip");
+	Cmd_RemoveCommand ("fs_openedList");
+	Cmd_RemoveCommand ("fs_referencedList");
 	Cmd_RemoveCommand ("model");
 	Cmd_RemoveCommand ("forcepowers");
 	Cmd_RemoveCommand ("video");
 	Cmd_RemoveCommand ("stopvideo");
+
+	CL_ShutdownInput();
+	Con_Shutdown();
 
 	Cvar_Set( "cl_running", "0" );
 
@@ -2861,8 +2821,8 @@ void CL_Shutdown( void ) {
 
 }
 
-qboolean CL_ConnectedToServer( void ) {
-	return (qboolean)( cls.state >= CA_CONNECTED );
+qboolean CL_ConnectedToRemoteServer( void ) {
+	return (qboolean)( com_sv_running && !com_sv_running->integer && cls.state >= CA_CONNECTED && !clc.demoplaying );
 }
 
 static void CL_SetServerInfo(serverInfo_t *server, const char *info, int ping) {
@@ -2882,6 +2842,8 @@ static void CL_SetServerInfo(serverInfo_t *server, const char *info, int ping) {
 			server->trueJedi = atoi(Info_ValueForKey(info, "truejedi" ));
 			server->weaponDisable = atoi(Info_ValueForKey(info, "wdisable" ));
 			server->forceDisable = atoi(Info_ValueForKey(info, "fdisable" ));
+			server->humans = atoi( Info_ValueForKey( info, "g_humanplayers" ) );
+			server->bots = atoi( Info_ValueForKey( info, "bots" ) );
 //			server->pure = (qboolean)atoi(Info_ValueForKey(info, "pure" ));
 		}
 		server->ping = ping;
@@ -2949,11 +2911,6 @@ void CL_ServerInfoPacket( netadr_t from, msg_t *msg ) {
 				case NA_BROADCAST:
 				case NA_IP:
 					type = 1;
-					break;
-
-				case NA_IPX:
-				case NA_BROADCAST_IPX:
-					type = 2;
 					break;
 
 				default:
@@ -3128,7 +3085,7 @@ void CL_ServerStatusResponse( netadr_t from, msg_t *msg ) {
 	Com_sprintf(&serverStatus->string[len], sizeof(serverStatus->string)-len, "%s", s);
 
 	if (serverStatus->print) {
-		Com_Printf( "Server (%s)\n", 
+		Com_Printf( "Server (%s)\n",
 			NET_AdrToString( serverStatus->address ) );
 		Com_Printf("Server settings:\n");
 		// print cvars
@@ -3231,9 +3188,6 @@ void CL_LocalServers_f( void ) {
 
 			to.type = NA_BROADCAST;
 			NET_SendPacket( NS_CLIENT, strlen( message ), message, to );
-
-			to.type = NA_BROADCAST_IPX;
-			NET_SendPacket( NS_CLIENT, strlen( message ), message, to );
 		}
 	}
 }
@@ -3246,28 +3200,37 @@ CL_GlobalServers_f
 void CL_GlobalServers_f( void ) {
 	netadr_t	to;
 	int			count, i, masterNum;
-	char		command[1024];
-	
-	if ((count = Cmd_Argc()) < 3 || (masterNum = atoi(Cmd_Argv(1))) < 0 || masterNum > 1)
+	char		command[1024], *masteraddress;
+
+	if ((count = Cmd_Argc()) < 3 || (masterNum = atoi(Cmd_Argv(1))) < 0 || masterNum > MAX_MASTER_SERVERS - 1)
 	{
-		Com_Printf("usage: globalservers <master# 0-1> <protocol> [keywords]\n");
+		Com_Printf("usage: globalservers <master# 0-%d> <protocol> [keywords]\n", MAX_MASTER_SERVERS - 1);
+		return;
+	}
+
+	Com_sprintf( command, sizeof(command), "sv_master%d", masterNum + 1 );
+	masteraddress = Cvar_VariableString( command );
+
+	if ( !*masteraddress )
+	{
+		Com_Printf( "CL_GlobalServers_f: Error: No master server address given.\n" );
 		return;
 	}
 
 	// reset the list, waiting for response
 	// -1 is used to distinguish a "no response"
 
-	i = NET_StringToAdr(MASTER_SERVER_NAME, &to);
+	i = NET_StringToAdr( masteraddress, &to );
 
 	if (!i)
 	{
-		Com_Printf("CL_GlobalServers_f: Error: could not resolve address of master %s\n", MASTER_SERVER_NAME);
+		Com_Printf( "CL_GlobalServers_f: Error: could not resolve address of master %s\n", masteraddress );
 		return;
 	}
 	to.type = NA_IP;
 	to.port = BigShort(PORT_MASTER);
 
-	Com_Printf("Requesting servers from the master %s (%s)...\n", MASTER_SERVER_NAME, NET_AdrToString(to));
+	Com_Printf( "Requesting servers from the master %s (%s)...\n", masteraddress, NET_AdrToString( to ) );
 
 	cls.numglobalservers = -1;
 	cls.pingUpdateSource = AS_GLOBAL;
@@ -3389,7 +3352,7 @@ CL_GetFreePing
 ping_t* CL_GetFreePing( void )
 {
 	ping_t*	pingptr;
-	ping_t*	best;	
+	ping_t*	best;
 	int		oldest;
 	int		i;
 	int		time;
@@ -3450,7 +3413,7 @@ void CL_Ping_f( void ) {
 
 	if ( Cmd_Argc() != 2 ) {
 		Com_Printf( "usage: ping [server]\n");
-		return;	
+		return;
 	}
 
 	Com_Memset( &to, 0, sizeof(netadr_t) );
@@ -3468,7 +3431,7 @@ void CL_Ping_f( void ) {
 	pingptr->time  = 0;
 
 	CL_SetServerInfoByAddress(pingptr->adr, NULL, 0);
-		
+
 	NET_OutOfBandPrint( NS_CLIENT, to, "getinfo xxx" );
 }
 
@@ -3557,7 +3520,7 @@ qboolean CL_UpdateVisiblePings_f(int source) {
 				}
 			}
 		}
-	} 
+	}
 
 	if (slots) {
 		status = qtrue;
@@ -3590,12 +3553,12 @@ void CL_ServerStatus_f(void) {
 		if ( cls.state != CA_ACTIVE || clc.demoplaying ) {
 			Com_Printf ("Not connected to a server.\n");
 			Com_Printf( "Usage: serverstatus [server]\n");
-			return;	
+			return;
 		}
 
 		toptr = &clc.serverAddress;
 	}
-	
+
 	if(!toptr)
 	{
 		Com_Memset( &to, 0, sizeof(netadr_t) );

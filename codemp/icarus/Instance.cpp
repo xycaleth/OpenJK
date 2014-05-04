@@ -1,6 +1,3 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 // ICARUS Instance
 //
 //	-- jweier
@@ -39,7 +36,7 @@ ICARUS_Instance::ICARUS_Instance( void )
 	m_DEBUG_NumSequenceFreed	= 0;
 	m_DEBUG_NumSequenceResidual	= 0;
 
-#endif 
+#endif
 
 }
 
@@ -75,7 +72,7 @@ int ICARUS_Instance::Free( void )
 	STL_ITERATE( sri, m_sequencers )
 	{
 		delete (*sri);
-		
+
 #ifdef _DEBUG
 
 		m_DEBUG_NumSequencerResidual++;
@@ -191,7 +188,7 @@ void ICARUS_Instance::DeleteSequencer( CSequencer *sequencer )
 		delete taskManager;
 	}
 
-	m_sequencers.remove( sequencer );	
+	m_sequencers.remove( sequencer );
 
 	sequencer->Free();
 	delete sequencer;
@@ -224,7 +221,7 @@ CSequence *ICARUS_Instance::GetSequence( void )
 
 	m_DEBUG_NumSequenceAlloc++;
 
-#endif 
+#endif
 
 	return sequence;
 }
@@ -255,7 +252,7 @@ DeleteSequence
 
 void ICARUS_Instance::DeleteSequence( CSequence *sequence )
 {
-	m_sequences.remove( sequence );	
+	m_sequences.remove( sequence );
 
 	delete sequence;
 
@@ -263,7 +260,7 @@ void ICARUS_Instance::DeleteSequence( CSequence *sequence )
 
 	m_DEBUG_NumSequenceFreed++;
 
-#endif 
+#endif
 }
 
 /*
@@ -387,7 +384,7 @@ int ICARUS_Instance::SaveSignals( void )
 	{
 		//m_interface->I_WriteSaveData( 'ISIG', &numSignals, sizeof( numSignals ) );
 		const char *name = ((*si).first).c_str();
-		
+
 		//Make sure this is a valid string
 		assert( ( name != NULL ) && ( name[0] != '\0' ) );
 
@@ -410,7 +407,7 @@ Save
 */
 
 int ICARUS_Instance::Save( void )
-{	
+{
 	//Save out a ICARUS save block header with the ICARUS version
 	double	version = ICARUS_VERSION;
 	m_interface->I_WriteSaveData( INT_ID('I','C','A','R'), &version, sizeof( version ) );
@@ -541,7 +538,7 @@ int ICARUS_Instance::LoadSequencers( void )
 
 	//Get the number of sequencers to load
 	m_interface->I_ReadSaveData( INT_ID('#','S','Q','R'), &numSequencers, sizeof( &numSequencers ) );
-	
+
 	//Load all sequencers
 	for ( int i = 0; i < numSequencers; i++ )
 	{

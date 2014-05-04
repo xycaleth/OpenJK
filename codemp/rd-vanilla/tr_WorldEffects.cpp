@@ -78,8 +78,8 @@ inline void VectorCeil(vec3_t in)
 	in[2] = ceilf(in[2]);
 }
 
-inline float	FloatRand(void) 
-{ 
+inline float	FloatRand(void)
+{
 	return ((float)rand() / (float)RAND_MAX);
 }
 
@@ -139,9 +139,9 @@ struct	SVecRange
 
 	inline void Pick(CVec3& V)
 	{
-		V[0] = WE_flrand(mMins[0], mMaxs[0]); 
-		V[1] = WE_flrand(mMins[1], mMaxs[1]); 
-		V[2] = WE_flrand(mMins[2], mMaxs[2]); 
+		V[0] = WE_flrand(mMins[0], mMaxs[0]);
+		V[1] = WE_flrand(mMins[1], mMaxs[1]);
+		V[2] = WE_flrand(mMins[2], mMaxs[2]);
 	}
 	inline void Wrap(CVec3& V, SVecRange &spawnRange)
 	{
@@ -500,8 +500,8 @@ public:
 			Wz.mExtents.mMins = mins;
 			Wz.mExtents.mMaxs = maxs;
 
-			SnapVectorToGrid(Wz.mExtents.mMins, POINTCACHE_CELL_SIZE); 
-			SnapVectorToGrid(Wz.mExtents.mMaxs, POINTCACHE_CELL_SIZE); 
+			SnapVectorToGrid(Wz.mExtents.mMins, POINTCACHE_CELL_SIZE);
+			SnapVectorToGrid(Wz.mExtents.mMaxs, POINTCACHE_CELL_SIZE);
 
 			Wz.mSize.mMins = Wz.mExtents.mMins;
 			Wz.mSize.mMaxs = Wz.mExtents.mMaxs;
@@ -511,7 +511,7 @@ public:
 			Wz.mWidth		=  (int)(Wz.mSize.mMaxs[0] - Wz.mSize.mMins[0]);
 			Wz.mHeight		=  (int)(Wz.mSize.mMaxs[1] - Wz.mSize.mMins[1]);
 			Wz.mDepth		= ((int)(Wz.mSize.mMaxs[2] - Wz.mSize.mMins[2]) + 31) >> 5;
-			
+
 			int arraySize	= (Wz.mWidth * Wz.mHeight * Wz.mDepth);
 			Wz.mPointCache  = (uint32_t *)Z_Malloc(arraySize*sizeof(uint32_t), TAG_POINTCACHE, qtrue);
 		}
@@ -542,7 +542,7 @@ public:
 		//---------------------------------------------------------------------
 		if (!mWeatherZones.size())
 		{
-			Com_Printf("WARNING: No Weather Zones Encountered\n");
+			ri->Printf( PRINT_ALL, "WARNING: No Weather Zones Encountered\n");
 			AddWeatherZone(tr.world->bmodels[0].bounds[0], tr.world->bmodels[0].bounds[1]);
 		}
 
@@ -777,7 +777,7 @@ public:
 
 	SFloatRange	mMass;				// Determines how slowness to accelerate, higher number = slower
 	float		mFrictionInverse;	// How much air friction does this particle have 1.0=none, 0.0=nomove
-	
+
 	int			mParticleCount;
 
 	bool		mWaterParticles;
@@ -1097,9 +1097,9 @@ public:
 				if (UseSpawnPlane())
 				{
 					part->mPosition		= mCameraPosition;
-					part->mPosition		-= (mSpawnPlaneNorm* mSpawnPlaneDistance); 
-					part->mPosition		+= (mSpawnPlaneRight*WE_flrand(-mSpawnPlaneSize, mSpawnPlaneSize)); 
-					part->mPosition		+= (mSpawnPlaneUp*   WE_flrand(-mSpawnPlaneSize, mSpawnPlaneSize)); 
+					part->mPosition		-= (mSpawnPlaneNorm* mSpawnPlaneDistance);
+					part->mPosition		+= (mSpawnPlaneRight*WE_flrand(-mSpawnPlaneSize, mSpawnPlaneSize));
+					part->mPosition		+= (mSpawnPlaneUp*   WE_flrand(-mSpawnPlaneSize, mSpawnPlaneSize));
 				}
 
 				// Otherwise, Just Wrap Around To The Other End Of The Range
@@ -1128,7 +1128,7 @@ public:
 				{
 					part->mFlags.set_bit(CWeatherParticle::FLAG_FADEIN);
 					part->mFlags.clear_bit(CWeatherParticle::FLAG_FADEOUT);
-				}			
+				}
 
 				// Start A Fade In
 				//-----------------
@@ -1191,7 +1191,7 @@ public:
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////
-	// Render - 
+	// Render -
 	////////////////////////////////////////////////////////////////////////////////////
 	void		Render()
 	{
@@ -1207,48 +1207,20 @@ public:
 
 		// Enable And Disable Things
 		//---------------------------
-		/*
-		if (mGLModeEnum==GL_POINTS && qglPointParameteriNV)
-		{
-			qglEnable(GL_POINT_SPRITE_NV);
+		qglEnable(GL_TEXTURE_2D);
+		//qglDisable(GL_CULL_FACE);
+		//naughty, you are making the assumption that culling is on when you get here. -rww
+		GL_Cull(CT_TWO_SIDED);
 
-			qglPointSize(mWidth);
-			qglPointParameterfEXT( GL_POINT_SIZE_MIN_EXT, 4.0f );
-			qglPointParameterfEXT( GL_POINT_SIZE_MAX_EXT, 2047.0f );
-
-			qglTexEnvi(GL_POINT_SPRITE_NV, GL_COORD_REPLACE_NV, GL_TRUE);
-		}
-		else
-		*/
-		//FIXME use this extension?
-		const float	attenuation[3] =
-		{
-			1, 0.0, 0.0004
-		};
-		if (mGLModeEnum == GL_POINTS && qglPointParameterfEXT)
-		{ //fixme use custom parameters but gotta make sure it expects them on same scale first
-			qglPointSize(10.0);
-			qglPointParameterfEXT(GL_POINT_SIZE_MIN_EXT, 1.0);
-			qglPointParameterfEXT(GL_POINT_SIZE_MAX_EXT, 4.0);
-			qglPointParameterfvEXT(GL_DISTANCE_ATTENUATION_EXT, (float *)attenuation);
-		}
-		else
-		{
-			qglEnable(GL_TEXTURE_2D);
-			//qglDisable(GL_CULL_FACE);
-			//naughty, you are making the assumption that culling is on when you get here. -rww
-			GL_Cull(CT_TWO_SIDED);
-
-			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mFilterMode==0)?(GL_LINEAR):(GL_NEAREST));
-			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (mFilterMode==0)?(GL_LINEAR):(GL_NEAREST));
+		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mFilterMode==0)?(GL_LINEAR):(GL_NEAREST));
+		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (mFilterMode==0)?(GL_LINEAR):(GL_NEAREST));
 
 
-			// Setup Matrix Mode And Translation
-			//-----------------------------------
-			qglMatrixMode(GL_MODELVIEW);
-			qglPushMatrix();
+		// Setup Matrix Mode And Translation
+		//-----------------------------------
+		qglMatrixMode(GL_MODELVIEW);
+		qglPushMatrix();
 
-		}
 
 		// Begin
 		//-------
@@ -1275,16 +1247,9 @@ public:
 				qglColor4f(mColor[0]*part->mAlpha, mColor[1]*part->mAlpha, mColor[2]*part->mAlpha, mColor[3]*part->mAlpha);
 			}
 
-			// Render A Point
-			//----------------
-			if (mGLModeEnum==GL_POINTS)
-			{
-				qglVertex3fv(part->mPosition.v);
-			}
-
 			// Render A Triangle
 			//-------------------
-			else if (mVertexCount==3)
+			if (mVertexCount==3)
 			{
  				qglTexCoord2f(1.0, 0.0);
 				qglVertex3f(part->mPosition[0],
@@ -1295,7 +1260,7 @@ public:
 				qglVertex3f(part->mPosition[0] + mCameraLeft[0],
 							part->mPosition[1] + mCameraLeft[1],
 							part->mPosition[2] + mCameraLeft[2]);
-				
+
 				qglTexCoord2f(0.0, 0.0);
 				qglVertex3f(part->mPosition[0] + mCameraLeftPlusUp[0],
 							part->mPosition[1] + mCameraLeftPlusUp[1],
@@ -1327,23 +1292,15 @@ public:
 				// Left top.
 				qglTexCoord2f( 0.0, 1.0 );
 				qglVertex3f(part->mPosition[0] + mCameraLeftPlusUp[0],
-							part->mPosition[1] + mCameraLeftPlusUp[1], 
+							part->mPosition[1] + mCameraLeftPlusUp[1],
 							part->mPosition[2] + mCameraLeftPlusUp[2] );
 			}
 		}
 		qglEnd();
 
-		if (mGLModeEnum==GL_POINTS)
-		{
-			//qglDisable(GL_POINT_SPRITE_NV);
-			//qglTexEnvi(GL_POINT_SPRITE_NV, GL_COORD_REPLACE_NV, GL_FALSE);
-		}
-		else
-		{
-			//qglEnable(GL_CULL_FACE);
-			//you don't need to do this when you are properly setting cull state.
-			qglPopMatrix();
-		}
+		//qglEnable(GL_CULL_FACE);
+		//you don't need to do this when you are properly setting cull state.
+		qglPopMatrix();
 
 		mParticlesRendered += mParticleCountRender;
 	}
@@ -1381,10 +1338,10 @@ void R_ShutdownWorldEffects(void)
 ////////////////////////////////////////////////////////////////////////////////////////
 void RB_RenderWorldEffects(void)
 {
-	if (!tr.world || 
-		(tr.refdef.rdflags & RDF_NOWORLDMODEL) || 
-		(backEnd.refdef.rdflags & RDF_SKYBOXPORTAL) || 
-		!mParticleClouds.size()) 
+	if (!tr.world ||
+		(tr.refdef.rdflags & RDF_NOWORLDMODEL) ||
+		(backEnd.refdef.rdflags & RDF_SKYBOXPORTAL) ||
+		!mParticleClouds.size())
 	{	//  no world rendering or no world or no particle clouds
 		return;
 	}
@@ -1443,7 +1400,7 @@ void RB_RenderWorldEffects(void)
 		}
 		if (false)
 		{
-			Com_Printf( "Weather: %d Particles Rendered\n", mParticlesRendered);
+			ri->Printf( PRINT_ALL, "Weather: %d Particles Rendered\n", mParticlesRendered);
 		}
 	}
 }
@@ -1662,7 +1619,7 @@ void RE_WorldEffectCommand(const char *command)
 		nCloud.mFilterMode	= 1;
 		nCloud.mBlendMode	= 1;
 		nCloud.mFade		= 100.0f;
-		
+
 		nCloud.mColor[0]	= 0.34f;
 		nCloud.mColor[1]	= 0.70f;
 		nCloud.mColor[2]	= 0.34f;
@@ -1857,26 +1814,26 @@ void RE_WorldEffectCommand(const char *command)
 	}
 	else
 	{
-		Com_Printf( "Weather Effect: Please enter a valid command.\n" );
-		Com_Printf( "	clear\n" );
-		Com_Printf( "	freeze\n" );
-		Com_Printf( "	zone (mins) (maxs)\n" );
-		Com_Printf( "	wind\n" );
-		Com_Printf( "	constantwind (velocity)\n" );
-		Com_Printf( "	gustingwind\n" );
-		Com_Printf( "	windzone (mins) (maxs) (velocity)\n" );
-		Com_Printf( "	lightrain\n" );
-		Com_Printf( "	rain\n" );
-		Com_Printf( "	acidrain\n" );
-		Com_Printf( "	heavyrain\n" );
-		Com_Printf( "	snow\n" );
-		Com_Printf( "	spacedust\n" );
-		Com_Printf( "	sand\n" );
-		Com_Printf( "	fog\n" );
-		Com_Printf( "	heavyrainfog\n" );
-		Com_Printf( "	light_fog\n" );
-		Com_Printf( "	outsideshake\n" );
-		Com_Printf( "	outsidepain\n" );
+		ri->Printf( PRINT_ALL, "Weather Effect: Please enter a valid command.\n" );
+		ri->Printf( PRINT_ALL, "	clear\n" );
+		ri->Printf( PRINT_ALL, "	freeze\n" );
+		ri->Printf( PRINT_ALL, "	zone (mins) (maxs)\n" );
+		ri->Printf( PRINT_ALL, "	wind\n" );
+		ri->Printf( PRINT_ALL, "	constantwind (velocity)\n" );
+		ri->Printf( PRINT_ALL, "	gustingwind\n" );
+		ri->Printf( PRINT_ALL, "	windzone (mins) (maxs) (velocity)\n" );
+		ri->Printf( PRINT_ALL, "	lightrain\n" );
+		ri->Printf( PRINT_ALL, "	rain\n" );
+		ri->Printf( PRINT_ALL, "	acidrain\n" );
+		ri->Printf( PRINT_ALL, "	heavyrain\n" );
+		ri->Printf( PRINT_ALL, "	snow\n" );
+		ri->Printf( PRINT_ALL, "	spacedust\n" );
+		ri->Printf( PRINT_ALL, "	sand\n" );
+		ri->Printf( PRINT_ALL, "	fog\n" );
+		ri->Printf( PRINT_ALL, "	heavyrainfog\n" );
+		ri->Printf( PRINT_ALL, "	light_fog\n" );
+		ri->Printf( PRINT_ALL, "	outsideshake\n" );
+		ri->Printf( PRINT_ALL, "	outsidepain\n" );
 	}
 }
 

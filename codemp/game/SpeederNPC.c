@@ -11,11 +11,10 @@ extern float DotToSpot( vec3_t spot, vec3_t from, vec3_t fromAngles );
 	extern vec3_t playerMins;
 	extern vec3_t playerMaxs;
 	extern void ChangeWeapon( gentity_t *ent, int newWeapon );
-	extern void PM_SetAnim(pmove_t	*pm,int setAnimParts,int anim,int setAnimFlags, int blendTime);
 	extern int PM_AnimLength( int index, animNumber_t anim );
 #endif
 
-extern void BG_SetAnim(playerState_t *ps, animation_t *animations, int setAnimParts,int anim,int setAnimFlags, int blendTime);
+extern void BG_SetAnim(playerState_t *ps, animation_t *animations, int setAnimParts,int anim,int setAnimFlags);
 extern int BG_GetTime(void);
 extern qboolean BG_SabersOff( playerState_t *ps );
 
@@ -77,8 +76,8 @@ static void ProcessMoveCommands( Vehicle_t *pVeh )
 	}
 
 	// If we're flying, make us accelerate at 40% (about half) acceleration rate, and restore the pitch
-	// to origin (straight) position (at 5% increments). 
-	if ( pVeh->m_ulFlags & VEH_FLYING ) 
+	// to origin (straight) position (at 5% increments).
+	if ( pVeh->m_ulFlags & VEH_FLYING )
 	{
 		speedInc = pVeh->m_pVehicleInfo->acceleration * pVeh->m_fTimeModifier * 0.4f;
 	}
@@ -154,9 +153,9 @@ static void ProcessMoveCommands( Vehicle_t *pVeh )
 		parentPS->speed = 0;
 	}
 	else if (
-		(curTime > pVeh->m_iTurboTime) && 
-		!(pVeh->m_ulFlags&VEH_FLYING) && 
-		pVeh->m_ucmd.forwardmove<0 && 
+		(curTime > pVeh->m_iTurboTime) &&
+		!(pVeh->m_ulFlags&VEH_FLYING) &&
+		pVeh->m_ucmd.forwardmove<0 &&
 		fabs(pVeh->m_vOrientation[ROLL])>25.0f)
 	{
 		pVeh->m_ulFlags |= VEH_SLIDEBREAKING;
@@ -186,7 +185,7 @@ static void ProcessMoveCommands( Vehicle_t *pVeh )
 
 	if ( parentPS->speed || parentPS->groundEntityNum == ENTITYNUM_NONE  ||
 		 pVeh->m_ucmd.forwardmove || pVeh->m_ucmd.upmove > 0 )
-	{ 
+	{
 		if ( pVeh->m_ucmd.forwardmove > 0 && speedInc )
 		{
 			parentPS->speed += speedInc;
@@ -313,7 +312,6 @@ void ProcessOrientCommands( Vehicle_t *pVeh )
 
 #ifdef _GAME
 
-extern void PM_SetAnim(pmove_t	*pm,int setAnimParts,int anim,int setAnimFlags, int blendTime);
 extern int PM_AnimLength( int index, animNumber_t anim );
 
 // This function makes sure that the vehicle is properly animated.
@@ -332,7 +330,7 @@ void AnimateVehicle( Vehicle_t *pVeh )
 void AnimateRiders( Vehicle_t *pVeh )
 {
 	animNumber_t Anim = BOTH_VS_IDLE;
-	int iFlags = SETANIM_FLAG_NORMAL, iBlend = 300;
+	int iFlags = SETANIM_FLAG_NORMAL;
 	playerState_t *pilotPS;
 	int curTime;
 
@@ -360,12 +358,10 @@ void AnimateRiders( Vehicle_t *pVeh )
 			}
 			else if ( pVeh->m_iBoarding == VEH_MOUNT_THROW_LEFT)
 			{
-				iBlend = 0;
 				Anim = BOTH_VS_MOUNTTHROW_R;
 			}
 			else if ( pVeh->m_iBoarding == VEH_MOUNT_THROW_RIGHT)
 			{
-				iBlend = 0;
 				Anim = BOTH_VS_MOUNTTHROW_L;
 			}
 
@@ -376,9 +372,9 @@ void AnimateRiders( Vehicle_t *pVeh )
 			// Set the animation, which won't be interrupted until it's completed.
 			// TODO: But what if he's killed? Should the animation remain persistant???
 			iFlags = SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD;
-			
+
 			BG_SetAnim(pVeh->m_pPilot->playerState, bgAllAnims[pVeh->m_pPilot->localAnimIndex].anims,
-				SETANIM_BOTH, Anim, iFlags, iBlend);
+				SETANIM_BOTH, Anim, iFlags);
 		}
 
 		return;
@@ -400,9 +396,8 @@ void AnimateRiders( Vehicle_t *pVeh )
 	if ( pVeh->m_ucmd.forwardmove < 0 && !(pVeh->m_ulFlags & VEH_SLIDEBREAKING))
 	{
 		Anim = BOTH_VS_REV;
-		iBlend = 500;
 	}
-	else 
+	else
 	{
 		qboolean HasWeapon	= ((pilotPS->weapon != WP_NONE) && (pilotPS->weapon != WP_MELEE));
 		qboolean Attacking	= (HasWeapon && !!(pVeh->m_ucmd.buttons&BUTTON_ATTACK));
@@ -447,13 +442,12 @@ void AnimateRiders( Vehicle_t *pVeh )
 			}
 			WeaponPose = (pVeh->m_ulFlags&VEH_SABERINLEFTHAND)?(WPOSE_SABERLEFT):(WPOSE_SABERRIGHT);
 		}
-		
+
 
  		if (Attacking && WeaponPose)
 		{// Attack!
-			iBlend	= 100;
  			iFlags	= SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD|SETANIM_FLAG_RESTART;
-	
+
 			// Auto Aiming
 			//===============================================
 			if (!Left && !Right)		// Allow player strafe keys to override
@@ -498,7 +492,6 @@ void AnimateRiders( Vehicle_t *pVeh )
 		}
 		else if (Left && pVeh->m_ucmd.buttons&BUTTON_USE)
 		{// Look To The Left Behind
-			iBlend	= 400;
 			iFlags	= SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD;
 			switch(WeaponPose)
 			{
@@ -509,7 +502,6 @@ void AnimateRiders( Vehicle_t *pVeh )
 		}
 		else if (Right && pVeh->m_ucmd.buttons&BUTTON_USE)
 		{// Look To The Right Behind
-			iBlend	= 400;
 			iFlags	= SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD;
 			switch(WeaponPose)
 			{
@@ -520,13 +512,11 @@ void AnimateRiders( Vehicle_t *pVeh )
 		}
 		else if (Turbo)
 		{// Kicked In Turbo
-			iBlend	= 50;
 			iFlags	= SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS;
 			Anim	= BOTH_VS_TURBO;
 		}
 		else if (Flying)
 		{// Off the ground in a jump
-			iBlend	= 800;
 			iFlags	= SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD;
 
 			switch(WeaponPose)
@@ -540,7 +530,6 @@ void AnimateRiders( Vehicle_t *pVeh )
 		}
 		else if (Crashing)
 		{// Hit the ground!
-			iBlend	= 100;
 			iFlags	= SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS;
 
 			switch(WeaponPose)
@@ -554,7 +543,6 @@ void AnimateRiders( Vehicle_t *pVeh )
 		}
 		else
 		{// No Special Moves
-			iBlend	= 300;
  			iFlags	= SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLDLESS;
 
 			if (pVeh->m_vOrientation[ROLL] <= -20)
@@ -603,7 +591,7 @@ void AnimateRiders( Vehicle_t *pVeh )
 		pVeh->m_pPilot->playerState->legsTimer = BG_AnimLength(pVeh->m_pPilot->localAnimIndex, Anim);
 	}
 	BG_SetAnim(pVeh->m_pPilot->playerState, bgAllAnims[pVeh->m_pPilot->localAnimIndex].anims,
-		SETANIM_BOTH, Anim, iFlags|SETANIM_FLAG_HOLD, iBlend);
+		SETANIM_BOTH, Anim, iFlags|SETANIM_FLAG_HOLD);
 }
 
 #ifndef _GAME

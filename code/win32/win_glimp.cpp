@@ -1183,12 +1183,8 @@ static void GLW_InitExtensions( void )
 	}
 
 	// GL_EXT_clamp_to_edge
-	glConfig.clampToEdgeAvailable = qfalse;
-	if ( GL_CheckForExtension( "GL_EXT_texture_edge_clamp" ) )
-	{
-		glConfig.clampToEdgeAvailable = qtrue;
-		ri.Printf( PRINT_ALL, "...Using GL_EXT_texture_edge_clamp\n" );
-	}
+	glConfig.clampToEdgeAvailable = qtrue;
+	Com_Printf ("...using GL_EXT_texture_edge_clamp\n" );
 
 	// WGL_EXT_swap_control
 	qwglSwapIntervalEXT = ( BOOL (WINAPI *)(int)) qwglGetProcAddress( "wglSwapIntervalEXT" );
@@ -1263,56 +1259,6 @@ static void GLW_InitExtensions( void )
 	else
 	{
 		ri.Printf( PRINT_ALL, "...GL_EXT_compiled_vertex_array not found\n" );
-	}
-
-	// GL_EXT_point_parameters
-	qglPointParameterfEXT = NULL;
-	qglPointParameterfvEXT = NULL;
-	if ( GL_CheckForExtension( "GL_EXT_point_parameters" ) )
-	{
-		if ( r_ext_point_parameters->integer )
-		{
-			qglPointParameterfEXT = ( void ( APIENTRY * )( GLenum, GLfloat) ) qwglGetProcAddress( "glPointParameterfEXT" );
-			qglPointParameterfvEXT = ( void ( APIENTRY * )( GLenum, GLfloat *) ) qwglGetProcAddress( "glPointParameterfvEXT" );
-			if (!qglPointParameterfEXT || !qglPointParameterfvEXT) 
-			{
-				ri.Printf( ERR_FATAL, "Bad GetProcAddress for GL_EXT_point_parameters");
-			}
-			ri.Printf( PRINT_ALL, "...using GL_EXT_point_parameters\n" );
-		}
-		else
-		{
-			ri.Printf( PRINT_ALL, "...ignoring GL_EXT_point_parameters\n" );
-		}
-	}
-	else
-	{
-		ri.Printf( PRINT_ALL, "...GL_EXT_point_parameters not found\n" );
-	}
-
-	// GL_NV_point_sprite
-	qglPointParameteriNV = NULL;
-	qglPointParameterivNV = NULL;
-	if ( GL_CheckForExtension( "GL_NV_point_sprite" ) )
-	{
-		if ( r_ext_nv_point_sprite->integer )
-		{
-			qglPointParameteriNV = ( void ( APIENTRY * )( GLenum, GLint) ) qwglGetProcAddress( "glPointParameteriNV" );
-			qglPointParameterivNV = ( void ( APIENTRY * )( GLenum, const GLint *) ) qwglGetProcAddress( "glPointParameterivNV" );
-			if (!qglPointParameteriNV || !qglPointParameterivNV) 
-			{
-				ri.Printf( ERR_FATAL, "Bad GetProcAddress for GL_NV_point_sprite");
-			}
-			ri.Printf( PRINT_ALL, "...using GL_NV_point_sprite\n" );
-		}
-		else
-		{
-			ri.Printf( PRINT_ALL,  "...ignoring GL_NV_point_sprite\n" );
-		}
-	}
-	else
-	{
-		ri.Printf( PRINT_ALL, "...GL_NV_point_sprite not found\n" );
 	}
 
 	bool bNVRegisterCombiners = false;

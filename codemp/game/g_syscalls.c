@@ -14,7 +14,7 @@ Q_EXPORT void dllEntry( intptr_t (QDECL *syscallptr)( intptr_t arg,... ) ) {
 }
 
 int PASSFLOAT( float x ) {
-	floatint_t fi;
+	byteAlias_t fi;
 	fi.f = x;
 	return fi.i;
 }
@@ -27,7 +27,7 @@ void trap_Error( const char *fmt ) {
 	exit(1);
 }
 int trap_Milliseconds( void ) {
-	return Q_syscall( G_MILLISECONDS ); 
+	return Q_syscall( G_MILLISECONDS );
 }
 void trap_PrecisionTimer_Start(void **theNewTimer) {
 	Q_syscall(G_PRECISIONTIMER_START, theNewTimer);
@@ -35,7 +35,7 @@ void trap_PrecisionTimer_Start(void **theNewTimer) {
 int trap_PrecisionTimer_End(void *theTimer) {
 	return Q_syscall(G_PRECISIONTIMER_END, theTimer);
 }
-void trap_Cvar_Register( vmCvar_t *cvar, const char *var_name, const char *value, int flags ) {
+void trap_Cvar_Register( vmCvar_t *cvar, const char *var_name, const char *value, uint32_t flags ) {
 	Q_syscall( G_CVAR_REGISTER, cvar, var_name, value, flags );
 }
 void trap_Cvar_Update( vmCvar_t *cvar ) {
@@ -434,7 +434,7 @@ void trap_AAS_PresenceTypeBoundingBox(int presencetype, vec3_t mins, vec3_t maxs
 	Q_syscall( BOTLIB_AAS_PRESENCE_TYPE_BOUNDING_BOX, presencetype, mins, maxs );
 }
 float trap_AAS_Time(void) {
-	floatint_t fi;
+	byteAlias_t fi;
 	fi.i = Q_syscall( BOTLIB_AAS_TIME );
 	return fi.f;
 }
@@ -577,12 +577,12 @@ void trap_BotFreeCharacter(int character) {
 	Q_syscall( BOTLIB_AI_FREE_CHARACTER, character );
 }
 float trap_Characteristic_Float(int character, int index) {
-	floatint_t fi;
+	byteAlias_t fi;
 	fi.i = Q_syscall( BOTLIB_AI_CHARACTERISTIC_FLOAT, character, index );
 	return fi.f;
 }
 float trap_Characteristic_BFloat(int character, int index, float min, float max) {
-	floatint_t fi;
+	byteAlias_t fi;
 	fi.i = Q_syscall( BOTLIB_AI_CHARACTERISTIC_BFLOAT, character, index, PASSFLOAT(min), PASSFLOAT(max) );
 	return fi.f;
 }
@@ -710,7 +710,7 @@ int trap_BotGetMapLocationGoal(char *name, void *goal) {
 	return Q_syscall( BOTLIB_AI_GET_MAP_LOCATION_GOAL, name, goal );
 }
 float trap_BotAvoidGoalTime(int goalstate, int number) {
-	floatint_t fi;
+	byteAlias_t fi;
 	fi.i = Q_syscall( BOTLIB_AI_AVOID_GOAL_TIME, goalstate, number );
 	return fi.f;
 }
@@ -736,7 +736,7 @@ void trap_BotSaveGoalFuzzyLogic(int goalstate, char *filename) {
 	Q_syscall( BOTLIB_AI_SAVE_GOAL_FUZZY_LOGIC, goalstate, filename );
 }
 void trap_BotMutateGoalFuzzyLogic(int goalstate, float range) {
-	Q_syscall( BOTLIB_AI_MUTATE_GOAL_FUZZY_LOGIC, goalstate, range );
+	Q_syscall( BOTLIB_AI_MUTATE_GOAL_FUZZY_LOGIC, goalstate, PASSFLOAT(range) );
 }
 int trap_BotAllocGoalState(int state) {
 	return Q_syscall( BOTLIB_AI_ALLOC_GOAL_STATE, state );
@@ -979,7 +979,15 @@ void trap_Bot_CalculatePaths(int rmg) {
 int SVSyscall_FS_Read( void *buffer, int len, fileHandle_t f ) { trap_FS_Read( buffer, len, f ); return 0; }
 int SVSyscall_FS_Write( const void *buffer, int len, fileHandle_t f ) { trap_FS_Write( buffer, len, f ); return 0; }
 qboolean SVSyscall_EntityContact( const vec3_t mins, const vec3_t maxs, const sharedEntity_t *ent, int capsule ) { if ( capsule ) return trap_EntityContactCapsule( mins, maxs, ent ); else return trap_EntityContact( mins, maxs, ent ); }
-void SVSyscall_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, int traceFlags, int useLod ) { if ( capsule ) trap_TraceCapsule( results, start, mins, maxs, end, passEntityNum, contentmask ); else trap_Trace( results, start, mins, maxs, end, passEntityNum, contentmask ); }
+
+void SVSyscall_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask, int capsule, int traceFlags, int useLod ) {
+	if ( capsule )
+		trap_TraceCapsule( results, start, mins, maxs, end, passEntityNum, contentmask );
+	else if ( traceFlags )
+		trap_G2Trace( results, start, mins, maxs, end, passEntityNum, contentmask, traceFlags, useLod );
+	else
+		trap_Trace( results, start, mins, maxs, end, passEntityNum, contentmask );
+}
 
 void QDECL G_Error( int errorLevel, const char *error, ... ) {
 	va_list argptr;

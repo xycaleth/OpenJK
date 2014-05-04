@@ -84,7 +84,28 @@ extern vec3_t gPainPoint;
 #define EC "\x19"
 
 #define	MAX_G_SHARED_BUFFER_SIZE		8192
-extern char gSharedBuffer[MAX_G_SHARED_BUFFER_SIZE];
+// used for communication with the engine
+typedef union sharedBuffer_u {
+	char							raw[MAX_G_SHARED_BUFFER_SIZE];
+	T_G_ICARUS_PLAYSOUND			playSound;
+	T_G_ICARUS_SET					set;
+	T_G_ICARUS_LERP2POS				lerp2Pos;
+	T_G_ICARUS_LERP2ORIGIN			lerp2Origin;
+	T_G_ICARUS_LERP2ANGLES			lerp2Angles;
+	T_G_ICARUS_GETTAG				getTag;
+	T_G_ICARUS_LERP2START			lerp2Start;
+	T_G_ICARUS_LERP2END				lerp2End;
+	T_G_ICARUS_USE					use;
+	T_G_ICARUS_KILL					kill;
+	T_G_ICARUS_REMOVE				remove;
+	T_G_ICARUS_PLAY					play;
+	T_G_ICARUS_GETFLOAT				getFloat;
+	T_G_ICARUS_GETVECTOR			getVector;
+	T_G_ICARUS_GETSTRING			getString;
+	T_G_ICARUS_SOUNDINDEX			soundIndex;
+	T_G_ICARUS_GETSETIDFORSTRING	getSetIDForString;
+} sharedBuffer_t;
+extern sharedBuffer_t gSharedBuffer;
 
 // movers are things like doors, plats, buttons, etc
 typedef enum {
@@ -96,7 +117,7 @@ typedef enum {
 
 #define SP_PODIUM_MODEL		"models/mapobjects/podium/podium4.md3"
 
-typedef enum 
+typedef enum
 {
 	HL_NONE = 0,
 	HL_FOOT_RT,
@@ -216,13 +237,13 @@ struct gentity_s {
 	char		*model;
 	char		*model2;
 	int			freetime;			// level.time when the object was freed
-	
+
 	int			eventTime;			// events will be cleared EVENT_VALID_MSEC after set
 	qboolean	freeAfterEvent;
 	qboolean	unlinkAfterEvent;
 
 	qboolean	physicsObject;		// if true, it can be pushed by movers and fall off edges
-									// all game items are physicsObjects, 
+									// all game items are physicsObjects,
 	float		physicsBounce;		// 1.0 = continuous bounce, 0.0 = no bounce
 	int			clipmask;			// brushes with this content value will be collided against
 									// when moving.  items and corpses do not collide against
@@ -441,7 +462,7 @@ typedef struct clientSession_s {
 // client data that stays across multiple respawns, but is cleared
 // on each level change or team change at ClientBegin()
 typedef struct clientPersistant_s {
-	clientConnected_t	connected;	
+	clientConnected_t	connected;
 	usercmd_t	cmd;				// we would lose angles if not persistant
 	qboolean	localClient;		// true if "ip" info key is "localhost"
 	qboolean	initialSpawn;		// the first spawn should be at a cool location
@@ -759,7 +780,7 @@ struct gclient_s {
 
 #define MAX_INTEREST_POINTS		64
 
-typedef struct 
+typedef struct
 {
 	vec3_t		origin;
 	char		*target;
@@ -769,7 +790,7 @@ typedef struct
 
 #define MAX_COMBAT_POINTS		512
 
-typedef struct 
+typedef struct
 {
 	vec3_t		origin;
 	int			flags;
@@ -823,6 +844,13 @@ typedef struct waypointData_s {
 	char	target4[MAX_QPATH];
 	int		nodeID;
 } waypointData_t;
+
+typedef struct {
+	char	message[MAX_SPAWN_VARS_CHARS];
+	int		count;
+	int		cs_index;
+	vec3_t	origin;
+} locationData_t;
 
 typedef struct level_locals_s {
 	struct gclient_s	*clients;		// [maxclients]
@@ -908,8 +936,6 @@ typedef struct level_locals_s {
 	vec3_t		intermission_origin;	// also used for spectator spawns
 	vec3_t		intermission_angle;
 
-	qboolean	locationLinked;			// target_locations get linked
-	gentity_t	*locationHead;			// head of the location list
 	int			bodyQueIndex;			// dead bodies
 	gentity_t	*bodyQue[BODY_QUEUE_SIZE];
 	int			portalSequence;
@@ -950,6 +976,12 @@ typedef struct level_locals_s {
 		int num;
 		char *infos[MAX_ARENAS];
 	} arenas;
+
+	struct {
+		int num;
+		qboolean linked;
+		locationData_t data[MAX_LOCATIONS];
+	} locations;
 
 	gametype_t	gametype;
 } level_locals_t;
@@ -1144,7 +1176,7 @@ void G_ReflectMissile( gentity_t *ent, gentity_t *missile, vec3_t forward );
 
 void G_RunMissile( gentity_t *ent );
 
-gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life, 
+gentity_t *CreateMissile( vec3_t org, vec3_t dir, float vel, int life,
 							gentity_t *owner, qboolean altFire);
 void G_BounceProjectile( vec3_t start, vec3_t impact, vec3_t dir, vec3_t endout );
 void G_ExplodeMissile( gentity_t *ent );

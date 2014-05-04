@@ -29,8 +29,6 @@ This file is part of Jedi Academy.
 	#include "../ghoul2/G2.h"
 #endif
 
-void R_AddTerrainSurfaces(void);
-
 trGlobals_t		tr;
 
 static float	s_flipMatrix[16] = {
@@ -138,29 +136,9 @@ int R_CullPointAndRadius( const vec3_t pt, float radius )
 	}
 
 	// check against frustum planes
-#ifndef __NO_JK2
-	if( com_jk2 && com_jk2->integer )
-	{
-		// They used 4 frustrum planes in JK2, and 5 in JKA --eez
-		for (i = 0 ; i < 4 ; i++) 
-		{
-			frust = &tr.viewParms.frustum[i];
-
-			dist = DotProduct( pt, frust->normal) - frust->dist;
-			if ( dist < -radius )
-			{
-				return CULL_OUT;
-			}
-			else if ( dist <= radius ) 
-			{
-				mightBeClipped = qtrue;
-			}
-		}
-	}
-	else
-	{
-#endif
-	for (i = 0 ; i < 5 ; i++) 
+#ifdef JK2_MODE
+	// They used 4 frustrum planes in JK2, and 5 in JKA --eez
+	for (i = 0 ; i < 4 ; i++) 
 	{
 		frust = &tr.viewParms.frustum[i];
 
@@ -174,7 +152,20 @@ int R_CullPointAndRadius( const vec3_t pt, float radius )
 			mightBeClipped = qtrue;
 		}
 	}
-#ifndef __NO_JK2
+#else
+	for (i = 0 ; i < 5 ; i++) 
+	{
+		frust = &tr.viewParms.frustum[i];
+
+		dist = DotProduct( pt, frust->normal) - frust->dist;
+		if ( dist < -radius )
+		{
+			return CULL_OUT;
+		}
+		else if ( dist <= radius ) 
+		{
+			mightBeClipped = qtrue;
+		}
 	}
 #endif
 
@@ -1389,8 +1380,6 @@ void R_GenerateDrawSurfs( void ) {
 	R_AddWorldSurfaces ();
 
 	R_AddPolygonSurfaces();
-
-	R_AddTerrainSurfaces();
 
 	// set the projection matrix with the minimum zfar
 	// now that we have the world bounded

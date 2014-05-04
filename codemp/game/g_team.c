@@ -79,7 +79,7 @@ void QDECL PrintMsg( gentity_t *ent, const char *fmt, ... ) {
 	char		msg[1024];
 	va_list		argptr;
 	char		*p;
-	
+
 	va_start (argptr,fmt);
 	if (vsprintf (msg, fmt, argptr) > sizeof(msg)) {
 		trap->Error( ERR_DROP, "PrintMsg overrun" );
@@ -322,28 +322,6 @@ void Team_CheckDroppedItem( gentity_t *dropped ) {
 
 /*
 ================
-Team_ForceGesture
-================
-*/
-void Team_ForceGesture(int team) {
-	int i;
-	gentity_t *ent;
-
-	for (i = 0; i < MAX_CLIENTS; i++) {
-		ent = &g_entities[i];
-		if (!ent->inuse)
-			continue;
-		if (!ent->client)
-			continue;
-		if (ent->client->sess.sessionTeam != team)
-			continue;
-		//
-		ent->flags |= FL_FORCE_GESTURE;
-	}
-}
-
-/*
-================
 Team_FragBonuses
 
 Calculate the bonuses for flag defense, flag carrier defense, etc.
@@ -462,7 +440,7 @@ void Team_FragBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 		break;
 	case TEAM_BLUE:
 		c = "team_CTF_blueflag";
-		break;		
+		break;
 	default:
 		return;
 	}
@@ -726,9 +704,9 @@ Team_DroppedFlagThink
 ==============
 */
 
-// This is to account for situations when there are more players standing 
-// on flag stand and then flag gets returned. This leaded to bit random flag 
-// grabs/captures, improved version takes distance to the center of flag stand 
+// This is to account for situations when there are more players standing
+// on flag stand and then flag gets returned. This leaded to bit random flag
+// grabs/captures, improved version takes distance to the center of flag stand
 // into consideration (closer player will get/capture the flag).
 static vec3_t	minFlagRange = { 50, 36, 36 };
 static vec3_t	maxFlagRange = { 44, 36, 36 };
@@ -753,7 +731,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 
 	if ( ent->flags & FL_DROPPED_ITEM ) {
 		// hey, its not home.  return it by teleporting it back
-		//PrintMsg( NULL, "%s" S_COLOR_WHITE " returned the %s flag!\n", 
+		//PrintMsg( NULL, "%s" S_COLOR_WHITE " returned the %s flag!\n",
 		//	cl->pers.netname, TeamName(team));
 		PrintCTFMessage(other->s.number, team, CTFMESSAGE_PLAYER_RETURNED_FLAG);
 
@@ -770,7 +748,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 	if (!cl->ps.powerups[enemy_flag])
 		return 0; // We don't have the flag
 
-	// fix: captures after timelimit hit could 
+	// fix: captures after timelimit hit could
 	// cause game ending with tied score
 	if (level.intermissionQueued)
 		return 0;
@@ -782,7 +760,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 	num = trap->EntitiesInBox( mins, maxs, touch, MAX_GENTITIES );
 
 	dist = Distance( ent->s.pos.trBase, other->client->ps.origin );
-		
+
 	if (other->client->sess.sessionTeam == TEAM_RED)
 		enemyTeam = TEAM_BLUE;
 	else
@@ -810,12 +788,12 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 			enemy->client->sess.sessionTeam != enemyTeam){
 			continue;
 		}
-			
+
 		//check if enemy is closer to our flag than us
 		enemyDist = Distance(ent->s.pos.trBase, enemy->client->ps.origin);
 		if (enemyDist < dist) {
-			// possible recursion is hidden in this, but 
-			// infinite recursion wont happen, because we cant 
+			// possible recursion is hidden in this, but
+			// infinite recursion wont happen, because we cant
 			// have a < b and b < a at the same time
 			return Team_TouchEnemyFlag( ent, enemy, team );
 		}
@@ -831,8 +809,6 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 
 	// Increase the team's score
 	AddTeamScore(ent->s.pos.trBase, other->client->sess.sessionTeam, 1);
-//	Team_ForceGesture(other->client->sess.sessionTeam);
-	//rww - don't really want to do this now. Mainly because performing a gesture disables your upper torso animations until it's done and you can't fire
 
 	other->client->pers.teamState.captures++;
 	other->client->rewardTime = level.time + REWARD_SPRITE_TIME;
@@ -856,7 +832,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 			cl->sess.sessionTeam) {
 			AddScore(player, ent->r.currentOrigin, CTF_TEAM_BONUS);
 			// award extra points for capture assists
-			if (player->client->pers.teamState.lastreturnedflag + 
+			if (player->client->pers.teamState.lastreturnedflag +
 				CTF_RETURN_FLAG_ASSIST_TIMEOUT > level.time) {
 				AddScore (player, ent->r.currentOrigin, CTF_RETURN_FLAG_ASSIST_BONUS);
 				other->client->pers.teamState.assists++;
@@ -865,7 +841,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 				player->client->rewardTime = level.time + REWARD_SPRITE_TIME;
 
 			}
-			if (player->client->pers.teamState.lastfraggedcarrier + 
+			if (player->client->pers.teamState.lastfraggedcarrier +
 				CTF_FRAG_CARRIER_ASSIST_TIMEOUT > level.time) {
 				AddScore(player, ent->r.currentOrigin, CTF_FRAG_CARRIER_ASSIST_BONUS);
 				other->client->pers.teamState.assists++;
@@ -900,7 +876,7 @@ int Team_TouchEnemyFlag( gentity_t *ent, gentity_t *other, int team ) {
 		ourFlag   = PW_REDFLAG;
 	} else {
 		ourFlag   = PW_BLUEFLAG;
-	}		
+	}
 
 	for(j = 0; j < num; ++j){
 		enemy = (g_entities + touch[j]);
@@ -924,8 +900,8 @@ int Team_TouchEnemyFlag( gentity_t *ent, gentity_t *other, int team ) {
 		//check if enemy is closer to our flag than us
 		enemyDist = Distance(ent->s.pos.trBase,enemy->client->ps.origin);
 		if (enemyDist < dist){
-			// possible recursion is hidden in this, but 
-			// infinite recursion wont happen, because we cant 
+			// possible recursion is hidden in this, but
+			// infinite recursion wont happen, because we cant
 			// have a < b and b < a at the same time
 			return Team_TouchOurFlag( ent, enemy, team );
 		}
@@ -981,32 +957,34 @@ Team_GetLocation
 Report a location for the player. Uses placed nearby target_location entities
 ============
 */
-gentity_t *Team_GetLocation(gentity_t *ent)
+locationData_t *Team_GetLocation(gentity_t *ent)
 {
-	gentity_t		*eloc, *best;
+	locationData_t	*loc, *best;
 	float			bestlen, len;
 	vec3_t			origin;
+	int				i;
 
 	best = NULL;
 	bestlen = 3*8192.0*8192.0;
 
 	VectorCopy( ent->r.currentOrigin, origin );
 
-	for (eloc = level.locationHead; eloc; eloc = eloc->nextTrain) {
-		len = ( origin[0] - eloc->r.currentOrigin[0] ) * ( origin[0] - eloc->r.currentOrigin[0] )
-			+ ( origin[1] - eloc->r.currentOrigin[1] ) * ( origin[1] - eloc->r.currentOrigin[1] )
-			+ ( origin[2] - eloc->r.currentOrigin[2] ) * ( origin[2] - eloc->r.currentOrigin[2] );
+	for ( i=0; i<level.locations.num; i++ ) {
+		loc = &level.locations.data[i];
+		len = ( origin[0] - loc->origin[0] ) * ( origin[0] - loc->origin[0] )
+			+ ( origin[1] - loc->origin[1] ) * ( origin[1] - loc->origin[1] )
+			+ ( origin[2] - loc->origin[2] ) * ( origin[2] - loc->origin[2] );
 
 		if ( len > bestlen ) {
 			continue;
 		}
 
-		if ( !trap->InPVS( origin, eloc->r.currentOrigin ) ) {
+		if ( !trap->InPVS( origin, loc->origin ) ) {
 			continue;
 		}
 
 		bestlen = len;
-		best = eloc;
+		best = loc;
 	}
 
 	return best;
@@ -1022,10 +1000,10 @@ Report a location for the player. Uses placed nearby target_location entities
 */
 qboolean Team_GetLocationMsg(gentity_t *ent, char *loc, int loclen)
 {
-	gentity_t *best;
+	locationData_t *best;
 
 	best = Team_GetLocation( ent );
-	
+
 	if (!best)
 		return qfalse;
 
@@ -1254,16 +1232,24 @@ void TeamplayInfoMessage( gentity_t *ent ) {
 		player = g_entities + i;
 		if (player->inuse && player->client->sess.sessionTeam == team ) {
 
-			h = player->client->ps.stats[STAT_HEALTH];
-			a = player->client->ps.stats[STAT_ARMOR];
-			if (h < 0) h = 0;
-			if (a < 0) a = 0;
+			if ( player->client->tempSpectate >= level.time ) {
+				h = a = 0;
 
-			Com_sprintf (entry, sizeof(entry),
-				" %i %i %i %i %i %i", 
-			//	level.sortedClients[i], player->client->pers.teamState.location, h, a, 
-				i, player->client->pers.teamState.location, h, a, 
-				player->client->ps.weapon, player->s.powerups);
+				Com_sprintf( entry, sizeof(entry),
+					" %i %i %i %i %i %i",
+					i, 0, h, a, 0, 0 );
+			}
+			else {
+				h = player->client->ps.stats[STAT_HEALTH];
+				a = player->client->ps.stats[STAT_ARMOR];
+				if ( h < 0 ) h = 0;
+				if ( a < 0 ) a = 0;
+
+				Com_sprintf( entry, sizeof(entry),
+					" %i %i %i %i %i %i",
+					i, player->client->pers.teamState.location, h, a,
+					player->client->ps.weapon, player->s.powerups );
+			}
 			j = strlen(entry);
 			if (stringlength + j >= sizeof(string))
 				break;
@@ -1278,7 +1264,8 @@ void TeamplayInfoMessage( gentity_t *ent ) {
 
 void CheckTeamStatus(void) {
 	int i;
-	gentity_t *loc, *ent;
+	locationData_t *loc;
+	gentity_t *ent;
 
 	if (level.time - level.lastTeamLocationTime > TEAM_LOCATION_UPDATE_TIME) {
 
@@ -1299,7 +1286,7 @@ void CheckTeamStatus(void) {
 			if (ent->inuse && (ent->client->sess.sessionTeam == TEAM_RED ||	ent->client->sess.sessionTeam == TEAM_BLUE)) {
 				loc = Team_GetLocation( ent );
 				if (loc)
-					ent->client->pers.teamState.location = loc->health;
+					ent->client->pers.teamState.location = loc->cs_index;
 				else
 					ent->client->pers.teamState.location = 0;
 			}

@@ -6,8 +6,6 @@
 #include "qcommon/stringed_ingame.h"
 #include "qcommon/RoffSystem.h"
 #include "ghoul2/ghoul2_shared.h"
-#include "RMG/RM_Headers.h"
-#include "qcommon/cm_local.h"
 #include "qcommon/cm_public.h"
 #include "icarus/GameInterface.h"
 #include "qcommon/timing.h"
@@ -28,7 +26,7 @@ void GVM_InitGame( int levelTime, int randomSeed, int restart ) {
 		VM_Call( gvm, GAME_INIT, levelTime, randomSeed, restart );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->InitGame( levelTime, randomSeed, restart );
 }
@@ -38,7 +36,7 @@ void GVM_ShutdownGame( int restart ) {
 		VM_Call( gvm, GAME_SHUTDOWN, restart );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ShutdownGame( restart );
 }
@@ -46,25 +44,25 @@ void GVM_ShutdownGame( int restart ) {
 char *GVM_ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 	if ( gvm->isLegacy )
 		return (char *)VM_Call( gvm, GAME_CLIENT_CONNECT, clientNum, firstTime, isBot );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ClientConnect( clientNum, firstTime, isBot );
 }
 
-void GVM_ClientBegin( int clientNum, qboolean allowTeamReset ) {
+void GVM_ClientBegin( int clientNum ) {
 	if ( gvm->isLegacy ) {
-		VM_Call( gvm, GAME_CLIENT_BEGIN, clientNum, allowTeamReset );
+		VM_Call( gvm, GAME_CLIENT_BEGIN, clientNum );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
-	ge->ClientBegin( clientNum, allowTeamReset );
+	ge->ClientBegin( clientNum, qtrue );
 }
 
 qboolean GVM_ClientUserinfoChanged( int clientNum ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_CLIENT_USERINFO_CHANGED, clientNum );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ClientUserinfoChanged( clientNum );
 }
@@ -74,7 +72,7 @@ void GVM_ClientDisconnect( int clientNum ) {
 		VM_Call( gvm, GAME_CLIENT_DISCONNECT, clientNum );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ClientDisconnect( clientNum );
 }
@@ -84,7 +82,7 @@ void GVM_ClientCommand( int clientNum ) {
 		VM_Call( gvm, GAME_CLIENT_COMMAND, clientNum );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ClientCommand( clientNum );
 }
@@ -94,7 +92,7 @@ void GVM_ClientThink( int clientNum, usercmd_t *ucmd ) {
 		VM_Call( gvm, GAME_CLIENT_THINK, clientNum, ucmd );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ClientThink( clientNum, ucmd );
 }
@@ -104,7 +102,7 @@ void GVM_RunFrame( int levelTime ) {
 		VM_Call( gvm, GAME_RUN_FRAME, levelTime );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->RunFrame( levelTime );
 }
@@ -112,7 +110,7 @@ void GVM_RunFrame( int levelTime ) {
 qboolean GVM_ConsoleCommand( void ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_CONSOLE_COMMAND );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ConsoleCommand();
 }
@@ -120,7 +118,7 @@ qboolean GVM_ConsoleCommand( void ) {
 int GVM_BotAIStartFrame( int time ) {
 	if ( gvm->isLegacy )
 		return VM_Call( gvm, BOTAI_START_FRAME, time );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->BotAIStartFrame( time );
 }
@@ -130,7 +128,7 @@ void GVM_ROFF_NotetrackCallback( int entID, const char *notetrack ) {
 		VM_Call( gvm, GAME_ROFF_NOTETRACK_CALLBACK, entID, notetrack );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ROFF_NotetrackCallback( entID, notetrack );
 }
@@ -140,7 +138,7 @@ void GVM_SpawnRMGEntity( void ) {
 		VM_Call( gvm, GAME_SPAWN_RMG_ENTITY );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->SpawnRMGEntity();
 }
@@ -148,7 +146,7 @@ void GVM_SpawnRMGEntity( void ) {
 int GVM_ICARUS_PlaySound( void ) {
 	if ( gvm->isLegacy )
 		return VM_Call( gvm, GAME_ICARUS_PLAYSOUND );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ICARUS_PlaySound();
 }
@@ -156,7 +154,7 @@ int GVM_ICARUS_PlaySound( void ) {
 qboolean GVM_ICARUS_Set( void ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_ICARUS_SET );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ICARUS_Set();
 }
@@ -166,7 +164,7 @@ void GVM_ICARUS_Lerp2Pos( void ) {
 		VM_Call( gvm, GAME_ICARUS_LERP2POS );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_Lerp2Pos();
 }
@@ -176,7 +174,7 @@ void GVM_ICARUS_Lerp2Origin( void ) {
 		VM_Call( gvm, GAME_ICARUS_LERP2ORIGIN );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_Lerp2Origin();
 }
@@ -186,7 +184,7 @@ void GVM_ICARUS_Lerp2Angles( void ) {
 		VM_Call( gvm, GAME_ICARUS_LERP2ANGLES );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_Lerp2Angles();
 }
@@ -194,7 +192,7 @@ void GVM_ICARUS_Lerp2Angles( void ) {
 int GVM_ICARUS_GetTag( void ) {
 	if ( gvm->isLegacy )
 		return VM_Call( gvm, GAME_ICARUS_GETTAG );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ICARUS_GetTag();
 }
@@ -204,7 +202,7 @@ void GVM_ICARUS_Lerp2Start( void ) {
 		VM_Call( gvm, GAME_ICARUS_LERP2START );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_Lerp2Start();
 }
@@ -214,7 +212,7 @@ void GVM_ICARUS_Lerp2End( void ) {
 		VM_Call( gvm, GAME_ICARUS_LERP2END );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_Lerp2End();
 }
@@ -224,7 +222,7 @@ void GVM_ICARUS_Use( void ) {
 		VM_Call( gvm, GAME_ICARUS_USE );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_Use();
 }
@@ -234,7 +232,7 @@ void GVM_ICARUS_Kill( void ) {
 		VM_Call( gvm, GAME_ICARUS_KILL );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_Kill();
 }
@@ -244,7 +242,7 @@ void GVM_ICARUS_Remove( void ) {
 		VM_Call( gvm, GAME_ICARUS_REMOVE );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_Remove();
 }
@@ -254,7 +252,7 @@ void GVM_ICARUS_Play( void ) {
 		VM_Call( gvm, GAME_ICARUS_PLAY );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_Play();
 }
@@ -262,7 +260,7 @@ void GVM_ICARUS_Play( void ) {
 int GVM_ICARUS_GetFloat( void ) {
 	if ( gvm->isLegacy )
 		return VM_Call( gvm, GAME_ICARUS_GETFLOAT );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ICARUS_GetFloat();
 }
@@ -270,7 +268,7 @@ int GVM_ICARUS_GetFloat( void ) {
 int GVM_ICARUS_GetVector( void ) {
 	if ( gvm->isLegacy )
 		return VM_Call( gvm, GAME_ICARUS_GETVECTOR );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ICARUS_GetVector();
 }
@@ -278,7 +276,7 @@ int GVM_ICARUS_GetVector( void ) {
 int GVM_ICARUS_GetString( void ) {
 	if ( gvm->isLegacy )
 		return VM_Call( gvm, GAME_ICARUS_GETSTRING );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ICARUS_GetString();
 }
@@ -288,7 +286,7 @@ void GVM_ICARUS_SoundIndex( void ) {
 		VM_Call( gvm, GAME_ICARUS_SOUNDINDEX );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->ICARUS_SoundIndex();
 }
@@ -296,7 +294,7 @@ void GVM_ICARUS_SoundIndex( void ) {
 int GVM_ICARUS_GetSetIDForString( void ) {
 	if ( gvm->isLegacy )
 		return VM_Call( gvm, GAME_ICARUS_GETSETIDFORSTRING );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->ICARUS_GetSetIDForString();
 }
@@ -304,7 +302,7 @@ int GVM_ICARUS_GetSetIDForString( void ) {
 qboolean GVM_NAV_ClearPathToPoint( int entID, vec3_t pmins, vec3_t pmaxs, vec3_t point, int clipmask, int okToHitEnt ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_NAV_CLEARPATHTOPOINT, entID, pmins, pmaxs, point, clipmask, okToHitEnt );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->NAV_ClearPathToPoint( entID, pmins, pmaxs, point, clipmask, okToHitEnt );
 }
@@ -312,7 +310,7 @@ qboolean GVM_NAV_ClearPathToPoint( int entID, vec3_t pmins, vec3_t pmaxs, vec3_t
 qboolean GVM_NPC_ClearLOS2( int entID, const vec3_t end ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_NAV_CLEARLOS, entID, end );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->NPC_ClearLOS2( entID, end );
 }
@@ -320,7 +318,7 @@ qboolean GVM_NPC_ClearLOS2( int entID, const vec3_t end ) {
 int GVM_NAVNEW_ClearPathBetweenPoints( vec3_t start, vec3_t end, vec3_t mins, vec3_t maxs, int ignore, int clipmask ) {
 	if ( gvm->isLegacy )
 		return VM_Call( gvm, GAME_NAV_CLEARPATHBETWEENPOINTS, start, end, mins, maxs, ignore, clipmask );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->NAVNEW_ClearPathBetweenPoints( start, end, mins, maxs, ignore, clipmask );
 }
@@ -328,7 +326,7 @@ int GVM_NAVNEW_ClearPathBetweenPoints( vec3_t start, vec3_t end, vec3_t mins, ve
 qboolean GVM_NAV_CheckNodeFailedForEnt( int entID, int nodeNum ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_NAV_CHECKNODEFAILEDFORENT, entID, nodeNum );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->NAV_CheckNodeFailedForEnt( entID, nodeNum );
 }
@@ -336,7 +334,7 @@ qboolean GVM_NAV_CheckNodeFailedForEnt( int entID, int nodeNum ) {
 qboolean GVM_NAV_EntIsUnlockedDoor( int entityNum ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_NAV_ENTISUNLOCKEDDOOR, entityNum );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->NAV_EntIsUnlockedDoor( entityNum );
 }
@@ -344,7 +342,7 @@ qboolean GVM_NAV_EntIsUnlockedDoor( int entityNum ) {
 qboolean GVM_NAV_EntIsDoor( int entityNum ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_NAV_ENTISDOOR, entityNum );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->NAV_EntIsDoor( entityNum );
 }
@@ -352,7 +350,7 @@ qboolean GVM_NAV_EntIsDoor( int entityNum ) {
 qboolean GVM_NAV_EntIsBreakable( int entityNum ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_NAV_ENTISBREAKABLE, entityNum );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->NAV_EntIsBreakable( entityNum );
 }
@@ -360,7 +358,7 @@ qboolean GVM_NAV_EntIsBreakable( int entityNum ) {
 qboolean GVM_NAV_EntIsRemovableUsable( int entNum ) {
 	if ( gvm->isLegacy )
 		return (qboolean)VM_Call( gvm, GAME_NAV_ENTISREMOVABLEUSABLE, entNum );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->NAV_EntIsRemovableUsable( entNum );
 }
@@ -370,7 +368,7 @@ void GVM_NAV_FindCombatPointWaypoints( void ) {
 		VM_Call( gvm, GAME_NAV_FINDCOMBATPOINTWAYPOINTS );
 		return;
 	}
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	ge->NAV_FindCombatPointWaypoints();
 }
@@ -378,7 +376,7 @@ void GVM_NAV_FindCombatPointWaypoints( void ) {
 int GVM_BG_GetItemIndexByTag( int tag, int type ) {
 	if ( gvm->isLegacy )
 		return VM_Call( gvm, GAME_GETITEMINDEXBYTAG, tag, type );
-	currentVM = gvm;
+	VMSwap v( gvm );
 
 	return ge->BG_GetItemIndexByTag( tag, type );
 }
@@ -387,12 +385,6 @@ int GVM_BG_GetItemIndexByTag( int tag, int type ) {
 // game syscalls
 //	only used by legacy mods!
 //
-
-static int FloatAsInt( float f ) {
-	floatint_t fi;
-	fi.f = f;
-	return fi.i;
-}
 
 // legacy syscall
 
@@ -427,7 +419,7 @@ static void SV_GameDropClient( int clientNum, const char *reason ) {
 	if ( clientNum < 0 || clientNum >= sv_maxclients->integer ) {
 		return;
 	}
-	SV_DropClient( svs.clients + clientNum, reason );	
+	SV_DropClient( svs.clients + clientNum, reason );
 }
 
 static void SV_GameSendServerCommand( int clientNum, const char *text ) {
@@ -437,7 +429,7 @@ static void SV_GameSendServerCommand( int clientNum, const char *text ) {
 		if ( clientNum < 0 || clientNum >= sv_maxclients->integer ) {
 			return;
 		}
-		SV_SendServerCommand( svs.clients + clientNum, "%s", text );	
+		SV_SendServerCommand( svs.clients + clientNum, "%s", text );
 	}
 }
 
@@ -461,7 +453,7 @@ static void SV_SetBrushModel( sharedEntity_t *ent, const char *name ) {
 	clipHandle_t	h;
 	vec3_t			mins, maxs;
 
-	if (!name) 
+	if (!name)
 	{
 		Com_Error( ERR_DROP, "SV_SetBrushModel: NULL" );
 	}
@@ -482,15 +474,7 @@ static void SV_SetBrushModel( sharedEntity_t *ent, const char *name ) {
 		VectorCopy (mins, ent->r.mins);
 		VectorCopy (maxs, ent->r.maxs);
 		ent->r.bmodel = qtrue;
-
-		if (com_RMG && com_RMG->integer)
-		{
-			ent->r.contents = CM_ModelContents( h, sv.mLocalSubBSPIndex );
-		}
-		else
-		{
-			ent->r.contents = CM_ModelContents( h, -1 );
-		}
+		ent->r.contents = CM_ModelContents( h, -1 );
 	}
 	else if (name[0] == '#')
 	{
@@ -605,11 +589,11 @@ static const char *SV_SetActiveSubBSP( int index ) {
 
 static qboolean SV_GetEntityToken( char *buffer, int bufferSize ) {
 	char *s;
-	
+
 	if ( sv.mLocalSubBSPIndex == -1 ) {
 		s = COM_Parse( (const char **)&sv.entityParsePoint );
 		Q_strncpyz( buffer, s, bufferSize );
-		if ( !sv.entityParsePoint && !s[0] ) 
+		if ( !sv.entityParsePoint && !s[0] )
 			return qfalse;
 		else
 			return qtrue;
@@ -617,7 +601,7 @@ static qboolean SV_GetEntityToken( char *buffer, int bufferSize ) {
 	else {
 		s = COM_Parse( (const char **)&sv.mLocalSubBSPEntityParsePoint);
 		Q_strncpyz( buffer, s, bufferSize );
-		if ( !sv.mLocalSubBSPEntityParsePoint && !s[0] ) 
+		if ( !sv.mLocalSubBSPEntityParsePoint && !s[0] )
 			return qfalse;
 		else
 			return qtrue;
@@ -1448,21 +1432,10 @@ static qhandle_t SV_RE_RegisterSkin( const char *name ) {
 }
 
 static int SV_CM_RegisterTerrain( const char *config ) {
-	return CM_RegisterTerrain( config, true )->GetTerrainId();
+	return 0;
 }
 
-static void SV_RMG_Init( void ) {
-	if ( com_RMG && com_RMG->integer ) {
-		if ( !TheRandomMissionManager )
-			TheRandomMissionManager = new CRMManager;
-
-		TheRandomMissionManager->SetLandScape( cmg.landScape );
-
-		if ( TheRandomMissionManager->LoadMission( qtrue ) )
-			TheRandomMissionManager->SpawnMission( qtrue );
-	//	cmg.landScape->UpdatePatches();
-	}
-}
+static void SV_RMG_Init( void ) { }
 
 static void SV_G2API_ListModelSurfaces( void *ghlInfo ) {
 	re->G2API_ListSurfaces( (CGhoul2Info *)ghlInfo );
@@ -1504,7 +1477,7 @@ static int SV_G2API_InitGhoul2Model( void **ghoul2Ptr, const char *fileName, int
 
 static qboolean SV_G2API_SetSkin( void *ghoul2, int modelIndex, qhandle_t customSkin, qhandle_t renderSkin ) {
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_SetSkin( &g2[modelIndex], customSkin, renderSkin );
+	return re->G2API_SetSkin( g2, modelIndex, customSkin, renderSkin );
 }
 
 static void SV_G2API_CollisionDetect( CollisionRecord_t *collRecMap, void* ghoul2, const vec3_t angles, const vec3_t position, int frameNumber, int entNum, vec3_t rayStart, vec3_t rayEnd, vec3_t scale, int traceFlags, int useLod, float fRadius ) {
@@ -1532,7 +1505,7 @@ static qboolean SV_G2API_SetBoneAnim( void *ghoul2, const int modelIndex, const 
 
 static qboolean SV_G2API_GetBoneAnim( void *ghoul2, const char *boneName, const int currentTime, float *currentFrame, int *startFrame, int *endFrame, int *flags, float *animSpeed, int *modelList, const int modelIndex ) {
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_GetBoneAnim( &g2[modelIndex], boneName, currentTime, currentFrame, startFrame, endFrame, flags, animSpeed, modelList );
+	return re->G2API_GetBoneAnim( g2, modelIndex, boneName, currentTime, currentFrame, startFrame, endFrame, flags, animSpeed, modelList );
 }
 
 static void SV_G2API_GetGLAName( void *ghoul2, int modelIndex, char *fillBuf ) {
@@ -1599,12 +1572,12 @@ static qboolean SV_G2API_SetNewOrigin( void *ghoul2, const int boltIndex ) {
 
 static qboolean SV_G2API_DoesBoneExist( void *ghoul2, int modelIndex, const char *boneName ) {
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_DoesBoneExist( &g2[modelIndex], boneName );
+	return re->G2API_DoesBoneExist( g2, modelIndex, boneName );
 }
 
 static int SV_G2API_GetSurfaceRenderStatus( void *ghoul2, const int modelIndex, const char *surfaceName ) {
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_GetSurfaceRenderStatus( &g2[modelIndex], surfaceName );
+	return re->G2API_GetSurfaceRenderStatus( g2, modelIndex, surfaceName );
 }
 
 static void SV_G2API_AbsurdSmoothing( void *ghoul2, qboolean status ) {
@@ -1693,7 +1666,7 @@ static qboolean SV_G2API_IKMove( void *ghoul2, int time, sharedIKMoveParams_t *p
 
 static qboolean SV_G2API_RemoveBone( void *ghoul2, const char *boneName, int modelIndex ) {
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_RemoveBone( &g2[modelIndex], boneName );
+	return re->G2API_RemoveBone( g2, modelIndex, boneName );
 }
 
 static void SV_G2API_AttachInstanceToEntNum( void *ghoul2, int entityNum, qboolean server ) {
@@ -1710,12 +1683,12 @@ static void SV_G2API_CleanEntAttachments( void ) {
 
 static qboolean SV_G2API_OverrideServer( void *serverInstance ) {
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)serverInstance);
-	return re->G2API_OverrideServerWithClientData( &g2[0] );
+	return re->G2API_OverrideServerWithClientData( g2, 0 );
 }
 
 static void SV_G2API_GetSurfaceName( void *ghoul2, int surfNumber, int modelIndex, char *fillBuf ) {
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	char *tmp = re->G2API_GetSurfaceName( &g2[modelIndex], surfNumber );
+	char *tmp = re->G2API_GetSurfaceName( g2, modelIndex, surfNumber );
 	strcpy( fillBuf, tmp );
 }
 
@@ -1801,10 +1774,10 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		return 0;
 
 	case G_PRECISIONTIMER_END:
-		SV_PrecisionTimerEnd( (void *)args[1] );
+		return SV_PrecisionTimerEnd( (void *)args[1] );
 
 	case G_CVAR_REGISTER:
-		Cvar_Register( (vmCvar_t *)VMA(1), (const char *)VMA(2), (const char *)VMA(3), args[4] ); 
+		Cvar_Register( (vmCvar_t *)VMA(1), (const char *)VMA(2), (const char *)VMA(3), args[4] );
 		return 0;
 
 	case G_CVAR_UPDATE:
@@ -1983,14 +1956,14 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 
 	case G_ROFF_CLEAN:
 		return SV_ROFF_Clean();
-	
+
 	case G_ROFF_UPDATE_ENTITIES:
 		SV_ROFF_UpdateEntities();
 		return 0;
 
 	case G_ROFF_CACHE:
 		return SV_ROFF_Cache( (char *)VMA(1) );
-		
+
 	case G_ROFF_PLAY:
 		return SV_ROFF_Play( args[1], args[2], (qboolean)args[3] );
 
@@ -2173,8 +2146,10 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		return navigator.CheckedNode(args[1], args[2]);
 	case G_NAV_SETCHECKEDNODE:
 		navigator.SetCheckedNode(args[1], args[2], args[3]);
+		return 0;
 	case G_NAV_FLAGALLNODES:
 		navigator.FlagAllNodes(args[1]);
+		return 0;
 	case G_NAV_GETPATHSCALCULATED:
 		return navigator.pathsCalculated;
 	case G_NAV_SETPATHSCALCULATED:
@@ -2597,8 +2572,8 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		{
 			CGhoul2Info_v &g2 = *((CGhoul2Info_v *)args[1]);
 			int modelIndex = args[2];
-			
-			return re->G2API_SetSkin(&g2[modelIndex], args[3], args[4]);
+
+			return re->G2API_SetSkin(g2, modelIndex, args[3], args[4]);
 		}
 
 	case G_G2_SIZE:
@@ -2616,7 +2591,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		return re->G2API_SetBoneAngles(*((CGhoul2Info_v *)args[1]), args[2], (const char *)VMA(3), (float *)VMA(4), args[5],
 							 (const Eorientations) args[6], (const Eorientations) args[7], (const Eorientations) args[8],
 							 (qhandle_t *)VMA(9), args[10], args[11] );
-	
+
 	case G_G2_PLAYANIM:
 		return re->G2API_SetBoneAnim(*((CGhoul2Info_v *)args[1]), args[2], (const char *)VMA(3), args[4], args[5],
 								args[6], VMF(7), args[8], VMF(9), args[10]);
@@ -2626,7 +2601,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 			CGhoul2Info_v &g2 = *((CGhoul2Info_v *)args[1]);
 			int modelIndex = args[10];
 
-			return re->G2API_GetBoneAnim(&g2[modelIndex], (const char*)VMA(2), args[3], (float *)VMA(4), (int *)VMA(5),
+			return re->G2API_GetBoneAnim(g2, modelIndex, (const char*)VMA(2), args[3], (float *)VMA(4), (int *)VMA(5),
 								(int *)VMA(6), (int *)VMA(7), (float *)VMA(8), (int *)VMA(9));
 		}
 
@@ -2704,14 +2679,14 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 	case G_G2_DOESBONEEXIST:
 		{
 			CGhoul2Info_v &g2 = *((CGhoul2Info_v *)args[1]);
-			return re->G2API_DoesBoneExist(&g2[args[2]], (const char *)VMA(3));
+			return re->G2API_DoesBoneExist(g2, args[2], (const char *)VMA(3));
 		}
 
 	case G_G2_GETSURFACERENDERSTATUS:
 	{
 		CGhoul2Info_v &g2 = *((CGhoul2Info_v *)args[1]);
 
-		return re->G2API_GetSurfaceRenderStatus(&g2[args[2]], (const char *)VMA(3));
+		return re->G2API_GetSurfaceRenderStatus(g2, args[2], (const char *)VMA(3));
 	}
 
 	case G_G2_ABSURDSMOOTHING:
@@ -2803,7 +2778,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		{
 			CGhoul2Info_v &g2 = *((CGhoul2Info_v *)args[1]);
 
-			return re->G2API_RemoveBone(&g2[args[3]], (const char *)VMA(2));
+			return re->G2API_RemoveBone(g2, args[3], (const char *)VMA(2));
 		}
 
 	case G_G2_ATTACHINSTANCETOENTNUM:
@@ -2820,7 +2795,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 	case G_G2_OVERRIDESERVER:
 		{
 			CGhoul2Info_v &g2 = *((CGhoul2Info_v *)args[1]);
-			return re->G2API_OverrideServerWithClientData(&g2[0]);
+			return re->G2API_OverrideServerWithClientData(g2, 0);
 		}
 
 	case G_G2_GETSURFACENAME:
@@ -2831,7 +2806,7 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 
 			CGhoul2Info_v &g2 = *((CGhoul2Info_v *)args[1]);
 
-			local = re->G2API_GetSurfaceName(&g2[modelindex], args[2]);
+			local = re->G2API_GetSurfaceName(g2, modelindex, args[2]);
 			if (local)
 			{
 				strcpy(point, local);
@@ -2846,11 +2821,10 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 		return 0;
 
 	case G_RMG_INIT:
-		SV_RMG_Init();
 		return 0;
 
 	case G_CM_REGISTER_TERRAIN:
-		return CM_RegisterTerrain((const char *)VMA(1), true)->GetTerrainId();
+		return 0;
 
 	case G_BOT_UPDATEWAYPOINTS:
 		SV_BotWaypointReception(args[1], (wpobject_t **)VMA(2));
@@ -3236,6 +3210,6 @@ void SV_RestartGame( void ) {
 		Com_Error( ERR_DROP, "VM_Restart on game failed" );
 		return;
 	}
-	
+
 	SV_InitGame( qtrue );
 }

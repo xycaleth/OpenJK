@@ -2,7 +2,6 @@
 
 // qcommon.h -- definitions common between client and server, but not game.or ref modules
 
-#include "qcommon/cm_public.h"
 #include "qcommon/q_shared.h"
 
 //============================================================================
@@ -64,7 +63,7 @@ void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *t
 
 void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entityState_s *to
 						   , qboolean force );
-void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to, 
+void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to,
 						 int number );
 
 #ifdef _ONEBIT_COMBO
@@ -87,11 +86,15 @@ NET
 ==============================================================
 */
 
+#define NET_ENABLEV4		0x01
+
 #define	PACKET_BACKUP	32	// number of old messages that must be kept on client and
 							// server for delta comrpession and ping estimation
 #define	PACKET_MASK		(PACKET_BACKUP-1)
 
 #define	MAX_PACKET_USERCMDS		32		// max number of usercmd_t in a packet
+
+#define	MAX_SNAPSHOT_ENTITIES	256
 
 #define	PORT_ANY			-1
 
@@ -102,9 +105,7 @@ typedef enum {
 	NA_BOT,
 	NA_LOOPBACK,
 	NA_BROADCAST,
-	NA_IP,
-	NA_IPX,
-	NA_BROADCAST_IPX
+	NA_IP
 } netadrtype_t;
 
 typedef enum {
@@ -116,14 +117,13 @@ typedef struct netadr_s {
 	netadrtype_t	type;
 
 	byte	ip[4];
-	byte	ipx[10];
 
 	unsigned short	port;
 } netadr_t;
 
 void		NET_Init( void );
 void		NET_Shutdown( void );
-void		NET_Restart( void );
+void		NET_Restart_f( void );
 void		NET_Config( qboolean enableNetworking );
 
 void		NET_SendPacket (netsrc_t sock, int length, const void *data, netadr_t to);
@@ -146,7 +146,7 @@ void		NET_Sleep(int msec);
 
 #define MAX_DOWNLOAD_WINDOW			8		// max of eight download frames
 #define MAX_DOWNLOAD_BLKSIZE		2048	// 2048 byte block chunks
- 
+
 
 /*
 Netchan handles packet fragmentation and out of order / duplicate suppression
@@ -166,7 +166,7 @@ typedef struct netchan_s {
 
 	// incoming fragment assembly buffer
 	int			fragmentSequence;
-	int			fragmentLength;	
+	int			fragmentLength;
 	byte		fragmentBuffer[MAX_MSGLEN];
 
 	// outgoing fragment buffer
@@ -231,7 +231,7 @@ enum svc_ops_e {
 //
 enum clc_ops_e {
 	clc_bad,
-	clc_nop, 		
+	clc_nop,
 	clc_move,				// [[usercmd_t]
 	clc_moveNoDelta,		// [[usercmd_t]
 	clc_clientCommand,		// [string] message
@@ -271,6 +271,17 @@ typedef struct vm_s {
 
 extern vm_t *currentVM;
 
+class VMSwap {
+private:
+	VMSwap();
+	vm_t *oldVM;
+public:
+	VMSwap( vm_t *newVM ) : oldVM( currentVM ) { currentVM = newVM; };
+	~VMSwap() { if ( oldVM ) currentVM = oldVM; };
+};
+
+extern const char *vmStrs[MAX_VM];
+
 typedef enum {
 	TRAP_MEMSET = 100,
 	TRAP_MEMCPY,
@@ -292,6 +303,7 @@ typedef enum {
 	TRAP_ASIN
 } sharedTraps_t;
 
+void			VM_Init( void );
 vm_t			*VM_CreateLegacy( vmSlots_t vmSlot, intptr_t (*systemCalls)(intptr_t *) );
 vm_t			*VM_Create( vmSlots_t vmSlot );
 void			 VM_Free( vm_t *vm );
@@ -363,6 +375,7 @@ void	Cmd_AddCommand( const char *cmd_name, xcommand_t function );
 // as a clc_clientCommand instead of executed locally
 
 void	Cmd_RemoveCommand( const char *cmd_name );
+void	Cmd_VM_RemoveCommand( const char *cmd_name, vmSlots_t vmslot );
 typedef void (*completionFunc_t)( char *args, int argNum );
 
 void	Cmd_CommandCompletion( callbackFunc_t callback );
@@ -421,19 +434,19 @@ modules of the program.
 
 */
 
-cvar_t *Cvar_Get( const char *var_name, const char *value, int flags );
+cvar_t *Cvar_Get( const char *var_name, const char *value, uint32_t flags );
 // creates the variable if it doesn't exist, or returns the existing one
 // if it exists, the value will not be changed, but flags will be ORed in
 // that allows variables to be unarchived without needing bitflags
 // if value is "", the value will not override a previously set value.
 
-void	Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags );
+void	Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, uint32_t flags );
 // basically a slightly modified Cvar_Get for the interpreted modules
 
 void	Cvar_Update( vmCvar_t *vmCvar );
 // updates an interpreted modules' version of a cvar
 
-cvar_t	*Cvar_Set2(const char *var_name, const char *value, int defaultFlags, qboolean force);
+cvar_t	*Cvar_Set2(const char *var_name, const char *value, uint32_t defaultFlags, qboolean force);
 //
 
 cvar_t	*Cvar_Set( const char *var_name, const char *value );
@@ -462,7 +475,7 @@ char	*Cvar_VariableString( const char *var_name );
 void	Cvar_VariableStringBuffer( const char *var_name, char *buffer, int bufsize );
 // returns an empty string if not defined
 
-int	Cvar_Flags(const char *var_name);
+uint32_t	Cvar_Flags(const char *var_name);
 // returns CVAR_NONEXISTENT if cvar doesn't exist or the flags of that particular CVAR.
 
 void	Cvar_CommandCompletion( callbackFunc_t callback );
@@ -497,7 +510,7 @@ void	Cvar_Restart_f( void );
 
 void Cvar_CompleteCvarName( char *args, int argNum );
 
-extern	int			cvar_modifiedFlags;
+extern uint32_t cvar_modifiedFlags;
 // whenever a cvar is modifed, its flags will be OR'd into this, so
 // a single check can determine if any CVAR_USERINFO, CVAR_SERVERINFO,
 // etc, variables have been modified since the last check.  The bit
@@ -550,6 +563,9 @@ void	FS_FreeFileList( char **fileList );
 
 void FS_Remove( const char *osPath );
 void FS_HomeRemove( const char *homePath );
+
+void FS_Rmdir( const char *osPath, qboolean recursive );
+void FS_HomeRmdir( const char *homePath, qboolean recursive );
 
 qboolean FS_FileExists( const char *file );
 
@@ -613,7 +629,7 @@ int		FS_FTell( fileHandle_t f );
 
 void	FS_Flush( fileHandle_t f );
 
-void	FS_FilenameCompletion( const char *dir, const char *ext, qboolean stripExt, void(*callback)( const char *s ), qboolean allowNonPureFilesOnDisk );
+void	FS_FilenameCompletion( const char *dir, const char *ext, qboolean stripExt, callbackFunc_t callback, qboolean allowNonPureFilesOnDisk );
 
 const char *FS_GetCurrentGameDir(bool emptybase=false);
 
@@ -641,9 +657,9 @@ const char *FS_LoadedPakPureChecksums( void );
 const char *FS_ReferencedPakNames( void );
 const char *FS_ReferencedPakChecksums( void );
 const char *FS_ReferencedPakPureChecksums( void );
-// Returns a space separated string containing the checksums of all loaded 
-// AND referenced pk3 files. Servers with sv_pure set will get this string 
-// back from clients for pure validation 
+// Returns a space separated string containing the checksums of all loaded
+// AND referenced pk3 files. Servers with sv_pure set will get this string
+// back from clients for pure validation
 
 void FS_ClearPakReferences( int flags );
 // clears referenced booleans on loaded pk3s
@@ -744,11 +760,7 @@ extern	cvar_t	*com_optvehtrace;
 extern	cvar_t	*com_G2Report;
 #endif
 
-extern	cvar_t	*com_RMG;
-
-#ifdef _DEBUG
-extern	cvar_t	*vm_legacy;
-#endif
+extern	cvar_t	*com_affinity;
 
 // both client and server must agree to pause
 extern	cvar_t	*cl_paused;
@@ -838,6 +850,7 @@ void  Z_TagFree	( memtag_t eTag );
 void  Z_Free	( void *ptr );
 int	  Z_Size	( void *pvAddress);
 void Com_InitZoneMemory(void);
+void Com_InitZoneMemoryVars(void);
 void Com_InitHunkMemory(void);
 void Com_ShutdownZoneMemory(void);
 void Com_ShutdownHunkMemory(void);
@@ -859,10 +872,6 @@ void Com_TouchMemory( void );
 void Com_Init( char *commandLine );
 void Com_Frame( void );
 void Com_Shutdown( void );
-//rwwRMG: Inserted:
-bool Com_ParseTextFile(const char *file, class CGenericParser2 &parser, bool cleanFirst = true);
-CGenericParser2 *Com_ParseTextFile(const char *file, bool cleanFirst, bool writeable);
-void Com_ParseTextFileDestroy(class CGenericParser2 &parser);
 
 
 /*
@@ -918,7 +927,7 @@ void CL_FlushMemory( void );
 void CL_StartHunkUsers( void );
 // start all the client stuff using the hunk
 
-qboolean CL_ConnectedToServer( void );
+qboolean CL_ConnectedToRemoteServer( void );
 // returns qtrue if connected to a server
 
 void Key_KeynameCompletion ( void(*callback)( const char *s ) );
@@ -1057,11 +1066,10 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 void	Sys_FreeFileList( char **fileList );
 //rwwRMG - changed to fileList to not conflict with list type
 
-void	Sys_BeginProfiling( void );
-void	Sys_EndProfiling( void );
-
 qboolean Sys_LowPhysicalMemory();
 unsigned int Sys_ProcessorCount();
+
+void Sys_SetProcessorAffinity( void );
 
 /* This is based on the Adaptive Huffman algorithm described in Sayood's Data
  * Compression book.  The ranks are not actually stored, but implicitly defined
@@ -1071,7 +1079,7 @@ unsigned int Sys_ProcessorCount();
 #define INTERNAL_NODE (HMAX+1)
 
 typedef struct nodetype {
-	struct	nodetype *left, *right, *parent; /* tree structure */ 
+	struct	nodetype *left, *right, *parent; /* tree structure */
 	struct	nodetype *next, *prev; /* doubly-linked list */
 	struct	nodetype **head; /* highest ranked node in block */
 	int		weight;
@@ -1121,3 +1129,7 @@ inline int Round(float value)
 {
 	return((int)floorf(value + 0.5f));
 }
+
+// Persistent data store API
+bool PD_Store ( const char *name, const void *data, size_t size );
+const void *PD_Load ( const char *name, size_t *size );

@@ -107,14 +107,14 @@ passed to the renderer.
 #define	MAX_MARK_FRAGMENTS	128
 #define	MAX_MARK_POINTS		384
 
-void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir, 
+void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
 				   float orientation, float red, float green, float blue, float alpha,
 				   qboolean alphaFade, float radius, qboolean temporary ) {
 	matrix3_t		axis;
 	float			texCoordScale;
 	vec3_t			originalPoints[4];
 	byte			colors[4];
-	int				i, j;
+	int				i, j, k;
 	int				numFragments;
 	markFragment_t	markFragments[MAX_MARK_FRAGMENTS], *mf;
 	vec3_t			markPoints[MAX_MARK_POINTS];
@@ -183,7 +183,8 @@ void CG_ImpactMark( qhandle_t markShader, const vec3_t origin, const vec3_t dir,
 			VectorSubtract( v->xyz, origin, delta );
 			v->st[0] = 0.5 + DotProduct( delta, axis[1] ) * texCoordScale;
 			v->st[1] = 0.5 + DotProduct( delta, axis[2] ) * texCoordScale;
-			*(int *)v->modulate = *(int *)colors;
+			for ( k=0; k<4; k++ )
+				v->modulate[k] = colors[k];
 		}
 
 		// if it is a temporary (shadow) mark, add it immediately and forget about it
@@ -266,7 +267,7 @@ void CG_AddMarks( void ) {
 					mp->verts[j].modulate[3] = fade;
 				}
 			}
-			else 
+			else
 			{
 				float f = (float)t / MARK_FADE_TIME;
 				for ( j = 0 ; j < mp->poly.numVerts ; j++ ) {

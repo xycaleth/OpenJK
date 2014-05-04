@@ -1,6 +1,4 @@
 // win_main.c
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
 
 #include "client/client.h"
 #include "win_local.h"
@@ -42,15 +40,6 @@ qboolean Sys_LowPhysicalMemory(void) {
 		return qtrue;
 	}
 	return (stat.ullTotalPhys <= MEM_THRESHOLD) ? qtrue : qfalse;
-}
-
-/*
-==================
-Sys_BeginProfiling
-==================
-*/
-void Sys_BeginProfiling( void ) {
-	// this is just used on the mac build
 }
 
 /*
@@ -275,7 +264,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 		if (!nfiles)
 			return NULL;
 
-		listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ), TAG_FILESYS );
+		listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ), TAG_LISTFILES );
 		for ( i = 0 ; i < nfiles ; i++ ) {
 			listCopy[i] = list[i];
 		}
@@ -328,7 +317,7 @@ char **Sys_ListFiles( const char *directory, const char *extension, char *filter
 		return NULL;
 	}
 
-	listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ), TAG_FILESYS );
+	listCopy = (char **)Z_Malloc( ( nfiles + 1 ) * sizeof( *listCopy ), TAG_LISTFILES );
 	for ( i = 0 ; i < nfiles ; i++ ) {
 		listCopy[i] = list[i];
 	}
@@ -383,7 +372,7 @@ char *Sys_GetClipboardData( void ) {
 				data = (char *)Z_Malloc( GlobalSize( hClipboardData ) + 1, TAG_CLIPBOARD);
 				Q_strncpyz( data, cliptext, GlobalSize( hClipboardData )+1 );
 				GlobalUnlock( hClipboardData );
-				
+
 				strtok( data, "\n\r\b" );
 			}
 		}
@@ -475,41 +464,41 @@ void *Sys_LoadDll(const char *name, qboolean useSystemLib)
 
 	if(useSystemLib)
 		Com_Printf("Trying to load \"%s\"...\n", name);
-	
+
 	if(!useSystemLib || !(dllhandle = Sys_LoadLibrary(name)))
 	{
 		const char *topDir;
 		char libPath[MAX_OSPATH];
-        
+
 		topDir = Sys_BinaryPath();
-        
+
 		if(!*topDir)
 			topDir = ".";
-        
+
 		Com_Printf("Trying to load \"%s\" from \"%s\"...\n", name, topDir);
 		Com_sprintf(libPath, sizeof(libPath), "%s%c%s", topDir, PATH_SEP, name);
-        
+
 		if(!(dllhandle = Sys_LoadLibrary(libPath)))
 		{
 			const char *basePath = Cvar_VariableString("fs_basepath");
-			
+
 			if(!basePath || !*basePath)
 				basePath = ".";
-			
+
 			if(FS_FilenameCompare(topDir, basePath))
 			{
 				Com_Printf("Trying to load \"%s\" from \"%s\"...\n", name, basePath);
 				Com_sprintf(libPath, sizeof(libPath), "%s%c%s", basePath, PATH_SEP, name);
 				dllhandle = Sys_LoadLibrary(libPath);
 			}
-			
+
 			if(!dllhandle)
 			{
 				Com_Printf("Loading \"%s\" failed\n", name);
 			}
 		}
 	}
-	
+
 	return dllhandle;
 }
 
@@ -568,7 +557,7 @@ void * QDECL Sys_LoadLegacyGameDll( const char *name, intptr_t (QDECL **vmMain)(
 		}
 	}
 
-	dllEntry = ( void (QDECL *)( intptr_t (QDECL *)( intptr_t, ... ) ) )GetProcAddress( libHandle, "dllEntry" ); 
+	dllEntry = ( void (QDECL *)( intptr_t (QDECL *)( intptr_t, ... ) ) )GetProcAddress( libHandle, "dllEntry" );
 	*vmMain = (intptr_t (QDECL *)(int,...))GetProcAddress( libHandle, "vmMain" );
 	if ( !*vmMain || !dllEntry ) {
 		if ( com_developer->integer )
@@ -775,18 +764,6 @@ void Sys_In_Restart_f( void ) {
 	IN_Init();
 }
 
-
-/*
-=================
-Sys_Net_Restart_f
-
-Restart the network subsystem
-=================
-*/
-void Sys_Net_Restart_f( void ) {
-	NET_Restart();
-}
-
 /*
 ================
 Sys_Init
@@ -804,7 +781,6 @@ void Sys_Init( void ) {
 	timeBeginPeriod( 1 );
 
 	Cmd_AddCommand ("in_restart", Sys_In_Restart_f);
-	Cmd_AddCommand ("net_restart", Sys_Net_Restart_f);
 
 	g_wv.osversion.dwOSVersionInfoSize = sizeof( g_wv.osversion );
 
@@ -816,29 +792,7 @@ void Sys_Init( void ) {
 	if (g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32s)
 		Sys_Error ("This game doesn't run on Win32s");
 
-	if ( g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32_NT )
-	{
-		Cvar_Set( "arch", "winnt" );
-	}
-	else if ( g_wv.osversion.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS )
-	{
-		if ( LOWORD( g_wv.osversion.dwBuildNumber ) >= WIN98_BUILD_NUMBER )
-		{
-			Cvar_Set( "arch", "win98" );
-		}
-		else if ( LOWORD( g_wv.osversion.dwBuildNumber ) >= OSR2_BUILD_NUMBER )
-		{
-			Cvar_Set( "arch", "win95 osr2.x" );
-		}
-		else
-		{
-			Cvar_Set( "arch", "win95" );
-		}
-	}
-	else
-	{
-		Cvar_Set( "arch", "unknown Windows variant" );
-	}
+	Cvar_Set( "arch", OS_STRING " " ARCH_STRING );
 
 	// save out a couple things in rom cvars for the renderer to access
 	Cvar_Get( "win_hinstance", va("%i", (int)g_wv.hInstance), CVAR_ROM );
@@ -856,7 +810,7 @@ void QuickMemTest(void)
 //	if (!Sys_LowPhysicalMemory())
 	{
 		const int iMemTestMegs = 128;	// useful search label
-		// special test, 
+		// special test,
 		void *pvData = malloc(iMemTestMegs * 1024 * 1024);
 		if (pvData)
 		{
@@ -866,9 +820,9 @@ void QuickMemTest(void)
 		{
 			// err...
 			//
-			LPCSTR psContinue = re->Language_IsAsian() ? 
+			LPCSTR psContinue = re->Language_IsAsian() ?
 								"Your machine failed to allocate %dMB in a memory test, which may mean you'll have problems running this game all the way through.\n\nContinue anyway?"
-								: 
+								:
 								SE_GetString("CON_TEXT_FAILED_MEMTEST");
 								// ( since it's too much hassle doing MBCS code pages and decodings etc for MessageBox command )
 
@@ -988,7 +942,7 @@ int main( int argc, char **argv )
 	// no abort/retry/fail errors
 	SetErrorMode( SEM_FAILCRITICALERRORS );
 
-	// get the initial time base
+	// Set the initial time base
 	Sys_Milliseconds();
 
 	Sys_SetBinaryPath( Sys_Dirname( argv[ 0 ] ) );

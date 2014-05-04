@@ -16,9 +16,6 @@ This file is part of Jedi Knight 2.
 */
 // Copyright 2001-2013 Raven Software
 
-// this include must remain at the top of every CPP file
-#include "common_headers.h"
-
 #if !defined(FX_SCHEDULER_H_INC)
 	#include "FxScheduler.h"
 #endif
@@ -66,7 +63,7 @@ void SEffectTemplate::operator=(const SEffectTemplate &that)
 {
 	mCopy = true;
 
-	strcpy( mEffectName, that.mEffectName );
+	Q_strncpyz( mEffectName, that.mEffectName, sizeof(mEffectName) );
 
 	mPrimitiveCount = that.mPrimitiveCount;
 
@@ -403,7 +400,7 @@ SEffectTemplate *CFxScheduler::GetNewEffectTemplate( int *id, const char *file )
 			if ( file )
 			{
 				mEffectIDs[file] = i;
-				strcpy( effect->mEffectName, file );
+				Q_strncpyz( effect->mEffectName, file, sizeof(effect->mEffectName) );
 			}
 
 			effect->mInUse = true;

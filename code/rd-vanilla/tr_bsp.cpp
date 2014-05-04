@@ -41,7 +41,6 @@ static	byte		*fileBase;
 int			c_subdivisions;
 int			c_gridVerts;
 
-void R_RMGInit(void);
 //===============================================================================
 
 static void HSVtoRGB( float h, float s, float v, float rgb[3] )
@@ -217,7 +216,7 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 				float g = buf_p[j*3+1];
 				float b = buf_p[j*3+2];
 				float intensity;
-				float out[3];
+				float out[3] = {0.0f, 0.0f, 0.0f};
 
 				intensity = 0.33f * r + 0.685f * g + 0.063f * b;
 
@@ -1194,6 +1193,9 @@ R_LoadLightGridArray
 */
 void R_LoadLightGridArray( lump_t *l, world_t &worldData ) {
 	world_t	*w;
+#ifdef Q3_BIG_ENDIAN
+	int i;
+#endif
 
 	w = &worldData;
 
@@ -1208,6 +1210,11 @@ void R_LoadLightGridArray( lump_t *l, world_t &worldData ) {
 
 	w->lightGridArray = (unsigned short *)Hunk_Alloc( l->filelen, qfalse );
 	memcpy( w->lightGridArray, (void *)(fileBase + l->fileofs), l->filelen );
+#ifdef Q3_BIG_ENDIAN
+	for ( i = 0 ; i < w->numGridArrayElements ; i++ ) {
+		w->lightGridArray[i] = LittleShort(w->lightGridArray[i]);
+	}
+#endif
 }
 
 

@@ -1,14 +1,8 @@
-//Anything above this #include will be ignored by the compiler
-#include "qcommon/exe_headers.h"
-
 // cl_parse.c  -- parse a message received from the server
 
 #include "client.h"
 #include "cl_cgameapi.h"
 #include "qcommon/stringed_ingame.h"
-#ifdef _DONETPROFILE_
-#include "qcommon/INetProfile.h"
-#endif
 #include "zlib/zlib.h"
 
 static char hiddenCvarVal[128];
@@ -19,7 +13,7 @@ char *svc_strings[256] = {
 	"svc_nop",
 	"svc_gamestate",
 	"svc_configstring",
-	"svc_baseline",	
+	"svc_baseline",
 	"svc_serverCommand",
 	"svc_download",
 	"svc_snapshot",
@@ -49,7 +43,7 @@ Parses deltas from the given base and adds the resulting entity
 to the current frame
 ==================
 */
-void CL_DeltaEntity (msg_t *msg, clSnapshot_t *frame, int newnum, entityState_t *old, 
+void CL_DeltaEntity (msg_t *msg, clSnapshot_t *frame, int newnum, entityState_t *old,
 					 qboolean unchanged) {
 	entityState_t	*state;
 
@@ -57,11 +51,11 @@ void CL_DeltaEntity (msg_t *msg, clSnapshot_t *frame, int newnum, entityState_t 
 	// it can be used as the source for a later delta
 	state = &cl.parseEntities[cl.parseEntitiesNum & (MAX_PARSE_ENTITIES-1)];
 
-	if ( unchanged ) 
+	if ( unchanged )
 	{
 		*state = *old;
-	} 
-	else 
+	}
+	else
 	{
 		MSG_ReadDeltaEntity( msg, old, state, newnum );
 	}
@@ -120,7 +114,7 @@ void CL_ParsePacketEntities( msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *n
 				Com_Printf ("%3i:  unchanged: %i\n", msg->readcount, oldnum);
 			}
 			CL_DeltaEntity( msg, newframe, oldnum, oldstate, qtrue );
-			
+
 			oldindex++;
 
 			if ( oldindex >= oldframe->numEntities ) {
@@ -168,7 +162,7 @@ void CL_ParsePacketEntities( msg_t *msg, clSnapshot_t *oldframe, clSnapshot_t *n
 			Com_Printf ("%3i:  unchanged: %i\n", msg->readcount, oldnum);
 		}
 		CL_DeltaEntity( msg, newframe, oldnum, oldstate, qtrue );
-		
+
 		oldindex++;
 
 		if ( oldindex >= oldframe->numEntities ) {
@@ -230,7 +224,7 @@ void CL_ParseSnapshot( msg_t *msg ) {
 	// If the frame is delta compressed from data that we
 	// no longer have available, we must suck up the rest of
 	// the frame, but not use it, then ask for a non-compressed
-	// message 
+	// message
 	if ( newSnap.deltaNum <= 0 ) {
 		newSnap.valid = qtrue;		// uncompressed frame
 		old = NULL;
@@ -240,6 +234,16 @@ void CL_ParseSnapshot( msg_t *msg ) {
 		if ( !old->valid ) {
 			// should never happen
 			Com_Printf ("Delta from invalid frame (not supposed to happen!).\n");
+			while ( ( newSnap.deltaNum & PACKET_MASK ) != ( newSnap.messageNum & PACKET_MASK ) && !old->valid ) {
+				newSnap.deltaNum++;
+				old = &cl.snapshots[newSnap.deltaNum & PACKET_MASK];
+			}
+			if ( old->valid ) {
+				Com_Printf ("Found more recent frame to delta from.\n");
+			}
+		}
+		if ( !old->valid ) {
+			Com_Printf ("Failed to find more recent frame to delta from.\n");
 		} else if ( old->messageNum != newSnap.deltaNum ) {
 			// The frame that the server did the delta from
 			// is too old, so we can't reconstruct it properly.
@@ -274,7 +278,7 @@ void CL_ParseSnapshot( msg_t *msg ) {
 		MSG_ReadDeltaPlayerstate( msg, NULL, &newSnap.ps );
 		if (newSnap.ps.m_iVehicleNum)
 		{ //this means we must have written our vehicle's ps too
-			MSG_ReadDeltaPlayerstate( msg, NULL, &newSnap.vps, qtrue );			
+			MSG_ReadDeltaPlayerstate( msg, NULL, &newSnap.vps, qtrue );
 		}
 	}
 
@@ -461,84 +465,6 @@ void CL_SystemInfoChanged( void ) {
 	cl_connectedToPureServer = Cvar_VariableValue( "sv_pure" );
 }
 
-void CL_ParseAutomapSymbols ( msg_t* msg )
-{
-	int i;
-
-	clc.rmgAutomapSymbolCount = (unsigned short) MSG_ReadShort ( msg );
-
-	for ( i = 0; i < clc.rmgAutomapSymbolCount; i ++ )
-	{
-		clc.rmgAutomapSymbols[i].mType = (int)MSG_ReadByte ( msg );
-		clc.rmgAutomapSymbols[i].mSide = (int)MSG_ReadByte ( msg );
-		clc.rmgAutomapSymbols[i].mOrigin[0] = (float)MSG_ReadLong ( msg );
-		clc.rmgAutomapSymbols[i].mOrigin[1] = (float)MSG_ReadLong ( msg );
-	}
-}
-
-void CL_ParseRMG ( msg_t* msg )
-{
-	clc.rmgHeightMapSize = (unsigned short)MSG_ReadShort ( msg );
-	if ( !clc.rmgHeightMapSize )
-	{
-		return;
-	}
-
-	z_stream zdata;
-	int		 size;
-	unsigned char heightmap1[15000];
-
-	if ( MSG_ReadBits ( msg, 1 ) )
-	{
-		// Read the heightmap
-		memset(&zdata, 0, sizeof(z_stream));
-		inflateInit ( &zdata/*, Z_SYNC_FLUSH*/ );
-
-		MSG_ReadData ( msg, heightmap1, clc.rmgHeightMapSize );
-
-		zdata.next_in = heightmap1;
-		zdata.avail_in = clc.rmgHeightMapSize;
-		zdata.next_out = (unsigned char*)clc.rmgHeightMap;
-		zdata.avail_out = MAX_HEIGHTMAP_SIZE;
-		inflate (&zdata,Z_SYNC_FLUSH );
-
-		clc.rmgHeightMapSize = zdata.total_out;
-
-		inflateEnd(&zdata);
-	}
-	else
-	{
-		MSG_ReadData ( msg, (unsigned char*)clc.rmgHeightMap, clc.rmgHeightMapSize );
-	}
-
-	size = (unsigned short)MSG_ReadShort ( msg );
-
-	if ( MSG_ReadBits ( msg, 1 ) )
-	{	
-		// Read the flatten map
-		memset(&zdata, 0, sizeof(z_stream));
-		inflateInit ( &zdata/*, Z_SYNC_FLUSH*/ );
-
-		MSG_ReadData ( msg, heightmap1, size );
-
-		zdata.next_in = heightmap1;
-		zdata.avail_in = clc.rmgHeightMapSize;
-		zdata.next_out = (unsigned char*)clc.rmgFlattenMap;
-		zdata.avail_out = MAX_HEIGHTMAP_SIZE;
-		inflate (&zdata, Z_SYNC_FLUSH);
-		inflateEnd(&zdata);
-	}
-	else
-	{
-		MSG_ReadData ( msg, (unsigned char*)clc.rmgFlattenMap, size );
-	}
-
-	// Read the seed		
-	clc.rmgSeed = MSG_ReadLong ( msg );
-
-	CL_ParseAutomapSymbols ( msg );
-}
-
 /*
 ==================
 CL_ParseGamestate
@@ -559,11 +485,6 @@ void CL_ParseGamestate( msg_t *msg ) {
 	// wipe local client state
 	CL_ClearState();
 
-#ifdef _DONETPROFILE_
-	int startBytes,endBytes;
-	startBytes=msg->readcount;
-#endif
-
 	// a gamestate always marks a server command sequence
 	clc.serverCommandSequence = MSG_ReadLong( msg );
 
@@ -575,7 +496,7 @@ void CL_ParseGamestate( msg_t *msg ) {
 		if ( cmd == svc_EOF ) {
 			break;
 		}
-		
+
 		if ( cmd == svc_configstring ) {
 			int		len, start;
 
@@ -649,12 +570,9 @@ void CL_ParseGamestate( msg_t *msg ) {
 	// read the checksum feed
 	clc.checksumFeed = MSG_ReadLong( msg );
 
-	CL_ParseRMG ( msg ); //rwwRMG - get info for it from the server
+	// Throw away the info for the old RMG system.
+	MSG_ReadShort (msg);
 
-#ifdef _DONETPROFILE_
-	endBytes=msg->readcount;
-//	ClReadProf().AddField("svc_gamestate",endBytes-startBytes);
-#endif
 
 	// parse serverId and other cvars
 	CL_SystemInfoChanged();
@@ -792,16 +710,9 @@ void CL_ParseCommandString( msg_t *msg ) {
 	int		seq;
 	int		index;
 
-#ifdef _DONETPROFILE_
-	int startBytes,endBytes;
-	startBytes=msg->readcount;
-#endif
 	seq = MSG_ReadLong( msg );
 	s = MSG_ReadString( msg );
-#ifdef _DONETPROFILE_
-	endBytes=msg->readcount;
-	ClReadProf().AddField("svc_serverCommand",endBytes-startBytes);
-#endif
+
 	// see if we have already executed stored it off
 	if ( clc.serverCommandSequence >= seq ) {
 		return;
@@ -878,7 +789,7 @@ void CL_ParseServerMessage( msg_t *msg ) {
 
 	// get the reliable sequence acknowledge number
 	clc.reliableAcknowledge = MSG_ReadLong( msg );
-	// 
+	//
 	if ( clc.reliableAcknowledge < clc.reliableSequence - MAX_RELIABLE_COMMANDS ) {
 		clc.reliableAcknowledge = clc.reliableSequence;
 	}
@@ -906,12 +817,12 @@ void CL_ParseServerMessage( msg_t *msg ) {
 				SHOWNET( msg, svc_strings[cmd] );
 			}
 		}
-	
+
 	// other commands
 		switch ( cmd ) {
 		default:
 			Com_Error (ERR_DROP,"CL_ParseServerMessage: Illegible server message\n");
-			break;			
+			break;
 		case svc_nop:
 			break;
 		case svc_serverCommand:

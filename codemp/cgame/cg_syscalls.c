@@ -3,7 +3,7 @@
 // cg_syscalls.c -- this file is only included when building a dll
 // cg_syscalls.asm is included instead when building a qvm
 #include "cg_local.h"
- 
+
 static intptr_t (QDECL *Q_syscall)( intptr_t arg, ... ) = (intptr_t (QDECL *)( intptr_t, ...))-1;
 
 static void TranslateSyscalls( void );
@@ -15,7 +15,7 @@ Q_EXPORT void dllEntry( intptr_t (QDECL *syscallptr)( intptr_t arg,... ) ) {
 }
 
 int PASSFLOAT( float x ) {
-	floatint_t fi;
+	byteAlias_t fi;
 	fi.f = x;
 	return fi.i;
 }
@@ -28,7 +28,7 @@ void trap_Error( const char *fmt ) {
 	exit(1);
 }
 int trap_Milliseconds( void ) {
-	return Q_syscall( CG_MILLISECONDS ); 
+	return Q_syscall( CG_MILLISECONDS );
 }
 void trap_PrecisionTimer_Start( void **theNewTimer ) {
 	Q_syscall( CG_PRECISIONTIMER_START, theNewTimer );
@@ -36,7 +36,7 @@ void trap_PrecisionTimer_Start( void **theNewTimer ) {
 int trap_PrecisionTimer_End( void *theTimer ) {
 	return Q_syscall(CG_PRECISIONTIMER_END, theTimer);
 }
-void trap_Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags ) {
+void trap_Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, uint32_t flags ) {
 	Q_syscall( CG_CVAR_REGISTER, vmCvar, varName, defaultValue, flags );
 }
 void trap_Cvar_Update( vmCvar_t *vmCvar ) {
@@ -436,7 +436,7 @@ void trap_FX_AddScheduledEffects( qboolean skyPortal ) {
 }
 void trap_FX_Draw2DEffects ( float screenXScale, float screenYScale ) {
 	Q_syscall( CG_FX_DRAW_2D_EFFECTS, PASSFLOAT(screenXScale), PASSFLOAT(screenYScale) );
-}	
+}
 int	trap_FX_InitSystem( refdef_t* refdef ) {
 	return Q_syscall( CG_FX_INIT_SYSTEM, refdef );
 }
@@ -656,15 +656,6 @@ void trap_G2API_GetSurfaceName(void *ghoul2, int surfNumber, int modelIndex, cha
 void trap_CG_RegisterSharedMemory(char *memory) {
 	Q_syscall(CG_SET_SHARED_BUFFER, memory);
 }
-int trap_CM_RegisterTerrain(const char *config) {
-	return Q_syscall(CG_CM_REGISTER_TERRAIN, config);
-}
-void trap_RMG_Init(int terrainID, const char *terrainInfo) {
-	Q_syscall(CG_RMG_INIT, terrainID, terrainInfo);
-}
-void trap_RE_InitRendererTerrain( const char *info ) {
-	Q_syscall(CG_RE_INIT_RENDERER_TERRAIN, info);
-}
 void trap_R_WeatherContentsOverride( int contents ) {
 	Q_syscall(CG_R_WEATHER_CONTENTS_OVERRIDE, contents);
 }
@@ -755,12 +746,10 @@ static void TranslateSyscalls( void ) {
 	trap->CM_LoadMap						= trap_CM_LoadMap;
 	trap->CM_NumInlineModels				= trap_CM_NumInlineModels;
 	trap->CM_PointContents					= trap_CM_PointContents;
-	trap->CM_RegisterTerrain				= trap_CM_RegisterTerrain;
 	trap->CM_TempModel						= CGSyscall_CM_TempModel;
 	trap->CM_Trace							= CGSyscall_CM_Trace;
 	trap->CM_TransformedPointContents		= trap_CM_TransformedPointContents;
 	trap->CM_TransformedTrace				= CGSyscall_CM_TransformedTrace;
-	trap->RMG_Init							= trap_RMG_Init;
 	trap->S_AddLocalSet						= trap_S_AddLocalSet;
 	trap->S_AddLoopingSound					= trap_S_AddLoopingSound;
 	trap->S_ClearLoopingSounds				= trap_S_ClearLoopingSounds;
@@ -821,7 +810,6 @@ static void TranslateSyscalls( void ) {
 	trap->R_SetRangedFog					= trap_R_SetRangeFog;
 	trap->R_SetRefractionProperties			= trap_R_SetRefractProp;
 	trap->R_WorldEffectCommand				= trap_R_WorldEffectCommand;
-	trap->RE_InitRendererTerrain			= trap_RE_InitRendererTerrain;
 	trap->WE_AddWeatherZone					= trap_WE_AddWeatherZone;
 	trap->GetCurrentSnapshotNumber			= trap_GetCurrentSnapshotNumber;
 	trap->GetCurrentCmdNumber				= trap_GetCurrentCmdNumber;

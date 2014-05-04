@@ -14,10 +14,8 @@ set(MPVanillaRendererFiles
 	"${MPDir}/rd-vanilla/G2_API.cpp"
 	"${MPDir}/rd-vanilla/G2_bolts.cpp"
 	"${MPDir}/rd-vanilla/G2_bones.cpp"
-	"${MPDir}/rd-vanilla/G2_local.h"
 	"${MPDir}/rd-vanilla/G2_misc.cpp"
 	"${MPDir}/rd-vanilla/G2_surfaces.cpp"
-	"${MPDir}/rd-vanilla/tr_arioche.cpp"
 	"${MPDir}/rd-vanilla/tr_backend.cpp"
 	"${MPDir}/rd-vanilla/tr_bsp.cpp"
 	"${MPDir}/rd-vanilla/tr_cmds.cpp"
@@ -26,7 +24,6 @@ set(MPVanillaRendererFiles
 	"${MPDir}/rd-vanilla/tr_ghoul2.cpp"
 	"${MPDir}/rd-vanilla/tr_image.cpp"
 	"${MPDir}/rd-vanilla/tr_init.cpp"
-	"${MPDir}/rd-vanilla/tr_landscape.h"
 	"${MPDir}/rd-vanilla/tr_light.cpp"
 	"${MPDir}/rd-vanilla/tr_local.h"
 	"${MPDir}/rd-vanilla/tr_main.cpp"
@@ -45,7 +42,6 @@ set(MPVanillaRendererFiles
 	"${MPDir}/rd-vanilla/tr_subs.cpp"
 	"${MPDir}/rd-vanilla/tr_surface.cpp"
 	"${MPDir}/rd-vanilla/tr_surfacesprites.cpp"
-	"${MPDir}/rd-vanilla/tr_terrain.cpp"
 	"${MPDir}/rd-vanilla/tr_world.cpp"
 	"${MPDir}/rd-vanilla/tr_WorldEffects.cpp"
 	"${MPDir}/rd-vanilla/tr_WorldEffects.h"
@@ -53,6 +49,8 @@ set(MPVanillaRendererFiles
 source_group("renderer" FILES ${MPVanillaRendererFiles})
 
 set(MPVanillaRendererGhoul2Files
+	"${MPDir}/ghoul2/g2_local.h"
+	"${MPDir}/ghoul2/ghoul2_shared.h"
 	"${MPDir}/ghoul2/G2_gore.cpp"
 	"${MPDir}/ghoul2/G2_gore.h")
 source_group("ghoul2" FILES ${MPVanillaRendererGhoul2Files})
@@ -64,7 +62,6 @@ set(MPVanillaRendererRdCommonFiles
 	"${MPDir}/rd-common/tr_font.cpp"
 	"${MPDir}/rd-common/tr_font.h"
 	"${MPDir}/rd-common/tr_image_load.cpp"
-	"${MPDir}/rd-common/tr_image_manipulation.cpp"
 	"${MPDir}/rd-common/tr_image_jpg.cpp"
 	"${MPDir}/rd-common/tr_image_tga.cpp"
 	"${MPDir}/rd-common/tr_image_png.cpp"
@@ -75,7 +72,6 @@ source_group("rd-common" FILES ${MPVanillaRendererRdCommonFiles})
 set(MPVanillaRendererFiles ${MPVanillaRendererFiles} ${MPVanillaRendererRdCommonFiles})
 
 set(MPVanillaRendererQcommonFiles
-	"${MPDir}/qcommon/GenericParser2.cpp"
 	"${MPDir}/qcommon/matcomp.cpp"
 	"${MPDir}/qcommon/q_math.cpp"
 	"${MPDir}/qcommon/q_shared.cpp")
@@ -131,6 +127,7 @@ if(NOT WIN32)
 	set(MPVanillaRendererIncludeDirectories ${MPVanillaRendererIncludeDirectories} ${OPENGL_INCLUDE_DIR})
 	set(MPVanillaRendererLibraries ${MPVanillaRendererLibraries} ${OPENGL_LIBRARIES})
 
+	set(SDL2_BUILDING_LIBRARY ON) # don't want main() in Renderer
 	find_package(SDL2 REQUIRED)
 	set(MPVanillaRendererIncludeDirectories ${MPVanillaRendererIncludeDirectories} ${SDL2_INCLUDE_DIR})
 	set(MPVanillaRendererLibraries ${MPVanillaRendererLibraries} ${SDL2_LIBRARY})

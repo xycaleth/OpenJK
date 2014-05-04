@@ -45,7 +45,6 @@ cvar_t	*com_sv_running;
 cvar_t	*com_cl_running;
 cvar_t	*com_logfile;		// 1 = buffer log, 2 = flush after each print
 cvar_t	*com_showtrace;
-cvar_t	*com_terrainPhysics;
 cvar_t	*com_version;
 cvar_t	*com_buildScript;	// for automated data building scripts
 cvar_t	*com_bootlogo;
@@ -55,15 +54,11 @@ cvar_t	*com_skippingcin;
 cvar_t	*com_speedslog;		// 1 = buffer log, 2 = flush after each print
 cvar_t  *com_homepath;
 
-#ifndef __NO_JK2
-// Support for JK2 binaries --eez
-cvar_t	*com_jk2;			// searches for jk2gamex86.dll instead of jagamex86.dll
-#endif
-
 #ifdef G2_PERFORMANCE_ANALYSIS
 cvar_t	*com_G2Report;
 #endif
 
+static cvar_t *com_affinity;
 
 // com_speeds times
 int		time_game;
@@ -146,8 +141,12 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 
 	CL_ConsolePrint( msg );
 
+	// Strip out color codes because these aren't needed in the log/viewlog or in the output window --eez
+	Q_StripColor( msg );
+
 	// echo to dedicated console and early console
 	Sys_Print( msg );
+
 
 #ifdef OUTPUT_TO_BUILD_WINDOW
 	OutputDebugString(msg);
@@ -281,8 +280,8 @@ void QDECL Com_Error( int code, const char *fmt, ... ) {
 	if ( code == ERR_DISCONNECT || code == ERR_DROP ) {
 		throw code;
 	} else {
-		CL_Shutdown ();
 		SV_Shutdown (va("Server fatal crashed: %s\n", com_errorMessage));
+		CL_Shutdown ();
 	}
 
 	Com_Shutdown ();
@@ -1045,6 +1044,37 @@ static void Com_CatchError ( int code )
 	}
 }
 
+#ifdef _WIN32
+static const char *GetErrorString( DWORD error ) {
+	static char buf[MAX_STRING_CHARS];
+	buf[0] = '\0';
+
+	if ( error ) {
+		LPVOID lpMsgBuf;
+		DWORD bufLen = FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL, error, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ), (LPTSTR)&lpMsgBuf, 0, NULL );
+		if ( bufLen ) {
+			LPCSTR lpMsgStr = (LPCSTR)lpMsgBuf;
+			Q_strncpyz( buf, lpMsgStr, min( (size_t)(lpMsgStr + bufLen), sizeof(buf) ) );
+			LocalFree( lpMsgBuf );
+		}
+	}
+	return buf;
+}
+#endif
+
+// based on Smod code
+static void Com_SetProcessorAffinity( void ) {
+#ifdef _WIN32
+	DWORD processMask;
+	if ( sscanf( com_affinity->string, "%X", &processMask ) != 1 )
+		processMask = 1; // set to first core only
+
+	if ( !SetProcessAffinityMask( GetCurrentProcess(), processMask ) )
+		Com_Printf( "Setting affinity mask failed (%s)\n", GetErrorString( GetLastError() ) );
+#endif
+}
+
 /*
 =================
 Com_Init
@@ -1072,11 +1102,6 @@ void Com_Init( char *commandLine ) {
 
 		// override anything from the config files with command line args
 		Com_StartupVariable( NULL );
-
-#ifndef __NO_JK2
-		Com_StartupVariable( "com_jk2" );
-		com_jk2 = Cvar_Get( "com_jk2", "0", CVAR_INIT );
-#endif
 
 		// done early so bind command exists
 		CL_InitKeyCommands();
@@ -1113,7 +1138,6 @@ void Com_Init( char *commandLine ) {
 		com_timescale = Cvar_Get ("timescale", "1", CVAR_CHEAT );
 		com_fixedtime = Cvar_Get ("fixedtime", "0", CVAR_CHEAT);
 		com_showtrace = Cvar_Get ("com_showtrace", "0", CVAR_CHEAT);
-		com_terrainPhysics = Cvar_Get ("com_terrainPhysics", "1", CVAR_CHEAT);
 		com_viewlog = Cvar_Get( "viewlog", "0", CVAR_TEMP );
 		com_speeds = Cvar_Get ("com_speeds", "0", 0);
 		
@@ -1128,7 +1152,9 @@ void Com_Init( char *commandLine ) {
 		com_skippingcin = Cvar_Get ("skippingCinematic", "0", CVAR_ROM);
 		com_buildScript = Cvar_Get( "com_buildScript", "0", 0 );
 
-		com_bootlogo = Cvar_Get( "com_bootlogo", "1", CVAR_ARCHIVE);
+		com_affinity = Cvar_Get( "com_affinity", "1", CVAR_ARCHIVE );
+
+		com_bootlogo = Cvar_Get( "com_bootlogo", "1", CVAR_ARCHIVE );
 		
 		if ( com_developer && com_developer->integer ) {
 			Cmd_AddCommand ("error", Com_Error_f);
@@ -1139,20 +1165,17 @@ void Com_Init( char *commandLine ) {
 		s = va("%s %s %s", Q3_VERSION, PLATFORM_STRING, __DATE__ );
 		com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO );
 
-#ifndef __NO_JK2
-		if(com_jk2 && com_jk2->integer)
-		{
-			JK2SP_Init();
-			Com_Printf("Running Jedi Outcast Mode\n");
-		}
-		else
+#ifdef JK2_MODE
+		JK2SP_Init();
+		Com_Printf("Running Jedi Outcast Mode\n");
+#else
+		SE_Init();	// Initialize StringEd
+		Com_Printf("Running Jedi Academy Mode\n");
 #endif
-		{
-			SE_Init();	// Initialize StringEd
-			Com_Printf("Running Jedi Academy Mode\n");
-		}
 	
 		Sys_Init();	// this also detects CPU type, so I can now do this CPU check below...
+
+		Com_SetProcessorAffinity();
 
 		Netchan_Init( Com_Milliseconds() & 0xffff );	// pick a port value that should be nice and random
 //	VM_Init();
@@ -1343,7 +1366,7 @@ void G2Time_ReportTimers(void);
 void Com_Frame( void ) {
 	try 
 	{
-		int		timeBeforeFirstEvents, timeBeforeServer, timeBeforeEvents, timeBeforeClient, timeAfter;
+		int		timeBeforeFirstEvents = 0, timeBeforeServer = 0, timeBeforeEvents = 0, timeBeforeClient = 0, timeAfter = 0;
 		int		msec, minMsec;
 		static int	lastTime = 0;
 
@@ -1532,11 +1555,8 @@ void Com_Frame( void ) {
 Com_Shutdown
 =================
 */
-extern void CM_FreeShaderText(void);
 void Com_Shutdown (void) {
 	CM_ClearMap();
-
-	CM_FreeShaderText();
 
 	if (logfile) {
 		FS_FCloseFile (logfile);
@@ -1559,14 +1579,11 @@ void Com_Shutdown (void) {
 		com_journalFile = 0;
 	}
 
-#ifndef __NO_JK2
-	if(com_jk2 && com_jk2->integer)
-	{
-		JK2SP_Shutdown();
-	}
-	else
-#endif
+#ifdef JK2_MODE
+	JK2SP_Shutdown();
+#else
 	SE_ShutDown();//close the string packages
+#endif
 
 	extern void Netchan_Shutdown();
 	Netchan_Shutdown();
@@ -1845,72 +1862,3 @@ void Field_AutoComplete( field_t *field ) {
 
 	Field_CompleteCommand( completionField->buffer, qtrue, qtrue );
 }
-
-/*
-============
-ParseTextFile
-============
-*/
-
-bool Com_ParseTextFile(const char *file, class CGenericParser2 &parser, bool cleanFirst)
-{
-	fileHandle_t	f;
-	int				length = 0;
-	char			*buf = 0, *bufParse = 0;
-
-	length = FS_FOpenFileByMode( file, &f, FS_READ );
-	if (!f || !length)		
-	{
-		return false;
-	}
-
-	buf = new char [length + 1];
-	FS_Read( buf, length, f );
-	buf[length] = 0;
-
-	bufParse = buf;
-	parser.Parse(&bufParse, cleanFirst);
-	delete[] buf;
-
-	FS_FCloseFile( f );
-
-	return true;
-}
-
-void Com_ParseTextFileDestroy(class CGenericParser2 &parser)
-{
-	parser.Clean();
-}
-
-CGenericParser2 *Com_ParseTextFile(const char *file, bool cleanFirst, bool writeable)
-{
-	fileHandle_t	f;
-	int				length = 0;
-	char			*buf = 0, *bufParse = 0;
-	CGenericParser2 *parse;
-
-	length = FS_FOpenFileByMode( file, &f, FS_READ );
-	if (!f || !length)		
-	{
-		return 0;
-	}
-
-	buf = new char [length + 1];
-	FS_Read( buf, length, f );
-	FS_FCloseFile( f );
-	buf[length] = 0;
-
-	bufParse = buf;
-
-	parse = new CGenericParser2;
-	if (!parse->Parse(&bufParse, cleanFirst, writeable))
-	{
-		delete parse;
-		parse = 0;
-	}
-
-	delete[] buf;
-
-	return parse;
-}
-

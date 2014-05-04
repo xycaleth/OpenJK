@@ -1,5 +1,7 @@
 #pragma once
 
+#include "qcommon/q_shared.h"
+
 // this is only used for visualization tools in cm_ debug functions
 
 typedef struct winding_s {
@@ -24,18 +26,8 @@ typedef struct winding_s {
 #endif
 
 winding_t	*AllocWinding (int points);
-float	WindingArea (winding_t *w);
-void	WindingCenter (winding_t *w, vec3_t center);
-void	ClipWindingEpsilon (winding_t *in, vec3_t normal, float dist, 
-				float epsilon, winding_t **front, winding_t **back);
-winding_t	*ChopWinding (winding_t *in, vec3_t normal, float dist);
 winding_t	*CopyWinding (winding_t *w);
-winding_t	*ReverseWinding (winding_t *w);
 winding_t	*BaseWindingForPlane (vec3_t normal, float dist);
-void	CheckWinding (winding_t *w);
-void	WindingPlane (winding_t *w, vec3_t normal, float *dist);
-void	RemoveColinearPoints (winding_t *w);
-int		WindingOnPlaneSide (winding_t *w, vec3_t normal, float dist);
 void	FreeWinding (winding_t *w);
 void	WindingBounds (winding_t *w, vec3_t mins, vec3_t maxs);
 

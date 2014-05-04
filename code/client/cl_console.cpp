@@ -32,7 +32,7 @@ console_t	con;
 
 cvar_t		*con_conspeed;
 cvar_t		*con_notifytime;
-cvar_t		*con_conAlpha;	//background alpha multiplier
+cvar_t		*con_opacity; // background alpha multiplier
 cvar_t		*con_autoclear;
 
 #define	DEFAULT_CONSOLE_WIDTH	78
@@ -57,6 +57,16 @@ void Con_ToggleConsole_f (void) {
 
 	Con_ClearNotify ();
 	Key_SetCatcher( Key_GetCatcher( ) ^ KEYCATCH_CONSOLE );
+}
+
+/*
+===================
+Con_ToggleMenu_f
+===================
+*/
+void Con_ToggleMenu_f( void ) {
+	CL_KeyEvent( A_ESCAPE, qtrue, Sys_Milliseconds() );
+	CL_KeyEvent( A_ESCAPE, qfalse, Sys_Milliseconds() );
 }
 
 /*
@@ -269,7 +279,7 @@ void Con_Init (void) {
 
 	con_notifytime = Cvar_Get ("con_notifytime", "3", 0);
 	con_conspeed = Cvar_Get ("scr_conspeed", "3", 0);
-	con_conAlpha = Cvar_Get( "conAlpha", "1.6", CVAR_ARCHIVE );
+	con_opacity = Cvar_Get ("con_opacity", "0.8", CVAR_ARCHIVE);
 	con_autoclear = Cvar_Get ("con_autoclear", "1", CVAR_ARCHIVE);
 	
 	Field_Clear( &g_consoleField );
@@ -280,6 +290,7 @@ void Con_Init (void) {
 	}
 
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
+	Cmd_AddCommand ("togglemenu", Con_ToggleMenu_f);
 	Cmd_AddCommand ("clear", Con_Clear_f);
 	Cmd_AddCommand ("condump", Con_Dump_f);
 	Cmd_SetCommandCompletionFunc( "condump", Cmd_CompleteTxtName );
@@ -531,11 +542,11 @@ void Con_DrawSolidConsole( float frac )
 		y = 0;
 	}
 	else {
-		// draw the background only if fullscreen
-		if ( frac != 1.0f )
+		// draw the background at full opacity only if fullscreen
+		if (frac < 1.0f)
 		{
-			vec4_t	con_color;
-			MAKERGBA( con_color, 0.0f, 0.0f, 0.0f, frac*con_conAlpha->value );
+			vec4_t con_color;
+			MAKERGBA(con_color, 1.0f, 1.0f, 1.0f, Com_Clamp(0.0f, 1.0f, con_opacity->value));
 			re.SetColor(con_color);
 		}
 		else
@@ -553,7 +564,7 @@ void Con_DrawSolidConsole( float frac )
 	i = strlen( Q3_VERSION );
 
 	for (x=0 ; x<i ; x++) {
-		SCR_DrawSmallChar( cls.glconfig.vidWidth - ( i - x ) * SMALLCHAR_WIDTH, 
+		SCR_DrawSmallChar( cls.glconfig.vidWidth - ( i - x + 1 ) * SMALLCHAR_WIDTH, 
 			(lines-(SMALLCHAR_HEIGHT+SMALLCHAR_HEIGHT/2)), Q3_VERSION[x] );
 	}
 

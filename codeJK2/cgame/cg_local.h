@@ -583,6 +583,9 @@ extern	vmCvar_t		cg_drawGun;
 extern	vmCvar_t		cg_autoswitch;
 extern	vmCvar_t		cg_simpleItems;
 extern	vmCvar_t		cg_fov;
+extern	vmCvar_t		cg_fovAspectAdjust;
+extern	vmCvar_t		cg_fovViewmodel;
+extern	vmCvar_t		cg_fovViewmodelAdjust;
 extern	vmCvar_t		cg_missionstatusscreen;
 extern	vmCvar_t		cg_endcredits;
 extern	vmCvar_t		cg_updatedDataPadForcePower1;
@@ -738,7 +741,6 @@ void CG_GameText(int y );
 //
 void CG_DrawScrollText( void );
 void CG_DrawCaptionText( void );
-void CG_DrawGameText( void );
 void CG_DrawCenterString( void ); 
 
 
@@ -1170,6 +1172,10 @@ void	cgi_UI_MenuPaintAll(void);
 void	cgi_UI_String_Init(void);
 
 void	SetWeaponSelectTime(void);
+
+void	CG_ClearLightStyles( void );
+void	CG_RunLightStyles( void );
+void	CG_SetLightstyle( int i );
 
 
 #endif	//__CG_LOCAL_H__

@@ -481,6 +481,9 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 	{
 		if(abs(cl.joystickAxis[AXIS_FORWARD]) >= 30) cmd->forwardmove = cl.joystickAxis[AXIS_FORWARD];
 		if(abs(cl.joystickAxis[AXIS_SIDE]) >= 30) cmd->rightmove = cl.joystickAxis[AXIS_SIDE];
+		anglespeed = 0.001 * cls.frametime * cl_anglespeedkey->value;
+		cl.viewangles[YAW] -= (cl_yawspeed->value / 100.0f) * (cl.joystickAxis[AXIS_YAW]/1024.0f);
+		cl.viewangles[PITCH] += (cl_pitchspeed->value / 100.0f) * (cl.joystickAxis[AXIS_PITCH]/1024.0f);
 	}
 	else
 	{
@@ -522,7 +525,6 @@ void CL_JoystickMove( usercmd_t *cmd ) {
 		}
 
 		cmd->upmove = ClampChar( cmd->upmove + cl.joystickAxis[AXIS_UP] );
-
 	}
 }
 
@@ -971,15 +973,9 @@ void CL_InitInput( void ) {
 	Cmd_AddCommand ("-force_lightning", IN_Button1Up);
 	Cmd_AddCommand ("+useforce", IN_Button2Down);	//use current force power
 	Cmd_AddCommand ("-useforce", IN_Button2Up);
-#ifndef __NO_JK2
-	if ( com_jk2 && com_jk2->integer ) {
-		Cmd_AddCommand ("+block", IN_Button3Down);//manual blocking
-		Cmd_AddCommand ("-block", IN_Button3Up);
-	}
-	else {
-		Cmd_AddCommand ("+force_drain", IN_Button3Down);//force drain
-		Cmd_AddCommand ("-force_drain", IN_Button3Up);
-	}
+#ifdef JK2_MODE
+	Cmd_AddCommand ("+block", IN_Button3Down);//manual blocking
+	Cmd_AddCommand ("-block", IN_Button3Up);
 #else
 	Cmd_AddCommand ("+force_drain", IN_Button3Down);//force drain
 	Cmd_AddCommand ("-force_drain", IN_Button3Up);
@@ -992,14 +988,7 @@ void CL_InitInput( void ) {
 	Cmd_AddCommand ("-force_grip", IN_Button6Up);
 	Cmd_AddCommand ("+altattack", IN_Button7Down);//altattack
 	Cmd_AddCommand ("-altattack", IN_Button7Up);
-#ifndef __NO_JK2
-	if ( !com_jk2 || !com_jk2->integer ) {
-		Cmd_AddCommand ("+forcefocus", IN_Button8Down);//special saber attacks
-		Cmd_AddCommand ("-forcefocus", IN_Button8Up);
-		Cmd_AddCommand ("+block", IN_Button8Down);//manual blocking
-		Cmd_AddCommand ("-block", IN_Button8Up);
-	}
-#else
+#ifndef JK2_MODE
 	Cmd_AddCommand ("+forcefocus", IN_Button8Down);//special saber attacks
 	Cmd_AddCommand ("-forcefocus", IN_Button8Up);
 	Cmd_AddCommand ("+block", IN_Button8Down);//manual blocking
