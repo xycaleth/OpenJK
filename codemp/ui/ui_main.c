@@ -896,7 +896,7 @@ void UI_SetActiveMenu( uiMenuCommand_t menu ) {
 				//	trap->S_StartBackgroundTrack("sound/misc/menu_background.wav", NULL);
 				if (uiInfo.inGameLoad)
 					UI_LoadNonIngame();
-\
+
 				Menus_CloseAll();
 				Menus_ActivateByName("main");
 				trap->Cvar_VariableStringBuffer("com_errorMessage", buf, sizeof(buf));
@@ -7236,6 +7236,8 @@ static int UI_HeadCountByColor(void) {
 	return c;
 }
 
+int Q_isprintext( int c );
+int Q_isgraph( int c );
 /*
 ==================
 UI_ServerInfoIsValid
@@ -7247,24 +7249,20 @@ or if the hostname is blank/undefined
 static qboolean UI_ServerInfoIsValid( char *info )
 {
 	char *c;
-	int  len = 0;
 
 	for ( c = info; *c; c++ )
 	{
-		if ( !isprint( *(unsigned char *)c ) )
+		if ( !Q_isprintext( *(unsigned char *)c ) ) //isprint
 			return qfalse;
 	}
 
 	for ( c = Info_ValueForKey( info, "hostname" ); *c; c++ )
 	{
-		if ( isgraph( *(unsigned char *)c ) )
-			len++;
+		if ( Q_isgraph( *(unsigned char *)c ) ) //isgraph
+			return qtrue;
 	}
 
-	if ( len )
-		return qtrue;
-	else
-		return qfalse;
+	return qfalse;
 }
 
 /*
@@ -7281,11 +7279,6 @@ static void UI_InsertServerIntoDisplayList(int num, int position) {
 	}
 
 	trap->LAN_GetServerInfo( UI_SourceForLAN(), num, info, sizeof(info) );
-
-#if 0
-	if ( !UI_ServerInfoIsValid( info ) ) // don't list servers with invalid info
-		return;
-#endif
 
 	uiInfo.serverStatus.numDisplayServers++;
 	for (i = uiInfo.serverStatus.numDisplayServers; i > position; i--) {
@@ -7407,6 +7400,7 @@ static void UI_BuildServerDisplayList(int force) {
 		return;
 	}
 
+	trap->Cvar_Update( &ui_browserFilterInvalidInfo );
 	trap->Cvar_Update( &ui_browserShowEmpty );
 	trap->Cvar_Update( &ui_browserShowFull );
 	trap->Cvar_Update( &ui_browserShowPasswordProtected );
@@ -7425,6 +7419,12 @@ static void UI_BuildServerDisplayList(int force) {
 		if (ping > 0 || ui_netSource.integer == UIAS_FAVORITES) {
 
 			trap->LAN_GetServerInfo(lanSource, i, info, MAX_STRING_CHARS);
+
+			// don't list servers with invalid info
+			if ( ui_browserFilterInvalidInfo.integer != 0 && !UI_ServerInfoIsValid( info ) ) {
+				trap->LAN_MarkServerVisible( lanSource, i, qfalse );
+				continue;
+			}
 
 			clients = atoi(Info_ValueForKey(info, "clients"));
 			uiInfo.serverStatus.numPlayersOnServers += clients;
@@ -10373,7 +10373,7 @@ static void UI_StartServerRefresh(qboolean full)
 
 	qtime_t q;
 	trap->RealTime(&q);
- 	trap->Cvar_Set( va("ui_lastServerRefresh_%i", ui_netSource.integer), va("%s-%i, %i @ %i:%2i", GetMonthAbbrevString(q.tm_mon),q.tm_mday, 1900+q.tm_year,q.tm_hour,q.tm_min));
+ 	trap->Cvar_Set( va("ui_lastServerRefresh_%i", ui_netSource.integer), va("%s-%i, %i @ %i:%02i", GetMonthAbbrevString(q.tm_mon),q.tm_mday, 1900+q.tm_year,q.tm_hour,q.tm_min));
 
 	if (!full) {
 		UI_UpdatePendingPings();

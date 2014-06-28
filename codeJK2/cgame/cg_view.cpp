@@ -95,7 +95,7 @@ void CG_TestG2Model_f (void) {
 	Q_strncpyz (cg.testModelName, CG_Argv( 1 ), MAX_QPATH );
 	cg.testModelEntity.hModel = cgi_R_RegisterModel( cg.testModelName );
 
-	cg.testModel = gi.G2API_InitGhoul2Model(*((CGhoul2Info_v *)cg.testModelEntity.ghoul2), cg.testModelName, cg.testModelEntity.hModel, NULL, NULL,0,0);
+	cg.testModel = gi.G2API_InitGhoul2Model( *((CGhoul2Info_v *)cg.testModelEntity.ghoul2), cg.testModelName, cg.testModelEntity.hModel, NULL_HANDLE, NULL_HANDLE, 0, 0 );
 	cg.testModelEntity.radius = 100.0f;
 
 	if ( cgi_Argc() == 3 ) {
@@ -378,13 +378,13 @@ static void CG_CalcIdealThirdPersonViewTarget(void)
 	{
 
 		gentity_t *gent = &g_entities[cg.snap->ps.viewEntity];
-		if ( gent->client && (gent->client->NPC_class == CLASS_GONK ) 
-			|| (gent->client->NPC_class == CLASS_INTERROGATOR) 
-			|| (gent->client->NPC_class == CLASS_SENTRY) 
-			|| (gent->client->NPC_class == CLASS_PROBE ) 
-			|| (gent->client->NPC_class == CLASS_MOUSE ) 
-			|| (gent->client->NPC_class == CLASS_R2D2 ) 
-			|| (gent->client->NPC_class == CLASS_R5D2) )
+		if ( gent->client && (gent->client->NPC_class == CLASS_GONK
+			|| gent->client->NPC_class == CLASS_INTERROGATOR
+			|| gent->client->NPC_class == CLASS_SENTRY
+			|| gent->client->NPC_class == CLASS_PROBE
+			|| gent->client->NPC_class == CLASS_MOUSE
+			|| gent->client->NPC_class == CLASS_R2D2
+			|| gent->client->NPC_class == CLASS_R5D2) )
 		{	// Droids use a generic offset
 			cameraFocusLoc[2] += 4;
 			VectorCopy( cameraFocusLoc,  cameraIdealTarget );

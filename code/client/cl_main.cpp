@@ -130,32 +130,6 @@ void CL_AddReliableCommand( const char *cmd ) {
 //======================================================================
 
 /*
-==================
-CL_NextDemo
-
-Called when a demo or cinematic finishes
-If the "nextdemo" cvar is set, that command will be issued
-==================
-*/
-void CL_NextDemo( void ) {
-	char	v[MAX_STRING_CHARS];
-
-	Q_strncpyz( v, Cvar_VariableString ("nextdemo"), sizeof(v) );
-	v[MAX_STRING_CHARS-1] = 0;
-	Com_DPrintf("CL_NextDemo: %s\n", v );
-	if (!v[0]) {
-		return;
-	}
-
-	Cvar_Set ("nextdemo","");
-	Cbuf_AddText (v);
-	Cbuf_AddText ("\n");
-	Cbuf_Execute();
-}
-
-//======================================================================
-
-/*
 =================
 CL_FlushMemory
 
@@ -947,6 +921,23 @@ void CL_StartSound( void ) {
 }
 
 /*
+============
+CL_InitRenderer
+============
+*/
+void CL_InitRenderer( void ) {
+	// this sets up the renderer and calls R_Init
+	re.BeginRegistration( &cls.glconfig );
+
+	// load character sets
+	cls.charSetShader = re.RegisterShaderNoMip("gfx/2d/charsgrid_med");
+	cls.whiteShader = re.RegisterShader( "white" );
+	cls.consoleShader = re.RegisterShader( "console" );
+	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
+	g_consoleField.widthInChars = g_console_field_width;
+}
+
+/*
 ============================
 CL_StartHunkUsers
 
@@ -961,14 +952,7 @@ void CL_StartHunkUsers( void ) {
 
 	if ( !cls.rendererStarted ) {
 		cls.rendererStarted = qtrue;
-		re.BeginRegistration( &cls.glconfig );
-
-		// load character sets
-		cls.charSetShader = re.RegisterShaderNoMip( "gfx/2d/charsgrid_med" );
-		cls.whiteShader = re.RegisterShader( "white" );
-		cls.consoleShader = re.RegisterShader( "console" );
-		g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
-		g_consoleField.widthInChars = g_console_field_width;
+		CL_InitRenderer();
 	}
 
 	if ( !cls.soundStarted ) {
@@ -1028,15 +1012,12 @@ DLL glue, but highly reusuable DLL glue at that
 ============
 */
 
-#ifdef JK2_MODE
-extern cStringsSingle *JK2SP_GetString(const char *Reference);
-#endif
 const char *String_GetStringValue( const char *reference )
 {
 #ifndef JK2_MODE
 	return SE_GetString(reference);
 #else
-	return const_cast<const char *>(JK2SP_GetString( reference )->GetText());
+	return JK2SP_GetStringTextString(reference);
 #endif
 }
 
@@ -1361,7 +1342,7 @@ void CL_Shutdown( void ) {
 	Com_Printf( "----- CL_Shutdown -----\n" );
 
 	if ( recursive ) {
-		printf ("recursive shutdown\n");
+		Com_Printf( "WARNING: Recursive shutdown\n" );
 		return;
 	}
 	recursive = qtrue;

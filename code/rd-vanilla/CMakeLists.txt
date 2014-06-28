@@ -62,13 +62,37 @@ if(BuildSPRdVanilla OR BuildJK2SPRdVanilla)
 	endif(UseInternalPNG)
 
 	if(UseInternalZlib)
-		# zlib.lib is included for windows
-		find_library(ZlibLibrary NAMES zlib PATHS ${OpenJKLibDir})
-		if(NOT ZlibLibrary)
-			message(FATAL_ERROR "UseInternalZlib enabled, but lib/zlib.lib not found!")
-		endif(NOT ZlibLibrary)
+		set(SPRDVanillaRendererZlibFiles
+			"${OpenJKLibDir}/zlib/adler32.c"
+			"${OpenJKLibDir}/zlib/compress.c"
+			"${OpenJKLibDir}/zlib/crc32.c"
+			"${OpenJKLibDir}/zlib/deflate.c"
+			"${OpenJKLibDir}/zlib/gzclose.c"
+			"${OpenJKLibDir}/zlib/gzlib.c"
+			"${OpenJKLibDir}/zlib/gzread.c"
+			"${OpenJKLibDir}/zlib/gzwrite.c"
+			"${OpenJKLibDir}/zlib/infback.c"
+			"${OpenJKLibDir}/zlib/inffast.c"
+			"${OpenJKLibDir}/zlib/inflate.c"
+			"${OpenJKLibDir}/zlib/inftrees.c"
+			"${OpenJKLibDir}/zlib/trees.c"
+			"${OpenJKLibDir}/zlib/uncompr.c"
+			"${OpenJKLibDir}/zlib/zutil.c"
+			"${OpenJKLibDir}/zlib/crc32.h"
+			"${OpenJKLibDir}/zlib/deflate.h"
+			"${OpenJKLibDir}/zlib/gzguts.h"
+			"${OpenJKLibDir}/zlib/inffast.h"
+			"${OpenJKLibDir}/zlib/inffixed.h"
+			"${OpenJKLibDir}/zlib/inflate.h"
+			"${OpenJKLibDir}/zlib/inftrees.h"
+			"${OpenJKLibDir}/zlib/trees.h"
+			"${OpenJKLibDir}/zlib/zconf.h"
+			"${OpenJKLibDir}/zlib/zlib.h"
+			"${OpenJKLibDir}/zlib/zutil.h")
+		source_group("zlib" FILES ${SPRDVanillaRendererZlibFiles})
+		set(SPRDVanillaFiles ${SPRDVanillaFiles} ${SPRDVanillaRendererZlibFiles})
+		
 		set(SPRDVanillaRendererIncludeDirectories ${SPRDVanillaRendererIncludeDirectories} "${OpenJKLibDir}/zlib")
-		set(SPRDVanillaRendererLibraries ${SPRDVanillaRendererLibraries} ${ZlibLibrary})
 	else(UseInternalZlib)
 		find_package(ZLIB REQUIRED)
 		set(SPRDVanillaRendererIncludeDirectories ${SPRDVanillaRendererIncludeDirectories} ${ZLIB_INCLUDE_DIR})
@@ -131,7 +155,6 @@ if(BuildSPRdVanilla OR BuildJK2SPRdVanilla)
 		"${SPDir}/rd-common/tr_font.cpp"
 		"${SPDir}/rd-common/tr_font.h"
 		"${SPDir}/rd-common/tr_image_load.cpp"
-		"${SPDir}/rd-common/tr_image_manipulation.cpp"
 		"${SPDir}/rd-common/tr_image_jpg.cpp"
 		"${SPDir}/rd-common/tr_image_tga.cpp"
 		"${SPDir}/rd-common/tr_image_png.cpp"
@@ -179,11 +202,11 @@ if(BuildSPRdVanilla OR BuildJK2SPRdVanilla)
 		if(WIN32)
 			install(TARGETS ${ProjectName} RUNTIME DESTINATION ".")
 		else(WIN32)
-			if(MakeApplicationBundles AND BuildSPEngine)
+			if(MakeApplicationBundles AND (BuildSPEngine OR BuildJK2SPEngine))
 				install(TARGETS ${ProjectName} LIBRARY DESTINATION "${EngineName}.app/Contents/MacOS/")
-			else(MakeApplicationBundles AND BuildSPEngine)
+			else(MakeApplicationBundles AND (BuildSPEngine OR BuildJK2SPEngine))
 				install(TARGETS ${ProjectName} LIBRARY DESTINATION ".")
-			endif(MakeApplicationBundles AND BuildSPEngine)
+			endif(MakeApplicationBundles AND (BuildSPEngine OR BuildJK2SPEngine))
 		endif(WIN32)
 
 		set_target_properties(${ProjectName} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "${SPRDVanillaDefines};${ReleaseDefines}")

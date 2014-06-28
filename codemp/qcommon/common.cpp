@@ -1018,10 +1018,6 @@ static void Com_Crash_f( void ) {
 	* ( volatile int * ) 0 = 0x12345678;
 }
 
-#ifdef MEM_DEBUG
-	void SH_Register(void);
-#endif
-
 /*
 ==================
 Com_ExecuteCfg
@@ -1305,10 +1301,6 @@ void Com_Init( char *commandLine ) {
 
 		// make sure single player is off by default
 		Cvar_Set("ui_singlePlayerActive", "0");
-
-#ifdef MEM_DEBUG
-		SH_Register();
-#endif
 
 		com_fullyInitialized = qtrue;
 		Com_Printf ("--- Common Initialization Complete ---\n");

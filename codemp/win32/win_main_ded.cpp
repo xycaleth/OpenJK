@@ -47,6 +47,8 @@ qboolean Sys_LowPhysicalMemory(void) {
 	if (!bAsked)	// just in case it takes a little time for GlobalMemoryStatusEx() to gather stats on
 	{				//	stuff we don't care about such as virtual mem etc.
 		bAsked = qtrue;
+
+		stat.dwLength = sizeof (stat);
 		GlobalMemoryStatusEx (&stat);
 	}
 	return (stat.ullTotalPhys <= MEM_THRESHOLD) ? qtrue : qfalse;
@@ -651,7 +653,6 @@ Used to load a development dll instead of a virtual machine
 */
 
 void * QDECL Sys_LoadLegacyGameDll( const char *name, intptr_t (QDECL **vmMain)(int, ...), intptr_t (QDECL *systemcalls)(intptr_t, ...) ) {
-	static int	lastWarning = 0;
 	HINSTANCE	libHandle;
 	void	(QDECL *dllEntry)( intptr_t (QDECL *syscallptr)(intptr_t, ...) );
 	char	*basepath;
@@ -666,7 +667,7 @@ void * QDECL Sys_LoadLegacyGameDll( const char *name, intptr_t (QDECL **vmMain)(
 	if (!Sys_UnpackDLL(filename))
 	{
 		if ( com_developer->integer )
-			Com_Printf ("Sys_LoadLegacyGameDll: Failed to unpack %s" ARCH_STRING DLL_EXT " from PK3.\n", name);
+			Com_Printf( "Sys_LoadLegacyGameDll: Failed to unpack %s from PK3.\n", filename );
 
 		return NULL;
 	}
@@ -702,7 +703,7 @@ void * QDECL Sys_LoadLegacyGameDll( const char *name, intptr_t (QDECL **vmMain)(
 	*vmMain = (intptr_t (QDECL *)(int,...))GetProcAddress( libHandle, "vmMain" );
 	if ( !*vmMain || !dllEntry ) {
 		if ( com_developer->integer )
-			Com_Printf ("Sys_LoadLegacyGameDll: Entry point not found in %s" ARCH_STRING DLL_EXT ". Failed with system error code 0x%X.\n", name, GetLastError());
+			Com_Printf( "Sys_LoadLegacyGameDll: Entry point not found in %s. Failed with system error code 0x%X.\n", filename, GetLastError() );
 
 		FreeLibrary( libHandle );
 		return NULL;
@@ -718,12 +719,12 @@ void *QDECL Sys_LoadGameDll( const char *name, void *(QDECL **moduleAPI)(int, ..
 	char	*fn;
 	char	filename[MAX_QPATH];
 
-	Com_sprintf( filename, sizeof( filename ), "%s"ARCH_STRING DLL_EXT, name );
+	Com_sprintf( filename, sizeof( filename ), "%s" ARCH_STRING DLL_EXT, name );
 
 	if (!Sys_UnpackDLL(filename))
 	{
 		if ( com_developer->integer )
-			Com_Printf ("Sys_LoadGameDll: Failed to unpack %s" ARCH_STRING DLL_EXT " from PK3.\n", name);
+			Com_Printf( "Sys_LoadGameDll: Failed to unpack %s from PK3.\n", filename );
 
 		return NULL;
 	}
@@ -758,7 +759,7 @@ void *QDECL Sys_LoadGameDll( const char *name, void *(QDECL **moduleAPI)(int, ..
 	*moduleAPI = (void *(QDECL *)(int,...))GetProcAddress( libHandle, "GetModuleAPI" );
 	if ( !*moduleAPI ) {
 		if ( com_developer->integer )
-			Com_Printf ("Sys_LoadGameDll: Entry point not found in %s" ARCH_STRING DLL_EXT ". Failed with system error code 0x%X.\n", name, GetLastError());
+			Com_Printf( "Sys_LoadGameDll: Entry point not found in %s. Failed with system error code 0x%X.\n", filename, GetLastError() );
 
 		FreeLibrary( libHandle );
 		return NULL;
@@ -914,8 +915,6 @@ Called after the common systems (cvars, files, etc)
 are initialized
 ================
 */
-#define OSR2_BUILD_NUMBER 1111
-#define WIN98_BUILD_NUMBER 1998
 
 void Sys_Init( void ) {
 	// make sure the timer is high precision, otherwise
