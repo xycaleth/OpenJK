@@ -13,6 +13,10 @@ find_package( Qt5Widgets REQUIRED )
 find_package( Qt5Gui REQUIRED )
 find_package( OpenGL REQUIRED )
 
+if( MSVC )
+	
+endif()
+
 set( MODVIEW_HEADER_FILES
 	"./anims.h"
 	"./common_headers.h"
@@ -156,6 +160,9 @@ qt5_wrap_ui( UI_HEADERS MainForm.ui )
 include_directories( "." )
 
 add_definitions( -D_M_IX86 )
+if( MSVC )
+	add_definitions( -D_CRT_SECURE_NO_WARNINGS )
+endif()
 
 set( MODVIEW_LIBRARIES ${OPENGL_LIBRARIES} )
 
