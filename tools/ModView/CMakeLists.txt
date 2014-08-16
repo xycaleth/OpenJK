@@ -1,10 +1,21 @@
 cmake_minimum_required( VERSION 2.8.9 )
 project( ModView )
 
+set( CMAKE_PREFIX_PATH
+		${CMAKE_PREFIX_PATH}
+		"${CMAKE_CURRENT_SOURCE_DIR}/../qt5/qtbase/lib/cmake/Qt5Core" )
+
+set( CMAKE_INCLUDE_CURRENT_DIR ON )
+set( CMAKE_AUTOMOC ON )
+
+find_package( Qt5Core REQUIRED )
+find_package( Qt5Widgets REQUIRED )
+find_package( Qt5Gui REQUIRED )
+find_package( OpenGL REQUIRED )
+
 set( MODVIEW_HEADER_FILES
 	"./anims.h"
 	"./common_headers.h"
-	"./disablewarnings.h"
 	"./files.h"
 	"./generic_stuff.h"
 	"./genericparser.h"
@@ -51,7 +62,6 @@ set( MODVIEW_HEADER_FILES
 	"./sequence.h"
 	"./shader.h"
 	"./skins.h"
-	"./special_defines.h"
 	"./stdafx.h"
 	"./stl.h"
 	"./StringUtils.h"
@@ -139,29 +149,17 @@ set( MODVIEW_SOURCE_FILES
 	"./zlib/infutil.c"
 	"./zlib/trees.c"
 	"./zlib/zutil.c"
-
-	MainForm.ui
 )
+
+qt5_wrap_ui( UI_HEADERS MainForm.ui )
 
 include_directories( "." )
 
 add_definitions( -D_M_IX86 )
 
-set( CMAKE_INCLUDE_CURRENT_DIR ON )
-set( CMAKE_AUTOMOC ON )
-
-set( CMAKE_PREFIX_PATH
-		${CMAKE_PREFIX_PATH}
-		"${CMAKE_CURRENT_SOURCE_DIR}/../qt5/qtbase/lib/cmake/Qt5Core" )
-
-find_package( Qt5Core REQUIRED )
-find_package( OpenGL REQUIRED )
 set( MODVIEW_LIBRARIES ${OPENGL_LIBRARIES} )
-set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g" )
-set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g" )
 
-add_executable( ModView ${MODVIEW_SOURCE_FILES} ${MODVIEW_HEADER_FILES} )
+add_executable( ModView ${MODVIEW_SOURCE_FILES} ${MODVIEW_HEADER_FILES} ${UI_HEADERS} )
 target_link_libraries( ModView ${MODVIEW_LIBRARIES} )
 
 qt5_use_modules( ModView Widgets Gui OpenGL )
-qt5_wrap_ui( ui_MainForm.h MainForm.ui )

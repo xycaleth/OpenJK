@@ -6,6 +6,7 @@
 #include <QtWidgets/QColorDialog>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QMessageBox>
+#include "GUIHelpers.h"
 #include "generic_stuff.h"
 #include "model.h"
 #include "SceneTreeItem.h"
@@ -125,23 +126,14 @@ void MainForm::OnChooseBackgroundColor()
 void MainForm::OnOpenModel()
 {
     const char *directory = Filename_PathOnly(Model_GetFullPrimaryFilename());
+	std::string modelName (OpenGLMDialog (this, directory));
 
-    QFileDialog openDialog (this);
-    openDialog.setDirectory (QString::fromLatin1 (directory));
-    openDialog.setFileMode (QFileDialog::ExistingFile);
-    openDialog.setNameFilter (tr ("Model files (*.glm)"));
-    openDialog.setAcceptMode (QFileDialog::AcceptOpen);
+	if ( modelName.empty() )
+	{
+		return;
+	}
 
-    if ( openDialog.exec() )
-    {
-        QStringList modelName = openDialog.selectedFiles();
-        if ( modelName.isEmpty() )
-        {
-            return;
-        }
-
-        OpenModel (modelName[0]);
-    }
+	OpenModel (QString::fromStdString (modelName));
 }
 
 void MainForm::OpenModel ( const QString& modelPath )

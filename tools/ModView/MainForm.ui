@@ -97,8 +97,6 @@
     <addaction name="actionSave"/>
     <addaction name="actionSave_Scene_As"/>
     <addaction name="separator"/>
-    <addaction name="actionRefresh_All_Textures"/>
-    <addaction name="separator"/>
     <addaction name="menuRecent_Files"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -121,6 +119,7 @@
     <addaction name="actionToolbar"/>
     <addaction name="actionStatus_Bar"/>
     <addaction name="separator"/>
+    <addaction name="actionRefresh_All_Textures"/>
     <addaction name="actionReset_view_position"/>
     <addaction name="actionShow_Vertex_Normals"/>
     <addaction name="actionWireframe"/>
@@ -294,6 +293,12 @@
    </property>
   </action>
   <action name="actionInterpolation">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Interpolation</string>
    </property>
