@@ -13,10 +13,6 @@ find_package( Qt5Widgets REQUIRED )
 find_package( Qt5Gui REQUIRED )
 find_package( OpenGL REQUIRED )
 
-if( MSVC )
-	
-endif()
-
 set( MODVIEW_HEADER_FILES
 	"./anims.h"
 	"./common_headers.h"
