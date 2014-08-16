@@ -260,10 +260,36 @@ void MainForm::OnScreenshotToFile()
 
 void MainForm::OnScreenshotToClipboard()
 {
+	
 }
 
 void MainForm::OnToggleCleanScreenshot()
 {
+	AppVars.bCleanScreenShots = !AppVars.bCleanScreenShots;
+}
+
+void MainForm::OnToggleBoundingBox()
+{
+	AppVars.bBBox = !AppVars.bBBox;
+	ModelList_ForceRedraw();
+}
+
+void MainForm::OnToggleHeightRuler()
+{
+	AppVars.bRuler = !AppVars.bRuler;
+	ModelList_ForceRedraw();
+}
+
+void MainForm::OnToggleOriginAxes()
+{
+	AppVars.bOriginLines = !AppVars.bOriginLines;
+	ModelList_ForceRedraw();
+}
+
+void MainForm::OnToggleFloor()
+{
+	AppVars.bFloor = !AppVars.bFloor;
+	ModelList_ForceRedraw();
 }
 
 void MainForm::OnCycleFieldOfView()

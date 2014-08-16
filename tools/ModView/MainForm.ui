@@ -118,12 +118,15 @@
     </property>
     <addaction name="actionToolbar"/>
     <addaction name="actionStatus_Bar"/>
-    <addaction name="separator"/>
     <addaction name="actionRefresh_All_Textures"/>
     <addaction name="actionReset_view_position"/>
+    <addaction name="separator"/>
+    <addaction name="actionBounding_Box"/>
+    <addaction name="actionFloor"/>
+    <addaction name="actionHeight_Ruler"/>
+    <addaction name="actionOrigin_Axes"/>
     <addaction name="actionShow_Vertex_Normals"/>
     <addaction name="actionWireframe"/>
-    <addaction name="actionOptions"/>
     <addaction name="separator"/>
     <addaction name="actionScreenshot_to_File"/>
     <addaction name="actionScreenshot_to_Clipboard"/>
@@ -354,6 +357,9 @@
    </property>
   </action>
   <action name="actionRemove_Text_Selections_on_Screenshot">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Remove Text/Selections from Screenshot</string>
    </property>
@@ -398,11 +404,6 @@
     <string>Picmip 3</string>
    </property>
   </action>
-  <action name="actionOpenGL_Driver_Info">
-   <property name="text">
-    <string>OpenGL Driver Info</string>
-   </property>
-  </action>
   <action name="actionIncrease_LOD">
    <property name="text">
     <string>Increase LOD</string>
@@ -435,6 +436,38 @@
    </property>
    <property name="text">
     <string>Wireframe</string>
+   </property>
+  </action>
+  <action name="actionOrigin_Axes">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Origin Axes</string>
+   </property>
+  </action>
+  <action name="actionBounding_Box">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Bounding Box</string>
+   </property>
+  </action>
+  <action name="actionHeight_Ruler">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Height Ruler</string>
+   </property>
+  </action>
+  <action name="actionFloor">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Floor</string>
    </property>
   </action>
  </widget>
@@ -928,6 +961,70 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionBounding_Box</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToggleBoundingBox()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionHeight_Ruler</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToggleHeightRuler()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionOrigin_Axes</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToggleOriginAxes()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionFloor</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToggleFloor()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -960,5 +1057,9 @@
   <slot>OnClickedTreeView(QModelIndex)</slot>
   <slot>OnToggleVertexNormals()</slot>
   <slot>OnToggleWireframe()</slot>
+  <slot>OnToggleBoundingBox()</slot>
+  <slot>OnToggleFloor()</slot>
+  <slot>OnToggleOriginAxes()</slot>
+  <slot>OnToggleHeightRuler()</slot>
  </slots>
 </ui>
