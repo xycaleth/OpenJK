@@ -2,8 +2,9 @@ cmake_minimum_required( VERSION 2.8.9 )
 project( ModView )
 
 set( CMAKE_PREFIX_PATH
-		${CMAKE_PREFIX_PATH}
-		"${CMAKE_CURRENT_SOURCE_DIR}/../qt5/qtbase/lib/cmake/Qt5Core" )
+	${CMAKE_PREFIX_PATH}
+	"${CMAKE_CURRENT_SOURCE_DIR}/../qt5/qtbase/lib/cmake/Qt5Core"
+)
 
 set( CMAKE_INCLUDE_CURRENT_DIR ON )
 set( CMAKE_AUTOMOC ON )
@@ -151,7 +152,9 @@ set( MODVIEW_SOURCE_FILES
 	"./zlib/zutil.c"
 )
 
-qt5_wrap_ui( UI_HEADERS MainForm.ui )
+qt5_wrap_ui( UI_HEADERS
+	MainForm.ui
+)
 
 include_directories( "." )
 
@@ -160,9 +163,32 @@ if( MSVC )
 	add_definitions( -D_CRT_SECURE_NO_WARNINGS )
 endif()
 
-set( MODVIEW_LIBRARIES ${OPENGL_LIBRARIES} )
+if( MSVC )
+	set( GUI_TYPE WIN32 )
+	set( MODVIEW_SOURCE_FILES ${MODVIEW_SOURCE_FILES} modview.rc )
+elseif ( APPLE )
+	set( GUI_TYPE MACOSX_BUNDLE )
+	set( PROGNAME ModView )
+endif()
 
-add_executable( ModView ${MODVIEW_SOURCE_FILES} ${MODVIEW_HEADER_FILES} ${UI_HEADERS} )
-target_link_libraries( ModView ${MODVIEW_LIBRARIES} )
+set( MODVIEW_LIBRARIES
+	${OPENGL_LIBRARIES}
+	${Qt5Core_QTMAIN_LIBRARIES}
+)
 
-qt5_use_modules( ModView Widgets Gui OpenGL )
+add_executable( ModView
+	${GUI_TYPE}
+	${MODVIEW_SOURCE_FILES}
+	${MODVIEW_HEADER_FILES}
+	${UI_HEADERS}
+)
+
+target_link_libraries( ModView
+	${MODVIEW_LIBRARIES}
+)
+
+qt5_use_modules( ModView
+	Widgets
+	Gui
+	OpenGL
+)
