@@ -63,6 +63,8 @@ private slots:
     void OnClickedTreeView ( const QModelIndex& index );
     void OnRightClickTreeView ( const QPoint& point );
 
+	void OnScreenshotTakenForClipboard ( const QImage& image );
+
 private:
     void ChangeLOD ( int lod );
     void ChangePicmip ( int level );

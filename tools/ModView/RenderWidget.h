@@ -2,6 +2,7 @@
 #define RENDERWIDGET_H
 
 #include <QtOpenGL/QGLWidget>
+#include <string>
 
 class RenderWidget : public QGLWidget
 {
@@ -9,6 +10,9 @@ class RenderWidget : public QGLWidget
 
 public:
     RenderWidget ( QWidget *parent = 0 );
+
+signals:
+	void tookScreenshotForClipboard ( const QImage& image );
 
 protected:
     void initializeGL();
@@ -20,6 +24,9 @@ protected:
 
     void mousePressEvent ( QMouseEvent *event );
     void mouseMoveEvent ( QMouseEvent *event );
+
+private:
+	void SaveScreenshot ( const std::string& filename, int width, int height );
 
 private:
     int lastX, lastY;

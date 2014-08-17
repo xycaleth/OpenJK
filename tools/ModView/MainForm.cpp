@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "MainForm.h"
 
+#include <QClipboard>
 #include <QtCore/QDateTime>
 #include <QtCore/QTimer>
 #include <QtWidgets/QColorDialog>
@@ -39,6 +40,8 @@ MainForm::MainForm ( QSettings& settings, QWidget *parent )
 
     CurrentSceneName (tr ("Untitled"));
 
+	connect (ui.renderWidget, SIGNAL(tookScreenshotForClipboard (const QImage&)), SLOT(OnScreenshotTakenForClipboard (const QImage&)));
+
     StartRenderTimer (this, ui.renderWidget);
 }
 
@@ -68,6 +71,11 @@ void MainForm::PopulateMRUFiles ( const QStringList& mruFiles )
 
         ui.menuRecent_Files->addAction (action);
     }
+}
+
+void MainForm::OnScreenshotTakenForClipboard ( const QImage& image )
+{
+	QApplication::clipboard()->setImage (image);
 }
 
 void MainForm::OnClearRecentFiles()
@@ -260,7 +268,15 @@ void MainForm::OnScreenshotToFile()
 
 void MainForm::OnScreenshotToClipboard()
 {
-	
+    if ( Model_Loaded() )
+    {
+        std::string baseName (Filename_WithoutPath (Filename_PathOnly (Model_GetFullPrimaryFilename())));
+
+        AppVars.takeScreenshot = true;
+		AppVars.takeScreenshotForClipboard = true;
+        AppVars.screenshotFileName.clear();
+        ModelList_ForceRedraw();
+    }
 }
 
 void MainForm::OnToggleCleanScreenshot()

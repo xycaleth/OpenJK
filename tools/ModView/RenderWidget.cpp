@@ -8,6 +8,7 @@
 #else
 #include <gl/GL.h>
 #endif
+#include <vector>
 #include "model.h"
 #include "text.h"
 #include "textures.h"
@@ -114,21 +115,31 @@ void RenderWidget::mouseMoveEvent ( QMouseEvent *event )
     lastY = y;
 }
 
-void SaveScreenshot ( const std::string& filename, int width, int height )
+void RenderWidget::SaveScreenshot ( const std::string& filename, int width, int height )
 {
     int oldPackAlignment = 0;
     
     glGetIntegerv (GL_PACK_ALIGNMENT, &oldPackAlignment);
     glPixelStorei (GL_PACK_ALIGNMENT, 1);
     
-    unsigned char *buffer = new unsigned char[width * height * 3];
-    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
-    
-    QImage image (buffer, width, height, width * 3, QImage::Format_RGB888);
-    image.mirrored().save (QString::fromStdString (filename));
-    
-    delete [] buffer;
+    std::vector<unsigned char> buffer (width * height * 3);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer.data());
     glPixelStorei (GL_PACK_ALIGNMENT, oldPackAlignment);
+    
+    QImage image (buffer.data(), width, height, width * 3, QImage::Format_RGB888);
+	image = image.mirrored();
+
+	if ( AppVars.takeScreenshotForClipboard )
+	{
+		AppVars.takeScreenshotForClipboard = false;
+		//image = image.convertToFormat (QImage::Format_ARGB32);
+
+		emit tookScreenshotForClipboard (image);
+	}
+	else
+	{
+		image.save (QString::fromStdString (filename));
+	}
 }
 
 void RenderWidget::paintGL()
