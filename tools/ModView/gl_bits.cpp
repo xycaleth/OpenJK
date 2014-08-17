@@ -55,7 +55,7 @@ void GL_Enter3D( double dFOV, int iWindowWidth, int iWindowDepth, bool bWireFram
 	if (bCLS)
 	{
 //		glClearColor	(0,0,0,0);
-		glClearColor((float)1/((float)256/(float)AppVars._R), (float)1/((float)256/(float)AppVars._G), (float)1/((float)256/(float)AppVars._B), 0.0f);
+		glClearColor(AppVars._R / 255.0f, AppVars._G / 255.0f, AppVars._B / 255.0f, 0.0f);
 		glClear			(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 
@@ -121,7 +121,7 @@ void GL_Enter2D(int iWindowWidth, int iWindowDepth, bool bCLS/* = true */)
 	if (bCLS)
 	{
 //		glClearColor	(0,1,0,0);
-		glClearColor((float)1/((float)256/(float)AppVars._R), (float)1/((float)256/(float)AppVars._G), (float)1/((float)256/(float)AppVars._B), 0.0f);
+		glClearColor(AppVars._R / 255.0f, AppVars._G / 255.0f, AppVars._B / 255.0f, 0.0f);
 		glClear			(GL_COLOR_BUFFER_BIT);
 	}
 	

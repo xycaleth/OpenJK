@@ -291,6 +291,7 @@ typedef struct
 	bool	bAlwaysOnTop;
 	bool	bSortSequencesByAlpha;
     bool    takeScreenshot;
+	bool	takeScreenshotForClipboard;
     std::string screenshotFileName;
 	
 	//  some really tacky stuff...

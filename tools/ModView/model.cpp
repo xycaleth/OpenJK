@@ -370,6 +370,7 @@ void AppVars_OnceOnlyInit(void)
 	AppVars.bAlwaysOnTop		= false;
 	AppVars.bSortSequencesByAlpha = false;
     AppVars.takeScreenshot = false;
+	AppVars.takeScreenshotForClipboard = false;
     AppVars.screenshotFileName = "";
 
 	AppVars.iLOD				=	0;
