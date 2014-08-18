@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/images">
-        <file>res/modview.ico</file>
-    </qresource>
+  <qresource prefix="/">
+    <file>res/new.png</file>
+  </qresource>
 </RCC>

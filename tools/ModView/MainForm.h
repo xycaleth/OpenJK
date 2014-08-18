@@ -18,6 +18,7 @@ public:
     void CurrentSceneName ( const QString& sceneName );
 
 private slots:
+	void OnNewScene();
     void OnOpenModel();
     void OnOpenRecentModel();
     void OnClearRecentFiles();

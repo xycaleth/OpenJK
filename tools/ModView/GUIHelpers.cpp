@@ -13,7 +13,7 @@ std::string GetInputFromPrompt ( const std::string& title, const std::string& di
         return input.toStdString();
     }
 
-    return std::string();
+    return "";
 }
 
 std::string OpenGLMDialog ( QWidget *parent, const char *directory )
@@ -21,7 +21,7 @@ std::string OpenGLMDialog ( QWidget *parent, const char *directory )
 	QFileDialog openDialog (parent);
     openDialog.setDirectory (QString::fromLatin1 (directory));
     openDialog.setFileMode (QFileDialog::ExistingFile);
-    openDialog.setNameFilter (QObject::tr ("Model files (*.glm)"));
+    openDialog.setNameFilter (QObject::tr ("GLM Models (*.glm)"));
     openDialog.setAcceptMode (QFileDialog::AcceptOpen);
 
     if ( openDialog.exec() )

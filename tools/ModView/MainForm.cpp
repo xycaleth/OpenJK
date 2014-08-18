@@ -131,6 +131,13 @@ void MainForm::OnChooseBackgroundColor()
     dialog->open (this, SLOT (OnChangeBackgroundColor (const QColor&)));
 }
 
+void MainForm::OnNewScene()
+{
+	Model_Delete();
+	CurrentSceneName (tr ("Untitled"));
+	ClearSceneTreeModel (*treeModel);
+}
+
 void MainForm::OnOpenModel()
 {
     const char *directory = Filename_PathOnly(Model_GetFullPrimaryFilename());

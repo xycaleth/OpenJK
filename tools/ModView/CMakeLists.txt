@@ -156,6 +156,10 @@ qt5_wrap_ui( UI_HEADERS
 	MainForm.ui
 )
 
+qt5_add_resources( MODVIEW_RESOURCES
+	ModView.qrc
+)
+
 include_directories( "." )
 
 add_definitions( -D_M_IX86 )
@@ -165,7 +169,7 @@ endif()
 
 if( MSVC )
 	set( GUI_TYPE WIN32 )
-	set( MODVIEW_SOURCE_FILES ${MODVIEW_SOURCE_FILES} modview.rc )
+	set( MODVIEW_RESOURCES ${MODVIEW_RESOURCES} modview.rc )
 elseif ( APPLE )
 	set( GUI_TYPE MACOSX_BUNDLE )
 	set( PROGNAME ModView )
@@ -178,6 +182,7 @@ set( MODVIEW_LIBRARIES
 
 add_executable( ModView
 	${GUI_TYPE}
+	${MODVIEW_RESOURCES}
 	${MODVIEW_SOURCE_FILES}
 	${MODVIEW_HEADER_FILES}
 	${UI_HEADERS}

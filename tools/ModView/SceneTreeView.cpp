@@ -163,6 +163,11 @@ void AddSkinsToTree ( SceneTreeItem *root, const ModelContainer& container, cons
     }
 }
 
+void ClearSceneTreeModel ( SceneTreeModel& model )
+{
+	model.clear();
+}
+
 void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container, SceneTreeModel& model )
 {
     SceneTreeItem *root = new SceneTreeItem ("", 0);

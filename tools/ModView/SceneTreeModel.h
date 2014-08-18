@@ -22,6 +22,7 @@ public:
     int             columnCount ( const QModelIndex& parent = QModelIndex() ) const;
 
     // Model mutator functions.
+	void			clear();
 
     // SceneTreeModel takes ownership of 'root'.
     void            setRoot ( SceneTreeItem *root );
