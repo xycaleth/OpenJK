@@ -1,145 +1,9 @@
 #include "stdafx.h"
 #include "SceneTreeModel.h"
 
-#include "ISceneTreeItemVisitor.h"
+#include <QBrush>
 #include "r_model.h"
 #include "SceneTreeItem.h"
-
-//=============================================================================
-// Scene Tree Item class implementation
-//=============================================================================
-
-SceneTreeItem::SceneTreeItem ( const QString& data, ModelHandle_t model, SceneTreeItem *parent )
-    : data (data)
-    , parent (parent)
-    , model (model)
-{
-}
-
-SceneTreeItem::~SceneTreeItem()
-{
-    for ( int i = 0; i < children.size(); i++ )
-    {
-        delete children[i];
-    }
-}
-
-ModelHandle_t SceneTreeItem::GetModel() const
-{
-    return model;
-}
-
-void SceneTreeItem::AddChild ( SceneTreeItem *child )
-{
-    children.append (child);
-}
-
-SceneTreeItem *SceneTreeItem::Child ( int row ) const
-{
-    return children.value (row);
-}
-
-int SceneTreeItem::ChildCount() const
-{
-    return children.size();
-}
-
-int SceneTreeItem::ChildCountRecursive() const
-{
-    int count = 0;
-    for ( int i = 0; i < ChildCount(); i++ )
-    {
-        count += Child(i)->ChildCountRecursive() + 1;
-    }
-
-    return count;
-}
-
-QVariant SceneTreeItem::Data() const
-{
-    return data;
-}
-
-void SceneTreeItem::Data ( const QString& data )
-{
-    this->data = data;
-}
-
-int SceneTreeItem::Row() const
-{
-    if ( parent != NULL )
-    {
-        return parent->children.indexOf (const_cast<SceneTreeItem *>(this));
-    }
-
-    return 0;
-}
-
-SceneTreeItem *SceneTreeItem::Parent() const
-{
-    return parent;
-}
-
-
-SequenceSceneTreeItem::SequenceSceneTreeItem ( const Sequence_t *sequence, int sequenceIndex, ModelHandle_t model, SceneTreeItem *parent )
-    : SceneTreeItem (Sequence_CreateTreeName (sequence), model, parent)
-    , sequence (sequence)
-    , sequenceIndex (sequenceIndex)
-{
-}
-
-void SequenceSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
-{
-    visitor->Visit (GetModel(), sequence, sequenceIndex);
-}
-
-std::string Surface_CreateTreeName ( ModelHandle_t model, const mdxmSurfHierarchy_t *surface )
-{
-    ModelContainer_t *container = ModelContainer_FindFromModelHandle (model);
-    if ( trap_G2_IsSurfaceOff (model, container->slist, surface->name) == SURF_OFF )
-    {
-        std::string prefix = "////// ";
-        return prefix + surface->name;
-    }
-    
-    return surface->name;
-}
-
-SurfaceSceneTreeItem::SurfaceSceneTreeItem ( const mdxmSurfHierarchy_t *surface, int surfaceIndex, ModelHandle_t model, SceneTreeItem *parent )
-    : SceneTreeItem (QString::fromStdString (Surface_CreateTreeName (model, surface)), model, parent)
-    , surface (surface)
-    , surfaceIndex (surfaceIndex)
-{
-}
-
-void SurfaceSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
-{
-    visitor->Visit (GetModel(), surface, surfaceIndex);
-}
-
-SkinSceneTreeItem::SkinSceneTreeItem ( const std::string& skinName, int skinIndex, ModelHandle_t model, SceneTreeItem *parent )
-    : SceneTreeItem (QString::fromStdString (skinName), model, parent)
-    , skinName (skinName)
-    , skinIndex (skinIndex)
-{
-}
-
-void SkinSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
-{
-    visitor->Visit (GetModel(), skinName.c_str(), skinIndex);
-}
-
-BoneSceneTreeItem::BoneSceneTreeItem ( const mdxaSkel_t *bone, int boneIndex, ModelHandle_t model, SceneTreeItem *parent )
-    : SceneTreeItem (bone->name, model, parent)
-    , bone (bone)
-    , boneIndex (boneIndex)
-{
-}
-
-void BoneSceneTreeItem::Accept ( ISceneTreeItemVisitor *visitor )
-{
-    visitor->Visit (GetModel(), bone, boneIndex);
-}
 
 //=============================================================================
 // Scene Tree Model class implementation
@@ -163,14 +27,24 @@ QVariant SceneTreeModel::data ( const QModelIndex& index, int role ) const
         return QVariant();
     }
 
-    if ( role != Qt::DisplayRole )
-    {
-        return QVariant();
-    }
+	switch ( role )
+	{
+		case Qt::DisplayRole:
+		{
+			return static_cast<SceneTreeItem *>(index.internalPointer())->Data();
+		}
 
-    SceneTreeItem *item = static_cast<SceneTreeItem *>(index.internalPointer());
+		case Qt::ForegroundRole:
+		{
+			SceneTreeItem *item = static_cast<SceneTreeItem *>(index.internalPointer());
+			return QVariant(QBrush(item->IsOff() ? Qt::gray : Qt::black));
+		}
 
-    return item->Data();
+		default:
+		{
+			return QVariant();
+		}
+	}
 }
 
 Qt::ItemFlags SceneTreeModel::flags ( const QModelIndex& index ) const
@@ -257,15 +131,20 @@ int SceneTreeModel::columnCount ( const QModelIndex& parent ) const
     return 1;
 }
 
-void SceneTreeModel::setRoot ( SceneTreeItem *root )
+void SceneTreeModel::clear()
 {
-    if ( this->root != NULL )
+	if ( this->root != NULL )
     {
         beginRemoveRows (QModelIndex(), 0, 0);
             delete this->root;
             this->root = NULL;
         endRemoveRows();
     }
+}
+
+void SceneTreeModel::setRoot ( SceneTreeItem *root )
+{
+    clear();
 
     beginInsertRows (QModelIndex(), 0, 0);
         this->root = root;

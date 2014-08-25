@@ -3,6 +3,8 @@
 //
 #include <math.h>
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #endif
 
@@ -30,6 +32,7 @@ typedef unsigned short word;
 static const float gfEpsilon = 1e-03f;
 #define DATA(f0,f1,f2) {f0,f1,f2}
 
+#include <algorithm>
 #include <map>
 #include <string>
 
@@ -38,19 +41,10 @@ using namespace std;
 typedef map <string, float> Thing_t;
 Thing_t Thing;
 
-inline float ACos (float fValue)
+static float ACos (float fValue)
 {
-    if ( -1.0f < fValue )
-    {
-        if ( fValue < 1.0f )
-            return (float)acos(fValue);
-        else
-            return 0.0f;
-    }
-    else
-    {
-        return (float) 3.14159265358979323846264;//PI;
-    }
+	fValue = std::min(std::max(fValue, -1.0f), 1.0f);
+	return std::cosf(fValue);
 }
 
 static void CrossProduct( const vec3_t v1, const vec3_t v2, vec3_t cross ) 
@@ -60,9 +54,7 @@ static void CrossProduct( const vec3_t v1, const vec3_t v2, vec3_t cross )
 	cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
 }
 
-
-
-static inline word SquashFloat(float f)
+static word SquashFloat(float f)
 {
 //	assert(f >= -2 && f <= 2);
 	if (!(f >= -2 && f <= 2))

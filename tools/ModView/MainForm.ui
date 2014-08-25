@@ -94,12 +94,11 @@
     </widget>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
-    <addaction name="actionSave"/>
-    <addaction name="actionSave_Scene_As"/>
     <addaction name="separator"/>
     <addaction name="menuRecent_Files"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
     <property name="title">
@@ -108,9 +107,6 @@
     <addaction name="actionChoose_background_color"/>
     <addaction name="actionChange_Floor_Position"/>
     <addaction name="actionChange_Bone_Weighting_Threshold"/>
-    <addaction name="actionPrompt_for_GLA_overrides"/>
-    <addaction name="separator"/>
-    <addaction name="actionChange_global_XYZ_scale"/>
    </widget>
    <widget class="QMenu" name="menu_View">
     <property name="title">
@@ -212,11 +208,17 @@
    </property>
   </action>
   <action name="actionSave">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Save Scene</string>
    </property>
   </action>
   <action name="actionSave_Scene_As">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Save Scene As...</string>
    </property>
@@ -257,7 +259,7 @@
   </action>
   <action name="actionStart_with_forced_wrapping">
    <property name="text">
-    <string>Start with forced wrapping</string>
+    <string>Start With Forced Wrapping</string>
    </property>
   </action>
   <action name="actionStop">
@@ -272,7 +274,7 @@
   </action>
   <action name="actionGo_to_end_frame">
    <property name="text">
-    <string>Go to end frame</string>
+    <string>Go to Last Frame</string>
    </property>
   </action>
   <action name="actionFaster">
@@ -287,12 +289,12 @@
   </action>
   <action name="actionNext_frame">
    <property name="text">
-    <string>Next frame</string>
+    <string>Next Frame</string>
    </property>
   </action>
   <action name="actionPrevious_frame">
    <property name="text">
-    <string>Previous frame</string>
+    <string>Previous Frame</string>
    </property>
   </action>
   <action name="actionInterpolation">
@@ -470,6 +472,11 @@
     <string>Floor</string>
    </property>
   </action>
+  <action name="actionOpen_Scene">
+   <property name="text">
+    <string>Open Scene...</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -479,7 +486,9 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="ModView.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>actionOpen</sender>
@@ -1025,6 +1034,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionNew</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnNewScene()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>472</x>
+     <y>309</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -1061,5 +1086,6 @@
   <slot>OnToggleFloor()</slot>
   <slot>OnToggleOriginAxes()</slot>
   <slot>OnToggleHeightRuler()</slot>
+  <slot>OnNewScene()</slot>
  </slots>
 </ui>

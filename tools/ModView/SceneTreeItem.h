@@ -9,12 +9,24 @@
 #include "model.h"
 #include "sequence.h"
 
+enum ModelResourceType
+{
+	MODELRESOURCE_NULL, // root of the tree view
+	MODELRESOURCE_ANIMSEQUENCE,
+	MODELRESOURCE_SURFACE,
+	MODELRESOURCE_TAG,
+	MODELRESOURCE_SKIN,
+	MODELRESOURCE_BONE
+};
+
 class ISceneTreeItemVisitor;
 class SceneTreeItem
 {
 public:
-    SceneTreeItem ( const QString& data, ModelHandle_t model, SceneTreeItem *parent = 0 );
-    virtual ~SceneTreeItem();
+    SceneTreeItem (
+		ModelResourceType resourceType, const void *resource, int resourceIndex,
+		const QString& data, ModelHandle_t model, SceneTreeItem *parent = 0 );
+    ~SceneTreeItem();
 
     // This SceneTreeItem object takes ownership of 'child'.
     void            AddChild ( SceneTreeItem *child );
@@ -27,9 +39,11 @@ public:
     int             Row() const;
     SceneTreeItem  *Parent() const;
 
-    // Not really sure if it's right to call this
-    // the visitor pattern...
-    virtual void    Accept ( ISceneTreeItemVisitor *visitor ) {};
+	void			LeftClick();
+	void			RightClick();
+	void			DoubleClick();
+
+	bool			IsOff() const;
 
     ModelHandle_t   GetModel() const;
 
@@ -39,54 +53,18 @@ private:
     SceneTreeItem *parent;
 
     ModelHandle_t model;
-};
 
-class SequenceSceneTreeItem : public SceneTreeItem
-{
-public:
-    SequenceSceneTreeItem ( const Sequence_t *sequence, int sequenceIndex, ModelHandle_t model, SceneTreeItem *parent = 0 );
+	ModelResourceType resourceType;
+	int resourceIndex;
+	union
+	{
+		const void *ptr;
 
-    void Accept ( ISceneTreeItemVisitor *visitor );
-
-private:
-    const Sequence_t *sequence;
-    int sequenceIndex;
-};
-
-class SurfaceSceneTreeItem : public SceneTreeItem
-{
-public:
-    SurfaceSceneTreeItem ( const mdxmSurfHierarchy_t *surface, int surfaceIndex, ModelHandle_t model, SceneTreeItem *parent = 0 );
-
-    void Accept ( ISceneTreeItemVisitor *visitor );
-
-private:
-    const mdxmSurfHierarchy_t *surface;
-    int surfaceIndex;
-};
-
-class SkinSceneTreeItem : public SceneTreeItem
-{
-public:
-    SkinSceneTreeItem ( const std::string& skinName, int skinIndex, ModelHandle_t model, SceneTreeItem *parent = 0 );
-
-    void Accept ( ISceneTreeItemVisitor *visitor );
-
-private:
-    std::string skinName;
-    int skinIndex;
-};
-
-class BoneSceneTreeItem : public SceneTreeItem
-{
-public:
-    BoneSceneTreeItem ( const mdxaSkel_t *bone, int boneIndex, ModelHandle_t model, SceneTreeItem *parent = 0 );
-
-    void Accept ( ISceneTreeItemVisitor *visitor );
-
-private:
-    const mdxaSkel_t *bone;
-    int boneIndex;
+		const Sequence_t *sequence;
+		const mdxmSurfHierarchy_t *surface;
+		const char *skinName;
+		const mdxaSkel_t *bone;
+	} resource;
 };
 
 #endif

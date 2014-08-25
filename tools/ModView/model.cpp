@@ -292,6 +292,8 @@ static void AppVars_Delete(void)
 	AppVars.iTotalContainers	= 0;
 	AppVars.strLoadedModelPath	= "";
 	AppVars.hModelLastLoaded	= NULL;
+
+	AppVars_ResetViewParams();
 }
 
 void AppVars_ResetViewParams(void)

@@ -7,5 +7,6 @@
 class SceneTreeModel;
 
 void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container, SceneTreeModel& model );
+void ClearSceneTreeModel ( SceneTreeModel& model );
 
 #endif

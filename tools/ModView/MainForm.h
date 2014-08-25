@@ -5,8 +5,6 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_MainForm.h"
 
-#include "SceneTreeItemAction.h"
-
 class SceneTreeModel;
 class MainForm : public QMainWindow
 {
@@ -18,6 +16,7 @@ public:
     void CurrentSceneName ( const QString& sceneName );
 
 private slots:
+	void OnNewScene();
     void OnOpenModel();
     void OnOpenRecentModel();
     void OnClearRecentFiles();
@@ -77,10 +76,6 @@ private:
 
     QSettings *settings;
     SceneTreeModel *treeModel;
-
-    SceneTreeItemClickAction treeItemClickAction;
-    SceneTreeItemDblClickAction treeItemDblClickAction;
-    SceneTreeItemRightClickAction treeItemRightClickAction;
 };
 
 #endif

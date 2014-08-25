@@ -8,7 +8,7 @@
 #ifndef R_MODEL_H
 #define R_MODEL_H
 
-
+#include "includes.h"
 
 void OnceOnlyCrap(void);
 
@@ -24,7 +24,6 @@ qboolean		trap_G2_SetSurfaceOnOff (qhandle_t model, surfaceInfo_t *slist, const 
 SurfaceOnOff_t	trap_G2_IsSurfaceOff	(qhandle_t model, surfaceInfo_t *slist, const char *surfaceName);
 void			trap_G2_Init_Bone_List	(void *a);
 qboolean		trap_G2_Set_Bone_Anim	(int a, void *b, void *c, int d, int e, int f, float g);
-
 
 #endif	// #ifndef R_MODEL_H
 
