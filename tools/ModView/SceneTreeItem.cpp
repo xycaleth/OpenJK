@@ -268,6 +268,35 @@ namespace
 			}
 		}
 	}
+	
+	void OnRightClickAnimSequenceRoot ( ModelHandle_t model )
+	{
+
+	}
+
+	void OnRightClickSkinNameRoot ( ModelHandle_t model )
+	{
+		QMenu menu;
+		QAction *validateAllAction = menu.addAction (QObject::tr ("Validate All"));
+
+		QAction *action = menu.exec(QCursor::pos());
+		if ( PickedAction (action, validateAllAction) )
+		{
+			Model_ValidateSkin (model, -1);
+		}
+	}
+
+	void OnRightClickBoneRoot ( ModelHandle_t model )
+	{
+	}
+
+	void OnRightClickSurfaceRoot ( ModelHandle_t model )
+	{
+	}
+
+	void OnRightClickTagRoot ( ModelHandle_t model )
+	{
+	}
 }
 
 SceneTreeItem::SceneTreeItem ( ModelResourceType resourceType, const void *resource, int resourceIndex, const QString& data, ModelHandle_t model, SceneTreeItem *parent )
@@ -422,6 +451,32 @@ void SceneTreeItem::RightClick()
 {
 	if ( resourceIndex == -1 )
 	{
+		switch ( resourceType )
+		{
+		case MODELRESOURCE_ANIMSEQUENCE:
+			OnRightClickAnimSequenceRoot( model );
+			break;
+
+		case MODELRESOURCE_SKIN:
+			OnRightClickSkinNameRoot( model );
+			break;
+
+		case MODELRESOURCE_BONE:
+			OnRightClickBoneRoot( model );
+			break;
+
+		case MODELRESOURCE_TAG:
+			OnRightClickTagRoot( model );
+			break;
+
+		case MODELRESOURCE_SURFACE:
+			OnRightClickSurfaceRoot( model );
+			break;
+
+		default:
+			break;
+		}
+
 		return;
 	}
 
