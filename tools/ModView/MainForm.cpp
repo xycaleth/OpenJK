@@ -385,7 +385,7 @@ void MainForm::OnDoubleClickedTreeView ( const QModelIndex& index )
     }
 
     SceneTreeItem *item = static_cast<SceneTreeItem *>(index.internalPointer());
-    item->Accept (&treeItemDblClickAction);
+    item->DoubleClick();
 }
 
 void MainForm::OnClickedTreeView ( const QModelIndex& index )
@@ -401,7 +401,7 @@ void MainForm::OnClickedTreeView ( const QModelIndex& index )
     Model_SetBoneHighlight (model, iITEMHIGHLIGHT_NONE);
     Model_SetSurfaceHighlight (model, iITEMHIGHLIGHT_NONE);
 
-    item->Accept (&treeItemClickAction);
+    item->LeftClick();
 }
 
 void MainForm::OnRightClickTreeView ( const QPoint& point )
@@ -413,7 +413,7 @@ void MainForm::OnRightClickTreeView ( const QPoint& point )
     }
 
     SceneTreeItem *item = static_cast<SceneTreeItem *>(selectedIndex.internalPointer());
-    item->Accept (&treeItemRightClickAction);
+    item->RightClick();
 }
 
 void MainForm::OnToggleVertexNormals()

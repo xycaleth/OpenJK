@@ -21,7 +21,7 @@ void BeforeBoneChildrenAdded ( mdxaSkel_t *bone, int index, void *userData )
 {
     BoneTreeApplication *app = static_cast<BoneTreeApplication *>(userData);
 
-    SceneTreeItem *item = new BoneSceneTreeItem (bone, index, app->container->hModel, app->nodes.back());
+    SceneTreeItem *item = new SceneTreeItem (MODELRESOURCE_BONE, bone, index, bone->name, app->container->hModel, app->nodes.back());
     app->nodes.back()->AddChild (item);
     app->nodes.append (item);
 }
@@ -58,7 +58,7 @@ void BeforeSurfaceChildrenAdded ( mdxmSurfHierarchy_t *surface, int index, void 
 {
     SurfaceTreeApplication *app = static_cast<SurfaceTreeApplication *>(userData);
 
-    SceneTreeItem *item = new SurfaceSceneTreeItem (surface, index, app->container->hModel, app->nodes.back());
+    SceneTreeItem *item = new SceneTreeItem (MODELRESOURCE_SURFACE, surface, index, surface->name, app->container->hModel, app->nodes.back());
     app->nodes.back()->AddChild (item);
     app->nodes.append (item);
 }
@@ -90,7 +90,7 @@ void BeforeTagChildrenAdded ( mdxmSurfHierarchy_t *surface, int index, void *use
 
     if ( surface->flags & G2SURFACEFLAG_ISBOLT )
     {
-        app->nodes.back()->AddChild (new SurfaceSceneTreeItem (surface, index, app->container->hModel, app->nodes.back()));
+        app->nodes.back()->AddChild (new SceneTreeItem (MODELRESOURCE_TAG, surface, index, surface->name, app->container->hModel, app->nodes.back()));
     }
 }
 
@@ -150,7 +150,7 @@ void AddSequencesToTree ( SceneTreeItem *root, const ModelContainer_t& container
 
     for ( std::size_t i = 0; i < sequenceList.size(); i++ )
     {
-        root->AddChild (new SequenceSceneTreeItem (&sequenceList[sequenceIndices[i]], sequenceIndices[i], container.hModel, root));
+        root->AddChild (new SceneTreeItem (MODELRESOURCE_ANIMSEQUENCE, &sequenceList[sequenceIndices[i]], sequenceIndices[i], sequenceList[sequenceIndices[i]].sName, container.hModel, root));
     }
 }
 
@@ -159,7 +159,7 @@ void AddSkinsToTree ( SceneTreeItem *root, const ModelContainer& container, cons
     int skinIndex = 0;
     for ( OldSkinSets_t::const_iterator skin = skins.begin(); skin != skins.end(); skin++, skinIndex++ )
     {
-        root->AddChild (new SkinSceneTreeItem (skin->first, skinIndex, container.hModel, root));
+        root->AddChild (new SceneTreeItem (MODELRESOURCE_SKIN, skin->first.c_str(), skinIndex, skin->first.c_str(), container.hModel, root));
     }
 }
 
@@ -170,14 +170,15 @@ void ClearSceneTreeModel ( SceneTreeModel& model )
 
 void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container, SceneTreeModel& model )
 {
-    SceneTreeItem *root = new SceneTreeItem ("", 0);
-    SceneTreeItem *modelItem = new SceneTreeItem (QString ("==> %1 <==").arg (QString::fromLatin1 (Filename_WithoutPath (modelName.toLatin1()))), container.hModel, root);
+    SceneTreeItem *root = new SceneTreeItem (MODELRESOURCE_NULL, NULL, -1, "", container.hModel, 0);
+
+    SceneTreeItem *modelItem = new SceneTreeItem (MODELRESOURCE_NULL, NULL, -1, QString ("==> %1 <==").arg (QString::fromLatin1 (Filename_WithoutPath (modelName.toLatin1()))), container.hModel, root);
 
     root->AddChild (modelItem);
 
-    SceneTreeItem *surfacesItem = new SceneTreeItem (QObject::tr ("Surfaces"), container.hModel, modelItem);
-    SceneTreeItem *tagsItem = new SceneTreeItem (QObject::tr ("Tags"), container.hModel, modelItem);
-    SceneTreeItem *bonesItem = new SceneTreeItem (QObject::tr ("Bones"), container.hModel, modelItem);
+    SceneTreeItem *surfacesItem = new SceneTreeItem (MODELRESOURCE_SURFACE, NULL, -1, QObject::tr ("Surfaces"), container.hModel, modelItem);
+    SceneTreeItem *tagsItem = new SceneTreeItem (MODELRESOURCE_TAG, NULL, -1, QObject::tr ("Tags"), container.hModel, modelItem);
+    SceneTreeItem *bonesItem = new SceneTreeItem (MODELRESOURCE_BONE, NULL, -1, QObject::tr ("Bones"), container.hModel, modelItem);
 
     mdxmHeader_t *pMDXMHeader = (mdxmHeader_t *)RE_GetModelData (container.hModel);
     mdxaHeader_t *pMDXAHeader = (mdxaHeader_t *)RE_GetModelData (pMDXMHeader->animIndex);
@@ -235,14 +236,14 @@ void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container
         static_cast<void *>(&boneApp));
 
     // Add skins
-    SceneTreeItem *skinsItem = new SceneTreeItem (QObject::tr ("Skins"), container.hModel, modelItem);
+    SceneTreeItem *skinsItem = new SceneTreeItem (MODELRESOURCE_SKIN, NULL, -1, QObject::tr ("Skins"), container.hModel, modelItem);
     AddSkinsToTree (skinsItem, container, container.OldSkinSets);
 
     // Add animation sequences
     SceneTreeItem *sequencesItem = NULL;
     if ( !container.SequenceList.empty() )
     {
-        sequencesItem = new SceneTreeItem (QObject::tr ("Sequences"), container.hModel, modelItem);
+        sequencesItem = new SceneTreeItem (MODELRESOURCE_ANIMSEQUENCE, NULL, -1,QObject::tr ("Sequences"), container.hModel, modelItem);
         AddSequencesToTree (sequencesItem, container, container.SequenceList);
     }
 
