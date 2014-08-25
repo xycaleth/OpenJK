@@ -8,6 +8,7 @@
 //#include "R_Image.h"
 //
 #include "files.h"
+#include "stl.h"
 
 #include <QtCore/QDir>
 
@@ -197,7 +198,7 @@ std::vector<std::string> Sys_ListFiles( const char *directory, const char *exten
 	nameFilters.push_back (starExtension);
 
 	QStringList files = root.entryList (nameFilters, filters);
-	nfiles = min (files.size(), MAX_FOUND_FILES - 1);
+	nfiles = std::min (files.size(), MAX_FOUND_FILES - 1);
 	
 	fileList.resize (nfiles);
 	

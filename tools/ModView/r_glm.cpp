@@ -178,6 +178,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 //MODVIEWREM	shader_t			*sh;
 	mdxmSurfHierarchy_t	*surfInfo;
 
+#if 0
 #ifndef _M_IX86
 	int					k;
 	int					frameSize;
@@ -186,6 +187,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 	mdxmVertex_t		*v;
  	mdxmFrame_t			*cframe;
 	int					*boneRef;
+#endif
 #endif
 	
 //	bool bSkinsExist = Skins_FilesExist(mod_name) || OldSkins_FilesExist(mod_name);
@@ -346,6 +348,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 			mod->mdxmsurf[l][i] = surf;
 
 			// register the shaders
+#if 0
 #ifndef _M_IX86
 //
 // optimisation, we don't bother doing this for standard intel case since our data's already in that format...
@@ -392,6 +395,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 				v = (mdxmVertex_t *)&v->weights[/*v->numWeights*/surf->maxVertBoneWeights];
 			}
 #endif
+#endif
 
 			// find the next surface
 			surf = (mdxmSurface_t *)( (byte *)surf + surf->ofsEnd );
@@ -401,6 +405,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 		lod = (mdxmLOD_t *)( (byte *)lod + lod->ofsEnd );
 	}
 
+#if 0
 #ifndef _M_IX86
 //
 // optimisation, we don't bother doing this for standard intel case since our data's already in that format...
@@ -410,6 +415,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 		LL(tag->boneIndex);
 		tag++;
 	}
+#endif
 #endif
 
 	return qtrue;
@@ -426,11 +432,13 @@ qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name ) {
 	int					version;
 	int					size;
 
+#if 0
 #ifndef _M_IX86
 	int					j, k, i;
 	int					frameSize;
 	mdxaFrame_t			*cframe;
 	mdxaSkel_t			*boneInfo;
+#endif
 #endif
 
  	pinmodel = (mdxaHeader_t *)buffer;

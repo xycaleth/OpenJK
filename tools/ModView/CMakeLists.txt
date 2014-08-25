@@ -158,7 +158,7 @@ qt5_wrap_ui( UI_HEADERS
 
 include_directories( "." )
 
-add_definitions( -D_M_IX86 )
+#add_definitions( -D_M_IX86 )
 if( MSVC )
 	add_definitions( -D_CRT_SECURE_NO_WARNINGS )
 endif()

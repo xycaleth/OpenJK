@@ -5,6 +5,7 @@
 #ifndef STL_H
 #define STL_H
 
+#include <algorithm>
 #include <list>
 #include <map>
 #include <string>

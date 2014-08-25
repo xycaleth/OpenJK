@@ -13,7 +13,7 @@ int main ( int argc, char *argv[] )
     QSettings settings ("OpenJK", "ModView");
     
 #if defined(__APPLE__) && defined(__MACH__)
-    app.setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+    //app.setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
 #endif
 
     App_OnceOnly();
