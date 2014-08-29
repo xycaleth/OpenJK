@@ -3520,7 +3520,7 @@ static void ModelList_Render_Actual(int iWindowWidth, int iWindowHeight)
 		GL_Enter3D( AppVars.dFOV, iWindowWidth, iWindowHeight, AppVars.bWireFrame, false);
 
 		{// CLS, & setup GL stuff...
-			glClearColor(AppVars._R / 256.0f, AppVars._G / 256.0f, AppVars._B / 256.0f, 0.0f);
+			glClearColor(AppVars._R / 255.0f, AppVars._G / 255.0f, AppVars._B / 255.0f, 0.0f);
 			glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 			glLoadIdentity	(); 	
 			glTranslatef	(AppVars.xPos, AppVars.yPos , AppVars.zPos );
@@ -3533,9 +3533,13 @@ static void ModelList_Render_Actual(int iWindowWidth, int iWindowHeight)
 			{
 				glEnable	(GL_BLEND);
 				glBlendFunc ( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+				glEnable(GL_ALPHA_TEST);
+				glAlphaFunc(GL_GREATER, 0.5f);
 			}
 			else
 			{
+				glDisable(GL_ALPHA_TEST);
 				glDisable(GL_BLEND);
 			}		
 		}
