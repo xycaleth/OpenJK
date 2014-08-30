@@ -44,7 +44,7 @@ Thing_t Thing;
 static float ACos (float fValue)
 {
 	fValue = std::min(std::max(fValue, -1.0f), 1.0f);
-	return std::cosf(fValue);
+	return static_cast<float>(cos(fValue));
 }
 
 static void CrossProduct( const vec3_t v1, const vec3_t v2, vec3_t cross ) 
