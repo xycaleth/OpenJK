@@ -36,7 +36,7 @@
 
 typedef unsigned char	byte;
 typedef unsigned short	word;
-typedef unsigned long	ulong;
+typedef unsigned int	ulong;
 
 #pragma pack(push)
 #pragma pack(1)
