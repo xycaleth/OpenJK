@@ -35,8 +35,6 @@ public:
 	char		*AllocText(const char *text, bool addNULL = true, CTextPool **poolPtr = 0);
 };
 
-void CleanTextPool(CTextPool *pool);
-
 class CGPObject
 {
 protected:

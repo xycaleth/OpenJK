@@ -104,7 +104,7 @@ typedef vec_t vec4_t[4];
 #include "stl.h"
 
 #ifndef SAFEFREE
-#define SAFEFREE(blah)	if (blah){free(blah);blah=NULL;}
+#define SAFEFREE(blah)	free(blah);blah=NULL;
 #endif
 
 #define ZEROMEM(blah)		memset(&blah,0,sizeof(blah))

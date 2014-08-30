@@ -98,7 +98,6 @@ set( MODVIEW_HEADER_FILES
 	common_headers.h
 	files.h
 	generic_stuff.h
-	genericparser.h
 	GenericParser2.h
     gl_bits.h
 	glm_code.h
@@ -136,7 +135,6 @@ set( MODVIEW_SOURCE_FILES
 	anims.cpp
 	files.cpp
 	generic_stuff.cpp
-	genericparser.cpp
 	GenericParser2.cpp
     gl_bits.cpp
 	glm_code.cpp

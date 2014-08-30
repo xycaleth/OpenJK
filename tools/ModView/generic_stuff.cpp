@@ -503,15 +503,15 @@ int LoadFile (const char * psPathedFilename, void **bufferptr, int bReportErrors
 {
 	FILE	*f;
 	int    length;
-	void    *buffer;
+	char    *buffer;
 
 	f = fopen(psPathedFilename,"rb");
 	if (f)
 	{
 		length = filesize(f);	
-		buffer = malloc (length+1);
-		((char *)buffer)[length] = 0;
-		int lread = fread (buffer,1,length, f);	
+		buffer = static_cast<char *>(malloc (length + 1));
+		buffer[length] = 0;
+		int lread = fread (buffer, 1, length, f);	
 		fclose (f);
 
 		if (lread==length)

@@ -343,7 +343,7 @@ void AppVars_OnceOnlyInit(void)
 	AppVars.bOriginLines		=	false;
 	AppVars.bBBox				=	false;
 	AppVars.bFloor				=	false;
-	AppVars.fFloorZ				=	-50;
+	AppVars.fFloorZ				=	0;
 	AppVars.bRuler				=	false;
 	AppVars.bBoneHighlight		=	true;
 	AppVars.bBoneWeightThreshholdingActive = false;

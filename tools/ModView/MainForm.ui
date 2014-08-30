@@ -114,6 +114,8 @@
     </property>
     <addaction name="actionToolbar"/>
     <addaction name="actionStatus_Bar"/>
+    <addaction name="separator"/>
+    <addaction name="actionZoom_to_Fit"/>
     <addaction name="actionRefresh_All_Textures"/>
     <addaction name="actionReset_view_position"/>
     <addaction name="separator"/>
@@ -172,8 +174,11 @@
    <property name="enabled">
     <bool>true</bool>
    </property>
+   <property name="contextMenuPolicy">
+    <enum>Qt::NoContextMenu</enum>
+   </property>
    <property name="windowTitle">
-    <string>toolBar</string>
+    <string>Toolbar</string>
    </property>
    <property name="movable">
     <bool>false</bool>
@@ -190,8 +195,29 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="actionNew"/>
+   <addaction name="actionOpen"/>
+   <addaction name="separator"/>
+   <addaction name="actionRewind"/>
+   <addaction name="actionPrevious_frame"/>
+   <addaction name="actionStop"/>
+   <addaction name="actionStart"/>
+   <addaction name="actionNext_frame"/>
+   <addaction name="actionGo_to_end_frame"/>
+   <addaction name="actionFaster"/>
+   <addaction name="actionSlower"/>
+   <addaction name="separator"/>
+   <addaction name="actionReset_view_position"/>
+   <addaction name="actionZoom_to_Fit"/>
+   <addaction name="actionCycle_Field_of_View_10_80_90"/>
+   <addaction name="separator"/>
+   <addaction name="actionRefresh_All_Textures"/>
   </widget>
   <action name="actionNew">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/document.png</normaloff>:/res/document.png</iconset>
+   </property>
    <property name="text">
     <string>New	Ctrl+N</string>
    </property>
@@ -200,6 +226,10 @@
    </property>
   </action>
   <action name="actionOpen">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/folder-open-document.png</normaloff>:/res/folder-open-document.png</iconset>
+   </property>
    <property name="text">
     <string>Open...	Ctrl+O</string>
    </property>
@@ -232,6 +262,9 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Toolbar</string>
    </property>
@@ -245,11 +278,19 @@
    </property>
   </action>
   <action name="actionReset_view_position">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/magnifier-history.png</normaloff>:/res/magnifier-history.png</iconset>
+   </property>
    <property name="text">
     <string>Reset View Position</string>
    </property>
   </action>
   <action name="actionStart">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/control.png</normaloff>:/res/control.png</iconset>
+   </property>
    <property name="text">
     <string>Start</string>
    </property>
@@ -263,36 +304,64 @@
    </property>
   </action>
   <action name="actionStop">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/control-pause.png</normaloff>:/res/control-pause.png</iconset>
+   </property>
    <property name="text">
     <string>Pause</string>
    </property>
   </action>
   <action name="actionRewind">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/control-skip-180.png</normaloff>:/res/control-skip-180.png</iconset>
+   </property>
    <property name="text">
     <string>Rewind</string>
    </property>
   </action>
   <action name="actionGo_to_end_frame">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/control-skip.png</normaloff>:/res/control-skip.png</iconset>
+   </property>
    <property name="text">
     <string>Go to Last Frame</string>
    </property>
   </action>
   <action name="actionFaster">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/plus.png</normaloff>:/res/plus.png</iconset>
+   </property>
    <property name="text">
     <string>Faster</string>
    </property>
   </action>
   <action name="actionSlower">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/minus.png</normaloff>:/res/minus.png</iconset>
+   </property>
    <property name="text">
     <string>Slower</string>
    </property>
   </action>
   <action name="actionNext_frame">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/control-double.png</normaloff>:/res/control-double.png</iconset>
+   </property>
    <property name="text">
     <string>Next Frame</string>
    </property>
   </action>
   <action name="actionPrevious_frame">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/control-double-180.png</normaloff>:/res/control-double-180.png</iconset>
+   </property>
    <property name="text">
     <string>Previous Frame</string>
    </property>
@@ -319,6 +388,10 @@
    </property>
   </action>
   <action name="actionRefresh_All_Textures">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/arrow-circle-315.png</normaloff>:/res/arrow-circle-315.png</iconset>
+   </property>
    <property name="text">
     <string>Refresh All Textures</string>
    </property>
@@ -367,6 +440,10 @@
    </property>
   </action>
   <action name="actionCycle_Field_of_View_10_80_90">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/magnifier-zoom.png</normaloff>:/res/magnifier-zoom.png</iconset>
+   </property>
    <property name="text">
     <string>Cycle Field of View (10/80/90)</string>
    </property>
@@ -475,6 +552,15 @@
   <action name="actionOpen_Scene">
    <property name="text">
     <string>Open Scene...</string>
+   </property>
+  </action>
+  <action name="actionZoom_to_Fit">
+   <property name="icon">
+    <iconset resource="ModView.qrc">
+     <normaloff>:/res/magnifier-zoom-fit.png</normaloff>:/res/magnifier-zoom-fit.png</iconset>
+   </property>
+   <property name="text">
+    <string>Zoom to Fit</string>
    </property>
   </action>
  </widget>
@@ -1050,6 +1136,38 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionToolbar</sender>
+   <signal>triggered(bool)</signal>
+   <receiver>toolBar</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>586</x>
+     <y>37</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toolBar</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>actionToolbar</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>586</x>
+     <y>37</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -1087,5 +1205,6 @@
   <slot>OnToggleOriginAxes()</slot>
   <slot>OnToggleHeightRuler()</slot>
   <slot>OnNewScene()</slot>
+  <slot>OnZoomToFit()</slot>
  </slots>
 </ui>

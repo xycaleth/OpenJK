@@ -1,5 +1,18 @@
 <RCC>
   <qresource prefix="/">
-    <file>res/new.png</file>
+    <file>res/minus.png</file>
+    <file>res/plus.png</file>
+    <file>res/magnifier-history.png</file>
+    <file>res/magnifier-zoom-fit.png</file>
+    <file>res/control-double.png</file>
+    <file>res/control-double-180.png</file>
+    <file>res/control-pause.png</file>
+    <file>res/control-skip.png</file>
+    <file>res/control-skip-180.png</file>
+    <file>res/magnifier-zoom.png</file>
+    <file>res/arrow-circle-315.png</file>
+    <file>res/folder-open-document.png</file>
+    <file>res/document.png</file>
+    <file>res/control.png</file>
   </qresource>
 </RCC>
