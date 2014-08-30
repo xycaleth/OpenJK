@@ -44,6 +44,7 @@ private slots:
     void OnToggleCleanScreenshot();
     void OnResetViewPoint();
     void OnCycleFieldOfView();
+	void OnZoomToFit();
     void OnIncreaseLOD();
     void OnDecreaseLOD();
     void OnPicmipTo0();

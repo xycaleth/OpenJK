@@ -16,14 +16,16 @@
 #include "text.h"
 #include "textures.h"
 
-void StartRenderTimer ( QWidget *parent, RenderWidget *renderWidget )
+namespace
 {
-    QTimer *fpsTimer = new QTimer (parent);
-    fpsTimer->setInterval (10);
-    QObject::connect (fpsTimer, SIGNAL (timeout()), parent, SLOT (OnUpdateAnimation()));
-    fpsTimer->start();
+	void StartRenderTimer ( QWidget *parent, RenderWidget *renderWidget )
+	{
+		QTimer *fpsTimer = new QTimer (parent);
+		fpsTimer->setInterval (10);
+		QObject::connect (fpsTimer, SIGNAL (timeout()), parent, SLOT (OnUpdateAnimation()));
+		fpsTimer->start();
+	}
 }
-
 
 MainForm::MainForm ( QSettings& settings, QWidget *parent )
     : QMainWindow (parent)
@@ -225,7 +227,10 @@ void MainForm::OnAnimationGoToEndFrame()
 
 void MainForm::OnAnimationSpeedUp()
 {
-    AppVars.dAnimSpeed *= ANIM_FASTER;
+	double fps = 1.0 / AppVars.dAnimSpeed;
+	fps += 2.0;
+
+    AppVars.dAnimSpeed = 1.0 / fps;
 
     // Need to update the FPS text
     ModelList_ForceRedraw();
@@ -233,7 +238,15 @@ void MainForm::OnAnimationSpeedUp()
 
 void MainForm::OnAnimationSlowDown()
 {
-    AppVars.dAnimSpeed *= ANIM_SLOWER;
+    double fps = 1.0 / AppVars.dAnimSpeed;
+	fps -= 2.0;
+
+	if ( fps <= 0.5 )
+	{
+		return;
+	}
+
+    AppVars.dAnimSpeed = 1.0 / fps;
 
     // Need to update the FPS text
     ModelList_ForceRedraw();
@@ -426,4 +439,9 @@ void MainForm::OnToggleWireframe()
 {
 	AppVars.bWireFrame = !AppVars.bWireFrame;
 	ModelList_ForceRedraw();
+}
+
+void MainForm::OnZoomToFit()
+{
+	
 }

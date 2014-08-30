@@ -198,7 +198,7 @@ char *CTextPool::AllocText(const char *text, bool addNULL, CTextPool **poolPtr)
 	return mPool + mUsed - length;
 }
 
-void CleanTextPool(CTextPool *pool)
+static void CleanTextPool(CTextPool *pool)
 {
 	CTextPool *next;
 
@@ -209,12 +209,6 @@ void CleanTextPool(CTextPool *pool)
 		pool = next;
 	}
 }
-
-
-
-
-
-
 
 CGPObject::CGPObject(const char *initName) :
 	mName(initName),

@@ -5,9 +5,9 @@
 // Currently reads either "<name>.frames" and/or "animtion.cfg" files...
 //
 #include "stdafx.h"
+#include "anims.h"
 
 #include <algorithm>
-#include "anims.h"
 #include "r_common.h"
 #include "sequence.h"
 #include "StringUtils.h"
