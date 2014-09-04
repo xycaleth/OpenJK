@@ -15,6 +15,7 @@
 #include "SceneTreeView.h"
 #include "text.h"
 #include "textures.h"
+#include "ChangeFloorDialog.h"
 
 namespace
 {
@@ -138,6 +139,8 @@ void MainForm::OnNewScene()
 	Model_Delete();
 	CurrentSceneName (tr ("Untitled"));
 	ClearSceneTreeModel (*treeModel);
+
+	ModelList_ForceRedraw();
 }
 
 void MainForm::OnOpenModel()
@@ -444,4 +447,10 @@ void MainForm::OnToggleWireframe()
 void MainForm::OnZoomToFit()
 {
 	
+}
+
+void MainForm::OnChangeFloorPosition()
+{
+	ChangeFloorDialog dlg(this);
+	dlg.exec();
 }

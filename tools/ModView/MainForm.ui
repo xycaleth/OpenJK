@@ -106,7 +106,6 @@
     </property>
     <addaction name="actionChoose_background_color"/>
     <addaction name="actionChange_Floor_Position"/>
-    <addaction name="actionChange_Bone_Weighting_Threshold"/>
    </widget>
    <widget class="QMenu" name="menu_View">
     <property name="title">
@@ -1168,6 +1167,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionChange_Floor_Position</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnChangeFloorPosition()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>586</x>
+     <y>340</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -1206,5 +1221,6 @@
   <slot>OnToggleHeightRuler()</slot>
   <slot>OnNewScene()</slot>
   <slot>OnZoomToFit()</slot>
+  <slot>OnChangeFloorPosition()</slot>
  </slots>
 </ui>

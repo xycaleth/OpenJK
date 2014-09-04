@@ -79,6 +79,7 @@ source_group( "LibJPEG Files" FILES ${MODVIEW_LIBJPEG_FILES} )
 set( MODVIEW_GUI_FILES
 	GUIHelpers.h
 	MainForm.h
+	ChangeFloorDialog.h
 	RenderWidget.h
 	SceneTreeItem.h
 	SceneTreeModel.h
@@ -86,6 +87,7 @@ set( MODVIEW_GUI_FILES
 	
 	GUIHelpers.cpp
 	MainForm.cpp
+	#ChangeFloorDialog.cpp
 	RenderWidget.cpp
 	SceneTreeItem.cpp
 	SceneTreeModel.cpp
@@ -164,6 +166,7 @@ set( MODVIEW_SOURCE_FILES
 
 qt5_wrap_ui( UI_HEADERS
 	MainForm.ui
+	ChangeFloor.ui
 )
 source_group( "Qt UI Files" FILES ${UI_HEADERS} )
 

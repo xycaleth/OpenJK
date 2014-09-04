@@ -65,6 +65,8 @@ private slots:
 
 	void OnScreenshotTakenForClipboard ( const QImage& image );
 
+	void OnChangeFloorPosition();
+
 private:
     void ChangeLOD ( int lod );
     void ChangePicmip ( int level );
