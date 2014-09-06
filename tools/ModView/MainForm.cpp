@@ -451,6 +451,9 @@ void MainForm::OnZoomToFit()
 
 void MainForm::OnChangeFloorPosition()
 {
-	ChangeFloorDialog dlg(this);
+	ChangeFloorDialog dlg(AppVars, this);
+
+	connect(&dlg, SIGNAL(FloorYChanged(int)), SLOT(OnFloorHeightChanged(int)));
+
 	dlg.exec();
 }

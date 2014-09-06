@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>327</width>
+    <width>330</width>
     <height>366</height>
    </rect>
   </property>
@@ -54,6 +54,55 @@
         </property>
        </widget>
       </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Expanding</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="heightTextbox">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="heightLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>units</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
      </layout>
     </widget>
    </item>
@@ -87,7 +136,7 @@
            </size>
           </property>
           <property name="autoFillBackground">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="styleSheet">
            <string notr="true">border: 1px solid lightgrey</string>
@@ -180,7 +229,7 @@
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
    <receiver>ChangeFloorDlg</receiver>
-   <slot>reject()</slot>
+   <slot>OnCancel()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>316</x>
@@ -192,5 +241,41 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>horizontalSlider</sender>
+   <signal>sliderMoved(int)</signal>
+   <receiver>ChangeFloorDlg</receiver>
+   <slot>OnFloorHeightChanged(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>163</x>
+     <y>111</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>163</x>
+     <y>182</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>ChangeFloorDlg</receiver>
+   <slot>OnFloorHeightChanged(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>163</x>
+     <y>111</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>163</x>
+     <y>182</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
+ <slots>
+  <slot>OnFloorHeightChanged(int)</slot>
+  <slot>OnCancel()</slot>
+ </slots>
 </ui>

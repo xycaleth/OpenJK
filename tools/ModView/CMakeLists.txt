@@ -87,7 +87,7 @@ set( MODVIEW_GUI_FILES
 	
 	GUIHelpers.cpp
 	MainForm.cpp
-	#ChangeFloorDialog.cpp
+	ChangeFloorDialog.cpp
 	RenderWidget.cpp
 	SceneTreeItem.cpp
 	SceneTreeModel.cpp

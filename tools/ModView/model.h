@@ -227,7 +227,7 @@ struct ModelContainer
 const double ANIM_SLOWER = 1.3;
 const double ANIM_FASTER = 0.9;
 
-typedef struct
+struct ModViewAppVars_t
 {
     std::string         strLoadedModelPath;	// full disk path of primary model
 	
@@ -300,7 +300,7 @@ typedef struct
 	ModelHandle_t hModelToHighLight;
 	ModelHandle_t hModelLastLoaded;	// useful for some simple batch stuff, may only be temp?
   
-} ModViewAppVars_t;
+};
 
 extern ModViewAppVars_t AppVars;
 
