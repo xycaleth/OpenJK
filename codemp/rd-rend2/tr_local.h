@@ -1095,16 +1095,29 @@ typedef enum
 	UNIFORM_COUNT
 } uniform_t;
 
+typedef struct uniformInfo_s
+{
+	char *name;
+	int type;
+	int size;
+}
+uniformInfo_t;
+
+extern uniformInfo_t uniformsInfo[];
+
 // shaderProgram_t represents a pair of one
 // GLSL vertex and one GLSL fragment shader
 typedef struct shaderProgram_s
 {
 	char *name;
 
-	GLuint     program;
-	GLuint     vertexShader;
-	GLuint     fragmentShader;
-	uint32_t        attribs;	// vertex array attributes
+	qboolean used;
+	void (*initializeUniforms)( struct shaderProgram_s *program );
+
+	GLuint program;
+	GLuint vertexShader;
+	GLuint fragmentShader;
+	uint32_t attribs;	// vertex array attributes
 
 	// uniform parameters
 	int numUniforms;
@@ -2679,8 +2692,7 @@ GLSL
 ============================================================
 */
 
-int GLSL_BeginLoadGPUShaders(void);
-void GLSL_EndLoadGPUShaders( int startTime );
+int GLSL_LoadGPUShaders(void);
 void GLSL_ShutdownGPUShaders(void);
 void GLSL_VertexAttribsState(uint32_t stateBits);
 void GLSL_UpdateTexCoordVertexAttribPointers ( uint32_t attribBits );

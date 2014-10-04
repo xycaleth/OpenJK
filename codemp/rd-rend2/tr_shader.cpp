@@ -3187,6 +3187,9 @@ static shader_t *GeneratePermanentShader( void ) {
 	newShader->next = hashTable[hash];
 	hashTable[hash] = newShader;
 
+	void *GenerateGenericGLSLShader( const shader_t *shader, const char *defines[], uint32_t permutation );
+	GenerateGenericGLSLShader(newShader, NULL, 0);
+
 	return newShader;
 }
 

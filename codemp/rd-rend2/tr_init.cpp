@@ -1524,7 +1524,7 @@ void R_Init( void ) {
 
 	FBO_Init();
 
-	int shadersStartTime = GLSL_BeginLoadGPUShaders();
+	GLSL_LoadGPUShaders();
 
 	R_InitVBOs();
 
@@ -1539,8 +1539,6 @@ void R_Init( void ) {
 	R_InitDecals();
 
 	R_InitQueries();
-
-	GLSL_EndLoadGPUShaders (shadersStartTime);
 
 	err = qglGetError();
 	if ( err != GL_NO_ERROR )
