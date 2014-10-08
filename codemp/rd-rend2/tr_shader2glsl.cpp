@@ -20,11 +20,7 @@ struct shader_s:
 
 	-- cbuffer data
 	fogParms_t	fogParms;
-
-	-- cbuffer data
 	float		portalRange;			// distance to fog out at
-
-	-- not sure...
 	int			multitextureEnv;		// 0, GL_MODULATE, GL_ADD (FIXME: put in stage)
 
 	-- rasterizer state
@@ -181,12 +177,57 @@ fog: {no fog, with fog}
 render pass: {depth prepass, shadow, render, fog} <-- depth prepass and shader the same thing?
 */
 
-struct ConstantData
+const int UNIFORMS_BITFIELD_ARRAY_SIZE = (UNIFORM_COUNT + 31) / 32;
+const int SAMPLERS_BITFIELD_ARRAY_SIZE = (NUM_TEXTURE_BUNDLES + 31) / 32;
+
+static void SetBit( uint32_t *bitfieldArray, int bit )
+{
+	int index = bit / 32;
+	int elementBit = bit - index * 32;
+
+	bitfieldArray[index] |= (1 << elementBit);
+}
+
+static void ClearBit( uint32_t *bitfieldArray, int bit )
+{
+	int index = bit / 32;
+	int elementBit = bit - index * 32;
+
+	bitfieldArray[index] &= ~(1 << elementBit);
+}
+
+static bool IsBitSet( uint32_t *bitfieldArray, int bit )
+{
+	int index = bit / 32;
+	int elementBit = bit - index * 32;
+
+	return (bitfieldArray[index] & (1 << elementBit)) != 0;
+}
+
+struct GLSLShader
+{
+	std::string code;
+
+	uint32_t attributes;
+	uint32_t samplers[SAMPLERS_BITFIELD_ARRAY_SIZE];
+	uint32_t uniforms[UNIFORMS_BITFIELD_ARRAY_SIZE];
+
+	int attributesArraySizes[ATTR_INDEX_COUNT];
+	int samplersArraySizes[NUM_TEXTURE_BUNDLES];
+	int uniformsArraySizes[UNIFORM_COUNT];
+};
+
+struct ConstantDescriptor
 {
 	int type;
 	int offset;
 	int location;
 	int size;
+};
+
+struct SamplerDescriptor
+{
+	GLenum target;
 };
 
 struct ShaderProgram
@@ -195,9 +236,13 @@ struct ShaderProgram
 	int fragmentShader;
 	int program;
 
-	int numUniforms;
-	ConstantData *constants;
+	int numSamplers;
+	SamplerDescriptor *samplers;
 
+	int numUniforms;
+	ConstantDescriptor *constants;
+
+	// Mapping from UNIFORM_* -> array index into 'constants' array.
 	int uniformDataIndices[UNIFORM_COUNT];
 };
 
@@ -206,6 +251,7 @@ struct Material
 	ShaderProgram *program;
 
 	void *constantData;
+	GLuint *textures;
 };
 
 const int MAX_SHADER_PROGRAM_TABLE_SIZE = 2048;
@@ -261,61 +307,17 @@ static bool AddShaderHeaderCode( const shader_t *shader, const char *defines[], 
 	return true;
 }
 
-static void GenerateGenericVertexShaderCode( const shader_t *shader, const char *defines[], uint32_t permutation, std::string& code )
+static void GenerateGenericVertexShaderCode(
+	const shader_t *shader,
+	const char *defines[],
+	uint32_t permutation,
+	GLSLShader& genShader )
 {
+	std::string& code = genShader.code;
 	uint32_t attributes = shader->vertexAttribs;
-	bool uniforms[UNIFORM_COUNT] = {};
-
-	// Determine uniforms needed
-	uniforms[UNIFORM_MODELVIEWPROJECTIONMATRIX] = true;
-	uniforms[UNIFORM_BASECOLOR] = true;
-	uniforms[UNIFORM_VERTCOLOR] = true;
-	
-	if ( permutation & (GENERICDEF_USE_TCGEN_AND_TCMOD | GENERICDEF_USE_RGBAGEN) )
-	{
-		uniforms[UNIFORM_LOCALVIEWORIGIN] = true;
-	}
-
-	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
-	{
-		// Per unique diffuse tex mods
-		uniforms[UNIFORM_DIFFUSETEXMATRIX] = true;
-		uniforms[UNIFORM_DIFFUSETEXOFFTURB] = true;
-
-		// Per unique tc gens
-		uniforms[UNIFORM_TCGEN0] = true;
-		uniforms[UNIFORM_TCGEN0VECTOR0] = true;
-		uniforms[UNIFORM_TCGEN0VECTOR1] = true;
-	}
-
-	if ( permutation & GENERICDEF_USE_FOG )
-	{
-		uniforms[UNIFORM_FOGCOLORMASK] = true;
-		uniforms[UNIFORM_FOGDEPTH] = true;
-		uniforms[UNIFORM_FOGDISTANCE] = true;
-		uniforms[UNIFORM_FOGEYET] = true;
-	}
-
-	if ( permutation & GENERICDEF_USE_DEFORM_VERTEXES )
-	{
-		// Per deform vertex entry
-		uniforms[UNIFORM_DEFORMGEN] = true;
-		uniforms[UNIFORM_DEFORMPARAMS] = true;
-		uniforms[UNIFORM_TIME] = true;
-	}
-
-	if ( permutation & GENERICDEF_USE_RGBAGEN )
-	{
-		// Per stage?
-		uniforms[UNIFORM_COLORGEN] = true;
-		uniforms[UNIFORM_ALPHAGEN] = true;
-		uniforms[UNIFORM_AMBIENTLIGHT] = true;
-		uniforms[UNIFORM_DIRECTEDLIGHT] = true;
-		uniforms[UNIFORM_MODELLIGHTDIR] = true;
-		uniforms[UNIFORM_PORTALRANGE] = true;
-	}
 
 	// Determine inputs needed
+	memset( genShader.attributesArraySizes, 1, sizeof( genShader.attributesArraySizes ) );
 	if ( permutation & GENERICDEF_USE_VERTEX_ANIMATION )
 	{
 		attributes |= ATTR_POSITION2;
@@ -332,6 +334,62 @@ static void GenerateGenericVertexShaderCode( const shader_t *shader, const char 
 		attributes |= ATTR_TEXCOORD1;
 	}
 
+	// Determine uniforms needed
+	memset( genShader.uniforms, 0, sizeof( genShader.uniforms ) );
+	memset( genShader.uniformsArraySizes, 1, sizeof( genShader.uniformsArraySizes ) );
+	memset( genShader.samplersArraySizes, 1, sizeof( genShader.samplersArraySizes ) );
+
+	SetBit( genShader.uniforms, UNIFORM_MODELVIEWPROJECTIONMATRIX );
+	SetBit( genShader.uniforms, UNIFORM_BASECOLOR );
+	SetBit( genShader.uniforms, UNIFORM_VERTCOLOR );
+	
+	if ( permutation & (GENERICDEF_USE_TCGEN_AND_TCMOD | GENERICDEF_USE_RGBAGEN) )
+	{
+		SetBit( genShader.uniforms, UNIFORM_LOCALVIEWORIGIN );
+	}
+
+	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
+	{
+		// Per unique diffuse tex mods
+		SetBit( genShader.uniforms, UNIFORM_DIFFUSETEXMATRIX );
+		SetBit( genShader.uniforms, UNIFORM_DIFFUSETEXOFFTURB );
+
+		// Per unique tc gens
+		SetBit( genShader.uniforms, UNIFORM_TCGEN0 );
+		SetBit( genShader.uniforms, UNIFORM_TCGEN0VECTOR0 );
+		SetBit( genShader.uniforms, UNIFORM_TCGEN0VECTOR1 );
+	}
+
+	if ( permutation & GENERICDEF_USE_FOG )
+	{
+		SetBit( genShader.uniforms, UNIFORM_FOGCOLORMASK );
+		SetBit( genShader.uniforms, UNIFORM_FOGDEPTH );
+		SetBit( genShader.uniforms, UNIFORM_FOGDISTANCE );
+		SetBit( genShader.uniforms, UNIFORM_FOGEYET );
+	}
+
+	if ( permutation & GENERICDEF_USE_DEFORM_VERTEXES )
+	{
+		// Per deform vertex entry
+		SetBit( genShader.uniforms, UNIFORM_DEFORMGEN );
+		SetBit( genShader.uniforms, UNIFORM_DEFORMPARAMS );
+		SetBit( genShader.uniforms, UNIFORM_TIME );
+
+		genShader.uniformsArraySizes[UNIFORM_DEFORMGEN] = shader->numDeforms;
+		genShader.uniformsArraySizes[UNIFORM_DEFORMPARAMS] = shader->numDeforms;
+	}
+
+	if ( permutation & GENERICDEF_USE_RGBAGEN )
+	{
+		// Per stage?
+		SetBit( genShader.uniforms, UNIFORM_COLORGEN );
+		SetBit( genShader.uniforms, UNIFORM_ALPHAGEN );
+		SetBit( genShader.uniforms, UNIFORM_AMBIENTLIGHT );
+		SetBit( genShader.uniforms, UNIFORM_DIRECTEDLIGHT );
+		SetBit( genShader.uniforms, UNIFORM_MODELLIGHTDIR );
+		SetBit( genShader.uniforms, UNIFORM_PORTALRANGE );
+	}
+
 	// Generate the code
 	AddShaderHeaderCode( shader, defines, permutation, code );
 
@@ -340,7 +398,7 @@ static void GenerateGenericVertexShaderCode( const shader_t *shader, const char 
 	// Add uniforms
 	for ( int i = 0; i < UNIFORM_COUNT; i++ )
 	{
-		if ( uniforms[i] )
+		if ( IsBitSet( genShader.uniforms, i ) )
 		{
 			code += "uniform ";
 			code += glslTypeStrings[uniformsInfo[i].type];
@@ -512,79 +570,93 @@ static void GenerateGenericVertexShaderCode( const shader_t *shader, const char 
 	code += "}\n\n";
 }
 
-static void GenerateGenericFragmentShaderCode( const shader_t *shader, const char *defines[], uint32_t permutation, std::string& code )
+static void GenerateGenericFragmentShaderCode(
+	const shader_t *shader,
+	const char *defines[],
+	uint32_t permutation,
+	GLSLShader& genShader )
 {
-	bool uniforms[UNIFORM_COUNT] = {};
+	std::string& code = genShader.code;
 
 	// Determine uniforms needed
-	uniforms[UNIFORM_DIFFUSEMAP] = true;
+	memset( genShader.uniforms, 0, sizeof( genShader.uniforms ) );
+
+	SetBit( genShader.uniforms, UNIFORM_DIFFUSEMAP );
+	SetBit( genShader.samplers, TB_DIFFUSEMAP );
 	
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
 	{
-		uniforms[UNIFORM_LIGHTMAP] = true;
+		SetBit( genShader.uniforms, UNIFORM_LIGHTMAP );
+		SetBit( genShader.samplers, TB_LIGHTMAP );
 	}
 
 	#if 0
 	if ( permutation & GENERICDEF_USE_NORMALMAP )
 	{
 		// Per unique normal map
-		uniforms[UNIFORM_NORMALMAP] = true;
+		SetBit( genShader.uniforms, UNIFORM_NORMALMAP );
+		SetBit( genShader.samplers, TB_NORMALMAP );
 	}
 
 	if ( permutation & GENERICDEF_USE_DELUXEMAP )
 	{
 		// Per unique deluxe map
-		uniforms[UNIFORM_DELUXEMAP] = true;
+		SetBit( genShader.uniforms, UNIFORM_DELUXEMAP );
+		SetBit( genShader.samplers, TB_DELUXEMAP );
 	}
 
 	if ( permutation & GENERICDEF_USE_SPECULARMAP )
 	{
 		// Per unique deluxe map
-		uniforms[UNIFORM_SPECULARMAP] = true;
+		SetBit( genShader.uniforms, UNIFORM_SPECULARMAP );
+		SetBit( genShader.samplers, TB_SPECULARMAP );
 	}
 
 	if ( permutation & GENERICDEF_USE_SHADOWMAP )
 	{
-		uniforms[UNIFORM_SHADOWMAP] = true;
+		SetBit( genShader.uniforms, UNIFORM_SHADOWMAP );
+		SetBit( genShader.samplers, TB_SHADOWMAP );
 	}
 
 	if ( permutation & GENERICDEF_USE_CUBEMAP )
 	{
-		uniforms[UNIFORM_CUBEMAP] = true;
+		SetBit( genShader.uniforms, UNIFORM_CUBEMAP );
+		SetBit( genShader.samplers, TB_CUBEMAP );
 	}
 
 	if ( permutation & (GENERICDEF_USE_NORMALMAP | GENERICDEF_USE_SPECULARMAP | GENERICDEF_USE_CUBEMAP) )
 	{
-		uniforms[UNIFORM_ENABLETEXTURES] = true;
+		SetBit( genShader.uniforms, UNIFORM_ENABLETEXTURES );
 	}
 
 	if ( permutation & (GENERICDEF_USE_LIGHTVECTOR | GENERICDEF_USE_FASTLIGHT) )
 	{
-		uniforms[UNIFORM_DIRECTLIGHT] = true;
-		uniforms[UNIFORM_AMBIENTLIGHT] = true;
+		SetBit( genShader.uniforms, UNIFORM_DIRECTLIGHT );
+		SetBit( genShader.uniforms, UNIFORM_AMBIENTLIGHT );
 	}
 
 	if ( permutation & (GENERICDEF_USE_PRIMARYLIGHT | GENERICDEF_USE_SHADOWMAP) )
 	{
-		uniforms[UNIFORM_PRIMARYLIGHTCOLOR] = true;
-		uniforms[UNIFORM_PRIMARYLIGHTAMBIENT] = true;
+		SetBit( genShader.uniforms, UNIFORM_PRIMARYLIGHTCOLOR );
+		SetBit( genShader.uniforms, UNIFORM_PRIMARYLIGHTAMBIENT );
 	}
 
 	if ( (permutation & GENERICDEF_USE_LIGHT) != 0 &&
 			(permutation & GENERICDEF_USE_FASTLIGHT) == 0 )
 	{
-		uniforms[UNIFORM_NORMALSCALE] = true;
-		uniforms[UNIFORM_SPECULARSCALE] = true;
+		SetBit( genShader.uniforms, UNIFORM_NORMALSCALE );
+		SetBit( genShader.uniforms, UNIFORM_SPECULARSCALE );
 	}
 
 	if ( (permutation & GENERICDEF_USE_LIGHT) != 0 &&
 			(permutation & GENERICDEF_USE_FASTLIGHT) == 0 &&
 			(permutation & GENERICDEF_USE_CUBEMAP) != 0 )
 	{
-		uniforms[UNIFORM_CUBEMAP] = true;
+		SetBit( genShader.uniforms, UNIFORM_CUBEMAP );
+		SetBit( genShader.samplers, TB_CUBEMAP );
 	}
 	#endif
-
+	
 	// Generate the code
 	AddShaderHeaderCode( shader, defines, permutation, code );
 
@@ -593,7 +665,7 @@ static void GenerateGenericFragmentShaderCode( const shader_t *shader, const cha
 	// Add uniforms
 	for ( int i = 0; i < UNIFORM_COUNT; i++ )
 	{
-		if ( uniforms[i] )
+		if ( IsBitSet( genShader.uniforms, i ) )
 		{
 			code += "uniform ";
 			code += glslTypeStrings[uniformsInfo[i].type];
@@ -685,23 +757,372 @@ uint32_t GetShaderCapabilities( const shader_t *shader )
 	return caps;
 }
 
+void SetMaterialData( Material *material, void *newData, uniform_t uniform )
+{
+	ShaderProgram *program = material->program;
+	ConstantDescriptor *constantData = &program->constants[program->uniformDataIndices[uniform]];
+	void *data = reinterpret_cast<char *>(material->constantData) + constantData->offset;
+
+	switch ( constantData->type )
+	{
+		case GLSL_INT:
+			memcpy( data, newData, sizeof( int ) );
+			break;
+
+		case GLSL_FLOAT:
+			memcpy( data, newData, sizeof( float ) );
+			break;
+
+		case GLSL_FLOAT5:
+			memcpy( data, newData, sizeof( float ) * 5 );
+			break;
+
+		case GLSL_VEC2:
+			memcpy( data, newData, sizeof( float ) * 2 );
+			break;
+
+		case GLSL_VEC3:
+			memcpy( data, newData, sizeof( float ) * 3 );
+			break;
+
+		case GLSL_VEC4:
+			memcpy( data, newData, sizeof( float ) * 4 );
+			break;
+
+		case GLSL_MAT16:
+			memcpy( data, newData, sizeof( float ) * 16 );
+			break;
+
+		default:
+			assert( false );
+			break;
+	}
+}
+
+static void FillDefaultUniformData( Material *material, const int uniformIndexes[UNIFORM_COUNT], const shader_t *shader )
+{
+	ShaderProgram *program = material->program;
+	for ( int i = 0,  end = program->numUniforms; i < end; i++ )
+	{
+		const ConstantDescriptor *uniform = &program->constants[i];
+		void *data = reinterpret_cast<char *>(material->constantData) + uniform->offset;
+
+		switch ( uniformIndexes[i] )
+		{
+			case UNIFORM_DIFFUSEMAP:
+				*(int *)data = TB_DIFFUSEMAP;
+				break;
+
+			case UNIFORM_LIGHTMAP:
+				*(int *)data = TB_LIGHTMAP;
+				break;
+
+			case UNIFORM_NORMALMAP:
+				*(int *)data = TB_NORMALMAP;
+				break;
+
+			case UNIFORM_DELUXEMAP:
+				*(int *)data = TB_DELUXEMAP;
+				break;
+
+			case UNIFORM_SPECULARMAP:
+				*(int *)data = TB_SPECULARMAP;
+				break;
+
+			case UNIFORM_TEXTUREMAP:
+				*(int *)data = TB_COLORMAP;
+				break;
+
+			case UNIFORM_LEVELSMAP:
+				*(int *)data = TB_LEVELSMAP;
+				break;
+
+			case UNIFORM_CUBEMAP:
+				*(int *)data = TB_CUBEMAP;
+				break;
+
+			case UNIFORM_SCREENIMAGEMAP:
+				*(int *)data = TB_COLORMAP;
+				break;
+
+			case UNIFORM_SCREENDEPTHMAP:
+				*(int *)data = TB_COLORMAP;
+				break;
+
+			case UNIFORM_SHADOWMAP:
+				*(int *)data = TB_SHADOWMAP;
+				break;
+
+			case UNIFORM_SHADOWMAP2:
+				*(int *)data = TB_SHADOWMAP2;
+				break;
+
+			case UNIFORM_SHADOWMAP3:
+				*(int *)data = TB_SHADOWMAP3;
+				break;
+
+			case UNIFORM_SHADOWMVP:
+			case UNIFORM_SHADOWMVP2:
+			case UNIFORM_SHADOWMVP3:
+				// Dynamic data, no need to initialize
+				break;
+
+			case UNIFORM_ENABLETEXTURES:
+				VectorSet4( (float *)data, 0.0f, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_DIFFUSETEXMATRIX:
+				VectorSet4( (float *)data, 0.0f, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_DIFFUSETEXOFFTURB:
+				VectorSet4( (float *)data, 0.0f, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_TEXTURE1ENV:
+				if ( shader->stages[0]->bundle[TB_LIGHTMAP].image[0] )
+				{
+					if ( r_lightmap->integer )
+					{
+						*(int *)data = GL_REPLACE;
+					}
+					else
+					{
+						*(int *)shader->multitextureEnv;
+					}
+				}
+				else
+				{
+					*(int *)data = 0;
+				}
+				break;
+
+			case UNIFORM_TCGEN0:
+				*(int *)data = shader->stages[0]->bundle[0].tcGen;
+				break;
+
+			case UNIFORM_TCGEN0VECTOR0:
+				VectorSet( (float *)data, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_TCGEN0VECTOR1:
+				VectorSet( (float *)data, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_DEFORMGEN:
+				*(int *)data = 0;
+				break;
+
+			case UNIFORM_DEFORMPARAMS:
+				((float *)data)[0] = 0.0f;
+				((float *)data)[1] = 0.0f;
+				((float *)data)[2] = 0.0f;
+				((float *)data)[3] = 0.0f;
+				((float *)data)[4] = 0.0f;
+				break;
+
+			case UNIFORM_COLORGEN:
+				*(int *)data = CGEN_LIGHTING_DIFFUSE_ENTITY;
+				break;
+
+			case UNIFORM_ALPHAGEN:
+				*(int *)data = AGEN_IDENTITY;
+				break;
+
+			case UNIFORM_COLOR:
+				VectorSet4( (float *)data, 0.0f, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_BASECOLOR:
+				VectorSet4( (float *)data, 0.0f, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_VERTCOLOR:
+				VectorSet4( (float *)data, 0.0f, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_DLIGHTINFO:
+				VectorSet4( (float *)data, 0.0f, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_LIGHTFORWARD:
+				VectorSet( (float *)data, 0.0f, 1.0f, 0.0f );
+				break;
+
+			case UNIFORM_LIGHTUP:
+				VectorSet( (float *)data, 0.0f, 0.0f, 1.0f );
+				break;
+
+			case UNIFORM_LIGHTRIGHT:
+				VectorSet( (float *)data, 1.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_LIGHTORIGIN:
+				VectorSet4( (float *)data, 0.0f, 0.0f, 0.0f, 1.0f );
+				break;
+
+			case UNIFORM_MODELLIGHTDIR:
+				VectorSet( (float *)data, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_LIGHTRADIUS:
+				*(float *)data = 100.0f;
+				break;
+
+			case UNIFORM_AMBIENTLIGHT:
+				VectorSet( (float *)data, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_DIRECTEDLIGHT:
+				VectorSet( (float *)data, 0.0f, 0.0f, 0.0f );
+				break;
+
+			case UNIFORM_PORTALRANGE:
+				*(float *)data = shader->portalRange;
+				break;
+
+			case UNIFORM_FOGDISTANCE:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_FOGDEPTH:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_FOGEYET:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_FOGCOLORMASK:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_MODELMATRIX:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_MODELVIEWPROJECTIONMATRIX:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_TIME:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_VERTEXLERP:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_NORMALSCALE:
+				VectorCopy4( (float *)data, shader->stages[0]->normalScale );
+				break;
+
+			case UNIFORM_SPECULARSCALE:
+				VectorCopy4( (float *)data, shader->stages[0]->specularScale );
+				break;
+
+			case UNIFORM_VIEWINFO: // znear: zfar: width/2: height/2
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_VIEWORIGIN:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_LOCALVIEWORIGIN:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_VIEWFORWARD:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_VIEWLEFT:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_VIEWUP:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_INVTEXRES:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_AUTOEXPOSUREMINMAX:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_TONEMINAVGMAXLINEAR:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_PRIMARYLIGHTORIGIN:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_PRIMARYLIGHTCOLOR:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_PRIMARYLIGHTAMBIENT:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_PRIMARYLIGHTRADIUS:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_CUBEMAPINFO:
+				*(int *)data = 1;
+				break;
+
+			case UNIFORM_BONE_MATRICES:
+				*(int *)data = 1;
+				break;
+
+			default:
+				assert(false);
+				break;
+		}
+	}
+}
+
 Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines[], uint32_t permutation )
 {
 	// Calculate hash for shader
 
 	// shader program = HashTableFind( table, hash );
 	// if ( shader program == NULL ) {
-	std::string vertexShader;
-	std::string fragmentShader;
+	GLSLShader vertexShader;
+	GLSLShader fragmentShader;
 
-	vertexShader.reserve( 16384 );
-	fragmentShader.reserve( 16384 );
+	vertexShader.code.reserve( 16384 );
+	fragmentShader.code.reserve( 16384 );
 
 	permutation |= GetShaderCapabilities( shader );
 
+	uint32_t sharedUniforms[UNIFORMS_BITFIELD_ARRAY_SIZE];
+	int uniformIndexes[UNIFORM_COUNT];
+	int numUniforms = 0;
+
 	// Generate shader code
-	GenerateGenericVertexShaderCode( shader, defines, permutation, vertexShader );
-	GenerateGenericFragmentShaderCode( shader, defines, permutation, fragmentShader );
+	GenerateGenericVertexShaderCode(
+		shader,
+		defines,
+		permutation,
+		vertexShader );
+
+	GenerateGenericFragmentShaderCode(
+		shader,
+		defines,
+		permutation,
+		fragmentShader );
+
+	for ( int i = 0; i < UNIFORMS_BITFIELD_ARRAY_SIZE; i++ )
+	{
+		sharedUniforms[i] = vertexShader.uniforms[i] | fragmentShader.uniforms[i];
+	}
 
 	// Generate static data and allocate memory for dynamic data
 
@@ -711,8 +1132,8 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 	//   int sizeInFloats;
 
 	// FIXME: Refactor into tr_glsl.cpp
-	const char *vertexShaderCode = vertexShader.c_str();
-	const char *fragmentShaderCode = fragmentShader.c_str();
+	const char *vertexShaderCode = vertexShader.code.c_str();
+	const char *fragmentShaderCode = fragmentShader.code.c_str();
 
 	int vshader = qglCreateShader( GL_VERTEX_SHADER );
 	if ( vshader == 0 )
@@ -720,6 +1141,7 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 		// Error etc?
 		return NULL;
 	}
+
 	qglShaderSource( vshader, 1, &vertexShaderCode, NULL );
 	qglCompileShader( vshader );
 
@@ -749,6 +1171,8 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 
 	qglLinkProgram( program );
 
+	qglUseProgram( program );
+
 	// Don't need to initialise defaults for the program.
 
 	// FIXME: Lol, leak memory
@@ -756,13 +1180,23 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 	shaderProgram->program = program;
 	shaderProgram->fragmentShader = fshader;
 	shaderProgram->vertexShader = vshader;
-	shaderProgram->numUniforms = 0;
-	shaderProgram->constants = new ConstantData[shaderProgram->numUniforms];
+	shaderProgram->numUniforms = numUniforms;
+	shaderProgram->constants = new ConstantDescriptor[shaderProgram->numUniforms];
 
 	int constantBufferSize = 0;
-	for ( int i = 0, end = shaderProgram->numUniforms; i < end; i++ )
+	for ( int i = 0, j = 0; i < numUniforms; i++ )
 	{
-		constantBufferSize += shaderProgram->constants[i].size;
+		ConstantDescriptor *uniform = &shaderProgram->constants[uniformIndexes[i]];
+		const uniformInfo_t *uniformInfo = &uniformsInfo[j];
+
+		uniform->offset = constantBufferSize;
+		uniform->size = uniformInfo->size;
+		uniform->type = uniformInfo->type;
+		uniform->location = qglGetUniformLocation( program, uniformInfo->name );
+
+		shaderProgram->uniformDataIndices[i] = j;
+
+		constantBufferSize += uniform->size;
 	}
 
 	// FIXME: Lol, more memory leaks
@@ -771,7 +1205,7 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 	material->program = shaderProgram;
 	material->constantData = malloc( constantBufferSize );
 
-	// Fill in the buffer
+	FillDefaultUniformData( material, uniformIndexes, shader );
 	
 	return material;
 }
@@ -785,7 +1219,7 @@ void RB_BindMaterial( const Material *material )
 	// Update uniforms
 	for ( int i = 0, end = program->numUniforms; i < end; i++ )
 	{
-		const ConstantData *constantData = &program->constants[i];
+		const ConstantDescriptor *constantData = &program->constants[i];
 		const GLfloat *data = reinterpret_cast<const GLfloat *>(material->constantData) + constantData->offset;
 
 		switch ( constantData->type )
@@ -819,9 +1253,15 @@ void RB_BindMaterial( const Material *material )
 				break;
 
 			default:
+				assert( false );
 				break;
 		}
 	}
 
 	// Bind textures
+	for ( int i = 0; i < program->numSamplers; i++ )
+	{
+		qglActiveTextureARB( GL_TEXTURE0 + i );
+		qglBindTexture( program->samplers[i].target, material->textures[i] );
+	}
 }
