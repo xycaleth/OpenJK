@@ -3139,6 +3139,8 @@ static void SortNewShader( void ) {
 GeneratePermanentShader
 ====================
 */
+struct Material;
+Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines[], uint32_t permutation );
 static shader_t *GeneratePermanentShader( void ) {
 	shader_t	*newShader;
 	int			i, b;
@@ -3187,8 +3189,9 @@ static shader_t *GeneratePermanentShader( void ) {
 	newShader->next = hashTable[hash];
 	hashTable[hash] = newShader;
 
-	void *GenerateGenericGLSLShader( const shader_t *shader, const char *defines[], uint32_t permutation );
 	GenerateGenericGLSLShader(newShader, NULL, 0);
+	GenerateGenericGLSLShader(newShader, NULL, GENERICDEF_USE_SKELETAL_ANIMATION);
+	GenerateGenericGLSLShader(newShader, NULL, GENERICDEF_USE_VERTEX_ANIMATION);
 
 	return newShader;
 }

@@ -58,22 +58,22 @@ extern const char *fallbackShader_gaussian_blur_fp;
 // These must be in the same order as in uniform_t in tr_local.h.
 uniformInfo_t uniformsInfo[] =
 {
-	{ "u_DiffuseMap",  GLSL_INT, 1 },
-	{ "u_LightMap",    GLSL_INT, 1 },
-	{ "u_NormalMap",   GLSL_INT, 1 },
-	{ "u_DeluxeMap",   GLSL_INT, 1 },
-	{ "u_SpecularMap", GLSL_INT, 1 },
+	{ "u_DiffuseMap",  GLSL_SAMPLER2D, 1 },
+	{ "u_LightMap",    GLSL_SAMPLER2D, 1 },
+	{ "u_NormalMap",   GLSL_SAMPLER2D, 1 },
+	{ "u_DeluxeMap",   GLSL_SAMPLER2D, 1 },
+	{ "u_SpecularMap", GLSL_SAMPLER2D, 1 },
 
-	{ "u_TextureMap", GLSL_INT, 1 },
-	{ "u_LevelsMap",  GLSL_INT, 1 },
-	{ "u_CubeMap",    GLSL_INT, 1 },
+	{ "u_TextureMap", GLSL_SAMPLER2D, 1 },
+	{ "u_LevelsMap",  GLSL_SAMPLER2D, 1 },
+	{ "u_CubeMap",    GLSL_SAMPLERCUBE, 1 },
 
-	{ "u_ScreenImageMap", GLSL_INT, 1 },
-	{ "u_ScreenDepthMap", GLSL_INT, 1 },
+	{ "u_ScreenImageMap", GLSL_SAMPLER2D, 1 },
+	{ "u_ScreenDepthMap", GLSL_SAMPLER2D, 1 },
 
-	{ "u_ShadowMap",  GLSL_INT, 1 },
-	{ "u_ShadowMap2", GLSL_INT, 1 },
-	{ "u_ShadowMap3", GLSL_INT, 1 },
+	{ "u_ShadowMap",  GLSL_SAMPLER2D, 1 },
+	{ "u_ShadowMap2", GLSL_SAMPLER2D, 1 },
+	{ "u_ShadowMap3", GLSL_SAMPLER2D, 1 },
 
 	{ "u_ShadowMvp",  GLSL_MAT16, 1 },
 	{ "u_ShadowMvp2", GLSL_MAT16, 1 },
@@ -140,7 +140,7 @@ uniformInfo_t uniformsInfo[] =
 
 	{ "u_CubeMapInfo", GLSL_VEC4, 1 },
 
-	{ "u_BoneMatrices",			GLSL_MAT16, 80 },
+	{ "u_BoneMatrices",			GLSL_MAT16, 20 },
 };
 
 static void GLSL_PrintProgramInfoLog(GLuint object, qboolean developerOnly)
@@ -714,6 +714,8 @@ void GLSL_InitUniforms(shaderProgram_t *program)
 		switch(uniformsInfo[i].type)
 		{
 			case GLSL_INT:
+			case GLSL_SAMPLER2D:
+			case GLSL_SAMPLERCUBE:
 				size += sizeof(GLint) * uniformsInfo[i].size;
 				break;
 			case GLSL_FLOAT:
@@ -757,7 +759,9 @@ void GLSL_SetUniformInt(shaderProgram_t *program, int uniformNum, GLint value)
 	if (uniforms[uniformNum] == -1)
 		return;
 
-	if (uniformsInfo[uniformNum].type != GLSL_INT)
+	if (uniformsInfo[uniformNum].type != GLSL_INT &&
+		uniformsInfo[uniformNum].type != GLSL_SAMPLER2D &&
+		uniformsInfo[uniformNum].type != GLSL_SAMPLERCUBE)
 	{
 		ri->Printf( PRINT_WARNING, "GLSL_SetUniformInt: wrong type for uniform %i in program %s\n", uniformNum, program->name);
 		return;

@@ -129,12 +129,14 @@ static const char *attributeStrings[] = {
 	"vec4 attr_BoneIndexes;\n",
 	"vec4 attr_BoneWeights;\n",
 	"vec3 attr_Position2;\n",
-	"vec3 attr_Tangent2;\n",
-	"vec4 attr_Normal2;\n"
+	"vec4 attr_Tangent2;\n",
+	"vec3 attr_Normal2;\n"
 };
 
 static const char *glslTypeStrings[] = {
 	"int",
+	"sampler2D",
+	"samplerCube",
 	"float",
 	"float[5]",
 	"vec2",
@@ -174,7 +176,7 @@ for each view:
 Runtime group variations:
 animation: {no animation, skeletal animation, vertex animation}
 fog: {no fog, with fog}
-render pass: {depth prepass, shadow, render, fog} <-- depth prepass and shader the same thing?
+render pass: {depth prepass, shadow, render} <-- depth prepass and shadow the same thing?
 */
 
 const int UNIFORMS_BITFIELD_ARRAY_SIZE = (UNIFORM_COUNT + 31) / 32;
@@ -209,10 +211,7 @@ struct GLSLShader
 	std::string code;
 
 	uint32_t attributes;
-	uint32_t samplers[SAMPLERS_BITFIELD_ARRAY_SIZE];
-	uint32_t uniforms[UNIFORMS_BITFIELD_ARRAY_SIZE];
 
-	int attributesArraySizes[ATTR_INDEX_COUNT];
 	int samplersArraySizes[NUM_TEXTURE_BUNDLES];
 	int uniformsArraySizes[UNIFORM_COUNT];
 };
@@ -222,7 +221,8 @@ struct ConstantDescriptor
 	int type;
 	int offset;
 	int location;
-	int size;
+	int baseTypeSize;
+	int arraySize;
 };
 
 struct SamplerDescriptor
@@ -254,8 +254,21 @@ struct Material
 	GLuint *textures;
 };
 
-const int MAX_SHADER_PROGRAM_TABLE_SIZE = 2048;
-static ShaderProgram *shaderProgramsTable[MAX_SHADER_PROGRAM_TABLE_SIZE];
+struct GLSLGeneratorContext
+{
+	static const int MAX_SHADER_PROGRAM_TABLE_SIZE = 2048;
+
+	ShaderProgram *shaderProgramsTable[MAX_SHADER_PROGRAM_TABLE_SIZE];
+};
+
+void InitGLSLGeneratorContext( GLSLGeneratorContext *ctx )
+{
+}
+
+void DestroyGLSLGeneratorContext( GLSLGeneratorContext *ctx )
+{
+	
+}
 
 static uint32_t GenerateVertexShaderHashValue( const shader_t *shader, uint32_t permutation )
 {
@@ -317,7 +330,6 @@ static void GenerateGenericVertexShaderCode(
 	uint32_t attributes = shader->vertexAttribs;
 
 	// Determine inputs needed
-	memset( genShader.attributesArraySizes, 1, sizeof( genShader.attributesArraySizes ) );
 	if ( permutation & GENERICDEF_USE_VERTEX_ANIMATION )
 	{
 		attributes |= ATTR_POSITION2;
@@ -329,51 +341,55 @@ static void GenerateGenericVertexShaderCode(
 		attributes |= ATTR_BONE_WEIGHTS;
 	}
 
+	if ( permutation & GENERICDEF_USE_RGBAGEN )
+	{
+		attributes |= ATTR_COLOR;
+	}
+
 	if ( permutation & (GENERICDEF_USE_TCGEN_AND_TCMOD | GENERICDEF_USE_RGBAGEN) )
 	{
 		attributes |= ATTR_TEXCOORD1;
 	}
 
 	// Determine uniforms needed
-	memset( genShader.uniforms, 0, sizeof( genShader.uniforms ) );
-	memset( genShader.uniformsArraySizes, 1, sizeof( genShader.uniformsArraySizes ) );
-	memset( genShader.samplersArraySizes, 1, sizeof( genShader.samplersArraySizes ) );
+	memset( genShader.uniformsArraySizes, 0, sizeof( genShader.uniformsArraySizes ) );
+	memset( genShader.samplersArraySizes, 0, sizeof( genShader.samplersArraySizes ) );
 
-	SetBit( genShader.uniforms, UNIFORM_MODELVIEWPROJECTIONMATRIX );
-	SetBit( genShader.uniforms, UNIFORM_BASECOLOR );
-	SetBit( genShader.uniforms, UNIFORM_VERTCOLOR );
+	genShader.uniformsArraySizes[UNIFORM_MODELVIEWPROJECTIONMATRIX] = 1;
+	genShader.uniformsArraySizes[UNIFORM_BASECOLOR] = 1;
+	genShader.uniformsArraySizes[UNIFORM_VERTCOLOR] = 1;
 	
 	if ( permutation & (GENERICDEF_USE_TCGEN_AND_TCMOD | GENERICDEF_USE_RGBAGEN) )
 	{
-		SetBit( genShader.uniforms, UNIFORM_LOCALVIEWORIGIN );
+		genShader.uniformsArraySizes[UNIFORM_LOCALVIEWORIGIN] = 1;
 	}
 
 	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
 	{
 		// Per unique diffuse tex mods
-		SetBit( genShader.uniforms, UNIFORM_DIFFUSETEXMATRIX );
-		SetBit( genShader.uniforms, UNIFORM_DIFFUSETEXOFFTURB );
+		genShader.uniformsArraySizes[UNIFORM_DIFFUSETEXMATRIX] = 1;
+		genShader.uniformsArraySizes[UNIFORM_DIFFUSETEXOFFTURB] = 1;
 
 		// Per unique tc gens
-		SetBit( genShader.uniforms, UNIFORM_TCGEN0 );
-		SetBit( genShader.uniforms, UNIFORM_TCGEN0VECTOR0 );
-		SetBit( genShader.uniforms, UNIFORM_TCGEN0VECTOR1 );
+		genShader.uniformsArraySizes[UNIFORM_TCGEN0] = 1;
+		genShader.uniformsArraySizes[UNIFORM_TCGEN0VECTOR0] = 1;
+		genShader.uniformsArraySizes[UNIFORM_TCGEN0VECTOR1] = 1;
 	}
 
 	if ( permutation & GENERICDEF_USE_FOG )
 	{
-		SetBit( genShader.uniforms, UNIFORM_FOGCOLORMASK );
-		SetBit( genShader.uniforms, UNIFORM_FOGDEPTH );
-		SetBit( genShader.uniforms, UNIFORM_FOGDISTANCE );
-		SetBit( genShader.uniforms, UNIFORM_FOGEYET );
+		genShader.uniformsArraySizes[UNIFORM_FOGCOLORMASK] = 1;
+		genShader.uniformsArraySizes[UNIFORM_FOGDEPTH] = 1;
+		genShader.uniformsArraySizes[UNIFORM_FOGDISTANCE] = 1;
+		genShader.uniformsArraySizes[UNIFORM_FOGEYET] = 1;
 	}
 
 	if ( permutation & GENERICDEF_USE_DEFORM_VERTEXES )
 	{
 		// Per deform vertex entry
-		SetBit( genShader.uniforms, UNIFORM_DEFORMGEN );
-		SetBit( genShader.uniforms, UNIFORM_DEFORMPARAMS );
-		SetBit( genShader.uniforms, UNIFORM_TIME );
+		genShader.uniformsArraySizes[UNIFORM_DEFORMGEN] = 1;
+		genShader.uniformsArraySizes[UNIFORM_DEFORMPARAMS] = 1;
+		genShader.uniformsArraySizes[UNIFORM_TIME] = 1;
 
 		genShader.uniformsArraySizes[UNIFORM_DEFORMGEN] = shader->numDeforms;
 		genShader.uniformsArraySizes[UNIFORM_DEFORMPARAMS] = shader->numDeforms;
@@ -382,12 +398,21 @@ static void GenerateGenericVertexShaderCode(
 	if ( permutation & GENERICDEF_USE_RGBAGEN )
 	{
 		// Per stage?
-		SetBit( genShader.uniforms, UNIFORM_COLORGEN );
-		SetBit( genShader.uniforms, UNIFORM_ALPHAGEN );
-		SetBit( genShader.uniforms, UNIFORM_AMBIENTLIGHT );
-		SetBit( genShader.uniforms, UNIFORM_DIRECTEDLIGHT );
-		SetBit( genShader.uniforms, UNIFORM_MODELLIGHTDIR );
-		SetBit( genShader.uniforms, UNIFORM_PORTALRANGE );
+		genShader.uniformsArraySizes[UNIFORM_COLORGEN] = 1;
+		genShader.uniformsArraySizes[UNIFORM_ALPHAGEN] = 1;
+		genShader.uniformsArraySizes[UNIFORM_AMBIENTLIGHT] = 1;
+		genShader.uniformsArraySizes[UNIFORM_DIRECTEDLIGHT] = 1;
+		genShader.uniformsArraySizes[UNIFORM_MODELLIGHTDIR] = 1;
+		genShader.uniformsArraySizes[UNIFORM_PORTALRANGE] = 1;
+	}
+
+	if ( permutation & GENERICDEF_USE_SKELETAL_ANIMATION )
+	{
+		genShader.uniformsArraySizes[UNIFORM_BONE_MATRICES] = 1;
+	}
+	else if ( permutation & GENERICDEF_USE_VERTEX_ANIMATION )
+	{
+		genShader.uniformsArraySizes[UNIFORM_VERTEXLERP] = 1;
 	}
 
 	// Generate the code
@@ -398,7 +423,7 @@ static void GenerateGenericVertexShaderCode(
 	// Add uniforms
 	for ( int i = 0; i < UNIFORM_COUNT; i++ )
 	{
-		if ( IsBitSet( genShader.uniforms, i ) )
+		if ( genShader.uniformsArraySizes[i] > 0 )
 		{
 			code += "uniform ";
 			code += glslTypeStrings[uniformsInfo[i].type];
@@ -422,7 +447,7 @@ static void GenerateGenericVertexShaderCode(
 	assert( sizeof( int ) == 4 );
 	for ( int i = 0, j = 1; i < 32; i++, j <<= 1 )
 	{
-		if ( shader->vertexAttribs & j )
+		if ( attributes & j )
 		{
 			code += "in ";
 			code += attributeStrings[i];
@@ -437,7 +462,13 @@ static void GenerateGenericVertexShaderCode(
 	code += "out vec2 var_TexCoords[";
 	code += (shader->numUnfoggedPasses + '0');
 	code += "];\n";
-	code += "out vec4 var_Color;\n";
+
+	if ( permutation & GENERICDEF_USE_RGBAGEN )
+	{
+		code += "out vec4 var_Colors[";
+		code += (shader->numUnfoggedPasses + '0');
+		code += "];\n";
+	}
 
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
 	{
@@ -547,7 +578,6 @@ static void GenerateGenericVertexShaderCode(
 	{
 		const shaderStage_t *stage = shader->stages[i];
 
-
 		code += "	var_TexCoords[";
 		code += (i + '0');
 		code += "] = attr_TexCoord0;\n";
@@ -558,13 +588,15 @@ static void GenerateGenericVertexShaderCode(
 		code += "	var_LightTex = attr_TexCoord1;\n";
 	}
 
-	code += '\n';
-
-	for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
+	if ( permutation & GENERICDEF_USE_RGBAGEN )
 	{
-		code += "	var_Colors[";
-		code += (i + '0');
-		code += "] = u_VertColor * attr_Color + u_BaseColor;\n";
+		code += '\n';
+		for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
+		{
+			code += "	var_Colors[";
+			code += (i + '0');
+			code += "] = u_VertColor * attr_Color + u_BaseColor;\n";
+		}
 	}
 
 	code += "}\n\n";
@@ -579,81 +611,81 @@ static void GenerateGenericFragmentShaderCode(
 	std::string& code = genShader.code;
 
 	// Determine uniforms needed
-	memset( genShader.uniforms, 0, sizeof( genShader.uniforms ) );
+	memset( genShader.uniformsArraySizes, 0, sizeof( genShader.uniformsArraySizes ) );
 
-	SetBit( genShader.uniforms, UNIFORM_DIFFUSEMAP );
-	SetBit( genShader.samplers, TB_DIFFUSEMAP );
+	genShader.uniformsArraySizes[UNIFORM_DIFFUSEMAP] = 1;
+	genShader.samplersArraySizes[TB_DIFFUSEMAP] = 1;
 	
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
 	{
-		SetBit( genShader.uniforms, UNIFORM_LIGHTMAP );
-		SetBit( genShader.samplers, TB_LIGHTMAP );
+		genShader.uniformsArraySizes[UNIFORM_LIGHTMAP] = 1;
+		genShader.samplersArraySizes[TB_LIGHTMAP] = 1;
 	}
 
 	#if 0
 	if ( permutation & GENERICDEF_USE_NORMALMAP )
 	{
 		// Per unique normal map
-		SetBit( genShader.uniforms, UNIFORM_NORMALMAP );
-		SetBit( genShader.samplers, TB_NORMALMAP );
+		genShader.uniformsArraySizes[UNIFORM_NORMALMAP] = 1;
+		genShader.samplersArraySizes[TB_NORMALMAP] = 1;
 	}
 
 	if ( permutation & GENERICDEF_USE_DELUXEMAP )
 	{
 		// Per unique deluxe map
-		SetBit( genShader.uniforms, UNIFORM_DELUXEMAP );
-		SetBit( genShader.samplers, TB_DELUXEMAP );
+		genShader.uniformsArraySizes[UNIFORM_DELUXEMAP] = 1;
+		genShader.samplersArraySizes[TB_DELUXEMAP] = 1;
 	}
 
 	if ( permutation & GENERICDEF_USE_SPECULARMAP )
 	{
 		// Per unique deluxe map
-		SetBit( genShader.uniforms, UNIFORM_SPECULARMAP );
-		SetBit( genShader.samplers, TB_SPECULARMAP );
+		genShader.uniformsArraySizes[UNIFORM_SPECULARMAP] = 1;
+		genShader.samplersArraySizes[TB_SPECULARMAP] = 1;
 	}
 
 	if ( permutation & GENERICDEF_USE_SHADOWMAP )
 	{
-		SetBit( genShader.uniforms, UNIFORM_SHADOWMAP );
-		SetBit( genShader.samplers, TB_SHADOWMAP );
+		genShader.uniformsArraySizes[UNIFORM_SHADOWMAP] = 1;
+		genShader.samplersArraySizes[TB_SHADOWMAP] = 1;
 	}
 
 	if ( permutation & GENERICDEF_USE_CUBEMAP )
 	{
-		SetBit( genShader.uniforms, UNIFORM_CUBEMAP );
-		SetBit( genShader.samplers, TB_CUBEMAP );
+		genShader.uniformsArraySizes[UNIFORM_CUBEMAP] = 1;
+		genShader.samplersArraySizes[TB_CUBEMAP] = 1;
 	}
 
 	if ( permutation & (GENERICDEF_USE_NORMALMAP | GENERICDEF_USE_SPECULARMAP | GENERICDEF_USE_CUBEMAP) )
 	{
-		SetBit( genShader.uniforms, UNIFORM_ENABLETEXTURES );
+		genShader.uniformsArraySizes[UNIFORM_ENABLETEXTURES] = 1;
 	}
 
 	if ( permutation & (GENERICDEF_USE_LIGHTVECTOR | GENERICDEF_USE_FASTLIGHT) )
 	{
-		SetBit( genShader.uniforms, UNIFORM_DIRECTLIGHT );
-		SetBit( genShader.uniforms, UNIFORM_AMBIENTLIGHT );
+		genShader.uniformsArraySizes[UNIFORM_DIRECTLIGHT] = 1;
+		genShader.uniformsArraySizes[UNIFORM_AMBIENTLIGHT] = 1;
 	}
 
 	if ( permutation & (GENERICDEF_USE_PRIMARYLIGHT | GENERICDEF_USE_SHADOWMAP) )
 	{
-		SetBit( genShader.uniforms, UNIFORM_PRIMARYLIGHTCOLOR );
-		SetBit( genShader.uniforms, UNIFORM_PRIMARYLIGHTAMBIENT );
+		genShader.uniformsArraySizes[UNIFORM_PRIMARYLIGHTCOLOR] = 1;
+		genShader.uniformsArraySizes[UNIFORM_PRIMARYLIGHTAMBIENT] = 1;
 	}
 
 	if ( (permutation & GENERICDEF_USE_LIGHT) != 0 &&
 			(permutation & GENERICDEF_USE_FASTLIGHT) == 0 )
 	{
-		SetBit( genShader.uniforms, UNIFORM_NORMALSCALE );
-		SetBit( genShader.uniforms, UNIFORM_SPECULARSCALE );
+		genShader.uniformsArraySizes[UNIFORM_NORMALSCALE] = 1;
+		genShader.uniformsArraySizes[UNIFORM_SPECULARSCALE] = 1;
 	}
 
 	if ( (permutation & GENERICDEF_USE_LIGHT) != 0 &&
 			(permutation & GENERICDEF_USE_FASTLIGHT) == 0 &&
 			(permutation & GENERICDEF_USE_CUBEMAP) != 0 )
 	{
-		SetBit( genShader.uniforms, UNIFORM_CUBEMAP );
-		SetBit( genShader.samplers, TB_CUBEMAP );
+		genShader.uniformsArraySizes[UNIFORM_CUBEMAP] = 1;
+		genShader.samplersArraySizes[TB_CUBEMAP] = 1;
 	}
 	#endif
 	
@@ -665,18 +697,38 @@ static void GenerateGenericFragmentShaderCode(
 	// Add uniforms
 	for ( int i = 0; i < UNIFORM_COUNT; i++ )
 	{
-		if ( IsBitSet( genShader.uniforms, i ) )
+		if ( genShader.uniformsArraySizes[i] > 0 )
 		{
 			code += "uniform ";
 			code += glslTypeStrings[uniformsInfo[i].type];
+			code += ' ';
+			code += uniformsInfo[i].name;
 
 			if ( uniformsInfo[i].size > 1 )
 			{
-				// TODO: Add array specifier
+				char buf[4];
+				char arraySpecifier[4];
+				int size = uniformsInfo[i].size * genShader.uniformsArraySizes[i];
+				int j, k;
+
+				for ( j = 0; j < ARRAY_LEN( buf ) && size > 0; j++, size /= 10 )
+				{
+					buf[j] = '0' + (size % 10);
+				}
+
+				for ( k = 0, j = j - 1; j >= 0; j--, k++ )
+				{
+					arraySpecifier[k] = buf[j];
+				}
+
+				assert( k < ARRAY_LEN( arraySpecifier ) );
+				arraySpecifier[k] = '\0';
+
+				code += '[';
+				code += arraySpecifier;
+				code += ']';
 			}
 
-			code += ' ';
-			code += uniformsInfo[i].name;
 			code += ";\n";
 		}
 	}
@@ -689,12 +741,19 @@ static void GenerateGenericFragmentShaderCode(
 	code += "in vec2 var_TexCoords[";
 	code += (shader->numUnfoggedPasses + '0');
 	code += "];\n";
-	code += "in vec4 var_Color;\n";
 
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
 	{
 		code += "in vec2 var_LightTex;\n";
 	}
+
+	if ( permutation & GENERICDEF_USE_RGBAGEN )
+	{
+		code += "in vec4 var_Colors[";
+		code += (shader->numUnfoggedPasses + '0');
+		code += "];\n";
+	}
+
 
 	code += '\n';
 
@@ -707,14 +766,29 @@ static void GenerateGenericFragmentShaderCode(
 		code += "out vec4 out_Glow;\n";
 	}
 
+	code += '\n';
+
 	//
 	// Main function body
 	//
 	code += "void main() {\n\
-	vec4 color = texture(u_DiffuseMap, var_TexCoords[0]);\n\
-	out_Color = color * var_Color;\n\
-	out_Glow = vec4(0.0);\n\
-}";
+	vec4 color = texture(u_DiffuseMap, var_TexCoords[0]);\n";
+
+	if ( permutation & GENERICDEF_USE_RGBAGEN )
+	{
+		code += "	out_Color = color * var_Colors[0];\n";
+	}
+	else
+	{
+		code += "	out_Color = color;\n";
+	}
+
+	if ( permutation & GENERICDEF_USE_GLOW_BUFFER )
+	{
+		code += "	out_Glow = vec4(0.0);\n";
+	}
+
+	code += '}';
 }
 
 uint32_t GetShaderCapabilities( const shader_t *shader )
@@ -730,7 +804,7 @@ uint32_t GetShaderCapabilities( const shader_t *shader )
 	{
 		const shaderStage_t *stage = shader->stages[i];
 
-		if ( stage->bundle[1].image[0] && shader->multitextureEnv )
+		if ( stage->bundle[TB_LIGHTMAP].image[0] && shader->multitextureEnv )
 		{
 			caps |= GENERICDEF_USE_LIGHTMAP;
 		}
@@ -757,46 +831,34 @@ uint32_t GetShaderCapabilities( const shader_t *shader )
 	return caps;
 }
 
-void SetMaterialData( Material *material, void *newData, uniform_t uniform )
+static size_t GetSizeOfGLSLTypeInBytes( int type )
+{
+	switch ( type )
+	{
+		case GLSL_INT: // fallthrough
+		case GLSL_SAMPLER2D: // fallthrough
+		case GLSL_SAMPLERCUBE: return sizeof( int );
+		case GLSL_FLOAT: return sizeof( float );
+		case GLSL_FLOAT5: return sizeof( float ) * 5;
+		case GLSL_VEC2: return sizeof( float ) * 2;
+		case GLSL_VEC3: return sizeof( float ) * 3;
+		case GLSL_VEC4: return sizeof( float ) * 4;
+		case GLSL_MAT16: return sizeof( float ) * 16;
+		default: assert( !"Invalid GLSL type" ); return 0;
+	}
+}
+
+void SetMaterialData( Material *material, void *newData, uniform_t uniform, int offset, int count )
 {
 	ShaderProgram *program = material->program;
 	ConstantDescriptor *constantData = &program->constants[program->uniformDataIndices[uniform]];
-	void *data = reinterpret_cast<char *>(material->constantData) + constantData->offset;
+	char *data = reinterpret_cast<char *>(material->constantData) + constantData->offset;
+	size_t baseTypeSizeInBytes = GetSizeOfGLSLTypeInBytes( constantData->type );
 
-	switch ( constantData->type )
-	{
-		case GLSL_INT:
-			memcpy( data, newData, sizeof( int ) );
-			break;
+	assert( count > 0 );
 
-		case GLSL_FLOAT:
-			memcpy( data, newData, sizeof( float ) );
-			break;
-
-		case GLSL_FLOAT5:
-			memcpy( data, newData, sizeof( float ) * 5 );
-			break;
-
-		case GLSL_VEC2:
-			memcpy( data, newData, sizeof( float ) * 2 );
-			break;
-
-		case GLSL_VEC3:
-			memcpy( data, newData, sizeof( float ) * 3 );
-			break;
-
-		case GLSL_VEC4:
-			memcpy( data, newData, sizeof( float ) * 4 );
-			break;
-
-		case GLSL_MAT16:
-			memcpy( data, newData, sizeof( float ) * 16 );
-			break;
-
-		default:
-			assert( false );
-			break;
-	}
+	memcpy( data + baseTypeSizeInBytes * offset, newData,
+		baseTypeSizeInBytes * constantData->baseTypeSize * count );
 }
 
 static void FillDefaultUniformData( Material *material, const int uniformIndexes[UNIFORM_COUNT], const shader_t *shader )
@@ -1082,7 +1144,7 @@ static void FillDefaultUniformData( Material *material, const int uniformIndexes
 				break;
 
 			default:
-				assert(false);
+				assert(!"Invalid uniform enum");
 				break;
 		}
 	}
@@ -1102,9 +1164,9 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 
 	permutation |= GetShaderCapabilities( shader );
 
-	uint32_t sharedUniforms[UNIFORMS_BITFIELD_ARRAY_SIZE];
+	int uniformArraySizes[UNIFORM_COUNT];
 	int uniformIndexes[UNIFORM_COUNT];
-	int numUniforms = 0;
+	int numUniforms;
 
 	// Generate shader code
 	GenerateGenericVertexShaderCode(
@@ -1119,17 +1181,20 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 		permutation,
 		fragmentShader );
 
-	for ( int i = 0; i < UNIFORMS_BITFIELD_ARRAY_SIZE; i++ )
+	numUniforms = 0;
+	for ( int i = 0; i < UNIFORM_COUNT; i++ )
 	{
-		sharedUniforms[i] = vertexShader.uniforms[i] | fragmentShader.uniforms[i];
+		uniformArraySizes[i] = max(
+			vertexShader.uniformsArraySizes[i],
+			fragmentShader.uniformsArraySizes[i]);
+
+		if ( uniformArraySizes[i] > 0 )
+		{
+			uniformIndexes[numUniforms++] = i;
+		}
 	}
 
 	// Generate static data and allocate memory for dynamic data
-
-	// Need array of structs:
-	//   uniform_t type;
-	//   int offset;
-	//   int sizeInFloats;
 
 	// FIXME: Refactor into tr_glsl.cpp
 	const char *vertexShaderCode = vertexShader.code.c_str();
@@ -1145,6 +1210,20 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 	qglShaderSource( vshader, 1, &vertexShaderCode, NULL );
 	qglCompileShader( vshader );
 
+	std::string log;
+	GLint status;
+	qglGetShaderiv( vshader, GL_COMPILE_STATUS, &status );
+	if ( status != GL_TRUE )
+	{
+		GLint logLength;
+		qglGetShaderiv( vshader, GL_INFO_LOG_LENGTH, &logLength );
+
+		log.resize( logLength );
+		
+		qglGetShaderInfoLog( vshader, logLength, NULL, &log[0] );
+		Com_Printf( "%s\n", log.c_str() );
+	}
+
 	int fshader = qglCreateShader( GL_FRAGMENT_SHADER );
 	if ( fshader == 0 )
 	{
@@ -1154,6 +1233,18 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 
 	qglShaderSource( fshader, 1, &fragmentShaderCode, NULL );
 	qglCompileShader( fshader );
+
+	qglGetShaderiv( fshader, GL_COMPILE_STATUS, &status );
+	if ( status != GL_TRUE )
+	{
+		GLint logLength;
+		qglGetShaderiv( fshader, GL_INFO_LOG_LENGTH, &logLength );
+
+		log.resize( logLength );
+		
+		qglGetShaderInfoLog( fshader, logLength, NULL, &log[0] );
+		Com_Printf( "%s\n", log.c_str() );
+	}
 
 	int program = qglCreateProgram();
 	if ( program == 0 )
@@ -1171,9 +1262,19 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 
 	qglLinkProgram( program );
 
-	qglUseProgram( program );
+	qglGetProgramiv( program, GL_LINK_STATUS, &status );
+	if ( status != GL_TRUE )
+	{
+		GLint logLength;
+		qglGetProgramiv( program, GL_INFO_LOG_LENGTH, &logLength );
 
-	// Don't need to initialise defaults for the program.
+		log.resize( logLength );
+		
+		qglGetProgramInfoLog( program, logLength, NULL, &log[0] );
+		Com_Printf( "%s\n", log.c_str() );
+	}
+
+	qglUseProgram( program );
 
 	// FIXME: Lol, leak memory
 	ShaderProgram *shaderProgram = new ShaderProgram();
@@ -1183,27 +1284,29 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 	shaderProgram->numUniforms = numUniforms;
 	shaderProgram->constants = new ConstantDescriptor[shaderProgram->numUniforms];
 
-	int constantBufferSize = 0;
-	for ( int i = 0, j = 0; i < numUniforms; i++ )
+	int constantBufferSizeInBytes = 0;
+	for ( int i = 0; i < numUniforms; i++ )
 	{
-		ConstantDescriptor *uniform = &shaderProgram->constants[uniformIndexes[i]];
-		const uniformInfo_t *uniformInfo = &uniformsInfo[j];
+		ConstantDescriptor *uniform = &shaderProgram->constants[i];
+		int uniformIndex = uniformIndexes[i];
+		const uniformInfo_t *uniformInfo = &uniformsInfo[uniformIndex];
 
-		uniform->offset = constantBufferSize;
-		uniform->size = uniformInfo->size;
+		uniform->offset = constantBufferSizeInBytes;
+		uniform->baseTypeSize = uniformInfo->size;
+		uniform->arraySize = uniformInfo->size * uniformArraySizes[uniformIndex];
 		uniform->type = uniformInfo->type;
 		uniform->location = qglGetUniformLocation( program, uniformInfo->name );
 
-		shaderProgram->uniformDataIndices[i] = j;
+		shaderProgram->uniformDataIndices[uniformIndex] = i;
 
-		constantBufferSize += uniform->size;
+		constantBufferSizeInBytes += uniform->arraySize * GetSizeOfGLSLTypeInBytes( uniform->type );
 	}
 
 	// FIXME: Lol, more memory leaks
 	Material *material = new Material();
 
 	material->program = shaderProgram;
-	material->constantData = malloc( constantBufferSize );
+	material->constantData = malloc( constantBufferSizeInBytes );
 
 	FillDefaultUniformData( material, uniformIndexes, shader );
 	
@@ -1225,31 +1328,33 @@ void RB_BindMaterial( const Material *material )
 		switch ( constantData->type )
 		{
 			case GLSL_INT:
-				qglUniform1iv( constantData->location, constantData->size, reinterpret_cast<const GLint *>(data) );
+			case GLSL_SAMPLER2D:
+			case GLSL_SAMPLERCUBE:
+				qglUniform1iv( constantData->location, constantData->arraySize, reinterpret_cast<const GLint *>(data) );
 				break;
 
 			case GLSL_FLOAT:
-				qglUniform1fv( constantData->location, constantData->size, data );
+				qglUniform1fv( constantData->location, constantData->arraySize, data );
 				break;
 
 			case GLSL_FLOAT5:
-				qglUniform1fv( constantData->location, 5 * constantData->size, data );
+				qglUniform1fv( constantData->location, 5 * constantData->arraySize, data );
 				break;
 
 			case GLSL_VEC2:
-				qglUniform2fv( constantData->location, constantData->size, data );
+				qglUniform2fv( constantData->location, constantData->arraySize, data );
 				break;
 
 			case GLSL_VEC3:
-				qglUniform3fv( constantData->location, constantData->size, data );
+				qglUniform3fv( constantData->location, constantData->arraySize, data );
 				break;
 
 			case GLSL_VEC4:
-				qglUniform4fv( constantData->location, constantData->size, data );
+				qglUniform4fv( constantData->location, constantData->arraySize, data );
 				break;
 
 			case GLSL_MAT16:
-				qglUniformMatrix4fv( constantData->location, constantData->size, GL_FALSE, data );
+				qglUniformMatrix4fv( constantData->location, constantData->arraySize, GL_FALSE, data );
 				break;
 
 			default:
@@ -1261,7 +1366,6 @@ void RB_BindMaterial( const Material *material )
 	// Bind textures
 	for ( int i = 0; i < program->numSamplers; i++ )
 	{
-		qglActiveTextureARB( GL_TEXTURE0 + i );
-		qglBindTexture( program->samplers[i].target, material->textures[i] );
+		GL_BindTexture( program->samplers[i].target, material->textures[i], i );
 	}
 }

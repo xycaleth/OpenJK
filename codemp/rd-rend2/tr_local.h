@@ -999,6 +999,8 @@ enum
 enum
 {
 	GLSL_INT,
+	GLSL_SAMPLER2D,
+	GLSL_SAMPLERCUBE,
 	GLSL_FLOAT,
 	GLSL_FLOAT5,
 	GLSL_VEC2,
@@ -2365,6 +2367,7 @@ void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, 
 ** GL wrapper/helper functions
 */
 void	GL_Bind( image_t *image );
+void	GL_BindTexture( int target, unsigned int texture, int unit );
 void	GL_BindToTMU( image_t *image, int tmu );
 void	GL_SetDefaultState (void);
 void	GL_SelectTexture( int unit );
