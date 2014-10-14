@@ -179,9 +179,6 @@ fog: {no fog, with fog}
 render pass: {depth prepass, shadow, render} <-- depth prepass and shadow the same thing?
 */
 
-const int UNIFORMS_BITFIELD_ARRAY_SIZE = (UNIFORM_COUNT + 31) / 32;
-const int SAMPLERS_BITFIELD_ARRAY_SIZE = (NUM_TEXTURE_BUNDLES + 31) / 32;
-
 static void SetBit( uint32_t *bitfieldArray, int bit )
 {
 	int index = bit / 32;
@@ -283,7 +280,9 @@ static uint32_t GenerateFragmentShaderHashValue( const shader_t *shader, uint32_
 static bool AddShaderHeaderCode( const shader_t *shader, const char *defines[], uint32_t permutation, std::string& code )
 {
 	// Add permutations for debug
-	code += "// Generic shader\n";
+	code += "// ";
+	code += shader->name;
+	code += '\n';
 
 	if ( permutation == 0 )
 	{
@@ -430,7 +429,12 @@ static void GenerateGenericVertexShaderCode(
 
 			if ( uniformsInfo[i].size > 1 )
 			{
-				// TODO: Add array specifier
+				char arraySpecifier[11];
+				sprintf( arraySpecifier, "%d", uniformsInfo[i].size * genShader.uniformsArraySizes[i] );
+
+				code += '[';
+				code += arraySpecifier;
+				code += ']';
 			}
 
 			code += ' ';
@@ -484,18 +488,18 @@ static void GenerateGenericVertexShaderCode(
 {\n\
 	vec2 tex = attr_TexCoord0;\n\
 	\n\
-	if (TCGen >= TCGEN_LIGHTMAP && TCGen <= TCGEN_LIGHTMAP3)\n\
+	if (TCGen >= 2 && TCGen <= 4)\n\
 	{\n\
 		tex = attr_TexCoord1;\n\
 	}\n\
-	else if (TCGen == TCGEN_ENVIRONMENT_MAPPED)\n\
+	else if (TCGen == 7)\n\
 	{\n\
 		vec3 viewer = normalize(u_LocalViewOrigin - position);\n\
 		vec2 ref = reflect(viewer, normal).yz;\n\
 		tex.s = ref.x * -0.5 + 0.5;\n\
 		tex.t = ref.y *  0.5 + 0.5;\n\
 	}\n\
-	else if (TCGen == TCGEN_VECTOR)\n\
+	else if (TCGen == 9)\n\
 	{\n\
 		tex = vec2(dot(position, TCGenVector0), dot(position, TCGenVector1));\n\
 	}\n\
@@ -506,14 +510,14 @@ static void GenerateGenericVertexShaderCode(
 		code += "vec2 ModTexCoords(in vec2 st, in vec3 position, in vec4 texMatrix, in vec4 offTurb)\n\
 {\n\
 	float amplitude = offTurb.z;\n\
-	float phase = offTurb.w * 2.0 * M_PI;\n\
+	float phase = offTurb.w * 2.0 * 3.14159;\n\
 	vec2 st2;\n\
 	st2.x = st.x * texMatrix.x + (st.y * texMatrix.z + offTurb.x);\n\
 	st2.y = st.x * texMatrix.y + (st.y * texMatrix.w + offTurb.y);\n\
 	\n\
 	vec2 offsetPos = vec2(position.x + position.z, position.y);\n\
 	\n\
-	vec2 texOffset = sin(offsetPos * (2.0 * M_PI / 1024.0) + vec2(phase));\n\
+	vec2 texOffset = sin(offsetPos * (2.0 * 3.14159 / 1024.0) + vec2(phase));\n\
 	\n\
 	return st2 + texOffset * amplitude;\n\
 }\n\n";
@@ -600,6 +604,82 @@ static void GenerateGenericVertexShaderCode(
 	}
 
 	code += "}\n\n";
+}
+
+static void AddBlendEquationCode( std::string& code, uint32_t state )
+{
+	code += "	dst = ";
+
+	switch ( state & GLS_SRCBLEND_BITS )
+	{
+		case GLS_SRCBLEND_ALPHA_SATURATE:
+			assert(!"Not used?");
+			break;
+		case GLS_SRCBLEND_DST_ALPHA:
+			code += "dst.a";
+			break;
+		case GLS_SRCBLEND_DST_COLOR:
+			code += "vec4(dst.rgb, 1.0)";
+			break;
+		case GLS_SRCBLEND_ONE:
+			code += "1.0";
+			break;
+		case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
+			code += "(1.0 - dst.a)";
+			break;
+		case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
+			code += "(1.0 - vec4(dst.rgb, 1.0))";
+			break;
+		case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
+			code += "(1.0 - src.a)";
+			break;
+		case GLS_SRCBLEND_SRC_ALPHA:
+			code += "src.a";
+			break;
+		case GLS_SRCBLEND_ZERO:
+			code += "0.0";
+			break;
+		default:
+			//assert(!"Invalid src blend");
+			code += "1.0";
+			break;
+	}
+
+	code += " * src + dst * ";
+
+	switch ( state & GLS_DSTBLEND_BITS )
+	{
+		case GLS_DSTBLEND_DST_ALPHA:
+			code += "dst.a";
+			break;
+		case GLS_DSTBLEND_ONE:
+			code += "1.0";
+			break;
+		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
+			code += "(1.0 - dst.a)";
+			break;
+		case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
+			code += "(1.0 - src.a)";
+			break;
+		case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
+			code += "(1.0 - vec4(src.rgb, 1.0))";
+			break;
+		case GLS_DSTBLEND_SRC_COLOR:
+			code += "vec4(src.rgb, 1.0)";
+			break;
+		case GLS_DSTBLEND_SRC_ALPHA:
+			code += "src.a";
+			break;
+		case GLS_DSTBLEND_ZERO:
+			code += "0.0";
+			break;
+		default:
+			//assert(!"Invalid dst blend");
+			code += "0.0";
+			break;
+	}
+
+	code += ";\n";
 }
 
 static void GenerateGenericFragmentShaderCode(
@@ -706,23 +786,8 @@ static void GenerateGenericFragmentShaderCode(
 
 			if ( uniformsInfo[i].size > 1 )
 			{
-				char buf[4];
-				char arraySpecifier[4];
-				int size = uniformsInfo[i].size * genShader.uniformsArraySizes[i];
-				int j, k;
-
-				for ( j = 0; j < ARRAY_LEN( buf ) && size > 0; j++, size /= 10 )
-				{
-					buf[j] = '0' + (size % 10);
-				}
-
-				for ( k = 0, j = j - 1; j >= 0; j--, k++ )
-				{
-					arraySpecifier[k] = buf[j];
-				}
-
-				assert( k < ARRAY_LEN( arraySpecifier ) );
-				arraySpecifier[k] = '\0';
+				char arraySpecifier[11];
+				sprintf( arraySpecifier, "%d", uniformsInfo[i].size * genShader.uniformsArraySizes[i] );
 
 				code += '[';
 				code += arraySpecifier;
@@ -754,7 +819,6 @@ static void GenerateGenericFragmentShaderCode(
 		code += "];\n";
 	}
 
-
 	code += '\n';
 
 	//
@@ -772,16 +836,73 @@ static void GenerateGenericFragmentShaderCode(
 	// Main function body
 	//
 	code += "void main() {\n\
-	vec4 color = texture(u_DiffuseMap, var_TexCoords[0]);\n";
+	\n\
+	vec4 src = vec4(0.0);\n\
+	vec4 src2 = vec4(0.0);\n\
+	vec4 dst = vec4(0.0);\n\n";
 
-	if ( permutation & GENERICDEF_USE_RGBAGEN )
+	char buffer[64];
+	for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
 	{
-		code += "	out_Color = color * var_Colors[0];\n";
+		const shaderStage_t *stage = shader->stages[i];
+
+		code += "	// Stage ";
+		code += (i + '1');
+		code += '\n';
+
+		if ( stage->bundle[TB_DIFFUSEMAP].image[0] != NULL )
+		{
+			code += "	src = texture(u_DiffuseMap, var_TexCoords[0]);\n";
+
+			if ( stage->bundle[TB_LIGHTMAP].image[0] != NULL )
+			{
+				code += "	src2 = texture(u_LightMap,  var_LightTex);\n";
+				code += "	src.rgb = src.rgb * src2.rgb;\n";
+			}
+		}
+
+		switch ( stage->rgbGen )
+		{
+			case CGEN_CONST:
+				sprintf( buffer, "%.9f, %.9f, %.9f", stage->constantColor[0], stage->constantColor[1], stage->constantColor[2] );
+
+				code += "	src.rgb *= vec3(";
+				code += buffer;
+				code += ");\n";
+				break;
+
+			default:
+				break;
+		}
+		
+		switch ( stage->alphaGen )
+		{
+			case AGEN_CONST:
+				sprintf( buffer, "%.9f", stage->constantColor[3] );
+
+				code += "	src.a *= ";
+				code += buffer;
+				code += ";\n";
+				break;
+
+			default:
+				break;
+		}
+		
+		// Depends on blend function
+		AddBlendEquationCode(code, stage->stateBits);
+
+		code += '\n';
 	}
-	else
+
+	//if ( permutation & GENERICDEF_USE_RGBAGEN )
 	{
-		code += "	out_Color = color;\n";
+		code += "	out_Color = dst;\n";
 	}
+	//else
+	//{
+	//	code += "	out_Color = color;\n";
+	//}
 
 	if ( permutation & GENERICDEF_USE_GLOW_BUFFER )
 	{
@@ -804,7 +925,7 @@ uint32_t GetShaderCapabilities( const shader_t *shader )
 	{
 		const shaderStage_t *stage = shader->stages[i];
 
-		if ( stage->bundle[TB_LIGHTMAP].image[0] && shader->multitextureEnv )
+		if ( stage->bundle[TB_LIGHTMAP].image[0] != NULL )
 		{
 			caps |= GENERICDEF_USE_LIGHTMAP;
 		}
@@ -1256,9 +1377,13 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 	qglAttachShader( program, vshader );
 	qglAttachShader( program, fshader );
 
-	// For each vertex shader input {
-	//   glBindAttribLocation(program, input location);
-	// }
+	for ( int i = 0; i < ATTR_INDEX_COUNT; i++ )
+	{
+		if ( vertexShader.attributes & (1 << i) )
+		{
+			//qglBindAttribLocation( program, i, )
+		}
+	}
 
 	qglLinkProgram( program );
 
