@@ -117,20 +117,24 @@ struct shader_s:
 */
 
 // Make sure to update this array if any ATTR_ enums are added.
-static const char *attributeStrings[] = {
-	"vec3 attr_Position;\n",
-	"vec2 attr_TexCoord0;\n",
-	"vec2 attr_TexCoord1;\n",
-	"vec4 attr_Tangent;\n",
-	"vec3 attr_Normal;\n",
-	"vec4 attr_Color;\n",
-	"vec4 attr_PaintColor;\n",
-	"vec3 attr_LightDirection;\n",
-	"vec4 attr_BoneIndexes;\n",
-	"vec4 attr_BoneWeights;\n",
-	"vec3 attr_Position2;\n",
-	"vec4 attr_Tangent2;\n",
-	"vec3 attr_Normal2;\n"
+static struct AttributeMeta
+{
+	int type;
+	const char *name;
+} attributeMeta[] = {
+	{ GLSL_VEC3, "attr_Position" },
+	{ GLSL_VEC2, "attr_TexCoord0" },
+	{ GLSL_VEC2, "attr_TexCoord1" },
+	{ GLSL_VEC4, "attr_Tangent" },
+	{ GLSL_VEC3, "attr_Normal" },
+	{ GLSL_VEC4, "attr_Color" },
+	{ GLSL_VEC4, "attr_PaintColor" },
+	{ GLSL_VEC3, "attr_LightDirection" },
+	{ GLSL_VEC4, "attr_BoneIndexes" },
+	{ GLSL_VEC4, "attr_BoneWeights" },
+	{ GLSL_VEC3, "attr_Position2" },
+	{ GLSL_VEC4, "attr_Tangent2" },
+	{ GLSL_VEC3, "attr_Normal2" }
 };
 
 static const char *glslTypeStrings[] = {
@@ -454,7 +458,10 @@ static void GenerateGenericVertexShaderCode(
 		if ( attributes & j )
 		{
 			code += "in ";
-			code += attributeStrings[i];
+			code += glslTypeStrings[attributeMeta[i].type];
+			code += ' ';
+			code += attributeMeta[i].name;
+			code += ";\n";
 		}
 	}
 
@@ -463,15 +470,20 @@ static void GenerateGenericVertexShaderCode(
 	// 
 	// Add outputs
 	//
-	code += "out vec2 var_TexCoords[";
-	code += (shader->numUnfoggedPasses + '0');
-	code += "];\n";
-
-	if ( permutation & GENERICDEF_USE_RGBAGEN )
+	if ( shader->numUnfoggedPasses > 0 )
 	{
-		code += "out vec4 var_Colors[";
+		// Fog shaders don't have any unfogged passes
+
+		code += "out vec2 var_TexCoords[";
 		code += (shader->numUnfoggedPasses + '0');
 		code += "];\n";
+
+		if ( permutation & GENERICDEF_USE_RGBAGEN )
+		{
+			code += "out vec4 var_Colors[";
+			code += (shader->numUnfoggedPasses + '0');
+			code += "];\n";
+		}
 	}
 
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
@@ -592,14 +604,17 @@ static void GenerateGenericVertexShaderCode(
 		code += "	var_LightTex = attr_TexCoord1;\n";
 	}
 
-	if ( permutation & GENERICDEF_USE_RGBAGEN )
+	if ( shader->numUnfoggedPasses > 0 )
 	{
-		code += '\n';
-		for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
+		if ( permutation & GENERICDEF_USE_RGBAGEN )
 		{
-			code += "	var_Colors[";
-			code += (i + '0');
-			code += "] = u_VertColor * attr_Color + u_BaseColor;\n";
+			code += '\n';
+			for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
+			{
+				code += "	var_Colors[";
+				code += (i + '0');
+				code += "] = u_VertColor * attr_Color + u_BaseColor;\n";
+			}
 		}
 	}
 
@@ -640,7 +655,6 @@ static void AddBlendEquationCode( std::string& code, uint32_t state )
 			code += "0.0";
 			break;
 		default:
-			//assert(!"Invalid src blend");
 			code += "1.0";
 			break;
 	}
@@ -674,7 +688,6 @@ static void AddBlendEquationCode( std::string& code, uint32_t state )
 			code += "0.0";
 			break;
 		default:
-			//assert(!"Invalid dst blend");
 			code += "0.0";
 			break;
 	}
@@ -803,23 +816,26 @@ static void GenerateGenericFragmentShaderCode(
 	// 
 	// Add inputs
 	//
-	code += "in vec2 var_TexCoords[";
-	code += (shader->numUnfoggedPasses + '0');
-	code += "];\n";
-
-	if ( permutation & GENERICDEF_USE_LIGHTMAP )
+	if ( shader->numUnfoggedPasses > 0 )
 	{
-		code += "in vec2 var_LightTex;\n";
-	}
-
-	if ( permutation & GENERICDEF_USE_RGBAGEN )
-	{
-		code += "in vec4 var_Colors[";
+		code += "in vec2 var_TexCoords[";
 		code += (shader->numUnfoggedPasses + '0');
 		code += "];\n";
-	}
 
-	code += '\n';
+		if ( permutation & GENERICDEF_USE_LIGHTMAP )
+		{
+			code += "in vec2 var_LightTex;\n";
+		}
+
+		if ( permutation & GENERICDEF_USE_RGBAGEN )
+		{
+			code += "in vec4 var_Colors[";
+			code += (shader->numUnfoggedPasses + '0');
+			code += "];\n";
+		}
+
+		code += '\n';
+	}
 
 	//
 	// Add outputs
@@ -919,6 +935,11 @@ uint32_t GetShaderCapabilities( const shader_t *shader )
 	if ( shader->numDeforms )
 	{
 		caps |= GENERICDEF_USE_DEFORM_VERTEXES;
+	}
+
+	if ( shader->numUnfoggedPasses == 0 )
+	{
+		caps |= GENERICDEF_USE_FOG;
 	}
 
 	for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
@@ -1381,7 +1402,7 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 	{
 		if ( vertexShader.attributes & (1 << i) )
 		{
-			//qglBindAttribLocation( program, i, )
+			qglBindAttribLocation( program, i, attributeMeta[i].name );
 		}
 	}
 
