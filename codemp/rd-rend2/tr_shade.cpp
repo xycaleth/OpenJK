@@ -684,13 +684,10 @@ static void ComputeFogValues(vec4_t fogDistanceVector, vec4_t fogDepthVector, fl
 
 	// rotate the gradient vector for this orientation
 	if ( fog->hasSurface ) {
-		fogDepthVector[0] = fog->surface[0] * backEnd.ori.axis[0][0] + 
-			fog->surface[1] * backEnd.ori.axis[0][1] + fog->surface[2] * backEnd.ori.axis[0][2];
-		fogDepthVector[1] = fog->surface[0] * backEnd.ori.axis[1][0] + 
-			fog->surface[1] * backEnd.ori.axis[1][1] + fog->surface[2] * backEnd.ori.axis[1][2];
-		fogDepthVector[2] = fog->surface[0] * backEnd.ori.axis[2][0] + 
-			fog->surface[1] * backEnd.ori.axis[2][1] + fog->surface[2] * backEnd.ori.axis[2][2];
-		fogDepthVector[3] = -fog->surface[3] + DotProduct( backEnd.ori.origin, fog->surface );
+		fogDepthVector[0] = DotProduct( fog->surface, backEnd.ori.axis[0] );
+		fogDepthVector[1] = DotProduct( fog->surface, backEnd.ori.axis[1] );
+		fogDepthVector[2] = DotProduct( fog->surface, backEnd.ori.axis[2] );
+		fogDepthVector[3] = DotProduct( backEnd.ori.origin, fog->surface ) - fog->surface[3]; 
 
 		*eyeT = DotProduct( backEnd.ori.viewOrigin, fogDepthVector ) + fogDepthVector[3];
 	} else {

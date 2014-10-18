@@ -2099,7 +2099,7 @@ static qboolean ParseShader( const char **text )
 		}
 		else if ( !Q_stricmp( token, "noglfog" ) )
 		{
-			//shader.fogPass = FP_NONE;
+			shader.fogPass = FP_NONE;
 			continue;
 		}
 		// polygonOffset
@@ -3189,9 +3189,12 @@ static shader_t *GeneratePermanentShader( void ) {
 	newShader->next = hashTable[hash];
 	hashTable[hash] = newShader;
 
-	GenerateGenericGLSLShader(newShader, NULL, 0);
-	GenerateGenericGLSLShader(newShader, NULL, GENERICDEF_USE_SKELETAL_ANIMATION);
-	GenerateGenericGLSLShader(newShader, NULL, GENERICDEF_USE_VERTEX_ANIMATION);
+	if ( !newShader->defaultShader )
+	{
+		GenerateGenericGLSLShader(newShader, NULL, 0);
+		GenerateGenericGLSLShader(newShader, NULL, GENERICDEF_USE_SKELETAL_ANIMATION);
+		GenerateGenericGLSLShader(newShader, NULL, GENERICDEF_USE_VERTEX_ANIMATION);
+	}
 
 	return newShader;
 }
