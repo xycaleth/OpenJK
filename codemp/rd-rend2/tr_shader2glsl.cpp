@@ -142,7 +142,6 @@ static const char *glslTypeStrings[] = {
 	"sampler2D",
 	"samplerCube",
 	"float",
-	"float[5]",
 	"vec2",
 	"vec3",
 	"vec4",
@@ -390,11 +389,13 @@ static void GenerateGenericVertexShaderCode(
 	if ( permutation & GENERICDEF_USE_DEFORM_VERTEXES )
 	{
 		// Per deform vertex entry
-		genShader.uniformsArraySizes[UNIFORM_DEFORMGEN] = 1;
+		genShader.uniformsArraySizes[UNIFORM_DEFORMTYPE] = 1;
+		genShader.uniformsArraySizes[UNIFORM_DEFORMFUNC] = 1;
 		genShader.uniformsArraySizes[UNIFORM_DEFORMPARAMS] = 1;
 		genShader.uniformsArraySizes[UNIFORM_TIME] = 1;
 
-		genShader.uniformsArraySizes[UNIFORM_DEFORMGEN] = shader->numDeforms;
+		genShader.uniformsArraySizes[UNIFORM_DEFORMFUNC] = shader->numDeforms;
+		genShader.uniformsArraySizes[UNIFORM_DEFORMTYPE] = shader->numDeforms;
 		genShader.uniformsArraySizes[UNIFORM_DEFORMPARAMS] = shader->numDeforms;
 	}
 
@@ -981,7 +982,6 @@ static size_t GetSizeOfGLSLTypeInBytes( int type )
 		case GLSL_SAMPLER2D: // fallthrough
 		case GLSL_SAMPLERCUBE: return sizeof( int );
 		case GLSL_FLOAT: return sizeof( float );
-		case GLSL_FLOAT5: return sizeof( float ) * 5;
 		case GLSL_VEC2: return sizeof( float ) * 2;
 		case GLSL_VEC3: return sizeof( float ) * 3;
 		case GLSL_VEC4: return sizeof( float ) * 4;
@@ -1113,8 +1113,12 @@ static void FillDefaultUniformData( Material *material, const int uniformIndexes
 				VectorSet( (float *)data, 0.0f, 0.0f, 0.0f );
 				break;
 
-			case UNIFORM_DEFORMGEN:
-				*(int *)data = 0;
+			case UNIFORM_DEFORMFUNC:
+				*(int *)data = GF_NONE;
+				break;
+
+			case UNIFORM_DEFORMTYPE:
+				*(int *)data = DEFORM_NONE;
 				break;
 
 			case UNIFORM_DEFORMPARAMS:
@@ -1123,6 +1127,8 @@ static void FillDefaultUniformData( Material *material, const int uniformIndexes
 				((float *)data)[2] = 0.0f;
 				((float *)data)[3] = 0.0f;
 				((float *)data)[4] = 0.0f;
+				((float *)data)[5] = 0.0f;
+				((float *)data)[6] = 0.0f;
 				break;
 
 			case UNIFORM_COLORGEN:
@@ -1482,9 +1488,6 @@ void RB_BindMaterial( const Material *material )
 			case GLSL_FLOAT:
 				qglUniform1fv( constantData->location, constantData->arraySize, data );
 				break;
-
-			case GLSL_FLOAT5:
-				qglUniform1fv( constantData->location, 5 * constantData->arraySize, data );
 				break;
 
 			case GLSL_VEC2:
