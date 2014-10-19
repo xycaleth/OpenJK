@@ -1,5 +1,6 @@
 #include "tr_local.h"
 
+#include <sstream>
 #include <string>
 /*
 struct shader_s:
@@ -137,6 +138,24 @@ static struct AttributeMeta
 	{ GLSL_VEC3, "attr_Normal2" }
 };
 
+static const char *deformTypeStrings[] = {
+	"DEFORM_NONE",
+	"DEFORM_WAVE",
+	"DEFORM_NORMALS",
+	"DEFORM_BULGE",
+	"DEFORM_MOVE",
+	"DEFORM_PROJECTION_SHADOW"
+};
+
+static const char *waveFormStrings[] = {
+	"WF_NONE",
+	"WF_SIN",
+	"WF_SQUARE",
+	"WF_TRIANGLE",
+	"WF_SAWTOOTH",
+	"WF_INVERSE_SAWTOOTH",
+};
+
 static const char *glslTypeStrings[] = {
 	"int",
 	"sampler2D",
@@ -208,7 +227,7 @@ static bool IsBitSet( uint32_t *bitfieldArray, int bit )
 
 struct GLSLShader
 {
-	std::string code;
+	std::ostringstream code;
 
 	uint32_t attributes;
 
@@ -280,16 +299,14 @@ static uint32_t GenerateFragmentShaderHashValue( const shader_t *shader, uint32_
 	return shader->index;
 }
 
-static bool AddShaderHeaderCode( const shader_t *shader, const char *defines[], uint32_t permutation, std::string& code )
+static bool AddShaderHeaderCode( const shader_t *shader, const char *defines[], uint32_t permutation, std::ostream& code )
 {
 	// Add permutations for debug
-	code += "// ";
-	code += shader->name;
-	code += '\n';
+	code << "// " << shader->name << '\n';
 
 	if ( permutation == 0 )
 	{
-		code += "// No shader flags\n";
+		code << "// No shader flags\n";
 	}
 	else
 	{
@@ -297,9 +314,20 @@ static bool AddShaderHeaderCode( const shader_t *shader, const char *defines[], 
 		{
 			if ( permutation & j )
 			{
-				code += "// ";
-				code += genericShaderDefStrings[i];
-				code += '\n';
+				code << "// " << genericShaderDefStrings[i] << '\n';
+			}
+		}
+
+		if ( permutation & GENERICDEF_USE_DEFORM_VERTEXES )
+		{
+			for ( int i = 0 ; i < ARRAY_LEN( deformTypeStrings ); i++ )
+			{
+				code << "#define " << deformTypeStrings[i] << ' ' << i << '\n';
+			}
+
+			for ( int i = 0 ; i < ARRAY_LEN( waveFormStrings ); i++ )
+			{
+				code << "#define " << waveFormStrings[i] << ' ' << i << '\n';
 			}
 		}
 	}
@@ -308,16 +336,12 @@ static bool AddShaderHeaderCode( const shader_t *shader, const char *defines[], 
 	{
 		for ( const char **define = defines; *define != NULL; define += 2 )
 		{
-			code += "#define ";
-			code += define[0];
-			code += ' ';
-			code += define[1];
-			code += '\n';
+			code << "#define " << define[0] << ' ' << define[1] << '\n';
 		}
 	}
 
-	code += "#line 0\n";
-	code += "#version 150 core\n";
+	code << "#line 0\n";
+	code << "#version 150 core\n";
 
 	return true;
 }
@@ -328,7 +352,7 @@ static void GenerateGenericVertexShaderCode(
 	uint32_t permutation,
 	GLSLShader& genShader )
 {
-	std::string& code = genShader.code;
+	std::ostream& code = genShader.code;
 	uint32_t attributes = shader->vertexAttribs;
 
 	// Determine inputs needed
@@ -422,33 +446,25 @@ static void GenerateGenericVertexShaderCode(
 	// Generate the code
 	AddShaderHeaderCode( shader, defines, permutation, code );
 
-	code += '\n';
+	code << '\n';
 
 	// Add uniforms
 	for ( int i = 0; i < UNIFORM_COUNT; i++ )
 	{
 		if ( genShader.uniformsArraySizes[i] > 0 )
 		{
-			code += "uniform ";
-			code += glslTypeStrings[uniformsInfo[i].type];
+			code << "uniform " << glslTypeStrings[uniformsInfo[i].type] << ' ' << uniformsInfo[i].name;
 
 			if ( uniformsInfo[i].size > 1 )
 			{
-				char arraySpecifier[11];
-				sprintf( arraySpecifier, "%d", uniformsInfo[i].size * genShader.uniformsArraySizes[i] );
-
-				code += '[';
-				code += arraySpecifier;
-				code += ']';
+				code << '[' << (uniformsInfo[i].size * genShader.uniformsArraySizes[i]) << ']';
 			}
 
-			code += ' ';
-			code += uniformsInfo[i].name;
-			code += ";\n";
+			code << ";\n";
 		}
 	}
 
-	code += '\n';
+	code << '\n';
 
 	//
 	// Add inputs
@@ -458,15 +474,11 @@ static void GenerateGenericVertexShaderCode(
 	{
 		if ( attributes & j )
 		{
-			code += "in ";
-			code += glslTypeStrings[attributeMeta[i].type];
-			code += ' ';
-			code += attributeMeta[i].name;
-			code += ";\n";
+			code << "in " << glslTypeStrings[attributeMeta[i].type] << ' ' << attributeMeta[i].name << ";\n";
 		}
 	}
 
-	code += '\n';
+	code << '\n';
 
 	// 
 	// Add outputs
@@ -475,29 +487,174 @@ static void GenerateGenericVertexShaderCode(
 	{
 		// Fog shaders don't have any unfogged passes
 
-		code += "out vec2 var_TexCoords[";
-		code += (shader->numUnfoggedPasses + '0');
-		code += "];\n";
+		code << "out vec2 var_TexCoords[" << shader->numUnfoggedPasses << "];\n";
 
 		if ( permutation & GENERICDEF_USE_RGBAGEN )
 		{
-			code += "out vec4 var_Colors[";
-			code += (shader->numUnfoggedPasses + '0');
-			code += "];\n";
+			code << "out vec4 var_Colors[" << shader->numUnfoggedPasses << "];\n";
 		}
 	}
 
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
 	{
-		code += "out vec2 var_LightTex;\n";
+		code << "out vec2 var_LightTex;\n";
 	}
 
-	code += '\n';
+	code << '\n';
 
 	// Helper functions
+	if ( permutation & GENERICDEF_USE_DEFORM_VERTEXES )
+	{
+		code << "float GetNoiseValue( float x, float y, float z, float t )\n\
+{\n\
+	return fract( sin( dot( vec4( x, y, z, t ), vec4( 12.9898, 78.233, 12.9898, 78.233 ) )) * 43758.5453 );\n\
+}\n\
+\n\
+float CalculateDeformScale( in int func, in float time, in float phase, in float frequency )\n\
+{\n\
+	float value = phase + time * frequency;\n\
+\n\
+	switch ( func )\n\
+	{\n\
+		case WF_SIN:\n\
+			return sin(value * 2.0 * 3.14159);\n\
+		case WF_SQUARE:\n\
+			return sign(0.5 - fract(value));\n\
+		case WF_TRIANGLE:\n\
+			return abs(fract(value + 0.75) - 0.5) * 4.0 - 1.0;\n\
+		case WF_SAWTOOTH:\n\
+			return fract(value);\n\
+		case WF_INVERSE_SAWTOOTH:\n\
+			return 1.0 - fract(value);\n\
+		default:\n\
+			return 0.0;\n\
+	}\n\
+}\n\
+\n\
+vec3 DeformPosition(\n\
+	const vec3 pos,\n\
+	const vec3 normal,\n\
+	const vec2 st,\n\
+	in float time,\n\
+	in int type,\n\
+	in int waveFunc,\n\
+	in float param0,\n\
+	in float param1,\n\
+	in float param2,\n\
+	in float param3,\n\
+	in float param4,\n\
+	in float param5,\n\
+	in float param6\n\
+)\n\
+{\n\
+	switch ( type )\n\
+	{\n\
+		default: return pos;\n\
+		\n\
+		case DEFORM_BULGE:\n\
+		{\n\
+			float bulgeHeight = param1;\n\
+			float bulgeWidth = param2;\n\
+			float bulgeSpeed = param3;\n\
+			\n\
+			float scale = CalculateDeformScale( WF_SIN, time, bulgeWidth * st.x, bulgeSpeed );\n\
+			\n\
+			return pos + normal * scale * bulgeHeight;\n\
+		}\n\
+\n\
+		case DEFORM_WAVE:\n\
+		{\n\
+			float base = param0;\n\
+			float amplitude = param1;\n\
+			float phase = param2;\n\
+			float frequency = param3;\n\
+			float spread = param4;\n\
+\n\
+			float offset = dot( pos.xyz, vec3( spread ) );\n\
+			float scale = CalculateDeformScale( waveFunc, time, phase + offset, frequency );\n\
+\n\
+			return pos + normal * (base + scale * amplitude);\n\
+		}\n\
+\n\
+		case DEFORM_MOVE:\n\
+		{\n\
+			float base = param0;\n\
+			float amplitude = param1;\n\
+			float phase = param2;\n\
+			float frequency = param3;\n\
+			vec3 direction = vec3( param4, param5, param6 );\n\
+\n\
+			float scale = CalculateDeformScale( waveFunc, time, phase, frequency );\n\
+\n\
+			return pos + direction * (base + scale * amplitude);\n\
+		}\n\
+\n\
+		case DEFORM_PROJECTION_SHADOW:\n\
+		{\n\
+			vec3 ground = vec3(\n\
+				param0,\n\
+				param1,\n\
+				param2);\n\
+			float groundDist = param3;\n\
+			vec3 lightDir = vec3(\n\
+				param4,\n\
+				param5,\n\
+				param6);\n\
+\n\
+			float d = dot( lightDir, ground );\n\
+\n\
+			lightDir = lightDir * max( 0.5 - d, 0.0 ) + ground;\n\
+			d = 1.0 / dot( lightDir, ground );\n\
+\n\
+			vec3 lightPos = lightDir * d;\n\
+\n\
+			return pos - lightPos * dot( pos, ground ) + groundDist;\n\
+		}\n\
+	}\n\
+}\n\
+\n\
+vec3 DeformNormal(\n\
+	in const vec3 position,\n\
+	in const vec3 normal,\n\
+	in float time,\n\
+	in int type,\n\
+	in float amplitude,\n\
+	in float frequency\n\
+)\n\
+{\n\
+	if ( type != DEFORM_NORMALS )\n\
+	{\n\
+		return normal;\n\
+	}\n\
+\n\
+	vec3 outNormal = normal;\n\
+	const float scale = 0.98;\n\
+	\n\
+	outNormal.x += amplitude * GetNoiseValue(\n\
+		position.x * scale,\n\
+		position.y * scale,\n\
+		position.z * scale,\n\
+		time * frequency );\n\
+\n\
+	outNormal.y += amplitude * GetNoiseValue(\n\
+		100.0 * position.x * scale,\n\
+		position.y * scale,\n\
+		position.z * scale,\n\
+		time * frequency );\n\
+\n\
+	outNormal.z += amplitude * GetNoiseValue(\n\
+		200.0 * position.x * scale,\n\
+		position.y * scale,\n\
+		position.z * scale,\n\
+		time * frequency );\n\
+\n\
+	return outNormal;\n\
+}\n";
+	}
+
 	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
 	{
-		code += "vec2 GenTexCoords(in int TCGen, in vec3 position, in vec3 normal, in vec3 TCGenVector0, in vec3 TCGenVector1)\n\
+		code << "vec2 GenTexCoords(in int TCGen, in vec3 position, in vec3 normal, in vec3 TCGenVector0, in vec3 TCGenVector1)\n\
 {\n\
 	vec2 tex = attr_TexCoord0;\n\
 	\n\
@@ -520,7 +677,7 @@ static void GenerateGenericVertexShaderCode(
 	return tex;\n\
 }\n\n";
 
-		code += "vec2 ModTexCoords(in vec2 st, in vec3 position, in vec4 texMatrix, in vec4 offTurb)\n\
+		code << "vec2 ModTexCoords(in vec2 st, in vec3 position, in vec4 texMatrix, in vec4 offTurb)\n\
 {\n\
 	float amplitude = offTurb.z;\n\
 	float phase = offTurb.w * 2.0 * 3.14159;\n\
@@ -538,7 +695,7 @@ static void GenerateGenericVertexShaderCode(
 
 	if ( permutation & GENERICDEF_USE_FOG )
 	{
-		code += "float CalcFog(in vec3 position)\n\
+		code << "float CalcFog(in vec3 position)\n\
 {\n\
 	float s = dot(vec4(position, 1.0), u_FogDistance) * 8.0;\n\
 	float t = dot(vec4(position, 1.0), u_FogDepth);\n\
@@ -554,17 +711,17 @@ static void GenerateGenericVertexShaderCode(
 	}
 
 	// Main function body
-	code += "void main() {\n";
+	code << "void main() {\n";
 
 	if ( permutation & GENERICDEF_USE_VERTEX_ANIMATION )
 	{
-		code += "	vec3 position = mix(attr_Position, attr_Position2, u_VertexLerp);\n";
-		code += "	vec3 normal = mix(attr_Normal, attr_Normal2, u_VertexLerp);\n";
-		code += "	normal = normalize(normal - vec3(0.5));\n";
+		code << "	vec3 position = mix(attr_Position, attr_Position2, u_VertexLerp);\n";
+		code << "	vec3 normal = mix(attr_Normal, attr_Normal2, u_VertexLerp);\n";
+		code << "	normal = normalize(normal - vec3(0.5));\n";
 	}
 	else if ( permutation & GENERICDEF_USE_SKELETAL_ANIMATION )
 	{
-		code += "	vec4 position4 = vec4(0.0);\n\
+		code << "	vec4 position4 = vec4(0.0);\n\
 	vec4 normal4 = vec4(0.0);\n\
 	vec4 originalPosition = vec4(attr_Position, 1.0);\n\
 	vec4 originalNormal = vec4(attr_Normal - vec3 (0.5), 0.0);\n\
@@ -582,11 +739,70 @@ static void GenerateGenericVertexShaderCode(
 	}
 	else
 	{
-		code += "	vec3 position = attr_Position;\n";
-		code += "	vec3 normal = attr_Normal * 2.0 - vec3(1.0);\n";
+		code << "	vec3 position = attr_Position;\n";
+		code << "	vec3 normal = attr_Normal * 2.0 - vec3(1.0);\n";
 	}
 
-	code += "\n\
+	if ( permutation & GENERICDEF_USE_DEFORM_VERTEXES )
+	{
+		code << '\n';
+
+		for ( int i = 0; i < shader->numDeforms; i++ )
+		{
+			code << "	position = DeformPosition(\n\
+		position,\n\
+		normal,\n\
+		attr_TexCoord0.st,\n\
+		u_Time,\n";
+
+			if ( shader->numDeforms > 1 )
+			{
+				code << "		u_DeformType[" << i << "],\n\
+		u_DeformFunc[" << i << "],\n";
+			}
+			else
+			{
+				code << "		u_DeformType,\n\
+		u_DeformFunc,\n";
+			}
+
+			for ( int j = 0; j < 7; j++ )
+			{
+				code << "		u_DeformParams[" << (i * 7 + j) << "]";
+
+				if ( j < 6 )
+				{
+					code << ',';
+				}
+
+				code << '\n';
+			}
+
+			code << "	);\n";
+
+			code << "	normal = DeformNormal(\n\
+		position,\n\
+		normal,\n\
+		u_Time,\n";
+
+			if ( shader->numDeforms > 1 )
+			{
+				code << "		u_DeformType[" << i << "],\n";
+			}
+			else
+			{
+				code << "		u_DeformType,\n";
+			}
+
+			// u_DeformParams[1]
+			code << "		u_DeformParams[" << (i * 7 + 1) << "],\n";
+
+			// u_DeformParams[3]
+			code << "		u_DeformParams[" << (i * 7 + 3) << "]);\n";
+		}
+	}
+
+	code << "\n\
 	gl_Position = u_ModelViewProjectionMatrix * vec4(position, 1.0);\n\
 	\n\
 	vec2 tex;\n";
@@ -595,36 +811,33 @@ static void GenerateGenericVertexShaderCode(
 	{
 		const shaderStage_t *stage = shader->stages[i];
 
-		code += "	var_TexCoords[";
-		code += (i + '0');
-		code += "] = attr_TexCoord0;\n";
+		code << "	var_TexCoords[" << i << "] = attr_TexCoord0;\n";
 	}
 
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
 	{
-		code += "	var_LightTex = attr_TexCoord1;\n";
+		code << "	var_LightTex = attr_TexCoord1;\n";
 	}
 
 	if ( shader->numUnfoggedPasses > 0 )
 	{
 		if ( permutation & GENERICDEF_USE_RGBAGEN )
 		{
-			code += '\n';
+			code << '\n';
 			for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
 			{
-				code += "	var_Colors[";
-				code += (i + '0');
-				code += "] = u_VertColor * attr_Color + u_BaseColor;\n";
+				code << "	var_Colors[" << i << "] = u_VertColor * attr_Color + u_BaseColor;\n";
 			}
 		}
 	}
 
-	code += "}\n\n";
+	code << "}\n\n";
 }
 
-static void AddBlendEquationCode( std::string& code, uint32_t state )
+// We don't clamp the output here. Do we need to?
+static void AddBlendEquationCode( std::ostream& code, uint32_t state )
 {
-	code += "	dst = ";
+	code << "	dst = ";
 
 	switch ( state & GLS_SRCBLEND_BITS )
 	{
@@ -632,68 +845,68 @@ static void AddBlendEquationCode( std::string& code, uint32_t state )
 			assert(!"Not used?");
 			break;
 		case GLS_SRCBLEND_DST_ALPHA:
-			code += "dst.a";
+			code << "dst.a";
 			break;
 		case GLS_SRCBLEND_DST_COLOR:
-			code += "vec4(dst.rgb, 1.0)";
+			code << "vec4(dst.rgb, 1.0)";
 			break;
 		case GLS_SRCBLEND_ONE:
-			code += "1.0";
+			code << "1.0";
 			break;
 		case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
-			code += "(1.0 - dst.a)";
+			code << "(1.0 - dst.a)";
 			break;
 		case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
-			code += "(1.0 - vec4(dst.rgb, 1.0))";
+			code << "(1.0 - vec4(dst.rgb, 1.0))";
 			break;
 		case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
-			code += "(1.0 - src.a)";
+			code << "(1.0 - src.a)";
 			break;
 		case GLS_SRCBLEND_SRC_ALPHA:
-			code += "src.a";
+			code << "src.a";
 			break;
 		case GLS_SRCBLEND_ZERO:
-			code += "0.0";
+			code << "0.0";
 			break;
 		default:
-			code += "1.0";
+			code << "1.0";
 			break;
 	}
 
-	code += " * src + dst * ";
+	code << " * src + dst * ";
 
 	switch ( state & GLS_DSTBLEND_BITS )
 	{
 		case GLS_DSTBLEND_DST_ALPHA:
-			code += "dst.a";
+			code << "dst.a";
 			break;
 		case GLS_DSTBLEND_ONE:
-			code += "1.0";
+			code << "1.0";
 			break;
 		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
-			code += "(1.0 - dst.a)";
+			code << "(1.0 - dst.a)";
 			break;
 		case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
-			code += "(1.0 - src.a)";
+			code << "(1.0 - src.a)";
 			break;
 		case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
-			code += "(1.0 - vec4(src.rgb, 1.0))";
+			code << "(1.0 - vec4(src.rgb, 1.0))";
 			break;
 		case GLS_DSTBLEND_SRC_COLOR:
-			code += "vec4(src.rgb, 1.0)";
+			code << "vec4(src.rgb, 1.0)";
 			break;
 		case GLS_DSTBLEND_SRC_ALPHA:
-			code += "src.a";
+			code << "src.a";
 			break;
 		case GLS_DSTBLEND_ZERO:
-			code += "0.0";
+			code << "0.0";
 			break;
 		default:
-			code += "0.0";
+			code << "0.0";
 			break;
 	}
 
-	code += ";\n";
+	code << ";\n";
 }
 
 static void GenerateGenericFragmentShaderCode(
@@ -702,7 +915,7 @@ static void GenerateGenericFragmentShaderCode(
 	uint32_t permutation,
 	GLSLShader& genShader )
 {
-	std::string& code = genShader.code;
+	std::ostream& code = genShader.code;
 
 	// Determine uniforms needed
 	memset( genShader.uniformsArraySizes, 0, sizeof( genShader.uniformsArraySizes ) );
@@ -773,7 +986,7 @@ static void GenerateGenericFragmentShaderCode(
 		genShader.uniformsArraySizes[UNIFORM_NORMALSCALE] = 1;
 		genShader.uniformsArraySizes[UNIFORM_SPECULARSCALE] = 1;
 	}
-
+	u_
 	if ( (permutation & GENERICDEF_USE_LIGHT) != 0 &&
 			(permutation & GENERICDEF_USE_FASTLIGHT) == 0 &&
 			(permutation & GENERICDEF_USE_CUBEMAP) != 0 )
@@ -786,106 +999,91 @@ static void GenerateGenericFragmentShaderCode(
 	// Generate the code
 	AddShaderHeaderCode( shader, defines, permutation, code );
 
-	code += '\n';
+	code << '\n';
 
 	// Add uniforms
 	for ( int i = 0; i < UNIFORM_COUNT; i++ )
 	{
 		if ( genShader.uniformsArraySizes[i] > 0 )
 		{
-			code += "uniform ";
-			code += glslTypeStrings[uniformsInfo[i].type];
-			code += ' ';
-			code += uniformsInfo[i].name;
+			code << "uniform " << glslTypeStrings[uniformsInfo[i].type] << ' ' << uniformsInfo[i].name;
 
 			if ( uniformsInfo[i].size > 1 )
 			{
-				char arraySpecifier[11];
-				sprintf( arraySpecifier, "%d", uniformsInfo[i].size * genShader.uniformsArraySizes[i] );
-
-				code += '[';
-				code += arraySpecifier;
-				code += ']';
+				code << '[' << (uniformsInfo[i].size * genShader.uniformsArraySizes[i]) << ']';
 			}
 
-			code += ";\n";
+			code << ";\n";
 		}
 	}
 
-	code += '\n';
+	code << '\n';
 
 	// 
 	// Add inputs
 	//
 	if ( shader->numUnfoggedPasses > 0 )
 	{
-		code += "in vec2 var_TexCoords[";
-		code += (shader->numUnfoggedPasses + '0');
-		code += "];\n";
+		code << "in vec2 var_TexCoords[" << shader->numUnfoggedPasses << "];\n";
 
 		if ( permutation & GENERICDEF_USE_LIGHTMAP )
 		{
-			code += "in vec2 var_LightTex;\n";
+			code << "in vec2 var_LightTex;\n";
 		}
 
 		if ( permutation & GENERICDEF_USE_RGBAGEN )
 		{
-			code += "in vec4 var_Colors[";
-			code += (shader->numUnfoggedPasses + '0');
-			code += "];\n";
+			code << "in vec4 var_Colors[" << shader->numUnfoggedPasses << "];\n";
 		}
 
-		code += '\n';
+		code << '\n';
 	}
 
 	//
 	// Add outputs
 	//
-	code += "out vec4 out_Color;\n";
+	code << "out vec4 out_Color;\n";
 	if ( permutation & GENERICDEF_USE_GLOW_BUFFER )
 	{
-		code += "out vec4 out_Glow;\n";
+		code << "out vec4 out_Glow;\n";
 	}
 
-	code += '\n';
+	code << '\n';
 
 	//
 	// Main function body
 	//
-	code += "void main() {\n\
+	code << "void main() {\n\
 	\n\
 	vec4 src = vec4(0.0);\n\
 	vec4 src2 = vec4(0.0);\n\
 	vec4 dst = vec4(0.0);\n\n";
 
-	char buffer[64];
 	for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
 	{
 		const shaderStage_t *stage = shader->stages[i];
 
-		code += "	// Stage ";
-		code += (i + '1');
-		code += '\n';
+		code << "	// Stage " << (i + 1) << '\n';
 
 		if ( stage->bundle[TB_DIFFUSEMAP].image[0] != NULL )
 		{
-			code += "	src = texture(u_DiffuseMap, var_TexCoords[0]);\n";
+			code << "	src = texture(u_DiffuseMap, var_TexCoords[0]);\n";
 
 			if ( stage->bundle[TB_LIGHTMAP].image[0] != NULL )
 			{
-				code += "	src2 = texture(u_LightMap,  var_LightTex);\n";
-				code += "	src.rgb = src.rgb * src2.rgb;\n";
+				code << "	src2 = texture(u_LightMap,  var_LightTex);\n";
+				code << "	src.rgb = src.rgb * src2.rgb;\n";
 			}
 		}
 
 		switch ( stage->rgbGen )
 		{
 			case CGEN_CONST:
-				sprintf( buffer, "%.9f, %.9f, %.9f", stage->constantColor[0], stage->constantColor[1], stage->constantColor[2] );
-
-				code += "	src.rgb *= vec3(";
-				code += buffer;
-				code += ");\n";
+				code << "	src.rgb *= vec3("
+						<< (stage->constantColor[0] / 255.0f) << ", "
+						<< (stage->constantColor[1] / 255.0f) << ", "
+						<< (stage->constantColor[2] / 255.0f)
+						<< ");\n";
 				break;
 
 			default:
@@ -895,11 +1093,7 @@ static void GenerateGenericFragmentShaderCode(
 		switch ( stage->alphaGen )
 		{
 			case AGEN_CONST:
-				sprintf( buffer, "%.9f", stage->constantColor[3] );
-
-				code += "	src.a *= ";
-				code += buffer;
-				code += ";\n";
+				code << "	src.a *= " << (stage->constantColor[3] / 255.0f) << ";\n";
 				break;
 
 			default:
@@ -909,24 +1103,24 @@ static void GenerateGenericFragmentShaderCode(
 		// Depends on blend function
 		AddBlendEquationCode(code, stage->stateBits);
 
-		code += '\n';
+		code << '\n';
 	}
 
 	//if ( permutation & GENERICDEF_USE_RGBAGEN )
 	{
-		code += "	out_Color = dst;\n";
+		code << "	out_Color = dst;\n";
 	}
 	//else
 	//{
-	//	code += "	out_Color = color;\n";
+	//	code << "	out_Color = color;\n";
 	//}
 
 	if ( permutation & GENERICDEF_USE_GLOW_BUFFER )
 	{
-		code += "	out_Glow = vec4(0.0);\n";
+		code << "	out_Glow = vec4(0.0);\n";
 	}
 
-	code += '}';
+	code << '}';
 }
 
 uint32_t GetShaderCapabilities( const shader_t *shader )
@@ -1307,9 +1501,6 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 	GLSLShader vertexShader;
 	GLSLShader fragmentShader;
 
-	vertexShader.code.reserve( 16384 );
-	fragmentShader.code.reserve( 16384 );
-
 	permutation |= GetShaderCapabilities( shader );
 
 	int uniformArraySizes[UNIFORM_COUNT];
@@ -1345,8 +1536,11 @@ Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines
 	// Generate static data and allocate memory for dynamic data
 
 	// FIXME: Refactor into tr_glsl.cpp
-	const char *vertexShaderCode = vertexShader.code.c_str();
-	const char *fragmentShaderCode = fragmentShader.code.c_str();
+	std::string vshaderString = vertexShader.code.str();
+	std::string fshaderString = fragmentShader.code.str();
+
+	const char *vertexShaderCode = vshaderString.c_str();
+	const char *fragmentShaderCode = fshaderString.c_str();
 
 	int vshader = qglCreateShader( GL_VERTEX_SHADER );
 	if ( vshader == 0 )
