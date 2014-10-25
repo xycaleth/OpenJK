@@ -1538,6 +1538,8 @@ void R_Init( void ) {
 
 	InitOpenGL();
 
+	GLSLGeneratorInitContext( &tr.glslGeneratorContext );
+
 	R_InitImages();
 
 	FBO_Init();
@@ -1583,6 +1585,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 
 	if ( tr.registered ) {
 		R_IssuePendingRenderCommands();
+		GLSLGeneratorDestroyContext( &tr.glslGeneratorContext );
 		R_ShutDownQueries();
 		FBO_Shutdown();
 		R_DeleteTextures();

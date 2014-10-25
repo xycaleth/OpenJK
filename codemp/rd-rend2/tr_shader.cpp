@@ -3157,8 +3157,6 @@ static void SortNewShader( void ) {
 GeneratePermanentShader
 ====================
 */
-struct Material;
-Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines[], uint32_t permutation );
 static shader_t *GeneratePermanentShader( void ) {
 	shader_t	*newShader;
 	int			i, b;
@@ -3209,9 +3207,16 @@ static shader_t *GeneratePermanentShader( void ) {
 
 	if ( !newShader->defaultShader )
 	{
-		GenerateGenericGLSLShader(newShader, NULL, 0);
-		GenerateGenericGLSLShader(newShader, NULL, GENERICDEF_USE_SKELETAL_ANIMATION);
-		GenerateGenericGLSLShader(newShader, NULL, GENERICDEF_USE_VERTEX_ANIMATION);
+		for ( int i = 0; i < GENERICDEF_COUNT; i++ )
+		{
+			if ( (i & GENERICDEF_USE_SKELETAL_ANIMATION) &&
+					(i & GENERICDEF_USE_VERTEX_ANIMATION) )
+			{
+				continue;
+			}
+
+			newShader->materials[i] = GLSLGeneratorGenerateMaterial(&tr.glslGeneratorContext, newShader, NULL, i);
+		}
 	}
 
 	return newShader;

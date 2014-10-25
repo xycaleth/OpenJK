@@ -178,6 +178,16 @@ static const char *genericShaderDefStrings[] = {
 	"GENERICDEF_USE_GLOW_BUFFER",
 };
 
+static uniform_t bundleToUniform[NUM_TEXTURE_BUNDLES] = {
+	UNIFORM_DIFFUSEMAP,
+	UNIFORM_LIGHTMAP,
+	UNIFORM_NORMALMAP,
+	UNIFORM_DELUXEMAP,
+	UNIFORM_SPECULARMAP,
+	UNIFORM_SHADOWMAP,
+	UNIFORM_CUBEMAP
+};
+
 /*
 Eventually, we want to render like this:
 
@@ -230,18 +240,20 @@ struct GLSLShader
 	std::ostringstream code;
 
 	uint32_t attributes;
-
 	int samplersArraySizes[NUM_TEXTURE_BUNDLES];
 	int uniformsArraySizes[UNIFORM_COUNT];
+
+	image_t *textures[MAX_SHADER_STAGES * NUM_TEXTURE_BUNDLES];
 };
 
 struct ConstantDescriptor
 {
+	int uniform;
 	int type;
 	int offset;
 	int location;
-	int baseTypeSize;
-	int arraySize;
+	int numElementsInBaseType;
+	int totalNumElements;
 };
 
 struct SamplerDescriptor
@@ -251,6 +263,11 @@ struct SamplerDescriptor
 
 struct ShaderProgram
 {
+	ShaderProgram *next;
+
+	uint32_t permutation;
+	bool used;
+
 	int vertexShader;
 	int fragmentShader;
 	int program;
@@ -259,10 +276,14 @@ struct ShaderProgram
 	SamplerDescriptor *samplers;
 
 	int numUniforms;
+	int constantsBufferSizeInBytes;
 	ConstantDescriptor *constants;
 
 	// Mapping from UNIFORM_* -> array index into 'constants' array.
 	int uniformDataIndices[UNIFORM_COUNT];
+
+	// Mapping from {stage, bundle} -> sampler index
+	int samplerIndexes[MAX_SHADER_STAGES][NUM_TEXTURE_BUNDLES];
 };
 
 struct Material
@@ -273,30 +294,33 @@ struct Material
 	GLuint *textures;
 };
 
-struct GLSLGeneratorContext
-{
-	static const int MAX_SHADER_PROGRAM_TABLE_SIZE = 2048;
+int numQ3ShadersLoaded;
+int numGLSLPrograms;
 
-	ShaderProgram *shaderProgramsTable[MAX_SHADER_PROGRAM_TABLE_SIZE];
-};
-
-void InitGLSLGeneratorContext( GLSLGeneratorContext *ctx )
+void GLSLGeneratorInitContext( GLSLGeneratorContext *ctx )
 {
+	memset( ctx->shaderProgramsTable, 0, sizeof( ctx->shaderProgramsTable ) );
 }
 
-void DestroyGLSLGeneratorContext( GLSLGeneratorContext *ctx )
+void GLSLGeneratorDestroyContext( GLSLGeneratorContext *ctx )
 {
-	
-}
+	for ( int i = 0; i < GLSLGeneratorContext::MAX_SHADER_PROGRAM_TABLE_SIZE; i++ )
+	{
+		ShaderProgram *program = ctx->shaderProgramsTable[i];
 
-static uint32_t GenerateVertexShaderHashValue( const shader_t *shader, uint32_t permutation )
-{
-	return shader->index;
-}
+		while ( program != NULL )
+		{
+			ShaderProgram *next = program->next;
 
-static uint32_t GenerateFragmentShaderHashValue( const shader_t *shader, uint32_t permutation )
-{
-	return shader->index;
+			qglDeleteProgram( program->program );
+
+			delete[] program->constants;
+			delete[] program->samplers;
+			delete program;
+
+			program = next;
+		}
+	}
 }
 
 static bool AddShaderHeaderCode( const shader_t *shader, const char *defines[], uint32_t permutation, std::ostream& code )
@@ -350,6 +374,7 @@ static void GenerateGenericVertexShaderCode(
 	const shader_t *shader,
 	const char *defines[],
 	uint32_t permutation,
+	int samplerMapping[MAX_SHADER_STAGES][NUM_TEXTURE_BUNDLES],
 	GLSLShader& genShader )
 {
 	std::ostream& code = genShader.code;
@@ -454,12 +479,7 @@ static void GenerateGenericVertexShaderCode(
 		if ( genShader.uniformsArraySizes[i] > 0 )
 		{
 			code << "uniform " << glslTypeStrings[uniformsInfo[i].type] << ' ' << uniformsInfo[i].name;
-
-			if ( uniformsInfo[i].size > 1 )
-			{
-				code << '[' << (uniformsInfo[i].size * genShader.uniformsArraySizes[i]) << ']';
-			}
-
+			code << '[' << (uniformsInfo[i].size * genShader.uniformsArraySizes[i]) << ']';
 			code << ";\n";
 		}
 	}
@@ -664,7 +684,7 @@ vec3 DeformNormal(\n\
 	}\n\
 	else if (TCGen == 7)\n\
 	{\n\
-		vec3 viewer = normalize(u_LocalViewOrigin - position);\n\
+		vec3 viewer = normalize(u_LocalViewOrigin[0] - position);\n\
 		vec2 ref = reflect(viewer, normal).yz;\n\
 		tex.s = ref.x * -0.5 + 0.5;\n\
 		tex.t = ref.y *  0.5 + 0.5;\n\
@@ -697,14 +717,14 @@ vec3 DeformNormal(\n\
 	{
 		code << "float CalcFog(in vec3 position)\n\
 {\n\
-	float s = dot(vec4(position, 1.0), u_FogDistance) * 8.0;\n\
-	float t = dot(vec4(position, 1.0), u_FogDepth);\n\
+	float s = dot(vec4(position, 1.0), u_FogDistance[0]) * 8.0;\n\
+	float t = dot(vec4(position, 1.0), u_FogDepth[0]);\n\
 	\n\
-	float eyeOutside = float(u_FogEyeT < 0.0);\n\
+	float eyeOutside = float(u_FogEyeT[0] < 0.0);\n\
 	float fogged = float(t < eyeOutside);\n\
 	\n\
 	t += 1e-6;\n\
-	t *= fogged / (t - u_FogEyeT * eyeOutside);\n\
+	t *= fogged / (t - u_FogEyeT[0] * eyeOutside);\n\
 	\n\
 	return s * t;\n\
 }\n\n";
@@ -715,8 +735,8 @@ vec3 DeformNormal(\n\
 
 	if ( permutation & GENERICDEF_USE_VERTEX_ANIMATION )
 	{
-		code << "	vec3 position = mix(attr_Position, attr_Position2, u_VertexLerp);\n";
-		code << "	vec3 normal = mix(attr_Normal, attr_Normal2, u_VertexLerp);\n";
+		code << "	vec3 position = mix(attr_Position, attr_Position2, u_VertexLerp[0]);\n";
+		code << "	vec3 normal = mix(attr_Normal, attr_Normal2, u_VertexLerp[0]);\n";
 		code << "	normal = normalize(normal - vec3(0.5));\n";
 	}
 	else if ( permutation & GENERICDEF_USE_SKELETAL_ANIMATION )
@@ -753,18 +773,9 @@ vec3 DeformNormal(\n\
 		position,\n\
 		normal,\n\
 		attr_TexCoord0.st,\n\
-		u_Time,\n";
-
-			if ( shader->numDeforms > 1 )
-			{
-				code << "		u_DeformType[" << i << "],\n\
+		u_Time[0],\n\
+		u_DeformType[" << i << "],\n\
 		u_DeformFunc[" << i << "],\n";
-			}
-			else
-			{
-				code << "		u_DeformType,\n\
-		u_DeformFunc,\n";
-			}
 
 			for ( int j = 0; j < 7; j++ )
 			{
@@ -783,16 +794,8 @@ vec3 DeformNormal(\n\
 			code << "	normal = DeformNormal(\n\
 		position,\n\
 		normal,\n\
-		u_Time,\n";
-
-			if ( shader->numDeforms > 1 )
-			{
-				code << "		u_DeformType[" << i << "],\n";
-			}
-			else
-			{
-				code << "		u_DeformType,\n";
-			}
+		u_Time[0],\n\
+		u_DeformType[" << i << "],\n";
 
 			// u_DeformParams[1]
 			code << "		u_DeformParams[" << (i * 7 + 1) << "],\n";
@@ -803,7 +806,7 @@ vec3 DeformNormal(\n\
 	}
 
 	code << "\n\
-	gl_Position = u_ModelViewProjectionMatrix * vec4(position, 1.0);\n\
+	gl_Position = u_ModelViewProjectionMatrix[0] * vec4(position, 1.0);\n\
 	\n\
 	vec2 tex;\n";
 
@@ -826,7 +829,7 @@ vec3 DeformNormal(\n\
 			code << '\n';
 			for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
 			{
-				code << "	var_Colors[" << i << "] = u_VertColor * attr_Color + u_BaseColor;\n";
+				code << "	var_Colors[" << i << "] = u_VertColor[0] * attr_Color + u_BaseColor[0];\n";
 			}
 		}
 	}
@@ -909,10 +912,25 @@ static void AddBlendEquationCode( std::ostream& code, uint32_t state )
 	code << ";\n";
 }
 
+static int GetTextureCount( int samplerMapping[MAX_SHADER_STAGES][NUM_TEXTURE_BUNDLES], int bundleType, int numStages )
+{
+	int count = 0;
+	for ( int i = 0; i < numStages; i++ )
+	{
+		if ( samplerMapping[i][bundleType] != -1 )
+		{
+			count++;
+		}
+	}
+
+	return count;
+}
+
 static void GenerateGenericFragmentShaderCode(
 	const shader_t *shader,
 	const char *defines[],
 	uint32_t permutation,
+	int samplerMapping[MAX_SHADER_STAGES][NUM_TEXTURE_BUNDLES],
 	GLSLShader& genShader )
 {
 	std::ostream& code = genShader.code;
@@ -921,12 +939,12 @@ static void GenerateGenericFragmentShaderCode(
 	memset( genShader.uniformsArraySizes, 0, sizeof( genShader.uniformsArraySizes ) );
 
 	genShader.uniformsArraySizes[UNIFORM_DIFFUSEMAP] = 1;
-	genShader.samplersArraySizes[TB_DIFFUSEMAP] = 1;
+	genShader.samplersArraySizes[TB_DIFFUSEMAP] = GetTextureCount( samplerMapping, TB_DIFFUSEMAP, shader->numUnfoggedPasses );
 	
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
 	{
 		genShader.uniformsArraySizes[UNIFORM_LIGHTMAP] = 1;
-		genShader.samplersArraySizes[TB_LIGHTMAP] = 1;
+		genShader.samplersArraySizes[TB_LIGHTMAP] = GetTextureCount( samplerMapping, TB_LIGHTMAP, shader->numUnfoggedPasses );;
 	}
 
 	#if 0
@@ -1007,11 +1025,7 @@ static void GenerateGenericFragmentShaderCode(
 		if ( genShader.uniformsArraySizes[i] > 0 )
 		{
 			code << "uniform " << glslTypeStrings[uniformsInfo[i].type] << ' ' << uniformsInfo[i].name;
-
-			if ( uniformsInfo[i].size > 1 )
-			{
-				code << '[' << (uniformsInfo[i].size * genShader.uniformsArraySizes[i]) << ']';
-			}
+			code << '[' << (uniformsInfo[i].size * genShader.uniformsArraySizes[i]) << ']';
 
 			code << ";\n";
 		}
@@ -1043,10 +1057,7 @@ static void GenerateGenericFragmentShaderCode(
 	// Add outputs
 	//
 	code << "out vec4 out_Color;\n";
-	if ( permutation & GENERICDEF_USE_GLOW_BUFFER )
-	{
-		code << "out vec4 out_Glow;\n";
-	}
+	code << "out vec4 out_Glow;\n";
 
 	code << '\n';
 
@@ -1067,11 +1078,11 @@ static void GenerateGenericFragmentShaderCode(
 
 		if ( stage->bundle[TB_DIFFUSEMAP].image[0] != NULL )
 		{
-			code << "	src = texture(u_DiffuseMap, var_TexCoords[0]);\n";
+			code << "	src = texture(u_DiffuseMap[" << samplerMapping[i][TB_DIFFUSEMAP] << "], var_TexCoords[" << i << "]);\n";
 
 			if ( stage->bundle[TB_LIGHTMAP].image[0] != NULL )
 			{
-				code << "	src2 = texture(u_LightMap,  var_LightTex);\n";
+				code << "	src2 = texture(u_LightMap[" << samplerMapping[i][TB_LIGHTMAP] << "],  var_LightTex);\n";
 				code << "	src.rgb = src.rgb * src2.rgb;\n";
 			}
 		}
@@ -1116,6 +1127,10 @@ static void GenerateGenericFragmentShaderCode(
 	//}
 
 	if ( permutation & GENERICDEF_USE_GLOW_BUFFER )
+	{
+		code << "	out_Glow = out_Color;\n";
+	}
+	else
 	{
 		code << "	out_Glow = vec4(0.0);\n";
 	}
@@ -1194,10 +1209,10 @@ void SetMaterialData( Material *material, void *newData, uniform_t uniform, int 
 	assert( count > 0 );
 
 	memcpy( data + baseTypeSizeInBytes * offset, newData,
-		baseTypeSizeInBytes * constantData->baseTypeSize * count );
+		baseTypeSizeInBytes * constantData->numElementsInBaseType * count );
 }
 
-static void FillDefaultUniformData( Material *material, const int uniformIndexes[UNIFORM_COUNT], const shader_t *shader )
+static void FillDefaultUniformData( Material *material, const shader_t *shader )
 {
 	ShaderProgram *program = material->program;
 	for ( int i = 0,  end = program->numUniforms; i < end; i++ )
@@ -1205,7 +1220,7 @@ static void FillDefaultUniformData( Material *material, const int uniformIndexes
 		const ConstantDescriptor *uniform = &program->constants[i];
 		void *data = reinterpret_cast<char *>(material->constantData) + uniform->offset;
 
-		switch ( uniformIndexes[i] )
+		switch ( uniform->uniform )
 		{
 			case UNIFORM_DIFFUSEMAP:
 				*(int *)data = TB_DIFFUSEMAP;
@@ -1492,176 +1507,392 @@ static void FillDefaultUniformData( Material *material, const int uniformIndexes
 	}
 }
 
-Material *GenerateGenericGLSLShader( const shader_t *shader, const char *defines[], uint32_t permutation )
+static void GenerateSamplingTable( const shader_t *shader, int samplerMapping[MAX_SHADER_STAGES][NUM_TEXTURE_BUNDLES] )
+{
+	for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
+	{
+		const shaderStage_t *stage = shader->stages[i];
+		int numTextures[NUM_TEXTURE_BUNDLES] = {};
+
+		for ( int j = 0; j < NUM_TEXTURE_BUNDLES; j++ )
+		{
+			if ( stage->bundle[j].image[0] != NULL )
+			{
+				samplerMapping[i][j] = numTextures[j]++;
+			}
+			else
+			{
+				samplerMapping[i][j] = -1;
+			}
+		}
+	}
+}
+
+static void AssignSamplersAndTextures( Material *material, const shader_t *shader )
+{
+	ShaderProgram *shaderProgram = material->program;
+	int totalNumSamplers = 0;
+
+	if ( shaderProgram->numSamplers == 0 )
+	{
+		return;
+	}
+
+	for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
+	{
+		const shaderStage_t *stage = shader->stages[i];
+		GLuint samplers[NUM_TEXTURE_BUNDLES];
+		int numSamplers = 0;
+
+		for ( int j = 0; j < NUM_TEXTURE_BUNDLES; j++ )
+		{
+			if ( shaderProgram->samplerIndexes[i][j] != -1 )
+			{
+				samplers[numSamplers] = totalNumSamplers;
+				material->textures[totalNumSamplers] = stage->bundle[j].image[0]->texnum;
+
+				numSamplers++;
+				totalNumSamplers++;
+			}
+
+			SetMaterialData( material, samplers, bundleToUniform[j], 0, numSamplers );
+		}
+	}
+}
+
+// Slight variation on the MurmurHash - we know that the size of data is a multiple of 4.
+static uint32_t MurmurHash( uint32_t *key, uint32_t numDWords, uint32_t seed )
+{
+	static const uint32_t c1 = 0xcc9e2d51;
+	static const uint32_t c2 = 0x1b873593;
+	static const uint32_t r1 = 15;
+	static const uint32_t r2 = 13;
+	static const uint32_t m = 5;
+	static const uint32_t n = 0xe6546b64;
+
+	uint32_t hash = seed;
+	for ( uint32_t i = 0; i < numDWords; i++ )
+	{
+		uint32_t k = key[i];
+
+		k *= c1;
+		k = (k << r1) | (k >> (32 - r1));
+		k *= c2;
+
+		hash ^= k;
+		hash = (hash << r2) | (hash >> (32 - r2));
+		hash *= m + n;
+	}
+
+	hash ^= numDWords * 4;
+	hash ^= hash >> 16;
+	hash *= 0x85ebca6b;
+	hash ^= hash >> 13;
+	hash *= 0xc2b2ae35;
+	hash ^= hash >> 16;
+
+	return hash;
+}
+
+static uint32_t CalculateShaderHash( const shader_t *shader, uint32_t permutation )
+{
+	struct CompactShader
+	{
+		uint32_t permutation;
+
+		unsigned numDeforms : 2;
+		unsigned numStages : 3;
+		unsigned glow : 1;
+
+		struct
+		{
+			struct
+			{
+				unsigned tcGenType : 4;
+				unsigned numTexMods : 2;
+				unsigned numAnimImages : 5;
+			} bundle[NUM_TEXTURE_BUNDLES];
+
+			unsigned rgbWaveType : 3;
+			unsigned alphaWaveType : 3;
+			unsigned fogColorAdjust : 2;
+			uint32_t stateBits;
+
+			byte constColor[4];
+		} stages[MAX_SHADER_STAGES];
+	};
+
+	byte data[(sizeof( CompactShader ) * 4 + 3) / 4]; // Rounded up to nearest 4 bytes
+	CompactShader *compact = reinterpret_cast<CompactShader *>(data);
+
+	memset( data, 0, sizeof( data ) );
+
+	compact->permutation = permutation;
+	compact->numDeforms = shader->numDeforms;
+	compact->numStages = shader->numUnfoggedPasses;
+
+	for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
+	{
+		const shaderStage_t *stage = shader->stages[i];
+
+		compact->glow = stage->glow || compact->glow;
+
+		for ( int j = 0; stage->bundle[j].image[0] != NULL; j++ )
+		{
+			compact->stages[i].bundle[j].numAnimImages = stage->bundle[j].numImageAnimations;
+			compact->stages[i].bundle[j].numTexMods = stage->bundle[j].numTexMods;
+			compact->stages[i].bundle[j].tcGenType = stage->bundle[j].tcGen;
+		}
+		
+		compact->stages[i].rgbWaveType = stage->rgbWave.func;
+		compact->stages[i].alphaWaveType = stage->alphaWave.func;
+		compact->stages[i].fogColorAdjust = stage->adjustColorsForFog;
+		compact->stages[i].stateBits = stage->stateBits;
+		memcpy( compact->stages[i].constColor, stage->constantColor, sizeof( stage->constantColor ) );
+	}
+
+	uint32_t *hashData = reinterpret_cast<uint32_t *>(data);
+	size_t numDWords = sizeof( data ) / 4;
+	uint32_t hash = MurmurHash( hashData, numDWords, 53271 );
+
+	return hash & (GLSLGeneratorContext::MAX_SHADER_PROGRAM_TABLE_SIZE - 1);
+}
+
+Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader_t *shader, const char *defines[], uint32_t permutation )
 {
 	// Calculate hash for shader
 
-	// shader program = HashTableFind( table, hash );
-	// if ( shader program == NULL ) {
-	GLSLShader vertexShader;
-	GLSLShader fragmentShader;
-
 	permutation |= GetShaderCapabilities( shader );
 
-	int uniformArraySizes[UNIFORM_COUNT];
-	int uniformIndexes[UNIFORM_COUNT];
-	int numUniforms;
+	uint32_t shaderHash = CalculateShaderHash( shader, permutation );
+	ShaderProgram *shaderProgram = ctx->shaderProgramsTable[shaderHash];
 
-	// Generate shader code
-	GenerateGenericVertexShaderCode(
-		shader,
-		defines,
-		permutation,
-		vertexShader );
-
-	GenerateGenericFragmentShaderCode(
-		shader,
-		defines,
-		permutation,
-		fragmentShader );
-
-	numUniforms = 0;
-	for ( int i = 0; i < UNIFORM_COUNT; i++ )
+	while ( shaderProgram != NULL )
 	{
-		uniformArraySizes[i] = max(
-			vertexShader.uniformsArraySizes[i],
-			fragmentShader.uniformsArraySizes[i]);
-
-		if ( uniformArraySizes[i] > 0 )
+		if ( shaderProgram->permutation == permutation )
 		{
-			uniformIndexes[numUniforms++] = i;
+			break;
 		}
+
+		shaderProgram = shaderProgram->next;
 	}
 
-	// Generate static data and allocate memory for dynamic data
-
-	// FIXME: Refactor into tr_glsl.cpp
-	std::string vshaderString = vertexShader.code.str();
-	std::string fshaderString = fragmentShader.code.str();
-
-	const char *vertexShaderCode = vshaderString.c_str();
-	const char *fragmentShaderCode = fshaderString.c_str();
-
-	int vshader = qglCreateShader( GL_VERTEX_SHADER );
-	if ( vshader == 0 )
+	if ( shaderProgram == NULL )
 	{
-		// Error etc?
-		return NULL;
-	}
+		GLSLShader vertexShader;
+		GLSLShader fragmentShader;
 
-	qglShaderSource( vshader, 1, &vertexShaderCode, NULL );
-	qglCompileShader( vshader );
+		memset( vertexShader.textures, 0, sizeof( vertexShader.textures ) );
+		memset( fragmentShader.textures, 0, sizeof( fragmentShader.textures ) );
 
-	std::string log;
-	GLint status;
-	qglGetShaderiv( vshader, GL_COMPILE_STATUS, &status );
-	if ( status != GL_TRUE )
-	{
-		GLint logLength;
-		qglGetShaderiv( vshader, GL_INFO_LOG_LENGTH, &logLength );
+		int uniformArraySizes[UNIFORM_COUNT];
+		int uniformIndexes[UNIFORM_COUNT];
+		int numUniforms;
+		int samplerMapping[MAX_SHADER_STAGES][NUM_TEXTURE_BUNDLES];
 
-		log.resize( logLength );
-		
-		qglGetShaderInfoLog( vshader, logLength, NULL, &log[0] );
-		Com_Printf( "%s\n", log.c_str() );
-	}
+		// Generate shader code
+		GenerateSamplingTable( shader, samplerMapping );
 
-	int fshader = qglCreateShader( GL_FRAGMENT_SHADER );
-	if ( fshader == 0 )
-	{
-		// Error etc
-		return NULL;
-	}
+		GenerateGenericVertexShaderCode(
+			shader,
+			defines,
+			permutation,
+			samplerMapping,
+			vertexShader );
 
-	qglShaderSource( fshader, 1, &fragmentShaderCode, NULL );
-	qglCompileShader( fshader );
+		GenerateGenericFragmentShaderCode(
+			shader,
+			defines,
+			permutation,
+			samplerMapping,
+			fragmentShader );
 
-	qglGetShaderiv( fshader, GL_COMPILE_STATUS, &status );
-	if ( status != GL_TRUE )
-	{
-		GLint logLength;
-		qglGetShaderiv( fshader, GL_INFO_LOG_LENGTH, &logLength );
-
-		log.resize( logLength );
-		
-		qglGetShaderInfoLog( fshader, logLength, NULL, &log[0] );
-		Com_Printf( "%s\n", log.c_str() );
-	}
-
-	int program = qglCreateProgram();
-	if ( program == 0 )
-	{
-		// Error etc
-		return NULL;
-	}
-
-	qglAttachShader( program, vshader );
-	qglAttachShader( program, fshader );
-
-	for ( int i = 0; i < ATTR_INDEX_COUNT; i++ )
-	{
-		if ( vertexShader.attributes & (1 << i) )
+		numUniforms = 0;
+		for ( int i = 0; i < UNIFORM_COUNT; i++ )
 		{
-			qglBindAttribLocation( program, i, attributeMeta[i].name );
+			uniformArraySizes[i] = max(
+				vertexShader.uniformsArraySizes[i],
+				fragmentShader.uniformsArraySizes[i]);
+
+			if ( uniformArraySizes[i] > 0 )
+			{
+				uniformIndexes[numUniforms++] = i;
+			}
 		}
-	}
 
-	qglLinkProgram( program );
+		// Generate static data and allocate memory for dynamic data
 
-	qglGetProgramiv( program, GL_LINK_STATUS, &status );
-	if ( status != GL_TRUE )
-	{
-		GLint logLength;
-		qglGetProgramiv( program, GL_INFO_LOG_LENGTH, &logLength );
+		// FIXME: Refactor into tr_glsl.cpp
+		std::string vshaderString = vertexShader.code.str();
+		std::string fshaderString = fragmentShader.code.str();
 
-		log.resize( logLength );
-		
-		qglGetProgramInfoLog( program, logLength, NULL, &log[0] );
-		Com_Printf( "%s\n", log.c_str() );
-	}
+		const char *vertexShaderCode = vshaderString.c_str();
+		const char *fragmentShaderCode = fshaderString.c_str();
 
-	qglUseProgram( program );
+		int vshader = qglCreateShader( GL_VERTEX_SHADER );
+		if ( vshader == 0 )
+		{
+			// Error etc?
+			return NULL;
+		}
 
-	// FIXME: Lol, leak memory
-	ShaderProgram *shaderProgram = new ShaderProgram();
-	shaderProgram->program = program;
-	shaderProgram->fragmentShader = fshader;
-	shaderProgram->vertexShader = vshader;
-	shaderProgram->numUniforms = numUniforms;
-	shaderProgram->constants = new ConstantDescriptor[shaderProgram->numUniforms];
+		qglShaderSource( vshader, 1, &vertexShaderCode, NULL );
+		qglCompileShader( vshader );
 
-	int constantBufferSizeInBytes = 0;
-	for ( int i = 0; i < numUniforms; i++ )
-	{
-		ConstantDescriptor *uniform = &shaderProgram->constants[i];
-		int uniformIndex = uniformIndexes[i];
-		const uniformInfo_t *uniformInfo = &uniformsInfo[uniformIndex];
+		int fshader = qglCreateShader( GL_FRAGMENT_SHADER );
+		if ( fshader == 0 )
+		{
+			// Error etc
+			return NULL;
+		}
 
-		uniform->offset = constantBufferSizeInBytes;
-		uniform->baseTypeSize = uniformInfo->size;
-		uniform->arraySize = uniformInfo->size * uniformArraySizes[uniformIndex];
-		uniform->type = uniformInfo->type;
-		uniform->location = qglGetUniformLocation( program, uniformInfo->name );
+		int program = qglCreateProgram();
+		if ( program == 0 )
+		{
+			// Error etc
+			return NULL;
+		}
 
-		shaderProgram->uniformDataIndices[uniformIndex] = i;
+		qglAttachShader( program, vshader );
+		qglAttachShader( program, fshader );
 
-		constantBufferSizeInBytes += uniform->arraySize * GetSizeOfGLSLTypeInBytes( uniform->type );
-	}
+		for ( int i = 0; i < ATTR_INDEX_COUNT; i++ )
+		{
+			if ( vertexShader.attributes & (1 << i) )
+			{
+				qglBindAttribLocation( program, i, attributeMeta[i].name );
+			}
+		}
 
-	// FIXME: Lol, more memory leaks
+		qglLinkProgram( program );
+
+		// FIXME: Lol, leak memory
+		shaderProgram = new ShaderProgram();
+		shaderProgram->used = qfalse;
+		shaderProgram->next = ctx->shaderProgramsTable[shaderHash];
+		shaderProgram->permutation = permutation;
+		shaderProgram->program = program;
+		shaderProgram->fragmentShader = fshader;
+		shaderProgram->vertexShader = vshader;
+		shaderProgram->numUniforms = numUniforms;
+		shaderProgram->constants = new ConstantDescriptor[shaderProgram->numUniforms];
+		memcpy( shaderProgram->samplerIndexes, samplerMapping, sizeof( shaderProgram->samplerIndexes ) );
+
+		int constantBufferSizeInBytes = 0;
+		for ( int i = 0; i < numUniforms; i++ )
+		{
+			ConstantDescriptor *uniform = &shaderProgram->constants[i];
+			int uniformIndex = uniformIndexes[i];
+			const uniformInfo_t *uniformInfo = &uniformsInfo[uniformIndex];
+
+			uniform->uniform = uniformIndex;
+			uniform->offset = constantBufferSizeInBytes;
+			uniform->numElementsInBaseType = uniformInfo->size;
+			uniform->totalNumElements = uniformInfo->size * uniformArraySizes[uniformIndex];
+			uniform->type = uniformInfo->type;
+			uniform->location = -1;
+
+			shaderProgram->uniformDataIndices[uniformIndex] = i;
+
+			constantBufferSizeInBytes += uniform->totalNumElements * GetSizeOfGLSLTypeInBytes( uniform->type );
+		}
+
+		shaderProgram->constantsBufferSizeInBytes = constantBufferSizeInBytes;
+
+		// And insert it into the hash table
+		ctx->shaderProgramsTable[shaderHash] = shaderProgram;
+
+		numGLSLPrograms++;
+	} // if hash not exists
+
 	Material *material = new Material();
 
 	material->program = shaderProgram;
-	material->constantData = malloc( constantBufferSizeInBytes );
+	material->constantData = new char[shaderProgram->constantsBufferSizeInBytes];
+	material->textures = new GLuint[shaderProgram->numSamplers];
+	
+	AssignSamplersAndTextures( material, shader );
+	FillDefaultUniformData( material, shader );
 
-	FillDefaultUniformData( material, uniformIndexes, shader );
+	numQ3ShadersLoaded++;
+	
+	Com_Printf("Q3 shaders loaded: %d\n", numQ3ShadersLoaded);
+	Com_Printf("GLSL programs generated: %d\n", numGLSLPrograms);
 	
 	return material;
+}
+
+void GLSLGeneratorFreeMaterial( Material *material )
+{
+	delete[] material->constantData;
+	delete[] material->textures;
+	delete material;
+}
+
+void RB_MakeMaterialReady( Material *material )
+{
+	ShaderProgram *program = material->program;
+
+	if ( program->used )
+	{
+		return;
+	}
+	
+	std::string log;
+	GLint status;
+	qglGetShaderiv( program->vertexShader, GL_COMPILE_STATUS, &status );
+	if ( status != GL_TRUE )
+	{
+		GLint logLength;
+		qglGetShaderiv( program->vertexShader, GL_INFO_LOG_LENGTH, &logLength );
+
+		log.resize( logLength );
+		
+		qglGetShaderInfoLog( program->vertexShader, logLength, NULL, &log[0] );
+		Com_Printf( "Vertex shader error: %s\n", log.c_str() );
+	}
+
+	qglGetShaderiv( program->fragmentShader, GL_COMPILE_STATUS, &status );
+	if ( status != GL_TRUE )
+	{
+		GLint logLength;
+		qglGetShaderiv( program->fragmentShader, GL_INFO_LOG_LENGTH, &logLength );
+
+		log.resize( logLength );
+		
+		qglGetShaderInfoLog( program->fragmentShader, logLength, NULL, &log[0] );
+		Com_Printf( "Fragment shader error: %s\n", log.c_str() );
+	}
+
+	qglGetProgramiv( program->program, GL_COMPILE_STATUS, &status );
+	if ( status != GL_TRUE )
+	{
+		GLint logLength;
+		qglGetProgramiv( program->program, GL_INFO_LOG_LENGTH, &logLength );
+
+		log.resize( logLength );
+		
+		qglGetProgramInfoLog( program->program, logLength, NULL, &log[0] );
+		Com_Printf( "Linker error: %s\n", log.c_str() );
+	}
+
+	qglUseProgram( program->program );
+
+	for ( int i = 0; i < program->numUniforms; i++ )
+	{
+		const uniformInfo_t *uniform = &uniformsInfo[program->constants[i].uniform];
+		program->constants[i].location = qglGetUniformLocation( program->program, uniform->name );
+	}
+
+	program->used = true;
 }
 
 void RB_BindMaterial( const Material *material )
 {
 	const ShaderProgram *program = material->program;
+
+	// Sneaky...
+	RB_MakeMaterialReady( const_cast<Material *>(material) );
 
 	qglUseProgram( program->program );
 
@@ -1676,28 +1907,27 @@ void RB_BindMaterial( const Material *material )
 			case GLSL_INT:
 			case GLSL_SAMPLER2D:
 			case GLSL_SAMPLERCUBE:
-				qglUniform1iv( constantData->location, constantData->arraySize, reinterpret_cast<const GLint *>(data) );
+				qglUniform1iv( constantData->location, constantData->totalNumElements, reinterpret_cast<const GLint *>(data) );
 				break;
 
 			case GLSL_FLOAT:
-				qglUniform1fv( constantData->location, constantData->arraySize, data );
-				break;
+				qglUniform1fv( constantData->location, constantData->totalNumElements, data );
 				break;
 
 			case GLSL_VEC2:
-				qglUniform2fv( constantData->location, constantData->arraySize, data );
+				qglUniform2fv( constantData->location, constantData->totalNumElements, data );
 				break;
 
 			case GLSL_VEC3:
-				qglUniform3fv( constantData->location, constantData->arraySize, data );
+				qglUniform3fv( constantData->location, constantData->totalNumElements, data );
 				break;
 
 			case GLSL_VEC4:
-				qglUniform4fv( constantData->location, constantData->arraySize, data );
+				qglUniform4fv( constantData->location, constantData->totalNumElements, data );
 				break;
 
 			case GLSL_MAT16:
-				qglUniformMatrix4fv( constantData->location, constantData->arraySize, GL_FALSE, data );
+				qglUniformMatrix4fv( constantData->location, constantData->totalNumElements, GL_FALSE, data );
 				break;
 
 			default:

@@ -383,6 +383,11 @@ RB_UpdateVBOs
 Adapted from Tess_UpdateVBOs from xreal
 
 Update the default VBO to replace the client side vertex arrays
+
+TODO: Improve this...
+We can allocate a large block of GPU memory and then use it as a
+ring buffer. Will need fences to ensure that we don't read use
+memory while it's still being used for drawing.
 ==============
 */
 void RB_UpdateVBOs(unsigned int attribBits)

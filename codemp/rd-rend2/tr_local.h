@@ -788,6 +788,8 @@ typedef struct shader_s {
   float clampTime;                                  // time this shader is clamped to
   float timeOffset;                                 // current time offset for this shader
 
+	struct Material *materials[256/*GENERICDEF_COUNT*/];
+
   struct shader_s *remappedShader;                  // current shader this one is remapped too
 
 	struct	shader_s	*next;
@@ -1768,6 +1770,18 @@ void		R_Modellist_f (void);
 #define	MAX_DRAWSURFS			0x10000
 #define	DRAWSURF_MASK			(MAX_DRAWSURFS-1)
 
+//====================================================
+
+struct Material;
+struct ShaderProgram;
+struct GLSLGeneratorContext
+{
+	static const int MAX_SHADER_PROGRAM_TABLE_SIZE = 2048;
+	ShaderProgram *shaderProgramsTable[MAX_SHADER_PROGRAM_TABLE_SIZE];
+};
+
+//====================================================
+
 /*
 
 the drawsurf sort data is packed into a single 32 bit value so it can be
@@ -2141,6 +2155,8 @@ typedef struct trGlobals_s {
 	// Specific to Jedi Academy
 	int						numBSPModels;
 	int						currentLevel;
+
+	GLSLGeneratorContext	glslGeneratorContext;
 } trGlobals_t;
 
 struct glconfigExt_t
@@ -3188,5 +3204,13 @@ int C_GetLevel( void );
 void C_LevelLoadEnd( void );
 
 void RB_SurfaceGhoul( CRenderableSurface *surf );
+
+// tr_shader2glsl.cpp
+void		GLSLGeneratorInitContext( GLSLGeneratorContext *ctx );
+void		GLSLGeneratorDestroyContext( GLSLGeneratorContext *ctx );
+Material *	GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader_t *shader, const char *defines[], uint32_t permutation );
+void		GLSLGeneratorFreeMaterial( Material *material );
+
+void RB_BindMaterial( const Material *material );
 
 #endif //TR_LOCAL_H
