@@ -1168,10 +1168,13 @@ uint32_t GetShaderCapabilities( const shader_t *shader )
 			caps |= GENERICDEF_USE_RGBAGEN;
 		}
 
-		if ( stage->bundle[0].tcGen != TCGEN_TEXTURE ||
-				stage->bundle[0].numTexMods > 0 )
+		for ( int j = 0; stage->bundle[j].image[0] != NULL; j++ )
 		{
-			caps |= GENERICDEF_USE_TCGEN_AND_TCMOD;
+			if ( stage->bundle[j].tcGen != TCGEN_TEXTURE ||
+					stage->bundle[j].numTexMods > 0 )
+			{
+				caps |= GENERICDEF_USE_TCGEN_AND_TCMOD;
+			}
 		}
 
 		if ( stage->glow )
@@ -1689,6 +1692,7 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		int uniformIndexes[UNIFORM_COUNT];
 		int numUniforms;
 		int samplerMapping[MAX_SHADER_STAGES][NUM_TEXTURE_BUNDLES];
+		int numSamplers;
 
 		// Generate shader code
 		GenerateSamplingTable( shader, samplerMapping );
@@ -1720,6 +1724,20 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 			}
 		}
 
+		numSamplers = 0;
+		for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
+		{
+			for ( int j = 0; shader->stages[i]->bundle[j].image[0] != NULL; j++ )
+			{
+				const textureBundle_t *bundle = &shader->stages[i]->bundle[j];
+
+				for ( int k = 0; bundle->image[k] != NULL; k++ )
+				{
+					numSamplers++;
+				}
+			}
+		}
+
 		// Generate static data and allocate memory for dynamic data
 
 		// FIXME: Refactor into tr_glsl.cpp
@@ -1745,6 +1763,9 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 			// Error etc
 			return NULL;
 		}
+
+		qglShaderSource( fshader, 1, &fragmentShaderCode, NULL );
+		qglCompileShader( fshader );
 
 		int program = qglCreateProgram();
 		if ( program == 0 )
@@ -1775,8 +1796,10 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		shaderProgram->fragmentShader = fshader;
 		shaderProgram->vertexShader = vshader;
 		shaderProgram->numUniforms = numUniforms;
-		shaderProgram->constants = new ConstantDescriptor[shaderProgram->numUniforms];
+		shaderProgram->constants = new ConstantDescriptor[numUniforms];
 		memcpy( shaderProgram->samplerIndexes, samplerMapping, sizeof( shaderProgram->samplerIndexes ) );
+		shaderProgram->numSamplers = numSamplers;
+		shaderProgram->samplers = new SamplerDescriptor[numSamplers];
 
 		int constantBufferSizeInBytes = 0;
 		for ( int i = 0; i < numUniforms; i++ )
@@ -1798,6 +1821,28 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		}
 
 		shaderProgram->constantsBufferSizeInBytes = constantBufferSizeInBytes;
+
+		int samplerIndex = 0;
+		for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
+		{
+			for ( int j = 0; shader->stages[i]->bundle[j].image[0] != NULL; j++ )
+			{
+				SamplerDescriptor *sampler = &shaderProgram->samplers[samplerIndex];
+
+				switch ( j )
+				{
+					case TB_CUBEMAP:
+						sampler->target = GL_TEXTURE_CUBE_MAP;
+						samplerIndex++;
+						break;
+
+					default:
+						sampler->target = GL_TEXTURE_2D;
+						samplerIndex++;
+						break;
+				}
+			}
+		}
 
 		// And insert it into the hash table
 		ctx->shaderProgramsTable[shaderHash] = shaderProgram;
@@ -1864,7 +1909,7 @@ void RB_MakeMaterialReady( Material *material )
 		Com_Printf( "Fragment shader error: %s\n", log.c_str() );
 	}
 
-	qglGetProgramiv( program->program, GL_COMPILE_STATUS, &status );
+	qglGetProgramiv( program->program, GL_LINK_STATUS, &status );
 	if ( status != GL_TRUE )
 	{
 		GLint logLength;
