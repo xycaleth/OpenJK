@@ -1,28 +1,28 @@
-attribute vec3  attr_Position;
-attribute vec3  attr_Normal;
-attribute vec4  attr_TexCoord0;
+in vec3 attr_Position;
+in vec3 attr_Normal;
+in vec4 attr_TexCoord0;
 
 //#if defined(USE_VERTEX_ANIMATION)
-attribute vec3  attr_Position2;
-attribute vec3  attr_Normal2;
+in vec3 attr_Position2;
+in vec3 attr_Normal2;
 //#endif
 
 //#if defined(USE_DEFORM_VERTEXES)
-uniform int    u_DeformType;
-uniform int    u_DeformFunc;
-uniform float  u_DeformParams[7];
+uniform int u_DeformType;
+uniform int u_DeformFunc;
+uniform float u_DeformParams[7];
 //#endif
 
-uniform float   u_Time;
-uniform mat4    u_ModelViewProjectionMatrix;
+uniform float u_Time;
+uniform mat4 u_ModelViewProjectionMatrix;
 
-uniform mat4   u_ModelMatrix;
+uniform mat4 u_ModelMatrix;
 
 //#if defined(USE_VERTEX_ANIMATION)
-uniform float   u_VertexLerp;
+uniform float u_VertexLerp;
 //#endif
 
-varying vec3    var_Position;
+out vec3 var_Position;
 
 float GetNoiseValue( float x, float y, float z, float t )
 {
@@ -126,7 +126,7 @@ vec3 DeformPosition(const vec3 pos, const vec3 normal, const vec2 st)
 	}
 }
 
-vec3 DeformNormal( in const vec3 position, in const vec3 normal )
+vec3 DeformNormal( const in vec3 position, const in vec3 normal )
 {
 	if ( u_DeformType != DEFORM_NORMALS )
 	{
