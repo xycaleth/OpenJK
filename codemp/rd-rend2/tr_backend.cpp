@@ -112,11 +112,17 @@ void GL_BindToTMU( image_t *image, int tmu )
 
 void GL_BindTexture( int target, unsigned int texture, int unit )
 {
-	qglActiveTextureARB( GL_TEXTURE0 + unit );
-	qglBindTexture( target, texture );
+	if ( unit != glState.currenttmu )
+	{
+		qglActiveTextureARB( GL_TEXTURE0 + unit );
+		glState.currenttmu = unit;
+	}
 
-	glState.currenttextures[unit] = texture;
-	glState.currenttmu = unit;
+	if ( glState.currenttextures[unit] != texture )
+	{
+		qglBindTexture( target, texture );
+		glState.currenttextures[unit] = texture;
+	}
 }
 
 

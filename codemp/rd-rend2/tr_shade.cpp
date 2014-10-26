@@ -1224,6 +1224,33 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 	ComputeFogValues(fogDistanceVector, fogDepthVector, &eyeT);
 
+	int index = 0;
+	if (glState.vertexAnimation)
+		index = 1;
+	else if (glState.skeletalAnimation)
+		index = 2;
+
+	Material *material = tess.shader->materials[index];
+
+	vec4_t baseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	vec4_t vertColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+	RB_SetMaterialData( material, baseColor, UNIFORM_BASECOLOR, 0, 1 );
+	RB_SetMaterialData( material, vertColor, UNIFORM_VERTCOLOR, 0, 1 );
+	RB_SetMaterialData( material, glState.modelviewProjection, UNIFORM_MODELVIEWPROJECTIONMATRIX, 0, 1 );
+
+	RB_BindMaterial( material );
+
+	if (input->multiDrawPrimitives)
+	{
+		R_DrawMultiElementsVBO(input->multiDrawPrimitives, input->multiDrawMinIndex, input->multiDrawMaxIndex, input->multiDrawNumIndexes, input->multiDrawFirstIndex);
+	}
+	else
+	{
+		R_DrawElementsVBO(input->numIndexes, input->firstIndex, input->minIndex, input->maxIndex);
+	}
+
+#if 0
 	for ( stage = 0; stage < MAX_SHADER_STAGES; stage++ )
 	{
 		shaderStage_t *pStage = input->xstages[stage];
@@ -1640,6 +1667,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		if (backEnd.depthFill)
 			break;
 	}
+#endif
 }
 
 

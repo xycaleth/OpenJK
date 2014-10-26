@@ -1202,17 +1202,26 @@ static size_t GetSizeOfGLSLTypeInBytes( int type )
 	}
 }
 
-void SetMaterialData( Material *material, void *newData, uniform_t uniform, int offset, int count )
+void RB_SetMaterialData( Material *material, void *newData, uniform_t uniform, int offset, int count )
 {
 	ShaderProgram *program = material->program;
-	ConstantDescriptor *constantData = &program->constants[program->uniformDataIndices[uniform]];
+	int constantIndex = program->uniformDataIndices[uniform];
+
+	if ( constantIndex == - 1 )
+	{
+		return;
+	}
+
+	ConstantDescriptor *constantData = &program->constants[constantIndex];
 	char *data = reinterpret_cast<char *>(material->constantData) + constantData->offset;
 	size_t baseTypeSizeInBytes = GetSizeOfGLSLTypeInBytes( constantData->type );
 
 	assert( count > 0 );
 
-	memcpy( data + baseTypeSizeInBytes * offset, newData,
-		baseTypeSizeInBytes * constantData->numElementsInBaseType * count );
+	void *dest = data + baseTypeSizeInBytes * offset;
+	size_t writeLen = baseTypeSizeInBytes * constantData->numElementsInBaseType * count;
+
+	memcpy( dest, newData, writeLen );
 }
 
 static void FillDefaultUniformData( Material *material, const shader_t *shader )
@@ -1504,7 +1513,7 @@ static void FillDefaultUniformData( Material *material, const shader_t *shader )
 				break;
 
 			default:
-				assert(!"Invalid uniform enum");
+				assert(!"Unhandled uniform");
 				break;
 		}
 	}
@@ -1558,7 +1567,7 @@ static void AssignSamplersAndTextures( Material *material, const shader_t *shade
 				totalNumSamplers++;
 			}
 
-			SetMaterialData( material, samplers, bundleToUniform[j], 0, numSamplers );
+			RB_SetMaterialData( material, samplers, bundleToUniform[j], 0, numSamplers );
 		}
 	}
 }
@@ -1787,7 +1796,6 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 
 		qglLinkProgram( program );
 
-		// FIXME: Lol, leak memory
 		shaderProgram = new ShaderProgram();
 		shaderProgram->used = qfalse;
 		shaderProgram->next = ctx->shaderProgramsTable[shaderHash];
@@ -1795,11 +1803,14 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		shaderProgram->program = program;
 		shaderProgram->fragmentShader = fshader;
 		shaderProgram->vertexShader = vshader;
+
 		shaderProgram->numUniforms = numUniforms;
 		shaderProgram->constants = new ConstantDescriptor[numUniforms];
-		memcpy( shaderProgram->samplerIndexes, samplerMapping, sizeof( shaderProgram->samplerIndexes ) );
+		memset( shaderProgram->uniformDataIndices, -1, sizeof( shaderProgram->uniformDataIndices ) );
+
 		shaderProgram->numSamplers = numSamplers;
 		shaderProgram->samplers = new SamplerDescriptor[numSamplers];
+		memcpy( shaderProgram->samplerIndexes, samplerMapping, sizeof( shaderProgram->samplerIndexes ) );
 
 		int constantBufferSizeInBytes = 0;
 		for ( int i = 0; i < numUniforms; i++ )
@@ -1927,6 +1938,9 @@ void RB_MakeMaterialReady( Material *material )
 	{
 		const uniformInfo_t *uniform = &uniformsInfo[program->constants[i].uniform];
 		program->constants[i].location = qglGetUniformLocation( program->program, uniform->name );
+
+		// If we've generated the shader correctly, then this uniform will exist.
+		assert( program->constants[i].location != -1 );
 	}
 
 	program->used = true;
@@ -1945,34 +1959,38 @@ void RB_BindMaterial( const Material *material )
 	for ( int i = 0, end = program->numUniforms; i < end; i++ )
 	{
 		const ConstantDescriptor *constantData = &program->constants[i];
-		const GLfloat *data = reinterpret_cast<const GLfloat *>(material->constantData) + constantData->offset;
+		const char *data = reinterpret_cast<const char *>(material->constantData) + constantData->offset;
+		const GLfloat *floatData = reinterpret_cast<const GLfloat *>(data);
+		const GLint *intData = reinterpret_cast<const GLint *>(data);
+
+		assert( constantData->location != -1 );
 
 		switch ( constantData->type )
 		{
 			case GLSL_INT:
 			case GLSL_SAMPLER2D:
 			case GLSL_SAMPLERCUBE:
-				qglUniform1iv( constantData->location, constantData->totalNumElements, reinterpret_cast<const GLint *>(data) );
+				qglUniform1iv( constantData->location, constantData->totalNumElements, intData );
 				break;
 
 			case GLSL_FLOAT:
-				qglUniform1fv( constantData->location, constantData->totalNumElements, data );
+				qglUniform1fv( constantData->location, constantData->totalNumElements, floatData );
 				break;
 
 			case GLSL_VEC2:
-				qglUniform2fv( constantData->location, constantData->totalNumElements, data );
+				qglUniform2fv( constantData->location, constantData->totalNumElements, floatData );
 				break;
 
 			case GLSL_VEC3:
-				qglUniform3fv( constantData->location, constantData->totalNumElements, data );
+				qglUniform3fv( constantData->location, constantData->totalNumElements, floatData );
 				break;
 
 			case GLSL_VEC4:
-				qglUniform4fv( constantData->location, constantData->totalNumElements, data );
+				qglUniform4fv( constantData->location, constantData->totalNumElements, floatData );
 				break;
 
 			case GLSL_MAT16:
-				qglUniformMatrix4fv( constantData->location, constantData->totalNumElements, GL_FALSE, data );
+				qglUniformMatrix4fv( constantData->location, constantData->totalNumElements, GL_FALSE, floatData );
 				break;
 
 			default:

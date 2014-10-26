@@ -3207,16 +3207,9 @@ static shader_t *GeneratePermanentShader( void ) {
 
 	if ( !newShader->defaultShader )
 	{
-		for ( int i = 0; i < GENERICDEF_COUNT; i++ )
-		{
-			if ( (i & GENERICDEF_USE_SKELETAL_ANIMATION) &&
-					(i & GENERICDEF_USE_VERTEX_ANIMATION) )
-			{
-				continue;
-			}
-
-			newShader->materials[i] = GLSLGeneratorGenerateMaterial(&tr.glslGeneratorContext, newShader, NULL, i);
-		}
+		newShader->materials[0] = GLSLGeneratorGenerateMaterial(&tr.glslGeneratorContext, newShader, NULL, 0);
+		newShader->materials[1] = GLSLGeneratorGenerateMaterial(&tr.glslGeneratorContext, newShader, NULL, GENERICDEF_USE_VERTEX_ANIMATION);
+		newShader->materials[2] = GLSLGeneratorGenerateMaterial(&tr.glslGeneratorContext, newShader, NULL, GENERICDEF_USE_SKELETAL_ANIMATION);
 	}
 
 	return newShader;

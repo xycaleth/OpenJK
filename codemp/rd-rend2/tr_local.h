@@ -788,7 +788,7 @@ typedef struct shader_s {
   float clampTime;                                  // time this shader is clamped to
   float timeOffset;                                 // current time offset for this shader
 
-	struct Material *materials[256/*GENERICDEF_COUNT*/];
+	struct Material *materials[3]; // regular, vertex anim, skel anim
 
   struct shader_s *remappedShader;                  // current shader this one is remapped too
 
@@ -3212,5 +3212,6 @@ Material *	GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shade
 void		GLSLGeneratorFreeMaterial( Material *material );
 
 void RB_BindMaterial( const Material *material );
+void RB_SetMaterialData( Material *material, void *newData, uniform_t uniform, int offset, int count );
 
 #endif //TR_LOCAL_H
