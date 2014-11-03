@@ -35,6 +35,9 @@ MainForm::MainForm ( QSettings& settings, QWidget *parent )
 {
     ui.setupUi (this);
 
+#if defined(__APPLE__) && defined(__MACH__)
+	ui.treeView->setAttribute(Qt::WA_MacShowFocusRect, false);
+#endif
     ui.treeView->setModel (treeModel);
     ui.treeView->setContextMenuPolicy (Qt::CustomContextMenu);
     connect (ui.treeView, SIGNAL (customContextMenuRequested (const QPoint&)), SLOT(OnRightClickTreeView (const QPoint&)));

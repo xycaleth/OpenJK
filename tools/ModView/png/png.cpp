@@ -483,6 +483,8 @@ bool PNG_Load(const byte *data, ulong datasize, png_image_t *image)
 
 	png_error = PNG_ERROR_OK;
 
+	memset(image, 0, sizeof(*image));
+
 	if(memcmp(data, png_signature, sizeof(png_signature)))
 	{
 		png_error = PNG_ERROR_NOSIG;
@@ -807,6 +809,7 @@ bool LoadPNG32 (const char *name, byte **pixels, int *width, int *height, int *b
 		return(true);
 	}
 	*pixels = NULL;
+
 	if(!PNG_Load(buffer, nLen, &png_image))
 	{
 		Com_Printf ("Error parsing %s: %s\n", name, PNG_GetError());

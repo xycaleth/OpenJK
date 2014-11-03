@@ -3090,8 +3090,8 @@ static void R_ModelContainer_CallBack_MeasureDigits(ModelContainer_t *pContainer
 	if (Model_SecondaryAnimLockingActive(pContainer))//iMultiLockSeqs_Secondary)
 		pTextData->bAnyMultiLockedSecondarySequences = true;
 
-	pTextData->iMostMultiLockedSequences = max(pTextData->iMostMultiLockedSequences,iMultiLockSeqs_Primary);
-	pTextData->iMostMultiLockedSequences = max(pTextData->iMostMultiLockedSequences,iMultiLockSeqs_Secondary);
+	pTextData->iMostMultiLockedSequences = std::max(pTextData->iMostMultiLockedSequences,iMultiLockSeqs_Primary);
+	pTextData->iMostMultiLockedSequences = std::max(pTextData->iMostMultiLockedSequences,iMultiLockSeqs_Secondary);
 }
 
 static void R_ModelContainer_CallBack_InfoText(ModelContainer_t *pContainer, void *pvData)
@@ -3268,7 +3268,7 @@ static void R_ModelContainer_CallBack_InfoText(ModelContainer_t *pContainer, voi
 													r,g,b
 													);
 
-				iFurthestX = max(iFurthestX,iTempX);
+				iFurthestX = std::max(iFurthestX,iTempX);
 				iMultiLockedTextY += TEXT_DEPTH;
 				
 				// (primary) or (secondary)...
@@ -3282,7 +3282,7 @@ static void R_ModelContainer_CallBack_InfoText(ModelContainer_t *pContainer, voi
 												pTextData->iMultiLockedTextX, iMultiLockedTextY, 
 												128,128,128		// grey
 												);
-					iFurthestX = max(iFurthestX,iTempX);
+					iFurthestX = std::max(iFurthestX,iTempX);
 					iMultiLockedTextY += TEXT_DEPTH;
 				}
 
@@ -3315,7 +3315,7 @@ static void R_ModelContainer_CallBack_InfoText(ModelContainer_t *pContainer, voi
 												pTextData->iMultiLockedTextX, iMultiLockedTextY, 
 												r,g,b
 												);
-					iFurthestX = max(iFurthestX,iTempX);
+					iFurthestX = std::max(iFurthestX,iTempX);
 					iMultiLockedTextY += TEXT_DEPTH;
 				}
 

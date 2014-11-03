@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include "files.h"
+#include "stl.h"
 
 #include <QtCore/QDir>
 

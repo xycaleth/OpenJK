@@ -177,7 +177,7 @@ source_group( "Qt Resource Files" FILES ${MODVIEW_RESOURCES} )
 
 include_directories( "." )
 
-add_definitions( -D_M_IX86 )
+#add_definitions( -D_M_IX86 )
 if( MSVC )
 	add_definitions( -D_CRT_SECURE_NO_WARNINGS )
 endif()
