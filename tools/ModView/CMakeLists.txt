@@ -179,7 +179,7 @@ include_directories( "." )
 
 #add_definitions( -D_M_IX86 )
 if( MSVC )
-	add_definitions( -D_CRT_SECURE_NO_WARNINGS )
+	add_definitions( -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX -DWIN32_LEAN_AND_MEAN )
 endif()
 
 if( MSVC )
