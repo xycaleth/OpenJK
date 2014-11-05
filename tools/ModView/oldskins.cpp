@@ -339,16 +339,19 @@ void OldSkins_ApplyDefault(ModelContainer_t *pContainer)
 
 	// look for one called "default" first...
 	//
-	OldSkinSets_t::iterator itSkins = pContainer->OldSkinSets.find("default");
-	if (itSkins != pContainer->OldSkinSets.end())
+	if ( !pContainer->OldSkinSets.empty() )
 	{
-		strCurrentSkin = itSkins->first;
-	}
-	else
-	{
-		// just use the first one we have...
-		//
-        strCurrentSkin = pContainer->OldSkinSets.begin()->first;
+		OldSkinSets_t::iterator itSkins = pContainer->OldSkinSets.find("default");
+		if (itSkins != pContainer->OldSkinSets.end())
+		{
+			strCurrentSkin = itSkins->first;
+		}
+		else
+		{
+			// just use the first one we have...
+			//
+			strCurrentSkin = pContainer->OldSkinSets.begin()->first;
+		}
 	}
 
 	// apply it, but don't barf if there wasn't one...
