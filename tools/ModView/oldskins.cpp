@@ -224,12 +224,9 @@ bool OldSkins_Read(const char * psLocalFilename_GLM, ModelContainer_t *pContaine
 //
 bool OldSkins_Apply( ModelContainer_t *pContainer, const char * psSkinName )
 {
-	//CWaitCursor wait;
-
 	bool bReturn = true;
 
 	pContainer->strCurrentSkinFile	= psSkinName;
-//	pContainer->strCurrentSkinEthnic= "";
 
 	pContainer->MaterialBinds.clear();
 	pContainer->MaterialShaders.clear();
@@ -237,20 +234,16 @@ bool OldSkins_Apply( ModelContainer_t *pContainer, const char * psSkinName )
 	for (int iSurface = 0; iSurface<pContainer->iNumSurfaces; iSurface++)
 	{
 		// when we're at this point we know it's GLM model, and that the shader name is in fact a material name...
-		//
 		const char * psMaterialName = GLMModel_GetSurfaceShaderName( pContainer->hModel, iSurface );
 
 		pContainer->MaterialShaders	[psMaterialName] = "";			// just insert the key for now, so the map<> is legit.
 		pContainer->MaterialBinds	[psMaterialName] = (GLuint) 0;	// default to gl-white-notfound texture
 	}
 
-//typedef vector< pair<string,string> > StringPairVector_t;
-//typedef map<string,StringPairVector_t> OldSkinSets_t;	// map key = (eg) "blue", string-pairs
-
 	OldSkinSets_t::iterator itOldSkins = pContainer->OldSkinSets.find(psSkinName);
 	if (itOldSkins != pContainer->OldSkinSets.end())
 	{
-		StringPairVector_t &StringPairs = (*itOldSkins).second;
+		StringPairVector_t &StringPairs = itOldSkins->second;
 
 		for (std::size_t iSkinEntry = 0; iSkinEntry < StringPairs.size(); iSkinEntry++)
 		{
@@ -259,23 +252,16 @@ bool OldSkins_Apply( ModelContainer_t *pContainer, const char * psSkinName )
 
 			pContainer->MaterialShaders[psMaterialName] = psShaderName;
 
-//			const char * psLocalTexturePath = R_FindShader( psShaderName );		// shader->texture name
-//			if (psLocalTexturePath && strlen(psLocalTexturePath))
-//			{
-//				TextureHandle_t hTexture = TextureHandle_ForName( psLocalTexturePath );
-//
-//				if (hTexture == -1)
-//				{
-//					hTexture = Texture_Load(psLocalTexturePath);
-//				}
-//
-//				GLuint uiBind = Texture_GetGLBind( hTexture );
-//
-//				pContainer->MaterialBinds[psMaterialName] = uiBind;
-//			}
-			TextureHandle_t hTexture = Texture_Load(psShaderName);
-			GLuint uiBind = Texture_GetGLBind( hTexture );
-			pContainer->MaterialBinds[psMaterialName] = uiBind;
+			if ( strcmp(psShaderName, "*off") == 0 )
+			{
+				pContainer->MaterialBinds[psMaterialName] = (GLuint)-1;
+			}
+			else
+			{
+				TextureHandle_t hTexture = Texture_Load(psShaderName);
+				GLuint uiBind = Texture_GetGLBind( hTexture );
+				pContainer->MaterialBinds[psMaterialName] = uiBind;
+			}
 		}
 	}
 

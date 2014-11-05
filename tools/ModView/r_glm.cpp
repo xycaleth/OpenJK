@@ -1562,7 +1562,10 @@ void R_RenderSurfaces(surfaceInfo_t *slist, trRefEntity_t *ent, int iLOD)//MODVI
 			R_AddDrawSurf( (surfaceType_t *)slist, shader, fogNum, qfalse );
 		}
 		*/
-		R_AddDrawSurf( (surfaceType_t *)slist, gluiTextureBind);
+		if ( gluiTextureBind != (GLuint)-1 )
+		{
+			R_AddDrawSurf( (surfaceType_t *)slist, gluiTextureBind);
+		}
 	}
 	else
 	// if we are turning off all descendants, then stop this recursion now
