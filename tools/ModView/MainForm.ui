@@ -122,6 +122,7 @@
     <addaction name="actionFloor"/>
     <addaction name="actionHeight_Ruler"/>
     <addaction name="actionOrigin_Axes"/>
+    <addaction name="actionTwo_Sided_Surfaces"/>
     <addaction name="actionShow_Vertex_Normals"/>
     <addaction name="actionWireframe"/>
     <addaction name="separator"/>
@@ -560,6 +561,14 @@
    </property>
    <property name="text">
     <string>Zoom to Fit</string>
+   </property>
+  </action>
+  <action name="actionTwo_Sided_Surfaces">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Two-Sided Surfaces</string>
    </property>
   </action>
  </widget>
@@ -1183,6 +1192,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionTwo_Sided_Surfaces</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OnToggleTwoSidedSurfaces()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>586</x>
+     <y>340</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>OnOpenModel()</slot>
@@ -1222,5 +1247,6 @@
   <slot>OnNewScene()</slot>
   <slot>OnZoomToFit()</slot>
   <slot>OnChangeFloorPosition()</slot>
+  <slot>OnToggleTwoSidedSurfaces()</slot>
  </slots>
 </ui>

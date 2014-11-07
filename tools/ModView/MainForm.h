@@ -58,6 +58,7 @@ private slots:
 	void OnToggleHeightRuler();
 	void OnToggleOriginAxes();
 	void OnToggleFloor();
+	void OnToggleTwoSidedSurfaces();
 
     void OnDoubleClickedTreeView ( const QModelIndex& index );
     void OnClickedTreeView ( const QModelIndex& index );

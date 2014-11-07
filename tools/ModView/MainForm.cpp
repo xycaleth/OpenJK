@@ -334,6 +334,12 @@ void MainForm::OnToggleFloor()
 	ModelList_ForceRedraw();
 }
 
+void MainForm::OnToggleTwoSidedSurfaces()
+{
+	AppVars.bShowPolysAsDoubleSided = !AppVars.bShowPolysAsDoubleSided;
+	ModelList_ForceRedraw();
+}
+
 void MainForm::OnCycleFieldOfView()
 {
     const float VALID_FOVS[] = { 10.0f, 80.0f, 90.0f };
