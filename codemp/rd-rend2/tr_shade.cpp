@@ -42,7 +42,7 @@ R_DrawElements
 
 void R_DrawElementsVBO( int numIndexes, glIndex_t firstIndex, glIndex_t minIndex, glIndex_t maxIndex )
 {
-	qglDrawRangeElements(GL_TRIANGLES, minIndex, maxIndex, numIndexes, GL_INDEX_TYPE, BUFFER_OFFSET(firstIndex * sizeof(glIndex_t)));
+	qglDrawRangeElements(GL_TRIANGLES, minIndex, maxIndex, numIndexes, GL_INDEX_TYPE, BUFFER_OFFSET(firstIndex * sizeof(glIndex_t)) + (tess.useInternalVBO ? tess.internalIBOCommitOffset : 0));
 }
 
 
@@ -1121,9 +1121,7 @@ static unsigned int RB_CalcShaderVertexAttribs( const shader_t *shader )
 		if (vertexAttribs & ATTR_NORMAL)
 		{
 			vertexAttribs |= ATTR_NORMAL2;
-#ifdef USE_VERT_TANGENT_SPACE
 			vertexAttribs |= ATTR_TANGENT2;
-#endif
 		}
 	}
 
@@ -1736,29 +1734,13 @@ static void RB_RenderShadowmap( shaderCommands_t *input )
 void RB_StageIteratorGeneric( void )
 {
 	shaderCommands_t *input;
-	unsigned int vertexAttribs = 0;
+	uint32_t vertexAttribs = 0;
 
 	input = &tess;
 	
 	if (!input->numVertexes || !input->numIndexes)
 	{
 		return;
-	}
-
-	if (tess.useInternalVBO)
-	{
-		RB_DeformTessGeometry();
-	}
-
-	vertexAttribs = RB_CalcShaderVertexAttribs( input->shader );
-
-	if (tess.useInternalVBO)
-	{
-		RB_UpdateVBOs(vertexAttribs);
-	}
-	else
-	{
-		backEnd.pc.c_staticVboDraws++;
 	}
 
 	//
@@ -1769,6 +1751,18 @@ void RB_StageIteratorGeneric( void )
 		// don't just call LogComment, or we will get
 		// a call to va() every frame!
 		GLimp_LogComment( va("--- RB_StageIteratorGeneric( %s ) ---\n", tess.shader->name) );
+	}
+
+	vertexAttribs = RB_CalcShaderVertexAttribs( input->shader );
+
+	if (tess.useInternalVBO)
+	{
+		RB_DeformTessGeometry();
+		RB_UpdateVBOs(vertexAttribs);
+	}
+	else
+	{
+		backEnd.pc.c_staticVboDraws++;
 	}
 
 	//
@@ -1876,6 +1870,8 @@ void RB_StageIteratorGeneric( void )
 	if ( tess.fogNum && tess.shader->fogPass ) {
 		RB_FogPass();
 	}
+
+	RB_CommitInternalBufferData();
 
 	//
 	// reset polygon offset

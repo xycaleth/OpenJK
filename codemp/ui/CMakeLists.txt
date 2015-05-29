@@ -1,3 +1,21 @@
+#============================================================================
+# Copyright (C) 2013 - 2015, OpenJK contributors
+# 
+# This file is part of the OpenJK source code.
+# 
+# OpenJK is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
+#============================================================================
+
 cmake_minimum_required(VERSION 2.8.8)
 
 # Make sure the user is not executing this script directly
@@ -73,16 +91,39 @@ if(NOT WIN32)
 	set_target_properties(${MPUI} PROPERTIES PREFIX "")
 endif(NOT WIN32)
 
-if(WIN32)
-	install(TARGETS ${MPUI} RUNTIME DESTINATION "OpenJK")
-else(WIN32)
-	if(MakeApplicationBundles AND BuildMPEngine)
-		install(TARGETS ${MPUI} LIBRARY DESTINATION "${MPEngine}.app/Contents/MacOS/OpenJK")
-		install(TARGETS ${MPUI} LIBRARY DESTINATION "${MPEngine}.app/Contents/MacOS/base")
-	else(MakeApplicationBundles AND BuildMPEngine)
-		install(TARGETS ${MPUI} LIBRARY DESTINATION "OpenJK")
-	endif(MakeApplicationBundles AND BuildMPEngine)
-endif(WIN32)
+if(MakeApplicationBundles AND BuildMPEngine)
+	install(TARGETS ${MPUI}
+		LIBRARY
+		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
+		COMPONENT ${JKAMPCoreComponent})
+	install(TARGETS ${MPUI}
+		LIBRARY
+		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
+		COMPONENT ${JKAMPCoreComponent})
+elseif(WIN32)
+	install(TARGETS ${MPUI}
+		RUNTIME
+		DESTINATION "${JKAInstallDir}/OpenJK"
+		COMPONENT ${JKAMPCoreComponent})
+	if (WIN64)
+		# Don't do this on 32-bit Windows to avoid overwriting
+		# vanilla JKA's DLLs
+		install(TARGETS ${MPUI}
+			RUNTIME
+			DESTINATION "${JKAInstallDir}/base"
+			COMPONENT ${JKAMPCoreComponent})
+	endif()
+else()
+	install(TARGETS ${MPUI}
+		LIBRARY
+		DESTINATION "${JKAInstallDir}/OpenJK"
+		COMPONENT ${JKAMPCoreComponent})
+	install(TARGETS ${MPUI}
+		LIBRARY
+		DESTINATION "${JKAInstallDir}/base"
+		COMPONENT ${JKAMPCoreComponent})
+endif()
+
 set_target_properties(${MPUI} PROPERTIES COMPILE_DEFINITIONS_RELWITHDEBINFO "${MPUIDefines};${ReleaseDefines}")
 set_target_properties(${MPUI} PROPERTIES COMPILE_DEFINITIONS_MINSIZEREL "${MPUIDefines};${ReleaseDefines}")
 set_target_properties(${MPUI} PROPERTIES COMPILE_DEFINITIONS_RELEASE "${MPUIDefines};${ReleaseDefines}")

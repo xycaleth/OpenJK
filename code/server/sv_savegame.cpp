@@ -1,35 +1,36 @@
 /*
-This file is part of Jedi Academy.
+===========================================================================
+Copyright (C) 2000 - 2013, Raven Software, Inc.
+Copyright (C) 2001 - 2013, Activision, Inc.
+Copyright (C) 2013 - 2015, OpenJK contributors
 
-    Jedi Academy is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 2 of the License, or
-    (at your option) any later version.
+This file is part of the OpenJK source code.
 
-    Jedi Academy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+OpenJK is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
 
-    You should have received a copy of the GNU General Public License
-    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see <http://www.gnu.org/licenses/>.
+===========================================================================
 */
-// Copyright 2001-2013 Raven Software
 
 // Filename:-	sv_savegame.cpp
-//
-// leave this as first line for PCH reasons...
-//
 #include "../server/exe_headers.h"
 
 #define JPEG_IMAGE_QUALITY 95
-
 
 //#define USE_LAST_SAVE_FROM_THIS_MAP	// enable this if you want to use the last explicity-loaded savegame from this map
 				 						//	when respawning after dying, else it'll just load "auto" regardless 
 										//	(EF1 behaviour). I should maybe time/date check them though?
 
 #include "server.h"
+#include "../qcommon/stringed_ingame.h"
 #include "../game/statindex.h"
 #include "../game/weapons.h"
 #include "../game/g_items.h"
@@ -41,8 +42,6 @@ This file is part of Jedi Academy.
 #endif
 
 #include <map>
-
-using namespace std;
 
 static char	saveGameComment[iSG_COMMENT_SIZE];
 
@@ -953,15 +952,19 @@ static void SG_WriteScreenshot(qboolean qbAutosave, const char *psMapName)
 
 		byBlank = new byte[bySize];
 		pbRawScreenShot = SCR_TempRawImage_ReadFromFile(va("levelshots/%s.tga",psMapName), &iWidth, &iHeight, byBlank, qtrue);	// qtrue = vert flip
-		for (int y = 0; y < iHeight; y++)
+		
+		if (pbRawScreenShot)
 		{
-			for (int x = 0; x < iWidth; x++)
+			for (int y = 0; y < iHeight; y++)
 			{
-				src = pbRawScreenShot + 4 * (y * iWidth + x);
-				dst = pbRawScreenShot + 3 * (y * iWidth + x);
-				dst[0] = src[0];
-				dst[1] = src[1];
-				dst[2] = src[2];
+				for (int x = 0; x < iWidth; x++)
+				{
+					src = pbRawScreenShot + 4 * (y * iWidth + x);
+					dst = pbRawScreenShot + 3 * (y * iWidth + x);
+					dst[0] = src[0];
+					dst[1] = src[1];
+					dst[2] = src[2];
+				}
 			}
 		}
 	}

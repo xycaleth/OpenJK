@@ -23,14 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_local.h"
 
-#ifndef _WIN32
-#include <SDL.h>
-#define GL_GetProcAddress SDL_GL_GetProcAddress
-#else
-#include "../win32/glw_win.h"
-extern glwstate_t glw_state;
-#define GL_GetProcAddress qwglGetProcAddress
-#endif
+#define GL_GetProcAddress ri->GL_GetProcAddress
 
 // Drawing commands
 PFNGLDRAWRANGEELEMENTSPROC qglDrawRangeElements;
@@ -73,6 +66,9 @@ PFNGLFLUSHMAPPEDBUFFERRANGEPROC qglFlushMappedBufferRange;
 PFNGLUNMAPBUFFERPROC qglUnmapBuffer;
 PFNGLCOPYBUFFERSUBDATAPROC qglCopyBufferSubData;
 PFNGLISBUFFERPROC qglIsBuffer;
+
+// Texturing
+PFNGLACTIVETEXTUREPROC qglActiveTexture;
 
 // Shader objects
 PFNGLCREATESHADERPROC qglCreateShader;
@@ -210,6 +206,9 @@ PFNGLTEXSTORAGE1DPROC qglTexStorage1D;
 PFNGLTEXSTORAGE2DPROC qglTexStorage2D;
 PFNGLTEXSTORAGE3DPROC qglTexStorage3D;
 
+// GL_ARB_buffer_storage
+PFNGLBUFFERSTORAGEPROC qglBufferStorage;
+
 static qboolean GLimp_HaveExtension(const char *ext)
 {
 	const char *ptr = Q_stristr( glConfigExt.originalExtensionString, ext );
@@ -236,10 +235,13 @@ static qboolean GetGLFunction ( GLFuncType& glFunction, const char *glFunctionSt
 	return qtrue;
 }
 
-void GLimp_InitExtraExtensions()
+void GLW_InitTextureCompression( void );
+void GLimp_InitExtensions()
 {
 	char *extension;
 	const char* result[3] = { "...ignoring %s\n", "...using %s\n", "...%s not found\n" };
+
+	Com_Printf("Initializing OpenGL 3.2 functions\n");
 
 	// Drawing commands
 	GetGLFunction (qglDrawRangeElements, "glDrawRangeElements", qtrue);
@@ -282,6 +284,10 @@ void GLimp_InitExtraExtensions()
 	GetGLFunction (qglUnmapBuffer, "glUnmapBuffer", qtrue);
 	GetGLFunction (qglCopyBufferSubData, "glCopyBufferSubData", qtrue);
 	GetGLFunction (qglIsBuffer, "glIsBuffer", qtrue);
+
+	// Texturing
+	GetGLFunction (qglActiveTexture, "glActiveTexture", qtrue);
+
 
 	// Shader objects
 	GetGLFunction (qglCreateShader, "glCreateShader", qtrue);
@@ -428,9 +434,40 @@ void GLimp_InitExtraExtensions()
 	GetGLFunction (qglGetQueryObjectiv, "glGetQueryObjectiv", qtrue);
 	GetGLFunction (qglGetQueryObjectuiv, "glGetQueryObjectuiv", qtrue);
 
+	Com_Printf ("Initializing OpenGL extensions\n" );
+
+	// Select our tc scheme
+	GLW_InitTextureCompression();
+
+	// GL_EXT_texture_filter_anisotropic
+	glConfig.maxTextureFilterAnisotropy = 0;
+	if ( GLimp_HaveExtension( "EXT_texture_filter_anisotropic" ) )
+	{
+		qglGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.maxTextureFilterAnisotropy );
+		Com_Printf ("...GL_EXT_texture_filter_anisotropic available\n" );
+
+		if ( r_ext_texture_filter_anisotropic->integer > 1 )
+		{
+			Com_Printf ("...using GL_EXT_texture_filter_anisotropic\n" );
+		}
+		else
+		{
+			Com_Printf ("...ignoring GL_EXT_texture_filter_anisotropic\n" );
+		}
+		ri->Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
+		if ( r_ext_texture_filter_anisotropic->value > glConfig.maxTextureFilterAnisotropy )
+		{
+			ri->Cvar_SetValue( "r_ext_texture_filter_anisotropic_avail", glConfig.maxTextureFilterAnisotropy );
+		}
+	}
+	else
+	{
+		Com_Printf ("...GL_EXT_texture_filter_anisotropic not found\n" );
+		ri->Cvar_Set( "r_ext_texture_filter_anisotropic_avail", "0" );
+	}
+
 	// Memory info
 	glRefConfig.memInfo = MI_NONE;
-
 	if( GLimp_HaveExtension( "GL_NVX_gpu_memory_info" ) )
 	{
 		glRefConfig.memInfo = MI_NVX;
@@ -482,6 +519,30 @@ void GLimp_InitExtraExtensions()
 		loaded = (qboolean)(loaded && GetGLFunction (qglTexStorage2D, "glTexStorage2D", qfalse));
 
 		glRefConfig.immutableTextures = loaded;
+		ri->Printf(PRINT_ALL, result[loaded], extension);
+	}
+	else
+	{
+		ri->Printf(PRINT_ALL, result[2], extension);
+	}
+
+	// GL_ARB_buffer_storage
+	extension = "GL_ARB_buffer_storage";
+	glRefConfig.immutableBuffers = qfalse;
+	if( GLimp_HaveExtension( extension ) )
+	{
+		qboolean loaded = qtrue;
+		
+		if ( r_arb_buffer_storage->integer )
+		{
+			loaded = (qboolean)(loaded && GetGLFunction (qglBufferStorage, "glBufferStorage", qfalse));
+		}
+		else
+		{
+			loaded = qfalse;
+		}
+
+		glRefConfig.immutableBuffers = loaded;
 		ri->Printf(PRINT_ALL, result[loaded], extension);
 	}
 	else

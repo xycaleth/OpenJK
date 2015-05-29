@@ -40,11 +40,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <unordered_map>
 #include <string>
 
-#ifdef _WIN32
-#include "win32\win_local.h"
-#include "qcommon\sstring.h"
-#endif
-
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
 
@@ -66,8 +61,6 @@ typedef unsigned int glIndex_t;
 #define PSHADOW_MAP_SIZE      512
 #define CUBE_MAP_MIPS      7
 #define CUBE_MAP_SIZE      (1 << CUBE_MAP_MIPS)
-
-#define USE_VERT_TANGENT_SPACE
 
 /*
 =====================================================
@@ -326,6 +319,27 @@ typedef enum
 	ANIMMAP_ONESHOT
 } animMapType_t;
 
+enum
+{
+	ATTR_INDEX_POSITION,
+	ATTR_INDEX_TEXCOORD0,
+	ATTR_INDEX_TEXCOORD1,
+	ATTR_INDEX_TANGENT,
+	ATTR_INDEX_NORMAL,
+	ATTR_INDEX_COLOR,
+	ATTR_INDEX_PAINTCOLOR,
+	ATTR_INDEX_LIGHTDIRECTION,
+	ATTR_INDEX_BONE_INDEXES,
+	ATTR_INDEX_BONE_WEIGHTS,
+
+	// GPU vertex animations
+	ATTR_INDEX_POSITION2,
+	ATTR_INDEX_TANGENT2,
+	ATTR_INDEX_NORMAL2,
+
+	ATTR_INDEX_MAX
+};
+
 typedef struct image_s {
 	char		imgName[MAX_QPATH];		// game path, including extension
 	int			width, height;				// source image
@@ -388,30 +402,10 @@ typedef struct VBO_s
 {
 	uint32_t        vertexesVBO;
 	int             vertexesSize;	// amount of memory data allocated for all vertices in bytes
-	uint32_t        ofs_xyz;
-	uint32_t        ofs_normal;
-	uint32_t        ofs_st;
-	uint32_t        ofs_vertexcolor;
-	uint32_t        ofs_lightdir;
-#ifdef USE_VERT_TANGENT_SPACE
-	uint32_t        ofs_tangent;
-#endif
-	uint32_t		ofs_boneweights;
-	uint32_t		ofs_boneindexes;
 
-	uint32_t        stride_xyz;
-	uint32_t        stride_normal;
-	uint32_t        stride_st;
-	uint32_t        stride_vertexcolor;
-	uint32_t        stride_lightdir;
-#ifdef USE_VERT_TANGENT_SPACE
-	uint32_t        stride_tangent;
-#endif
-	uint32_t		stride_boneweights;
-	uint32_t		stride_boneindexes;
-
-	uint32_t        size_xyz;
-	uint32_t        size_normal;
+	uint32_t		offsets[ATTR_INDEX_MAX];
+	uint32_t		strides[ATTR_INDEX_MAX];
+	uint32_t		sizes[ATTR_INDEX_MAX];
 } VBO_t;
 
 typedef struct IBO_s
@@ -823,27 +817,6 @@ static QINLINE qboolean ShaderRequiresCPUDeforms(const shader_t * shader)
 
 	return qfalse;
 }
-
-enum
-{
-	ATTR_INDEX_POSITION,
-	ATTR_INDEX_TEXCOORD0,
-	ATTR_INDEX_TEXCOORD1,
-	ATTR_INDEX_TANGENT,
-	ATTR_INDEX_NORMAL,
-	ATTR_INDEX_COLOR,
-	ATTR_INDEX_PAINTCOLOR,
-	ATTR_INDEX_LIGHTDIRECTION,
-	ATTR_INDEX_BONE_INDEXES,
-	ATTR_INDEX_BONE_WEIGHTS,
-
-	// GPU vertex animations
-	ATTR_INDEX_POSITION2,
-	ATTR_INDEX_TANGENT2,
-	ATTR_INDEX_NORMAL2,
-
-	ATTR_INDEX_COUNT,
-};
 
 enum
 {
@@ -1314,9 +1287,7 @@ typedef struct
 	vec2_t          st;
 	vec2_t          lightmap[MAXLIGHTMAPS];
 	vec3_t          normal;
-#ifdef USE_VERT_TANGENT_SPACE
 	vec4_t          tangent;
-#endif
 	vec3_t          lightdir;
 	vec4_t			vertexColors[MAXLIGHTMAPS];
 
@@ -1632,10 +1603,8 @@ typedef struct
 {
 	vec3_t          xyz;
 	vec3_t          normal;
-#ifdef USE_VERT_TANGENT_SPACE
 	vec3_t          tangent;
 	vec3_t          bitangent;
-#endif
 } mdvVertex_t;
 
 typedef struct
@@ -1845,7 +1814,6 @@ typedef struct {
 typedef struct glstate_s {
 	int			currenttextures[NUM_TEXTURE_BUNDLES];
 	int			currenttmu;
-	qboolean	finishCalled;
 	int			texEnv[2];
 	int			faceCulling;
 	uint32_t	glStateBits;
@@ -1894,6 +1862,7 @@ typedef struct {
 	int textureCompression;
 
 	qboolean immutableTextures;
+	qboolean immutableBuffers;
 
 	qboolean floatLightmap;
 } glRefConfig_t;
@@ -1964,6 +1933,8 @@ typedef struct {
 */
 typedef struct trGlobals_s {
 	qboolean				registered;		// cleared at shutdown, set at beginRegistration
+
+	window_t				window;
 
 	int						visIndex;
 	int						visClusters[MAX_VISCOUNTS];
@@ -2148,10 +2119,6 @@ typedef struct trGlobals_s {
 	float					rangedFog;
 	float					distanceCull, distanceCullSquared; //rwwRMG - added
 
-#ifdef _WIN32
-	WinVars_t *wv;
-#endif
-
 	// Specific to Jedi Academy
 	int						numBSPModels;
 	int						currentLevel;
@@ -2170,6 +2137,7 @@ extern backEndState_t	backEnd;
 extern trGlobals_t	tr;
 extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
 extern glRefConfig_t glRefConfig;
+extern window_t		window;
 
 //
 // cvars
@@ -2222,6 +2190,7 @@ extern  cvar_t  *r_arb_half_float_pixel;
 extern  cvar_t  *r_ext_framebuffer_multisample;
 extern  cvar_t  *r_arb_seamless_cube_map;
 extern  cvar_t  *r_arb_vertex_type_2_10_10_10_rev;
+extern	cvar_t	*r_arb_buffer_storage;
 
 extern	cvar_t	*r_nobind;						// turns off binding to appropriate textures
 extern	cvar_t	*r_singleShader;				// make most world faces use default shader
@@ -2484,13 +2453,8 @@ IMPLEMENTATION SPECIFIC FUNCTIONS
 ====================================================================
 */
 
-void		GLimp_Init( void );
-void		GLimp_Shutdown( void );
-void		GLimp_EndFrame( void );
-void		GLimp_LogComment( char *comment );
-void		GLimp_InitExtraExtensions( void );
-void		GLimp_Minimize( void );
-void		GLimp_SetGamma( unsigned char red[256], unsigned char green[256], unsigned char blue[256] );
+static QINLINE void	GLimp_LogComment( char *comment ) {}
+void GLimp_InitExtensions();
 
 /*
 ====================================================================
@@ -2513,9 +2477,7 @@ struct shaderCommands_s
 	glIndex_t	indexes[SHADER_MAX_INDEXES] QALIGN(16);
 	vec4_t		xyz[SHADER_MAX_VERTEXES] QALIGN(16);
 	uint32_t	normal[SHADER_MAX_VERTEXES] QALIGN(16);
-#ifdef USE_VERT_TANGENT_SPACE
 	uint32_t	tangent[SHADER_MAX_VERTEXES] QALIGN(16);
-#endif
 	vec2_t		texCoords[SHADER_MAX_VERTEXES][2] QALIGN(16);
 	vec4_t		vertexColors[SHADER_MAX_VERTEXES] QALIGN(16);
 	uint32_t    lightdir[SHADER_MAX_VERTEXES] QALIGN(16);
@@ -2523,7 +2485,13 @@ struct shaderCommands_s
 
 	VBO_t       *vbo;
 	IBO_t       *ibo;
+	void		*vboData; // If immutable buffers
+	void		*iboData; // are available
 	qboolean    useInternalVBO;
+	int			internalVBOWriteOffset;
+	int			internalVBOCommitOffset;
+	int			internalIBOWriteOffset;
+	int			internalIBOCommitOffset;
 
 	stageVars_t	svars QALIGN(16);
 
@@ -2554,9 +2522,6 @@ struct shaderCommands_s
 	int			numPasses;
 	void		(*currentStageIteratorFunc)( void );
 	shaderStage_t	**xstages;
-
-	// JA specific
-	bool		fading;
 };
 
 #ifdef _WIN32
@@ -2692,13 +2657,24 @@ VERTEX BUFFER OBJECTS
 ============================================================
 */
 
+struct VertexArraysProperties
+{
+	size_t vertexDataSize;
+	int numVertexArrays;
+
+	int enabledAttributes[ATTR_INDEX_MAX];
+	int offsets[ATTR_INDEX_MAX];
+	int sizes[ATTR_INDEX_MAX];
+	int strides[ATTR_INDEX_MAX];
+	void *streams[ATTR_INDEX_MAX];
+};
+
 uint32_t R_VboPackTangent(vec4_t v);
 uint32_t R_VboPackNormal(vec3_t v);
 void R_VboUnpackTangent(vec4_t v, uint32_t b);
 void R_VboUnpackNormal(vec3_t v, uint32_t b);
 
 VBO_t          *R_CreateVBO(byte * vertexes, int vertexesSize, vboUsage_t usage);
-
 IBO_t          *R_CreateIBO(byte * indexes, int indexesSize, vboUsage_t usage);
 
 void            R_BindVBO(VBO_t * vbo);
@@ -2712,6 +2688,9 @@ void            R_ShutdownVBOs(void);
 void            R_VBOList_f(void);
 
 void            RB_UpdateVBOs(unsigned int attribBits);
+void			RB_CommitInternalBufferData();
+void			CalculateVertexArraysProperties(uint32_t attributes, VertexArraysProperties *properties);
+void			CalculateVertexArraysFromVBO(uint32_t attributes, const VBO_t *vbo, VertexArraysProperties *properties);
 
 
 /*

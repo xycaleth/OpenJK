@@ -68,7 +68,6 @@ Key: - removed, + added, * modified
 [SP/MP] * Removed shift key requirement to open console
 [SP/MP] + Raw Mouse Input added to windows (in_mouse 2). An in_restart required if changed while game is running.
 [MP] + gamecode: /clientlist displays clients by id/name and if they are a bot. (Shows real client id unlike serverstatus)
-[SP/MP] + Added XInput support for XBOX 360 controllers (Windows only, in_joystick 2). SDL on *nix supports this as well.
 [SP/MP] + Updated the JPG library
 [MP] * svsay command prints to dedicated console
 [SP/MP] * Alt-tab works properly
@@ -106,13 +105,12 @@ Key: - removed, + added, * modified
 [SP] + gamecode: Added cg_dynamicCrosshair (default 1)
 [MP] + Added support for surfaceSprites flattened in MP.  (Fixes surface sprites on t2_trip)
 [SP/MP] * Fixed never fading shadow in text
-[SP/MP] + trap_R_DrawRotatePic/2 allows full shader support now
 [SP] * MAX_SHADER_FILES bumped to 4096 from 1024 to match MP
 [MP] + Added in-engine ban code from ioquake3. Cmds: sv_rehashbans, sv_listbans, sv_banaddr, sv_exceptaddr, sv_bandel, sv_exceptdel, sv_flushbans. CVar: sv_banFile
 [SP/MP] * Fix up font renderer glyph positioning
 [MP] + addFavorite
-[SP/MP] * Fixed overstrike mode when using any UI edit box
-[SP/MP] * Fix crash when standing on an NPC who has been knocked down
+[SP/MP] * gamecode: Fixed overstrike mode when using any UI edit box
+[SP/MP] * gamecode: Fix crash when standing on an NPC who has been knocked down
 [MP] + gamecode: fx_wind entity
 [MP] * gamecode: fx_rain entity supports most options from SP now. LIGHTNING/shaking not supported, acidrain doesn't actually hurt
 [MP] * gamecode: more customRGBA options from SP on NPCs
@@ -138,9 +136,10 @@ Key: - removed, + added, * modified
 [MP] * CVar code in engine is more robust.  Protects against clients setting systeminfo cvars they should not etc.  More accurate warning messages when servers/vms/clients set cvars they should not.
 [SP] + Add modelscale and modelscale_vec support to misc_model_ghoul
 [MP] * gamecode: Fix teamoverlay not making you look dead in siege when in limbo
-[MP] + Add sv_blockJumpSelect cvar to help prevent use of modded clients using an exploit with FP_LEVIATHAN with old mods
+[MP] + Add sv_blockJumpSelect cvar to help prevent use of modded clients using an exploit with FP_LEVITATION with old mods
 [MP] * Fix exploit with usercmd bytes set to -128
 [SP/MP] + Add stopmusic command
 [SP] * Fix external lightmap support
 [MP] + Add external lightmap support from SP
 [SP/MP] * General buffer safety cleanup
+[SP/MP] * Fix stencil shadows not working if a model has more than 500 vertexes.

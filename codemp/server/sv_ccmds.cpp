@@ -1,3 +1,27 @@
+/*
+===========================================================================
+Copyright (C) 1999 - 2005, Id Software, Inc.
+Copyright (C) 2000 - 2013, Raven Software, Inc.
+Copyright (C) 2001 - 2013, Activision, Inc.
+Copyright (C) 2005 - 2015, ioquake3 contributors
+Copyright (C) 2013 - 2015, OpenJK contributors
+
+This file is part of the OpenJK source code.
+
+OpenJK is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see <http://www.gnu.org/licenses/>.
+===========================================================================
+*/
+
 #include "server.h"
 #include "qcommon/stringed_ingame.h"
 #include "server/sv_gameapi.h"
@@ -324,7 +348,7 @@ static void SV_MapRestart_f( void ) {
 			// this generally shouldn't happen, because the client
 			// was connected before the level change
 			SV_DropClient( client, denied );
-			Com_Printf( "SV_MapRestart_f(%d): dropped client %i - denied!\n", delay, i ); // bk010125
+			Com_Printf( "SV_MapRestart_f(%d): dropped client %i - denied!\n", delay, i );
 			continue;
 		}
 
@@ -673,11 +697,10 @@ Remove a ban or an exception from the list.
 ==================
 */
 
-static qboolean SV_DelBanEntryFromList( int index )
-{
+static qboolean SV_DelBanEntryFromList( int index ) {
 	if ( index == serverBansCount - 1 )
 		serverBansCount--;
-	else if ( index < ARRAY_LEN( serverBans ) - 1 )
+	else if ( index < (int)ARRAY_LEN( serverBans ) - 1 )
 	{
 		memmove( serverBans + index, serverBans + index + 1, (serverBansCount - index - 1) * sizeof( *serverBans ) );
 		serverBansCount--;
@@ -760,7 +783,7 @@ static void SV_AddBanToList( qboolean isexception )
 		return;
 	}
 
-	if ( serverBansCount >= ARRAY_LEN( serverBans ) )
+	if ( serverBansCount >= (int)ARRAY_LEN( serverBans ) )
 	{
 		Com_Printf( "Error: Maximum number of bans/exceptions exceeded.\n" );
 		return;
@@ -1052,6 +1075,35 @@ static void SV_ExceptDel_f( void )
 	SV_DelBanFromList( qtrue );
 }
 
+static const char *SV_CalcUptime( void ) {
+	static char buf[MAX_STRING_CHARS / 4] = { '\0' };
+	char tmp[64] = { '\0' };
+	time_t currTime;
+
+	time( &currTime );
+
+	int secs = difftime( currTime, svs.startTime );
+	int mins = secs / 60;
+	int hours = mins / 60;
+	int days = hours / 24;
+
+	secs %= 60;
+	mins %= 60;
+	hours %= 24;
+	//days %= 365;
+
+	buf[0] = '\0';
+	if ( days > 0 ) {
+		Com_sprintf( tmp, sizeof(tmp), "%i days ", days );
+		Q_strcat( buf, sizeof(buf), tmp );
+	}
+
+	Com_sprintf( tmp, sizeof(tmp), "%ih%im%is", hours, mins, secs );
+	Q_strcat( buf, sizeof(buf), tmp );
+
+	return buf;
+}
+
 /*
 ================
 SV_Status_f
@@ -1122,6 +1174,7 @@ static void SV_Status_f( void )
 	Com_Printf( "udp/ip  : %s:%i os(%s) type(%s)\n", Cvar_VariableString( "net_ip" ), Cvar_VariableIntegerValue( "net_port" ), STATUS_OS, ded_table[com_dedicated->integer] );
 	Com_Printf( "map     : %s gametype(%i)\n", sv_mapname->string, sv_gametype->integer );
 	Com_Printf( "players : %i humans, %i bots (%i max)\n", humans, bots, sv_maxclients->integer - sv_privateClients->integer );
+	Com_Printf( "uptime  : %s\n", SV_CalcUptime() );
 
 	Com_Printf ("cl score ping name            address                                 rate \n");
 	Com_Printf ("-- ----- ---- --------------- --------------------------------------- -----\n");
@@ -1583,6 +1636,7 @@ static time_t SV_ExtractTimeFromDemoFolder( char *folder ) {
 		return 0;
 	}
 	timeinfo.tm_year -= 1900;
+	timeinfo.tm_mon--;
 	return mktime( &timeinfo );
 }
 

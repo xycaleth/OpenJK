@@ -78,7 +78,7 @@ void GL_SelectTexture( int unit )
 	if (!(unit >= 0 && unit <= 31))
 		ri->Error( ERR_DROP, "GL_SelectTexture: unit = %i", unit );
 
-	qglActiveTextureARB( GL_TEXTURE0_ARB + unit );
+	qglActiveTexture( GL_TEXTURE0 + unit );
 
 	glState.currenttmu = unit;
 }
@@ -453,15 +453,6 @@ to actually render the visible surfaces for this view
 void RB_BeginDrawingView (void) {
 	int clearBits = 0;
 
-	// sync with gl if needed
-	if ( r_finish->integer == 1 && !glState.finishCalled ) {
-		qglFinish ();
-		glState.finishCalled = qtrue;
-	}
-	if ( r_finish->integer == 0 ) {
-		glState.finishCalled = qtrue;
-	}
-
 	// we will need to change the projection matrix before drawing
 	// 2D images again
 	backEnd.projection2D = qfalse;
@@ -582,7 +573,7 @@ void RB_BeginDrawingView (void) {
 RB_RenderDrawSurfList
 ==================
 */
-void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	shader_t		*shader, *oldShader;
 	int				fogNum, oldFogNum;
 	int				entityNum, oldEntityNum;
@@ -953,7 +944,7 @@ RB_SetColor
 
 =============
 */
-const void	*RB_SetColor( const void *data ) {
+static const void	*RB_SetColor( const void *data ) {
 	const setColorCommand_t	*cmd;
 
 	cmd = (const setColorCommand_t *)data;
@@ -971,7 +962,7 @@ const void	*RB_SetColor( const void *data ) {
 RB_StretchPic
 =============
 */
-const void *RB_StretchPic ( const void *data ) {
+static const void *RB_StretchPic ( const void *data ) {
 	const stretchPicCommand_t	*cmd;
 	shader_t *shader;
 	int		numVerts, numIndexes;
@@ -1060,7 +1051,7 @@ const void *RB_StretchPic ( const void *data ) {
 RB_DrawRotatePic
 =============
 */
-const void *RB_RotatePic ( const void *data ) 
+static const void *RB_RotatePic ( const void *data ) 
 {
 	const rotatePicCommand_t	*cmd;
 	image_t *image;
@@ -1158,7 +1149,7 @@ const void *RB_RotatePic ( const void *data )
 RB_DrawRotatePic2
 =============
 */
-const void *RB_RotatePic2 ( const void *data ) 
+static const void *RB_RotatePic2 ( const void *data ) 
 {
 	const rotatePicCommand_t	*cmd;
 	image_t *image;
@@ -1258,7 +1249,7 @@ RB_DrawSurfs
 
 =============
 */
-const void	*RB_DrawSurfs( const void *data ) {
+static const void	*RB_DrawSurfs( const void *data ) {
 	const drawSurfsCommand_t	*cmd;
 
 	// finish any 2D drawing if needed
@@ -1535,7 +1526,7 @@ RB_DrawBuffer
 
 =============
 */
-const void	*RB_DrawBuffer( const void *data ) {
+static const void	*RB_DrawBuffer( const void *data ) {
 	const drawBufferCommand_t	*cmd;
 
 	cmd = (const drawBufferCommand_t *)data;
@@ -1622,7 +1613,7 @@ RB_ColorMask
 
 =============
 */
-const void *RB_ColorMask(const void *data)
+static const void *RB_ColorMask(const void *data)
 {
 	const colorMaskCommand_t *cmd = (colorMaskCommand_t *)data;
 
@@ -1647,7 +1638,7 @@ RB_ClearDepth
 
 =============
 */
-const void *RB_ClearDepth(const void *data)
+static const void *RB_ClearDepth(const void *data)
 {
 	const clearDepthCommand_t *cmd = (clearDepthCommand_t *)data;
 	
@@ -1688,7 +1679,7 @@ RB_SwapBuffers
 
 =============
 */
-const void	*RB_SwapBuffers( const void *data ) {
+static const void	*RB_SwapBuffers( const void *data ) {
 	const swapBuffersCommand_t	*cmd;
 
 	// finish any 2D drawing if needed
@@ -1737,13 +1728,9 @@ const void	*RB_SwapBuffers( const void *data ) {
 		}
 	}
 
-	if ( !glState.finishCalled ) {
-		qglFinish();
-	}
-
 	GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
 
-	GLimp_EndFrame();
+	ri->WIN_Present( &window );
 
 	backEnd.framePostProcessed = qfalse;
 	backEnd.projection2D = qfalse;
@@ -1757,7 +1744,7 @@ RB_CapShadowMap
 
 =============
 */
-const void *RB_CapShadowMap(const void *data)
+static const void *RB_CaptureShadowMap(const void *data)
 {
 	const capShadowmapCommand_t *cmd = (const capShadowmapCommand_t *)data;
 
@@ -2034,7 +2021,7 @@ void RB_ExecuteRenderCommands( const void *data ) {
 			data = RB_ClearDepth(data);
 			break;
 		case RC_CAPSHADOWMAP:
-			data = RB_CapShadowMap(data);
+			data = RB_CaptureShadowMap(data);
 			break;
 		case RC_POSTPROCESS:
 			data = RB_PostProcess(data);

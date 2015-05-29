@@ -2336,12 +2336,10 @@ static void ComputeVertexAttribs(void)
 		{
 			shader.vertexAttribs |= ATTR_NORMAL;
 
-#ifdef USE_VERT_TANGENT_SPACE
 			if ((pStage->glslShaderIndex & LIGHTDEF_LIGHTTYPE_MASK) && !(r_normalMapping->integer == 0 && r_specularMapping->integer == 0))
 			{
 				shader.vertexAttribs |= ATTR_TANGENT;
 			}
-#endif
 
 			switch (pStage->glslShaderIndex & LIGHTDEF_LIGHTTYPE_MASK)
 			{
@@ -2468,10 +2466,6 @@ static qboolean CollapseMultitexture( void ) {
 	int abits, bbits;
 	int i;
 	textureBundle_t tmpBundle;
-
-	if ( !qglActiveTextureARB ) {
-		return qfalse;
-	}
 
 	// make sure both stages are active
 	if ( !stages[0].active || !stages[1].active ) {
@@ -3135,10 +3129,24 @@ static void SortNewShader( void ) {
 	newShader = tr.shaders[ tr.numShaders - 1 ];
 	sort = newShader->sort;
 
+	int numStagesInNewShader = 0;
+	while ( newShader->stages[numStagesInNewShader] )
+		numStagesInNewShader++;
+
 	for ( i = tr.numShaders - 2 ; i >= 0 ; i-- ) {
-		if ( tr.sortedShaders[ i ]->sort <= sort ) {
+		int numStages = 0;
+		while ( tr.sortedShaders[numStages] )
+			numStages++;
+
+		if ( tr.sortedShaders[ i ]->sort < sort ) {
 			break;
 		}
+
+		if ( tr.sortedShaders[ i ]->sort == sort && numStages <= numStagesInNewShader )
+		{
+			break;
+		}
+	
 		tr.sortedShaders[i+1] = tr.sortedShaders[i];
 		tr.sortedShaders[i+1]->sortedIndex++;
 	}

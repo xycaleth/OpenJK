@@ -1930,7 +1930,7 @@ static GLenum RawImage_GetFormat(const byte *data, int numPixels, qboolean light
 
 static int CalcNumMipmapLevels ( int width, int height )
 {
-	return static_cast<int>(ceil (log2 (max (width, height))) + 1);
+	return static_cast<int>(ceil (log2 (Q_max (width, height))) + 1);
 }
 
 static void RawImage_UploadTexture( byte *data, int x, int y, int width, int height, GLenum internalFormat, imgType_t type, int flags, qboolean subtexture )
@@ -2297,15 +2297,13 @@ image_t *R_CreateImage( const char *name, byte *pic, int width, int height, imgT
 		
 
 	// lightmaps are always allocated on TMU 1
-	if ( qglActiveTextureARB && isLightmap ) {
+	if ( isLightmap ) {
 		image->TMU = 1;
 	} else {
 		image->TMU = 0;
 	}
 
-	if ( qglActiveTextureARB ) {
-		GL_SelectTexture( image->TMU );
-	}
+	GL_SelectTexture( image->TMU );
 
 	if (image->flags & IMGFLAG_CUBEMAP)
 	{
@@ -2416,10 +2414,7 @@ void R_UpdateSubImage( image_t *image, byte *pic, int x, int y, int width, int h
 
 	scaledBuffer = (byte *)ri->Hunk_AllocateTempMemory( sizeof( unsigned ) * scaled_width * scaled_height );
 
-	if ( qglActiveTextureARB ) {
-		GL_SelectTexture( image->TMU );
-	}
-
+	GL_SelectTexture( image->TMU );
 	GL_Bind(image);	
 
 	// copy or resample data as appropriate for first MIP level
@@ -2657,7 +2652,7 @@ static void R_CreateDlightImage( void ) {
 	R_LoadImage("gfx/2d/dlight", &pic, &width, &height);
 	if (pic)
 	{
-		tr.dlightImage = R_CreateImage("*dlight", pic, width, height, IMGTYPE_COLORALPHA, IMGFLAG_CLAMPTOEDGE, 0 );
+		tr.dlightImage = R_CreateImage("*dlight", pic, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, 0 );
 		Z_Free(pic);
 	}
 	else
@@ -2685,7 +2680,7 @@ static void R_CreateDlightImage( void ) {
 				data[y][x][3] = 255;			
 			}
 		}
-		tr.dlightImage = R_CreateImage("*dlight", (byte *)data, DLIGHT_SIZE, DLIGHT_SIZE, IMGTYPE_COLORALPHA, IMGFLAG_CLAMPTOEDGE, 0 );
+		tr.dlightImage = R_CreateImage("*dlight", (byte *)data, DLIGHT_SIZE, DLIGHT_SIZE, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, 0 );
 	}
 }
 
@@ -3028,7 +3023,7 @@ void R_SetColorMappings( void ) {
 
 	if ( glConfig.deviceSupportsGamma )
 	{
-		GLimp_SetGamma( s_gammatable, s_gammatable, s_gammatable );
+		ri->WIN_SetGamma( &glConfig, s_gammatable, s_gammatable, s_gammatable );
 	}
 }
 
@@ -3062,12 +3057,8 @@ void R_DeleteTextures( void ) {
 	tr.numImages = 0;
 
 	Com_Memset( glState.currenttextures, 0, sizeof( glState.currenttextures ) );
-	if ( qglActiveTextureARB ) {
-		GL_SelectTexture( 1 );
-		qglBindTexture( GL_TEXTURE_2D, 0 );
-		GL_SelectTexture( 0 );
-		qglBindTexture( GL_TEXTURE_2D, 0 );
-	} else {
-		qglBindTexture( GL_TEXTURE_2D, 0 );
-	}
+	GL_SelectTexture( 1 );
+	qglBindTexture( GL_TEXTURE_2D, 0 );
+	GL_SelectTexture( 0 );
+	qglBindTexture( GL_TEXTURE_2D, 0 );
 }

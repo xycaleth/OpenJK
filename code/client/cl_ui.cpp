@@ -1,32 +1,33 @@
 /*
-This file is part of Jedi Academy.
+===========================================================================
+Copyright (C) 1999 - 2005, Id Software, Inc.
+Copyright (C) 2000 - 2013, Raven Software, Inc.
+Copyright (C) 2001 - 2013, Activision, Inc.
+Copyright (C) 2013 - 2015, OpenJK contributors
 
-    Jedi Academy is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 2 of the License, or
-    (at your option) any later version.
+This file is part of the OpenJK source code.
 
-    Jedi Academy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+OpenJK is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
 
-    You should have received a copy of the GNU General Public License
-    along with Jedi Academy.  If not, see <http://www.gnu.org/licenses/>.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, see <http://www.gnu.org/licenses/>.
+===========================================================================
 */
-// Copyright 2001-2013 Raven Software
 
-// leave this as first line for PCH reasons...
-//
 #include "../server/exe_headers.h"
-
 
 #include "client.h"
 #include "client_ui.h"
+#include "qcommon/stringed_ingame.h"
 
 #include "vmachine.h"
-
-int PC_ReadTokenHandle(int handle, struct pc_token_s *pc_token);
 
 intptr_t CL_UISystemCalls( intptr_t *args );
 
@@ -301,7 +302,7 @@ void CL_InitUI( void ) {
 
 	uii.GetConfigString			= (void (*)(int, char *, int))GetConfigString;
 
-	uii.Milliseconds			= Sys_Milliseconds;
+	uii.Milliseconds			= Sys_Milliseconds2;
 
 	UI_Init(UI_API_VERSION, &uii, (cls.state > CA_DISCONNECTED && cls.state <= CA_ACTIVE));
 

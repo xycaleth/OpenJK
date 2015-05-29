@@ -199,6 +199,7 @@ void RB_InstantQuad2(vec4_t quadVerts[4], vec2_t texCoords[4])
 	tess.indexes[tess.numIndexes++] = 3;
 	tess.minIndex = 0;
 	tess.maxIndex = 3;
+	tess.useInternalVBO = qtrue;
 
 	RB_UpdateVBOs(ATTR_POSITION | ATTR_TEXCOORD0);
 
@@ -206,11 +207,14 @@ void RB_InstantQuad2(vec4_t quadVerts[4], vec2_t texCoords[4])
 
 	R_DrawElementsVBO(tess.numIndexes, tess.firstIndex, tess.minIndex, tess.maxIndex);
 
+	RB_CommitInternalBufferData();
+
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
 	tess.firstIndex = 0;
 	tess.minIndex = 0;
 	tess.maxIndex = 0;
+	tess.useInternalVBO = qfalse;
 }
 
 
@@ -368,9 +372,7 @@ static void RB_SurfaceVertsAndIndexes( int numVerts, srfVert_t *verts, int numIn
 	float          *xyz, *texCoords, *lightCoords;
 	uint32_t        *lightdir;
 	uint32_t        *normal;
-#ifdef USE_VERT_TANGENT_SPACE
 	uint32_t        *tangent;
-#endif
 	glIndex_t      *outIndex;
 	float          *color;
 
@@ -401,7 +403,6 @@ static void RB_SurfaceVertsAndIndexes( int numVerts, srfVert_t *verts, int numIn
 			*normal = R_VboPackNormal(dv->normal);
 	}
 
-#ifdef USE_VERT_TANGENT_SPACE
 	if ( tess.shader->vertexAttribs & ATTR_TANGENT )
 	{
 		dv = verts;
@@ -409,7 +410,6 @@ static void RB_SurfaceVertsAndIndexes( int numVerts, srfVert_t *verts, int numIn
 		for ( i = 0 ; i < numVerts ; i++, dv++, tangent++ )
 			*tangent = R_VboPackTangent(dv->tangent);
 	}
-#endif
 
 	if ( tess.shader->vertexAttribs & ATTR_TEXCOORD0 )
 	{
@@ -648,6 +648,7 @@ static void RB_SurfaceBeam( void )
 
 	tess.minIndex = 0;
 	tess.maxIndex = tess.numVertexes;
+	tess.useInternalVBO = qtrue;
 
 	// FIXME: A lot of this can probably be removed for speed, and refactored into a more convenient function
 	RB_UpdateVBOs(ATTR_POSITION);
@@ -661,11 +662,14 @@ static void RB_SurfaceBeam( void )
 
 	R_DrawElementsVBO(tess.numIndexes, tess.firstIndex, tess.minIndex, tess.maxIndex);
 
+	RB_CommitInternalBufferData();
+
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
 	tess.firstIndex = 0;
 	tess.minIndex = 0;
 	tess.maxIndex = 0;
+	tess.useInternalVBO = qfalse;
 }
 
 //------------------
@@ -1744,9 +1748,7 @@ static void RB_SurfaceGrid( srfBspSurface_t *srf ) {
 	float	*xyz;
 	float	*texCoords, *lightCoords;
 	uint32_t *normal;
-#ifdef USE_VERT_TANGENT_SPACE
 	uint32_t *tangent;
-#endif
 	float   *color;
 	uint32_t *lightdir;
 	srfVert_t	*dv;
@@ -1832,9 +1834,7 @@ static void RB_SurfaceGrid( srfBspSurface_t *srf ) {
 
 		xyz = tess.xyz[numVertexes];
 		normal = &tess.normal[numVertexes];
-#ifdef USE_VERT_TANGENT_SPACE
 		tangent = &tess.tangent[numVertexes];
-#endif
 		texCoords = tess.texCoords[numVertexes][0];
 		lightCoords = tess.texCoords[numVertexes][1];
 		color = tess.vertexColors[numVertexes];
@@ -1857,12 +1857,10 @@ static void RB_SurfaceGrid( srfBspSurface_t *srf ) {
 					*normal++ = R_VboPackNormal(dv->normal);
 				}
 
-#ifdef USE_VERT_TANGENT_SPACE
 				if ( tess.shader->vertexAttribs & ATTR_TANGENT )
 				{
 					*tangent++ = R_VboPackTangent(dv->tangent);
 				}
-#endif
 				if ( tess.shader->vertexAttribs & ATTR_TEXCOORD0 )
 				{
 					VectorCopy2(dv->st, texCoords);
@@ -2054,7 +2052,7 @@ void RB_SurfaceVBOMDVMesh(srfVBOMDVMesh_t * surface)
 	//mdvSurface_t   *mdvSurface;
 	refEntity_t    *refEnt;
 
-//	GLimp_LogComment("--- RB_SurfaceVBOMDVMesh ---\n");					// FIXME: REIMPLEMENT (wasn't implemented in ioq3 to begin with) --eez
+	GLimp_LogComment("--- RB_SurfaceVBOMDVMesh ---\n");
 
 	if(!surface->vbo || !surface->ibo)
 		return;
