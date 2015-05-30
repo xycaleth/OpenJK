@@ -114,7 +114,7 @@ void GL_BindTexture( int target, unsigned int texture, int unit )
 {
 	if ( unit != glState.currenttmu )
 	{
-		qglActiveTextureARB( GL_TEXTURE0 + unit );
+		qglActiveTexture( GL_TEXTURE0 + unit );
 		glState.currenttmu = unit;
 	}
 

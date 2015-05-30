@@ -325,6 +325,8 @@ void GLSLGeneratorDestroyContext( GLSLGeneratorContext *ctx )
 
 static bool AddShaderHeaderCode( const shader_t *shader, const char *defines[], uint32_t permutation, std::ostream& code )
 {
+	code << "#version 150 core\n";
+
 	// Add permutations for debug
 	code << "// " << shader->name << '\n';
 
@@ -365,7 +367,6 @@ static bool AddShaderHeaderCode( const shader_t *shader, const char *defines[], 
 	}
 
 	code << "#line 0\n";
-	code << "#version 150 core\n";
 
 	return true;
 }
@@ -392,11 +393,6 @@ static void GenerateGenericVertexShaderCode(
 		attributes |= ATTR_BONE_WEIGHTS;
 	}
 
-	if ( permutation & GENERICDEF_USE_RGBAGEN )
-	{
-		attributes |= ATTR_COLOR;
-	}
-
 	if ( permutation & (GENERICDEF_USE_TCGEN_AND_TCMOD | GENERICDEF_USE_RGBAGEN) )
 	{
 		attributes |= ATTR_TEXCOORD1;
@@ -410,6 +406,7 @@ static void GenerateGenericVertexShaderCode(
 	genShader.uniformsArraySizes[UNIFORM_BASECOLOR] = 1;
 	genShader.uniformsArraySizes[UNIFORM_VERTCOLOR] = 1;
 	
+#if 0
 	if ( permutation & (GENERICDEF_USE_TCGEN_AND_TCMOD | GENERICDEF_USE_RGBAGEN) )
 	{
 		genShader.uniformsArraySizes[UNIFORM_LOCALVIEWORIGIN] = 1;
@@ -458,6 +455,7 @@ static void GenerateGenericVertexShaderCode(
 		genShader.uniformsArraySizes[UNIFORM_MODELLIGHTDIR] = 1;
 		genShader.uniformsArraySizes[UNIFORM_PORTALRANGE] = 1;
 	}
+#endif
 
 	if ( permutation & GENERICDEF_USE_SKELETAL_ANIMATION )
 	{
@@ -508,11 +506,7 @@ static void GenerateGenericVertexShaderCode(
 		// Fog shaders don't have any unfogged passes
 
 		code << "out vec2 var_TexCoords[" << shader->numUnfoggedPasses << "];\n";
-
-		if ( permutation & GENERICDEF_USE_RGBAGEN )
-		{
-			code << "out vec4 var_Colors[" << shader->numUnfoggedPasses << "];\n";
-		}
+		code << "out vec4 var_Colors[" << shader->numUnfoggedPasses << "];\n";
 	}
 
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
@@ -523,6 +517,7 @@ static void GenerateGenericVertexShaderCode(
 	code << '\n';
 
 	// Helper functions
+#if 0
 	if ( permutation & GENERICDEF_USE_DEFORM_VERTEXES )
 	{
 		code << "float GetNoiseValue( float x, float y, float z, float t )\n\
@@ -701,12 +696,8 @@ vec3 DeformNormal(\n\
 {\n\
 	float amplitude = offTurb.z;\n\
 	float phase = offTurb.w * 2.0 * 3.14159;\n\
-	vec2 st2;\n\
-	st2.x = st.x * texMatrix.x + (st.y * texMatrix.z + offTurb.x);\n\
-	st2.y = st.x * texMatrix.y + (st.y * texMatrix.w + offTurb.y);\n\
-	\n\
+	vec2 st2 = st.xx * texMatrix.xy + (st.yy * texMatrix.zw + offTurb.xy);\n\
 	vec2 offsetPos = vec2(position.x + position.z, position.y);\n\
-	\n\
 	vec2 texOffset = sin(offsetPos * (2.0 * 3.14159 / 1024.0) + vec2(phase));\n\
 	\n\
 	return st2 + texOffset * amplitude;\n\
@@ -729,6 +720,7 @@ vec3 DeformNormal(\n\
 	return s * t;\n\
 }\n\n";
 	}
+#endif
 
 	// Main function body
 	code << "void main() {\n";
@@ -763,6 +755,7 @@ vec3 DeformNormal(\n\
 		code << "	vec3 normal = attr_Normal * 2.0 - vec3(1.0);\n";
 	}
 
+#if 0
 	if ( permutation & GENERICDEF_USE_DEFORM_VERTEXES )
 	{
 		code << '\n';
@@ -804,6 +797,7 @@ vec3 DeformNormal(\n\
 			code << "		u_DeformParams[" << (i * 7 + 3) << "]);\n";
 		}
 	}
+#endif
 
 	code << "\n\
 	gl_Position = u_ModelViewProjectionMatrix[0] * vec4(position, 1.0);\n\
@@ -824,13 +818,10 @@ vec3 DeformNormal(\n\
 
 	if ( shader->numUnfoggedPasses > 0 )
 	{
-		if ( permutation & GENERICDEF_USE_RGBAGEN )
+		code << '\n';
+		for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
 		{
-			code << '\n';
-			for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
-			{
-				code << "	var_Colors[" << i << "] = u_VertColor[0] * attr_Color + u_BaseColor[0];\n";
-			}
+			code << "	var_Colors[" << i << "] = u_VertColor[0] * attr_Color + u_BaseColor[0];\n";
 		}
 	}
 
@@ -840,8 +831,6 @@ vec3 DeformNormal(\n\
 // We don't clamp the output here. Do we need to?
 static void AddBlendEquationCode( std::ostream& code, uint32_t state )
 {
-	code << "	dst = ";
-
 	switch ( state & GLS_SRCBLEND_BITS )
 	{
 		case GLS_SRCBLEND_ALPHA_SATURATE:
@@ -1045,11 +1034,7 @@ static void GenerateGenericFragmentShaderCode(
 			code << "in vec2 var_LightTex;\n";
 		}
 
-		if ( permutation & GENERICDEF_USE_RGBAGEN )
-		{
-			code << "in vec4 var_Colors[" << shader->numUnfoggedPasses << "];\n";
-		}
-
+		code << "in vec4 var_Colors[" << shader->numUnfoggedPasses << "];\n";
 		code << '\n';
 	}
 
@@ -1112,6 +1097,7 @@ static void GenerateGenericFragmentShaderCode(
 		}
 		
 		// Depends on blend function
+		code << "	dst = var_Colors[" << i << "] * ";
 		AddBlendEquationCode(code, stage->stateBits);
 
 		code << '\n';
@@ -1670,16 +1656,77 @@ static uint32_t CalculateShaderHash( const shader_t *shader, uint32_t permutatio
 	return hash & (GLSLGeneratorContext::MAX_SHADER_PROGRAM_TABLE_SIZE - 1);
 }
 
+
+
+void RB_MakeMaterialReady( Material *material )
+{
+	ShaderProgram *program = material->program;
+
+	if ( program->used )
+	{
+		return;
+	}
+	
+	std::string log;
+	GLint status;
+	qglGetShaderiv( program->vertexShader, GL_COMPILE_STATUS, &status );
+	if ( status != GL_TRUE )
+	{
+		GLint logLength;
+		qglGetShaderiv( program->vertexShader, GL_INFO_LOG_LENGTH, &logLength );
+
+		log.resize( logLength );
+		
+		qglGetShaderInfoLog( program->vertexShader, logLength, NULL, &log[0] );
+		Com_Printf( "Vertex shader error: %s\n", log.c_str() );
+	}
+
+	qglGetShaderiv( program->fragmentShader, GL_COMPILE_STATUS, &status );
+	if ( status != GL_TRUE )
+	{
+		GLint logLength;
+		qglGetShaderiv( program->fragmentShader, GL_INFO_LOG_LENGTH, &logLength );
+
+		log.resize( logLength );
+		
+		qglGetShaderInfoLog( program->fragmentShader, logLength, NULL, &log[0] );
+		Com_Printf( "Fragment shader error: %s\n", log.c_str() );
+	}
+
+	qglGetProgramiv( program->program, GL_LINK_STATUS, &status );
+	if ( status != GL_TRUE )
+	{
+		GLint logLength;
+		qglGetProgramiv( program->program, GL_INFO_LOG_LENGTH, &logLength );
+
+		log.resize( logLength );
+		
+		qglGetProgramInfoLog( program->program, logLength, NULL, &log[0] );
+		Com_Printf( "Linker error: %s\n", log.c_str() );
+	}
+
+	qglUseProgram( program->program );
+
+	for ( int i = 0; i < program->numUniforms; i++ )
+	{
+		const uniformInfo_t *uniform = &uniformsInfo[program->constants[i].uniform];
+		program->constants[i].location = qglGetUniformLocation( program->program, uniform->name );
+
+		// If we've generated the shader correctly, then this uniform will exist.
+		assert( program->constants[i].location != -1 );
+	}
+
+	program->used = true;
+}
+
 Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader_t *shader, const char *defines[], uint32_t permutation )
 {
 	// Calculate hash for shader
-
 	permutation |= GetShaderCapabilities( shader );
 
 	uint32_t shaderHash = CalculateShaderHash( shader, permutation );
 	ShaderProgram *shaderProgram = ctx->shaderProgramsTable[shaderHash];
-
-	while ( shaderProgram != NULL )
+	while ( shaderProgram )
 	{
 		if ( shaderProgram->permutation == permutation )
 		{
@@ -1689,7 +1736,8 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		shaderProgram = shaderProgram->next;
 	}
 
-	if ( shaderProgram == NULL )
+	Material *material;
+	if ( !shaderProgram )
 	{
 		GLSLShader vertexShader;
 		GLSLShader fragmentShader;
@@ -1723,7 +1771,7 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		numUniforms = 0;
 		for ( int i = 0; i < UNIFORM_COUNT; i++ )
 		{
-			uniformArraySizes[i] = max(
+			uniformArraySizes[i] = Q_max(
 				vertexShader.uniformsArraySizes[i],
 				fragmentShader.uniformsArraySizes[i]);
 
@@ -1736,11 +1784,11 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		numSamplers = 0;
 		for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
 		{
-			for ( int j = 0; shader->stages[i]->bundle[j].image[0] != NULL; j++ )
+			for ( int j = 0; shader->stages[i]->bundle[j].image[0]; j++ )
 			{
 				const textureBundle_t *bundle = &shader->stages[i]->bundle[j];
 
-				for ( int k = 0; bundle->image[k] != NULL; k++ )
+				for ( int k = 0; bundle->image[k]; k++ )
 				{
 					numSamplers++;
 				}
@@ -1786,7 +1834,7 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		qglAttachShader( program, vshader );
 		qglAttachShader( program, fshader );
 
-		for ( int i = 0; i < ATTR_INDEX_COUNT; i++ )
+		for ( int i = 0; i < ATTR_INDEX_MAX; i++ )
 		{
 			if ( vertexShader.attributes & (1 << i) )
 			{
@@ -1794,7 +1842,7 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 			}
 		}
 
-		qglLinkProgram( program );
+		qglLinkProgram( program );		
 
 		shaderProgram = new ShaderProgram();
 		shaderProgram->used = qfalse;
@@ -1859,21 +1907,35 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		ctx->shaderProgramsTable[shaderHash] = shaderProgram;
 
 		numGLSLPrograms++;
-	} // if hash not exists
 
-	Material *material = new Material();
+		material = new Material();
 
-	material->program = shaderProgram;
-	material->constantData = new char[shaderProgram->constantsBufferSizeInBytes];
-	material->textures = new GLuint[shaderProgram->numSamplers];
+		material->program = shaderProgram;
+		material->constantData = new char[shaderProgram->constantsBufferSizeInBytes];
+		material->textures = new GLuint[shaderProgram->numSamplers];
 	
-	AssignSamplersAndTextures( material, shader );
-	FillDefaultUniformData( material, shader );
+		AssignSamplersAndTextures( material, shader );
+		FillDefaultUniformData( material, shader );
+		RB_MakeMaterialReady(material);
+	} // if hash not exists
+	else
+	{
+		material = new Material();
+
+		material->program = shaderProgram;
+		material->constantData = new char[shaderProgram->constantsBufferSizeInBytes];
+		material->textures = new GLuint[shaderProgram->numSamplers];
+	
+		AssignSamplersAndTextures( material, shader );
+		FillDefaultUniformData( material, shader );
+		RB_MakeMaterialReady(material);
+	}
 
 	numQ3ShadersLoaded++;
 	
 	Com_Printf("Q3 shaders loaded: %d\n", numQ3ShadersLoaded);
 	Com_Printf("GLSL programs generated: %d\n", numGLSLPrograms);
+
 	
 	return material;
 }
@@ -1883,67 +1945,6 @@ void GLSLGeneratorFreeMaterial( Material *material )
 	delete[] material->constantData;
 	delete[] material->textures;
 	delete material;
-}
-
-void RB_MakeMaterialReady( Material *material )
-{
-	ShaderProgram *program = material->program;
-
-	if ( program->used )
-	{
-		return;
-	}
-	
-	std::string log;
-	GLint status;
-	qglGetShaderiv( program->vertexShader, GL_COMPILE_STATUS, &status );
-	if ( status != GL_TRUE )
-	{
-		GLint logLength;
-		qglGetShaderiv( program->vertexShader, GL_INFO_LOG_LENGTH, &logLength );
-
-		log.resize( logLength );
-		
-		qglGetShaderInfoLog( program->vertexShader, logLength, NULL, &log[0] );
-		Com_Printf( "Vertex shader error: %s\n", log.c_str() );
-	}
-
-	qglGetShaderiv( program->fragmentShader, GL_COMPILE_STATUS, &status );
-	if ( status != GL_TRUE )
-	{
-		GLint logLength;
-		qglGetShaderiv( program->fragmentShader, GL_INFO_LOG_LENGTH, &logLength );
-
-		log.resize( logLength );
-		
-		qglGetShaderInfoLog( program->fragmentShader, logLength, NULL, &log[0] );
-		Com_Printf( "Fragment shader error: %s\n", log.c_str() );
-	}
-
-	qglGetProgramiv( program->program, GL_LINK_STATUS, &status );
-	if ( status != GL_TRUE )
-	{
-		GLint logLength;
-		qglGetProgramiv( program->program, GL_INFO_LOG_LENGTH, &logLength );
-
-		log.resize( logLength );
-		
-		qglGetProgramInfoLog( program->program, logLength, NULL, &log[0] );
-		Com_Printf( "Linker error: %s\n", log.c_str() );
-	}
-
-	qglUseProgram( program->program );
-
-	for ( int i = 0; i < program->numUniforms; i++ )
-	{
-		const uniformInfo_t *uniform = &uniformsInfo[program->constants[i].uniform];
-		program->constants[i].location = qglGetUniformLocation( program->program, uniform->name );
-
-		// If we've generated the shader correctly, then this uniform will exist.
-		assert( program->constants[i].location != -1 );
-	}
-
-	program->used = true;
 }
 
 void RB_BindMaterial( const Material *material )
