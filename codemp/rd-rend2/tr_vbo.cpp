@@ -496,6 +496,7 @@ ring buffer. Will need fences to ensure that we don't read use
 memory while it's still being used for drawing.
 ==============
 */
+const char *GetAttributeName( int attributeIndex );
 void RB_UpdateVBOs(unsigned int attribBits)
 {
 	GLimp_LogComment("--- RB_UpdateVBOs ---\n");
@@ -534,6 +535,19 @@ void RB_UpdateVBOs(unsigned int attribBits)
 
 		// Interleave the data
 		void *writePtr = dstPtr;
+
+#if 0
+		Com_Printf("Writing to VBO offset %d\n", tess.internalVBOWriteOffset);
+		int offset = 0;
+		for ( int j = 0; j < vertexArrays.numVertexArrays; j++ )
+		{
+			int attributeIndex = vertexArrays.enabledAttributes[j];
+			Com_Printf("%s offset: %d size: %d\n", GetAttributeName(attributeIndex), offset, vertexArrays.sizes[attributeIndex]);
+			offset += vertexArrays.sizes[attributeIndex];
+		}
+		Com_Printf("Vertex size: %d\n", offset);
+#endif
+
 		for ( int i = 0; i < tess.numVertexes; i++ )
 		{
 			for ( int j = 0; j < vertexArrays.numVertexArrays; j++ )

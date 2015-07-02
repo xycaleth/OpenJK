@@ -1109,7 +1109,7 @@ static void RB_FogPass( void ) {
 	}
 }
 
-
+const char *GetAttributeName( int attributeIndex );
 static unsigned int RB_CalcShaderVertexAttribs( const shader_t *shader )
 {
 	unsigned int vertexAttribs = shader->vertexAttribs;
@@ -1130,6 +1130,18 @@ static unsigned int RB_CalcShaderVertexAttribs( const shader_t *shader )
 		vertexAttribs |= ATTR_BONE_WEIGHTS;
 		vertexAttribs |= ATTR_BONE_INDEXES;
 	}
+
+#if 0
+	Com_Printf("Vertex attribs: ");
+	for ( int i = 0, j = 1; i < ATTR_INDEX_MAX; i++, j <<= 1 )
+	{
+		if ( vertexAttribs & j )
+		{
+			Com_Printf("%s ", GetAttributeName(i));
+		}
+	}
+	Com_Printf("\n");
+#endif
 
 	return vertexAttribs;
 }

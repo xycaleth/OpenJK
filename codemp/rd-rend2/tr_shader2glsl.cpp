@@ -398,6 +398,8 @@ static void GenerateGenericVertexShaderCode(
 		attributes |= ATTR_TEXCOORD1;
 	}
 
+	genShader.attributes = attributes;
+
 	// Determine uniforms needed
 	memset( genShader.uniformsArraySizes, 0, sizeof( genShader.uniformsArraySizes ) );
 	memset( genShader.samplersArraySizes, 0, sizeof( genShader.samplersArraySizes ) );
