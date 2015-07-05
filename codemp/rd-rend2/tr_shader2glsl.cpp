@@ -393,7 +393,7 @@ static void GenerateGenericVertexShaderCode(
 		attributes |= ATTR_BONE_WEIGHTS;
 	}
 
-	if ( permutation & (GENERICDEF_USE_TCGEN_AND_TCMOD | GENERICDEF_USE_RGBAGEN) )
+	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
 	{
 		attributes |= ATTR_TEXCOORD1;
 	}
@@ -405,11 +405,14 @@ static void GenerateGenericVertexShaderCode(
 	memset( genShader.samplersArraySizes, 0, sizeof( genShader.samplersArraySizes ) );
 
 	genShader.uniformsArraySizes[UNIFORM_MODELVIEWPROJECTIONMATRIX] = 1;
-	genShader.uniformsArraySizes[UNIFORM_BASECOLOR] = 1;
-	genShader.uniformsArraySizes[UNIFORM_VERTCOLOR] = 1;
+	if ( shader->numUnfoggedPasses > 0 )
+	{
+		genShader.uniformsArraySizes[UNIFORM_BASECOLOR] = 1;
+		genShader.uniformsArraySizes[UNIFORM_VERTCOLOR] = 1;
+	}
 	
 #if 0
-	if ( permutation & (GENERICDEF_USE_TCGEN_AND_TCMOD | GENERICDEF_USE_RGBAGEN) )
+	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
 	{
 		genShader.uniformsArraySizes[UNIFORM_LOCALVIEWORIGIN] = 1;
 	}
@@ -839,31 +842,31 @@ static void AddBlendEquationCode( std::ostream& code, uint32_t state )
 			assert(!"Not used?");
 			break;
 		case GLS_SRCBLEND_DST_ALPHA:
-			code << "dst.a";
+			code << "vec4(dst.a)";
 			break;
 		case GLS_SRCBLEND_DST_COLOR:
 			code << "vec4(dst.rgb, 1.0)";
 			break;
 		case GLS_SRCBLEND_ONE:
-			code << "1.0";
+			code << "vec4(1.0)";
 			break;
 		case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
-			code << "(1.0 - dst.a)";
+			code << "vec4(1.0 - dst.a)";
 			break;
 		case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
 			code << "(1.0 - vec4(dst.rgb, 1.0))";
 			break;
 		case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
-			code << "(1.0 - src.a)";
+			code << "vec4(1.0 - src.a)";
 			break;
 		case GLS_SRCBLEND_SRC_ALPHA:
-			code << "src.a";
+			code << "vec4(src.a)";
 			break;
 		case GLS_SRCBLEND_ZERO:
-			code << "0.0";
+			code << "vec4(0.0)";
 			break;
 		default:
-			code << "1.0";
+			code << "vec4(1.0)";
 			break;
 	}
 
@@ -872,16 +875,16 @@ static void AddBlendEquationCode( std::ostream& code, uint32_t state )
 	switch ( state & GLS_DSTBLEND_BITS )
 	{
 		case GLS_DSTBLEND_DST_ALPHA:
-			code << "dst.a";
+			code << "vec4(dst.a)";
 			break;
 		case GLS_DSTBLEND_ONE:
-			code << "1.0";
+			code << "vec4(1.0)";
 			break;
 		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
-			code << "(1.0 - dst.a)";
+			code << "vec4(1.0 - dst.a)";
 			break;
 		case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
-			code << "(1.0 - src.a)";
+			code << "vec4(1.0 - src.a)";
 			break;
 		case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
 			code << "(1.0 - vec4(src.rgb, 1.0))";
@@ -890,13 +893,13 @@ static void AddBlendEquationCode( std::ostream& code, uint32_t state )
 			code << "vec4(src.rgb, 1.0)";
 			break;
 		case GLS_DSTBLEND_SRC_ALPHA:
-			code << "src.a";
+			code << "vec4(src.a)";
 			break;
 		case GLS_DSTBLEND_ZERO:
-			code << "0.0";
+			code << "vec4(0.0)";
 			break;
 		default:
-			code << "0.0";
+			code << "vec4(0.0)";
 			break;
 	}
 
@@ -929,8 +932,11 @@ static void GenerateGenericFragmentShaderCode(
 	// Determine uniforms needed
 	memset( genShader.uniformsArraySizes, 0, sizeof( genShader.uniformsArraySizes ) );
 
-	genShader.uniformsArraySizes[UNIFORM_DIFFUSEMAP] = 1;
-	genShader.samplersArraySizes[TB_DIFFUSEMAP] = GetTextureCount( samplerMapping, TB_DIFFUSEMAP, shader->numUnfoggedPasses );
+	if ( shader->numUnfoggedPasses > 0 )
+	{
+		genShader.uniformsArraySizes[UNIFORM_DIFFUSEMAP] = 1;
+		genShader.samplersArraySizes[TB_DIFFUSEMAP] = GetTextureCount( samplerMapping, TB_DIFFUSEMAP, shader->numUnfoggedPasses );
+	}
 	
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
 	{
@@ -1074,45 +1080,16 @@ static void GenerateGenericFragmentShaderCode(
 			}
 		}
 
-		switch ( stage->rgbGen )
-		{
-			case CGEN_CONST:
-				code << "	src.rgb *= vec3("
-						<< (stage->constantColor[0] / 255.0f) << ", "
-						<< (stage->constantColor[1] / 255.0f) << ", "
-						<< (stage->constantColor[2] / 255.0f)
-						<< ");\n";
-				break;
-
-			default:
-				break;
-		}
-		
-		switch ( stage->alphaGen )
-		{
-			case AGEN_CONST:
-				code << "	src.a *= " << (stage->constantColor[3] / 255.0f) << ";\n";
-				break;
-
-			default:
-				break;
-		}
+		code << "	src *= var_Colors[0];\n";
 		
 		// Depends on blend function
-		code << "	dst = var_Colors[" << i << "] * ";
+		code << "	dst = ";
 		AddBlendEquationCode(code, stage->stateBits);
 
 		code << '\n';
 	}
 
-	//if ( permutation & GENERICDEF_USE_RGBAGEN )
-	{
-		code << "	out_Color = dst;\n";
-	}
-	//else
-	//{
-	//	code << "	out_Color = color;\n";
-	//}
+	code << "	out_Color = dst;\n";
 
 	if ( permutation & GENERICDEF_USE_GLOW_BUFFER )
 	{
@@ -1147,13 +1124,6 @@ uint32_t GetShaderCapabilities( const shader_t *shader )
 		if ( stage->bundle[TB_LIGHTMAP].image[0] != NULL )
 		{
 			caps |= GENERICDEF_USE_LIGHTMAP;
-		}
-
-		if ( stage->rgbGen == CGEN_LIGHTING_DIFFUSE ||
-				stage->alphaGen == AGEN_LIGHTING_SPECULAR ||
-				stage->alphaGen == AGEN_PORTAL )
-		{
-			caps |= GENERICDEF_USE_RGBAGEN;
 		}
 
 		for ( int j = 0; stage->bundle[j].image[0] != NULL; j++ )

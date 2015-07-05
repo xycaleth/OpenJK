@@ -1240,10 +1240,46 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 	else if (glState.skeletalAnimation)
 		index = 2;
 
-	Material *material = tess.shader->materials[index];
+	Material *material = input->shader->materials[index];
+	if ( !material )
+		return;
 
+	uint32_t stateBits = input->shader->numUnfoggedPasses ? input->xstages[0]->stateBits : 0;
+	colorGen_t forceRGBGen = CGEN_BAD;
+	alphaGen_t forceAlphaGen = AGEN_IDENTITY;
+
+	if ( backEnd.currentEntity )
+	{
+		assert(backEnd.currentEntity->e.renderfx >= 0);
+
+		if ( backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1 )
+		{
+			// we want to be able to rip a hole in the thing being disintegrated, and by doing the depth-testing it avoids some kinds of artefacts, but will probably introduce others?
+			stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_192;
+		}
+
+		if ( backEnd.currentEntity->e.renderfx & RF_RGB_TINT )
+		{//want to use RGBGen from ent
+			forceRGBGen = CGEN_ENTITY;
+		}
+
+		if ( backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA )
+		{
+			stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+			if ( backEnd.currentEntity->e.renderfx & RF_ALPHA_DEPTH )
+			{ //depth write, so faces through the model will be stomped over by nearer ones. this works because
+				//we draw RF_FORCE_ENT_ALPHA stuff after everything else, including standard alpha surfs.
+				stateBits |= GLS_DEPTHMASK_TRUE;
+			}
+		}
+	}
 	vec4_t baseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 	vec4_t vertColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+	GL_State( stateBits );
+
+	if ( input->shader->numUnfoggedPasses )
+		ComputeShaderColors( input->xstages[0], baseColor, vertColor, stateBits, &forceRGBGen, &forceAlphaGen );
 
 	RB_SetMaterialData( material, baseColor, UNIFORM_BASECOLOR, 0, 1 );
 	RB_SetMaterialData( material, vertColor, UNIFORM_VERTCOLOR, 0, 1 );
