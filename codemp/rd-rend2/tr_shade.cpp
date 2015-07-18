@@ -1230,6 +1230,21 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 	genFunc_t deformGen;
 	float deformParams[7];
 
+	int numTcGens = 0;
+	texCoordGen_t tcGens[16];
+
+	int numTcGen0Vec0s = 0;
+	vec3_t tcGen0Vec0s[16];
+
+	int numTcGen0Vec1s = 0;
+	vec3_t tcGen0Vec1s[16];
+
+	int numTexMatrices = 0;
+	vec4_t texMatrices[16];
+
+	int numTexOffTurbs = 0;
+	vec4_t texOffTurbs[16];
+
 	ComputeDeformValues(&deformType, &deformGen, deformParams);
 
 	ComputeFogValues(fogDistanceVector, fogDepthVector, &eyeT);
@@ -1284,6 +1299,20 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 	RB_SetMaterialData( material, baseColor, UNIFORM_BASECOLOR, 0, 1 );
 	RB_SetMaterialData( material, vertColor, UNIFORM_VERTCOLOR, 0, 1 );
 	RB_SetMaterialData( material, glState.modelviewProjection, UNIFORM_MODELVIEWPROJECTIONMATRIX, 0, 1 );
+
+	for ( int i = 0; input->xstages[i]; i++ )
+	{
+		const shaderStage_t *stage = input->xstages[i];
+		if ( stage->bundle[0].tcGen != TCGEN_TEXTURE )
+		{
+			tcGens[numTcGens++] = stage->bundle[0].tcGen;
+		}
+
+		for ( int j = 0; j < stage->bundle[0].numTexMods; j++ )
+		{
+
+		}
+	}
 
 	RB_BindMaterial( material );
 

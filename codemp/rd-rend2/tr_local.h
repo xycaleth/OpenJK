@@ -933,16 +933,17 @@ enum
 
 enum
 {
-	GENERICDEF_USE_DEFORM_VERTEXES  = 0x0001,
-	GENERICDEF_USE_TCGEN_AND_TCMOD  = 0x0002,
-	GENERICDEF_USE_VERTEX_ANIMATION = 0x0004,
-	GENERICDEF_USE_FOG              = 0x0008,
-	GENERICDEF_USE_RGBAGEN          = 0x0010,
-	GENERICDEF_USE_LIGHTMAP         = 0x0020,
-	GENERICDEF_USE_SKELETAL_ANIMATION = 0x0040,
-	GENERICDEF_USE_GLOW_BUFFER      = 0x0080,
-	GENERICDEF_ALL                  = 0x00FF,
-	GENERICDEF_COUNT                = 0x0100,
+	GENERICDEF_USE_DEFORM_VERTEXES    = 0x0001,
+	GENERICDEF_USE_TCGEN              = 0x0002,
+	GENERICDEF_USE_TCMOD              = 0x0004,
+	GENERICDEF_USE_VERTEX_ANIMATION   = 0x0008,
+	GENERICDEF_USE_FOG                = 0x0010,
+	GENERICDEF_USE_RGBAGEN            = 0x0020,
+	GENERICDEF_USE_LIGHTMAP           = 0x0040,
+	GENERICDEF_USE_SKELETAL_ANIMATION = 0x0080,
+	GENERICDEF_USE_GLOW_BUFFER        = 0x0100,
+	GENERICDEF_ALL                    = 0x01FF,
+	GENERICDEF_COUNT                  = 0x0200,
 };
 
 enum
@@ -1745,7 +1746,7 @@ struct Material;
 struct ShaderProgram;
 struct GLSLGeneratorContext
 {
-	static const int MAX_SHADER_PROGRAM_TABLE_SIZE = 2048;
+	static const int MAX_SHADER_PROGRAM_TABLE_SIZE = 2039; // prime number
 	ShaderProgram *shaderProgramsTable[MAX_SHADER_PROGRAM_TABLE_SIZE];
 };
 
@@ -3190,7 +3191,7 @@ void		GLSLGeneratorDestroyContext( GLSLGeneratorContext *ctx );
 Material *	GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader_t *shader, const char *defines[], uint32_t permutation );
 void		GLSLGeneratorFreeMaterial( Material *material );
 
-void RB_BindMaterial( const Material *material );
+void RB_BindMaterial( Material *material );
 void RB_SetMaterialData( Material *material, void *newData, uniform_t uniform, int offset, int count );
 
 #endif //TR_LOCAL_H

@@ -169,7 +169,8 @@ static const char *glslTypeStrings[] = {
 
 static const char *genericShaderDefStrings[] = {
 	"GENERICDEF_USE_DEFORM_VERTEXES",
-	"GENERICDEF_USE_TCGEN_AND_TCMOD",
+	"GENERICDEF_USE_TCGEN",
+	"GENERICDEF_USE_TCMOD",
 	"GENERICDEF_USE_VERTEX_ANIMATION",
 	"GENERICDEF_USE_FOG",
 	"GENERICDEF_USE_RGBAGEN",
@@ -279,6 +280,9 @@ struct ShaderProgram
 	int constantsBufferSizeInBytes;
 	ConstantDescriptor *constants;
 
+	// Representation of the constant buffer for this shader program.
+	void *constantBuffer;
+
 	// Mapping from UNIFORM_* -> array index into 'constants' array.
 	int uniformDataIndices[UNIFORM_COUNT];
 
@@ -292,6 +296,10 @@ struct Material
 
 	void *constantData;
 	GLuint *textures;
+
+#if defined(_DEBUG)
+	const shader_t *shader;
+#endif
 };
 
 int numQ3ShadersLoaded;
@@ -316,6 +324,7 @@ void GLSLGeneratorDestroyContext( GLSLGeneratorContext *ctx )
 
 			delete[] program->constants;
 			delete[] program->samplers;
+			delete [] program->constantBuffer;
 			delete program;
 
 			program = next;
@@ -393,9 +402,9 @@ static void GenerateGenericVertexShaderCode(
 		attributes |= ATTR_BONE_WEIGHTS;
 	}
 
-	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
+	if ( permutation & (GENERICDEF_USE_TCGEN | GENERICDEF_USE_TCMOD) )
 	{
-		attributes |= ATTR_TEXCOORD1;
+		attributes |= ATTR_TEXCOORD0 | ATTR_TEXCOORD1;
 	}
 
 	genShader.attributes = attributes;
@@ -411,24 +420,23 @@ static void GenerateGenericVertexShaderCode(
 		genShader.uniformsArraySizes[UNIFORM_VERTCOLOR] = 1;
 	}
 	
-#if 0
-	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
+	if ( permutation & GENERICDEF_USE_TCGEN )
 	{
-		genShader.uniformsArraySizes[UNIFORM_LOCALVIEWORIGIN] = 1;
-	}
-
-	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
-	{
-		// Per unique diffuse tex mods
-		genShader.uniformsArraySizes[UNIFORM_DIFFUSETEXMATRIX] = 1;
-		genShader.uniformsArraySizes[UNIFORM_DIFFUSETEXOFFTURB] = 1;
-
 		// Per unique tc gens
 		genShader.uniformsArraySizes[UNIFORM_TCGEN0] = 1;
 		genShader.uniformsArraySizes[UNIFORM_TCGEN0VECTOR0] = 1;
 		genShader.uniformsArraySizes[UNIFORM_TCGEN0VECTOR1] = 1;
+		genShader.uniformsArraySizes[UNIFORM_LOCALVIEWORIGIN] = 1;
 	}
 
+	if ( permutation & GENERICDEF_USE_TCMOD )
+	{
+		// Per unique diffuse tex mods
+		genShader.uniformsArraySizes[UNIFORM_DIFFUSETEXMATRIX] = 1;
+		genShader.uniformsArraySizes[UNIFORM_DIFFUSETEXOFFTURB] = 1;
+	}
+
+#if 0
 	if ( permutation & GENERICDEF_USE_FOG )
 	{
 		genShader.uniformsArraySizes[UNIFORM_FOGCOLORMASK] = 1;
@@ -672,7 +680,9 @@ vec3 DeformNormal(\n\
 }\n";
 	}
 
-	if ( permutation & GENERICDEF_USE_TCGEN_AND_TCMOD )
+#endif
+
+	if ( permutation & GENERICDEF_USE_TCGEN )
 	{
 		code << "vec2 GenTexCoords(in int TCGen, in vec3 position, in vec3 normal, in vec3 TCGenVector0, in vec3 TCGenVector1)\n\
 {\n\
@@ -696,7 +706,10 @@ vec3 DeformNormal(\n\
 	\n\
 	return tex;\n\
 }\n\n";
+	}
 
+	if ( permutation & GENERICDEF_USE_TCMOD )
+	{
 		code << "vec2 ModTexCoords(in vec2 st, in vec3 position, in vec4 texMatrix, in vec4 offTurb)\n\
 {\n\
 	float amplitude = offTurb.z;\n\
@@ -709,6 +722,7 @@ vec3 DeformNormal(\n\
 }\n\n";
 	}
 
+#if 0
 	if ( permutation & GENERICDEF_USE_FOG )
 	{
 		code << "float CalcFog(in vec3 position)\n\
@@ -813,7 +827,21 @@ vec3 DeformNormal(\n\
 	{
 		const shaderStage_t *stage = shader->stages[i];
 
-		code << "	var_TexCoords[" << i << "] = attr_TexCoord0;\n";
+		if ( stage->bundle[0].tcGen != TCGEN_TEXTURE )
+		{
+			code << "	tex = GenTexCoords(u_TCGen0[0], position, normal, u_TCGen0Vector0[0], u_TCGen0Vector1[0]);\n";
+		}
+		else
+		{
+			code << "	tex = attr_TexCoord0;\n";
+		}
+
+		for ( int j = 0; j < stage->bundle[0].numTexMods; j++ )
+		{
+			code << "	tex = ModTexCoords(tex, position, u_DiffuseTexMatrix[0], u_DiffuseTexOffTurb[0]);\n";
+		}
+
+		code << "	var_TexCoords[" << i << "] = tex;\n\n";
 	}
 
 	if ( permutation & GENERICDEF_USE_LIGHTMAP )
@@ -1075,7 +1103,7 @@ static void GenerateGenericFragmentShaderCode(
 
 			if ( stage->bundle[TB_LIGHTMAP].image[0] != NULL )
 			{
-				code << "	src2 = texture(u_LightMap[" << samplerMapping[i][TB_LIGHTMAP] << "],  var_LightTex);\n";
+				code << "	src2 = texture(u_LightMap[" << samplerMapping[i][TB_LIGHTMAP] << "], var_LightTex);\n";
 				code << "	src.rgb = src.rgb * src2.rgb;\n";
 			}
 		}
@@ -1126,12 +1154,16 @@ uint32_t GetShaderCapabilities( const shader_t *shader )
 			caps |= GENERICDEF_USE_LIGHTMAP;
 		}
 
-		for ( int j = 0; stage->bundle[j].image[0] != NULL; j++ )
+		for ( int j = 0; j < 1 && stage->bundle[j].image[0] != NULL; j++ )
 		{
-			if ( stage->bundle[j].tcGen != TCGEN_TEXTURE ||
-					stage->bundle[j].numTexMods > 0 )
+			if ( stage->bundle[j].tcGen != TCGEN_TEXTURE )
 			{
-				caps |= GENERICDEF_USE_TCGEN_AND_TCMOD;
+				caps |= GENERICDEF_USE_TCGEN;
+			}
+
+			if ( stage->bundle[j].numTexMods )
+			{
+				caps |= GENERICDEF_USE_TCMOD;
 			}
 		}
 
@@ -1628,8 +1660,6 @@ static uint32_t CalculateShaderHash( const shader_t *shader, uint32_t permutatio
 	return hash & (GLSLGeneratorContext::MAX_SHADER_PROGRAM_TABLE_SIZE - 1);
 }
 
-
-
 void RB_MakeMaterialReady( Material *material )
 {
 	ShaderProgram *program = material->program;
@@ -1814,7 +1844,7 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 			}
 		}
 
-		qglLinkProgram( program );		
+		qglLinkProgram( program );
 
 		shaderProgram = new ShaderProgram();
 		shaderProgram->used = qfalse;
@@ -1852,6 +1882,8 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		}
 
 		shaderProgram->constantsBufferSizeInBytes = constantBufferSizeInBytes;
+		shaderProgram->constantBuffer = new char[constantBufferSizeInBytes];
+		memset(shaderProgram->constantBuffer, 0, constantBufferSizeInBytes);
 
 		int samplerIndex = 0;
 		for ( int i = 0; i < shader->numUnfoggedPasses; i++ )
@@ -1885,6 +1917,9 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		material->program = shaderProgram;
 		material->constantData = new char[shaderProgram->constantsBufferSizeInBytes];
 		material->textures = new GLuint[shaderProgram->numSamplers];
+#if defined(_DEBUG)
+		material->shader = shader;
+#endif
 	
 		AssignSamplersAndTextures( material, shader );
 		FillDefaultUniformData( material, shader );
@@ -1897,6 +1932,9 @@ Material *GLSLGeneratorGenerateMaterial( GLSLGeneratorContext *ctx, const shader
 		material->program = shaderProgram;
 		material->constantData = new char[shaderProgram->constantsBufferSizeInBytes];
 		material->textures = new GLuint[shaderProgram->numSamplers];
+#if defined(_DEBUG)
+		material->shader = shader;
+#endif
 	
 		AssignSamplersAndTextures( material, shader );
 		FillDefaultUniformData( material, shader );
@@ -1919,12 +1957,12 @@ void GLSLGeneratorFreeMaterial( Material *material )
 	delete material;
 }
 
-void RB_BindMaterial( const Material *material )
+void RB_BindMaterial( Material *material )
 {
 	const ShaderProgram *program = material->program;
 
 	// Sneaky...
-	RB_MakeMaterialReady( const_cast<Material *>(material) );
+	RB_MakeMaterialReady( material );
 
 	qglUseProgram( program->program );
 
@@ -1932,6 +1970,7 @@ void RB_BindMaterial( const Material *material )
 	for ( int i = 0, end = program->numUniforms; i < end; i++ )
 	{
 		const ConstantDescriptor *constantData = &program->constants[i];
+		char *currentData = reinterpret_cast<char *>(program->constantBuffer) + constantData->offset;
 		const char *data = reinterpret_cast<const char *>(material->constantData) + constantData->offset;
 		const GLfloat *floatData = reinterpret_cast<const GLfloat *>(data);
 		const GLint *intData = reinterpret_cast<const GLint *>(data);
@@ -1943,31 +1982,55 @@ void RB_BindMaterial( const Material *material )
 			case GLSL_INT:
 			case GLSL_SAMPLER2D:
 			case GLSL_SAMPLERCUBE:
-				qglUniform1iv( constantData->location, constantData->totalNumElements, intData );
+				//if ( memcmp(currentData, data, sizeof(GLint) * constantData->totalNumElements) != 0 )
+				{
+					memcpy(currentData, data, sizeof(GLint) * constantData->totalNumElements);
+					qglUniform1iv( constantData->location, constantData->totalNumElements, intData );
+				}
 				break;
 
 			case GLSL_FLOAT:
-				qglUniform1fv( constantData->location, constantData->totalNumElements, floatData );
+				//if ( memcmp(currentData, data, sizeof(GLfloat) * constantData->totalNumElements) != 0 )
+				{
+					memcpy(currentData, data, sizeof(GLfloat) * constantData->totalNumElements);
+					qglUniform1fv( constantData->location, constantData->totalNumElements, floatData );
+				}
 				break;
 
 			case GLSL_VEC2:
-				qglUniform2fv( constantData->location, constantData->totalNumElements, floatData );
+				//if ( memcmp(currentData, data, 2 * sizeof(GLfloat) * constantData->totalNumElements) != 0 )
+				{
+					memcpy(currentData, data, 2 * sizeof(GLfloat) * constantData->totalNumElements);
+					qglUniform2fv( constantData->location, constantData->totalNumElements, floatData );
+				}
 				break;
 
 			case GLSL_VEC3:
-				qglUniform3fv( constantData->location, constantData->totalNumElements, floatData );
+				//if ( memcmp(currentData, data, 3 * sizeof(GLfloat) * constantData->totalNumElements) != 0 )
+				{
+					memcpy(currentData, data, 3 * sizeof(GLfloat) * constantData->totalNumElements);
+					qglUniform3fv( constantData->location, constantData->totalNumElements, floatData );
+				}
 				break;
 
 			case GLSL_VEC4:
-				qglUniform4fv( constantData->location, constantData->totalNumElements, floatData );
+				//if ( memcmp(currentData, data, 4 * sizeof(GLfloat) * constantData->totalNumElements) != 0 )
+				{
+					memcpy(currentData, data, 4 * sizeof(GLfloat) * constantData->totalNumElements);
+					qglUniform4fv( constantData->location, constantData->totalNumElements, floatData );
+				}
 				break;
 
 			case GLSL_MAT16:
-				qglUniformMatrix4fv( constantData->location, constantData->totalNumElements, GL_FALSE, floatData );
+				//if ( memcmp(currentData, data, 16 * sizeof(GLfloat) * constantData->totalNumElements) != 0 )
+				{
+					memcpy(currentData, data, 16 * sizeof(GLfloat) * constantData->totalNumElements);
+					qglUniformMatrix4fv( constantData->location, constantData->totalNumElements, GL_FALSE, floatData );
+				}
 				break;
 
 			default:
-				assert( false );
+				assert( !"Invalid GLSL uniform data type" );
 				break;
 		}
 	}

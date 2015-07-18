@@ -1073,9 +1073,13 @@ int GLSL_LoadGPUShaders(void)
 		if (i & GENERICDEF_USE_DEFORM_VERTEXES)
 			Q_strcat(extradefines, 1024, "#define USE_DEFORM_VERTEXES\n");
 
-		if (i & GENERICDEF_USE_TCGEN_AND_TCMOD)
+		if (i & GENERICDEF_USE_TCGEN)
 		{
 			Q_strcat(extradefines, 1024, "#define USE_TCGEN\n");
+		}
+
+		if (i & GENERICDEF_USE_TCMOD)
+		{
 			Q_strcat(extradefines, 1024, "#define USE_TCMOD\n");
 		}
 
@@ -1730,7 +1734,7 @@ shaderProgram_t *GLSL_GetGenericShaderProgram(int stage)
 
 	if (pStage->bundle[0].tcGen != TCGEN_TEXTURE)
 	{
-		shaderAttribs |= GENERICDEF_USE_TCGEN_AND_TCMOD;
+		shaderAttribs |= GENERICDEF_USE_TCGEN;
 	}
 
 	if (tess.shader->numDeforms && !ShaderRequiresCPUDeforms(tess.shader))
@@ -1750,7 +1754,7 @@ shaderProgram_t *GLSL_GetGenericShaderProgram(int stage)
 
 	if (pStage->bundle[0].numTexMods)
 	{
-		shaderAttribs |= GENERICDEF_USE_TCGEN_AND_TCMOD;
+		shaderAttribs |= GENERICDEF_USE_TCMOD;
 	}
 
 	if (pStage->glow)
