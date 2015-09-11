@@ -422,56 +422,34 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 
 	// FIXME: A lot of this can probably be removed for speed, and refactored into a more convenient function
 	RB_UpdateVBOs(ATTR_POSITION | ATTR_TEXCOORD0);
-/*
-	{
-		shaderProgram_t *sp = &tr.textureColorShader;
 
-		GLSL_VertexAttribsState(ATTR_POSITION | ATTR_TEXCOORD0, NULL);
-		GLSL_BindProgram(sp);
+	shaderProgram_t *sp = &tr.lightallShader[0];
+	vec4_t vector;
+
+	GLSL_VertexAttribsState(ATTR_POSITION | ATTR_TEXCOORD0, NULL);
+	GLSL_BindProgram(sp);
 		
-		GLSL_SetUniformMatrix16(sp, UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
+	GLSL_SetUniformMatrix4x4(sp, UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
 		
-		color[0] = 
-		color[1] = 
-		color[2] = tr.identityLight;
-		color[3] = 1.0f;
-		GLSL_SetUniformVec4(sp, UNIFORM_COLOR, color);
-	}
-*/
-	{
-		shaderProgram_t *sp = &tr.lightallShader[0];
-		vec4_t vector;
+	color[0] = 
+	color[1] = 
+	color[2] = backEnd.refdef.colorScale;
+	color[3] = 1.0f;
+	GLSL_SetUniformVec4(sp, UNIFORM_BASECOLOR, color);
 
-		GLSL_VertexAttribsState(ATTR_POSITION | ATTR_TEXCOORD0, NULL);
-		GLSL_BindProgram(sp);
-		
-		GLSL_SetUniformMatrix4x4(sp, UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
-		
-		color[0] = 
-		color[1] = 
-		color[2] = backEnd.refdef.colorScale;
-		color[3] = 1.0f;
-		GLSL_SetUniformVec4(sp, UNIFORM_BASECOLOR, color);
+	color[0] = 
+	color[1] = 
+	color[2] = 
+	color[3] = 0.0f;
+	GLSL_SetUniformVec4(sp, UNIFORM_VERTCOLOR, color);
 
-		color[0] = 
-		color[1] = 
-		color[2] = 
-		color[3] = 0.0f;
-		GLSL_SetUniformVec4(sp, UNIFORM_VERTCOLOR, color);
+	VectorSet4(vector, 1.0, 0.0, 0.0, 1.0);
+	GLSL_SetUniformVec4(sp, UNIFORM_DIFFUSETEXMATRIX, vector);
 
-		VectorSet4(vector, 1.0, 0.0, 0.0, 1.0);
-		GLSL_SetUniformVec4(sp, UNIFORM_DIFFUSETEXMATRIX, vector);
-
-		VectorSet4(vector, 0.0, 0.0, 0.0, 0.0);
-		GLSL_SetUniformVec4(sp, UNIFORM_DIFFUSETEXOFFTURB, vector);
-	}
+	VectorSet4(vector, 0.0, 0.0, 0.0, 0.0);
+	GLSL_SetUniformVec4(sp, UNIFORM_DIFFUSETEXOFFTURB, vector);
 
 	R_DrawElementsVBO(tess.numIndexes - tess.firstIndex, tess.firstIndex, tess.minIndex, tess.maxIndex);
-
-	//qglDrawElements(GL_TRIANGLES, tess.numIndexes - tess.firstIndex, GL_INDEX_TYPE, BUFFER_OFFSET(tess.firstIndex * sizeof(glIndex_t)));
-	
-	//R_BindNullVBO();
-	//R_BindNullIBO();
 
 	RB_CommitInternalBufferData();
 	
@@ -873,20 +851,16 @@ void RB_StageIteratorSky( void ) {
 	// draw the outer skybox
 	if ( tess.shader->sky.outerbox[0] && tess.shader->sky.outerbox[0] != tr.defaultImage ) {
 		matrix_t oldmodelview;
+		matrix_t trans, product;
 		
 		GL_State( 0 );
-		//qglTranslatef (backEnd.viewParms.ori.origin[0], backEnd.viewParms.ori.origin[1], backEnd.viewParms.ori.origin[2]);
 
-		{
-			// FIXME: this could be a lot cleaner
-			matrix_t trans, product;
+		// FIXME: this could be a lot cleaner
 
-			Matrix16Copy( glState.modelview, oldmodelview );
-			Matrix16Translation( backEnd.viewParms.ori.origin, trans );
-			Matrix16Multiply( glState.modelview, trans, product );
-			GL_SetModelviewMatrix( product );
-
-		}
+		Matrix16Copy( glState.modelview, oldmodelview );
+		Matrix16Translation( backEnd.viewParms.ori.origin, trans );
+		Matrix16Multiply( glState.modelview, trans, product );
+		GL_SetModelviewMatrix( product );
 
 		DrawSkyBox( tess.shader );
 

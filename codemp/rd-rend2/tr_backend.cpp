@@ -58,8 +58,15 @@ void GL_Bind( image_t *image ) {
 			image->frameUsed = tr.frameCount;
 		}
 		glState.currenttextures[glState.currenttmu] = texnum;
-		if (image && image->flags & IMGFLAG_CUBEMAP)
-			qglBindTexture( GL_TEXTURE_CUBE_MAP, texnum );
+		if (image)
+		{
+			if (image->flags & IMGFLAG_CUBEMAP)
+				qglBindTexture( GL_TEXTURE_CUBE_MAP, texnum );
+			else if (image->flags & IMGFLAG_3D)
+				qglBindTexture( GL_TEXTURE_3D, texnum );
+			else
+				qglBindTexture( GL_TEXTURE_2D, texnum );
+		}
 		else
 			qglBindTexture( GL_TEXTURE_2D, texnum );
 	}
@@ -102,10 +109,18 @@ void GL_BindToTMU( image_t *image, int tmu )
 			image->frameUsed = tr.frameCount;
 		glState.currenttextures[tmu] = texnum;
 
-		if (image && (image->flags & IMGFLAG_CUBEMAP))
-			qglBindTexture( GL_TEXTURE_CUBE_MAP, texnum );
+		if (image)
+		{
+			if (image->flags & IMGFLAG_CUBEMAP)
+				qglBindTexture( GL_TEXTURE_CUBE_MAP, texnum );
+			else if (image->flags & IMGFLAG_3D)
+				qglBindTexture( GL_TEXTURE_3D, texnum );
+			else
+				qglBindTexture( GL_TEXTURE_2D, texnum );
+		}
 		else
 			qglBindTexture( GL_TEXTURE_2D, texnum );
+
 		GL_SelectTexture( oldtmu );
 	}
 }
@@ -384,14 +399,14 @@ void GL_State( uint32_t stateBits )
 void GL_SetProjectionMatrix(matrix_t matrix)
 {
 	Matrix16Copy(matrix, glState.projection);
-	Matrix16Multiply(glState.projection, glState.modelview, glState.modelviewProjection);	
+	Matrix16Multiply(glState.projection, glState.modelview, glState.modelviewProjection);
 }
 
 
 void GL_SetModelviewMatrix(matrix_t matrix)
 {
 	Matrix16Copy(matrix, glState.modelview);
-	Matrix16Multiply(glState.projection, glState.modelview, glState.modelviewProjection);	
+	Matrix16Multiply(glState.projection, glState.modelview, glState.modelviewProjection);
 }
 
 
@@ -553,31 +568,141 @@ void RB_BeginDrawingView (void) {
 	}
 }
 
+static void RB_LightSolidSurfaces( dlight_t *dlights, int numDlights )
+{
+	float zmax = backEnd.viewParms.zFar;
+	float zmin = r_znear->value;
+	vec4_t viewInfo = { zmax / zmin, zmax, 0.0f, 0.0f };
 
-#define	MAC_EVENT_PUMP_MSEC		5
+	FBO_Bind(tr.deferredLightFbo);
 
-/*
-==================
-RB_RenderDrawSurfList
-==================
-*/
-static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
-	shader_t		*shader, *oldShader;
-	int				fogNum, oldFogNum;
-	int				entityNum, oldEntityNum;
-	int				dlighted, oldDlighted;
-	int				postRender, oldPostRender;
-	int             cubemapIndex, oldCubemapIndex;
-	int		depthRange, oldDepthRange;
-	int				i;
-	drawSurf_t		*drawSurf;
-	int				oldSort;
-	float			originalTime;
-	FBO_t*			fbo = NULL;
-	qboolean		inQuery = qfalse;
+	//
+	// Light grid lighting
+	//
+	if ( backEnd.refdef.num_entities )
+	{
+		float ymax = zmax * tanf(DEG2RAD(0.5f * backEnd.viewParms.fovY));
+		float xmax = zmax * tanf(DEG2RAD(0.5f * backEnd.viewParms.fovX));
+		vec2_t lightScales;
+		vec3_t viewVector;
 
-	float			depth[2];
+		GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE);
 
+		// Only affect non-world entities
+		qglEnable( GL_STENCIL_TEST );
+		qglStencilFunc( GL_EQUAL, 1, 0xff );
+		qglStencilMask( 0 );
+
+		GLSL_BindProgram(&tr.deferredLightGridShader);
+
+		VectorScale(backEnd.refdef.viewaxis[0], zmax, viewVector);
+		GLSL_SetUniformVec3(&tr.deferredLightGridShader, UNIFORM_VIEWFORWARD, viewVector);
+		VectorScale(backEnd.refdef.viewaxis[1], xmax, viewVector);
+		GLSL_SetUniformVec3(&tr.deferredLightGridShader, UNIFORM_VIEWLEFT, viewVector);
+		VectorScale(backEnd.refdef.viewaxis[2], ymax, viewVector);
+		GLSL_SetUniformVec3(&tr.deferredLightGridShader, UNIFORM_VIEWUP, viewVector);
+
+		lightScales[0] = r_ambientScale->value;
+		lightScales[1] = r_directedScale->value;
+
+		GLSL_SetUniformVec3(&tr.deferredLightGridShader, UNIFORM_LIGHTGRIDORIGIN, tr.world->lightGridOrigin);
+		GLSL_SetUniformVec3(&tr.deferredLightGridShader, UNIFORM_LIGHTGRIDCELLINVERSESIZE, tr.world->lightGridInverseSize);
+		GLSL_SetUniformVec2(&tr.deferredLightGridShader, UNIFORM_LIGHTGRIDLIGHTSCALE, lightScales);
+
+		GLSL_SetUniformVec3(&tr.deferredLightGridShader, UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
+		GLSL_SetUniformVec4(&tr.deferredLightGridShader, UNIFORM_VIEWINFO, viewInfo);
+
+		GL_BindToTMU(tr.renderImage, 0);
+		GL_BindToTMU(tr.renderDepthImage, 1);
+		GL_BindToTMU(tr.gbufferNormals, 2);
+		GL_BindToTMU(tr.gbufferSpecularAndGloss, 3);
+		GL_BindToTMU(tr.world->directionImages, 4);
+		GL_BindToTMU(tr.world->directionalLightImages[0], 5);
+		GL_BindToTMU(tr.world->ambientLightImages[0], 6);
+
+		qglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+		qglDisable( GL_STENCIL_TEST );
+	}
+
+	//
+	// Point lighting
+	//
+	if ( numDlights )
+	{
+		vec4_t dlightTransforms[MAX_DLIGHTS];
+		vec3_t dlightColors[MAX_DLIGHTS];
+		matrix_t viewProjectionMatrix;
+
+		GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_GREATER);
+		GL_Cull(CT_BACK_SIDED);
+
+		for ( int i = 0; i < numDlights; i++ )
+		{
+			dlight_t *dlight = dlights + i;
+
+			dlightTransforms[i][0] = dlight->origin[0];
+			dlightTransforms[i][1] = dlight->origin[1];
+			dlightTransforms[i][2] = dlight->origin[2];
+			dlightTransforms[i][3] = dlight->radius;
+
+			dlightColors[i][0] = dlight->color[0];
+			dlightColors[i][1] = dlight->color[1];
+			dlightColors[i][2] = dlight->color[2];
+		}
+
+		Matrix16Multiply(
+			backEnd.viewParms.projectionMatrix,
+			backEnd.viewParms.world.modelViewMatrix,
+			viewProjectionMatrix);
+
+		tess.useInternalVBO = qfalse;
+		R_BindVBO(tr.lightSphereVolume.vbo);
+		R_BindIBO(tr.lightSphereVolume.ibo);
+		GLSL_VertexAttribsState(ATTR_POSITION, NULL);
+		GLSL_BindProgram(tr.lightSphereVolume.program);
+
+		GLSL_SetUniformVec3(tr.lightSphereVolume.program, UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
+		GLSL_SetUniformVec4(tr.lightSphereVolume.program, UNIFORM_VIEWINFO, viewInfo);
+		GLSL_SetUniformVec3N(tr.lightSphereVolume.program, UNIFORM_DLIGHTCOLORS, dlightColors, numDlights);
+		GLSL_SetUniformVec4N(tr.lightSphereVolume.program, UNIFORM_DLIGHTTRANSFORMS, dlightTransforms, numDlights);
+		GLSL_SetUniformMatrix4x4(tr.lightSphereVolume.program, UNIFORM_MODELVIEWPROJECTIONMATRIX, viewProjectionMatrix);
+
+		GL_BindToTMU(tr.renderImage, 0);
+		GL_BindToTMU(tr.renderDepthImage, 1);
+		GL_BindToTMU(tr.gbufferNormals, 2);
+		GL_BindToTMU(tr.gbufferSpecularAndGloss, 3);
+
+		qglDrawElementsInstanced(GL_TRIANGLES, tr.lightSphereVolume.numIndexes, GL_UNSIGNED_INT, 0, numDlights);
+	}
+
+	GL_Bind(tr.renderImage);
+	qglReadBuffer(GL_COLOR_ATTACHMENT0);
+	qglCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, glConfig.vidWidth, glConfig.vidHeight);
+}
+
+static void RB_RenderDrawSurfListSolidsOnly( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+	shader_t	*shader, *oldShader;
+	int			fogNum, oldFogNum;
+	int			entityNum, oldEntityNum;
+	int			postRender, oldPostRender;
+	int            cubemapIndex, oldCubemapIndex;
+	int			depthRange, oldDepthRange;
+	int			i;
+	drawSurf_t	*drawSurf;
+	int			oldSort;
+	float		originalTime;
+	FBO_t*		fbo = NULL;
+	qboolean	inQuery = qfalse;
+
+	float		depth[2];
+
+	qglStencilMask( 0xff );
+	qglClear( GL_STENCIL_BUFFER_BIT );
+
+	qglEnable( GL_STENCIL_TEST );
+	qglStencilFunc( GL_ALWAYS, 1, 0xff );
+	qglStencilMask( 0xff );
 
 	// save original time for entity shader offsets
 	originalTime = backEnd.refdef.floatTime;
@@ -590,7 +715,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	oldShader = NULL;
 	oldFogNum = -1;
 	oldDepthRange = 0;
-	oldDlighted = 0;
 	oldPostRender = 0;
 	oldCubemapIndex = -1;
 	oldSort = -1;
@@ -598,23 +722,21 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	depth[0] = 0.f;
 	depth[1] = 1.f;
 
-	backEnd.pc.c_surfaces += numDrawSurfs;
-
 	for (i = 0, drawSurf = drawSurfs ; i < numDrawSurfs ; i++, drawSurf++) {
 		R_DecomposeSort( drawSurf->sort, &shader, &cubemapIndex, &fogNum, &postRender );
 		entityNum = drawSurf->entityNum;
-		dlighted = drawSurf->lit;
+
+		if ( shader->sort != SS_OPAQUE )
+			continue;
+
+		backEnd.pc.c_surfaces++;
 
 		if ( shader == oldShader &&
 				fogNum == oldFogNum &&
 				postRender == oldPostRender &&
 				cubemapIndex == oldCubemapIndex &&
-				entityNum == oldEntityNum &&
-				dlighted == oldDlighted )
+				entityNum == oldEntityNum )
 		{
-			if (backEnd.depthFill && shader && shader->sort != SS_OPAQUE)
-				continue;
-
 			// fast path, same as previous sort
 			rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
 			continue;
@@ -629,7 +751,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		if ( shader != NULL &&
 				( shader != oldShader ||
 					fogNum != oldFogNum ||
-					dlighted != oldDlighted ||
 					postRender != oldPostRender ||
 					cubemapIndex != oldCubemapIndex ||
 					(entityNum != oldEntityNum && !shader->entityMergable)))
@@ -642,13 +763,14 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			backEnd.pc.c_surfBatches++;
 			oldShader = shader;
 			oldFogNum = fogNum;
-			oldDlighted = dlighted;
 			oldPostRender = postRender;
 			oldCubemapIndex = cubemapIndex;
 		}
 
-		if (backEnd.depthFill && shader && shader->sort != SS_OPAQUE)
-			continue;
+		if ( !tess.shader->isLightmapped )
+			qglStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		else
+			qglStencilOp(GL_KEEP, GL_KEEP, GL_ZERO);
 
 		//
 		// change the modelview matrix if needed
@@ -667,10 +789,207 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				// set up the transformation matrix
 				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.ori );
 
-				// set up the dynamic lighting if needed
-				if ( backEnd.currentEntity->needDlights ) {
-					R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
+				if ( backEnd.currentEntity->e.renderfx & RF_NODEPTH ) {
+					// No depth at all, very rare but some things for seeing through walls
+					depthRange = 2;
 				}
+				else if ( backEnd.currentEntity->e.renderfx & RF_DEPTHHACK ) {
+					// hack the depth range to prevent view model from poking into walls
+					depthRange = 1;
+				}
+
+				
+			} else {
+				backEnd.currentEntity = &tr.worldEntity;
+				backEnd.refdef.floatTime = originalTime;
+				backEnd.ori = backEnd.viewParms.world;
+				// we have to reset the shaderTime as well otherwise image animations on
+				// the world (like water) continue with the wrong frame
+				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+
+			}
+
+			GL_SetModelviewMatrix( backEnd.ori.modelViewMatrix );
+
+			//
+			// change depthrange. Also change projection matrix so first person weapon does not look like coming
+			// out of the screen.
+			//
+			if (oldDepthRange != depthRange)
+			{
+				switch ( depthRange ) {
+					default:
+					case 0:
+						if(backEnd.viewParms.stereoFrame != STEREO_CENTER)
+						{
+							GL_SetProjectionMatrix( backEnd.viewParms.projectionMatrix );
+						}
+
+						if( !sunflare )
+							qglDepthRange( 0.0f, 1.0f );
+
+						break;
+
+					case 1:
+						if(backEnd.viewParms.stereoFrame != STEREO_CENTER)
+						{
+							viewParms_t temp = backEnd.viewParms;
+
+							R_SetupProjection(&temp, r_znear->value, 0, qfalse);
+
+							GL_SetProjectionMatrix( temp.projectionMatrix );
+						}
+
+ 						if ( !oldDepthRange )
+ 							qglDepthRange( 0.0f, 0.3f );
+
+						break;
+
+					case 2:
+						if(backEnd.viewParms.stereoFrame != STEREO_CENTER)
+						{
+							viewParms_t temp = backEnd.viewParms;
+
+							R_SetupProjection(&temp, r_znear->value, 0, qfalse);
+
+							GL_SetProjectionMatrix( temp.projectionMatrix );
+						}
+
+ 						if ( !oldDepthRange )
+ 							qglDepthRange( 0.0f, 0.0f );
+
+						break;
+				}
+
+				oldDepthRange = depthRange;
+			}
+
+			oldEntityNum = entityNum;
+		}
+
+		// add the triangles for this surface
+		rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
+	}
+
+	backEnd.refdef.floatTime = originalTime;
+
+	// draw the contents of the last shader batch
+	if (oldShader != NULL) {
+		RB_EndSurface();
+	}
+
+	if (inQuery) {
+		qglEndQuery(GL_SAMPLES_PASSED);
+	}
+
+	FBO_Bind(fbo);
+
+	// go back to the world modelview matrix
+
+	GL_SetModelviewMatrix( backEnd.viewParms.world.modelViewMatrix );
+
+	// Restore depth range for subsequent rendering
+	qglDepthRange( 0.0f, 1.0f );
+	qglDisable( GL_STENCIL_TEST );
+}
+
+static void RB_RenderDrawSurfListTransparentsOnly( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+	shader_t	*shader, *oldShader;
+	int			fogNum, oldFogNum;
+	int			entityNum, oldEntityNum;
+	int			postRender, oldPostRender;
+	int            cubemapIndex, oldCubemapIndex;
+	int			depthRange, oldDepthRange;
+	int			i;
+	drawSurf_t	*drawSurf;
+	int			oldSort;
+	float		originalTime;
+	FBO_t*		fbo = NULL;
+	qboolean	inQuery = qfalse;
+
+	float		depth[2];
+
+
+	// save original time for entity shader offsets
+	originalTime = backEnd.refdef.floatTime;
+
+	fbo = glState.currentFBO;
+	FBO_Bind(tr.renderFbo);
+
+	// draw everything
+	oldEntityNum = -1;
+	backEnd.currentEntity = &tr.worldEntity;
+	oldShader = NULL;
+	oldFogNum = -1;
+	oldDepthRange = 0;
+	oldPostRender = 0;
+	oldCubemapIndex = -1;
+	oldSort = -1;
+
+	depth[0] = 0.f;
+	depth[1] = 1.f;
+
+	for (i = 0, drawSurf = drawSurfs ; i < numDrawSurfs ; i++, drawSurf++) {
+		R_DecomposeSort( drawSurf->sort, &shader, &cubemapIndex, &fogNum, &postRender );
+		entityNum = drawSurf->entityNum;
+
+		if ( shader->sort == SS_OPAQUE )
+			continue;
+
+		backEnd.pc.c_surfaces++;
+
+		if ( shader == oldShader &&
+				fogNum == oldFogNum &&
+				postRender == oldPostRender &&
+				cubemapIndex == oldCubemapIndex &&
+				entityNum == oldEntityNum )
+		{
+			// fast path, same as previous sort
+			rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
+			continue;
+		}
+
+		oldSort = drawSurf->sort;
+
+		//
+		// change the tess parameters if needed
+		// a "entityMergable" shader is a shader that can have surfaces from seperate
+		// entities merged into a single batch, like smoke and blood puff sprites
+		if ( shader != NULL &&
+				( shader != oldShader ||
+					fogNum != oldFogNum ||
+					postRender != oldPostRender ||
+					cubemapIndex != oldCubemapIndex ||
+					(entityNum != oldEntityNum && !shader->entityMergable)))
+		{
+			if (oldShader != NULL) {
+				RB_EndSurface();
+			}
+
+			RB_BeginSurface( shader, fogNum, cubemapIndex );
+			backEnd.pc.c_surfBatches++;
+			oldShader = shader;
+			oldFogNum = fogNum;
+			oldPostRender = postRender;
+			oldCubemapIndex = cubemapIndex;
+		}
+
+		//
+		// change the modelview matrix if needed
+		//
+		if ( entityNum != oldEntityNum ) {
+			qboolean sunflare = qfalse;
+			depthRange = 0;
+
+			if ( entityNum != REFENTITYNUM_WORLD ) {
+				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
+				backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
+				// we have to reset the shaderTime as well otherwise image animations start
+				// from the wrong frame
+				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+
+				// set up the transformation matrix
+				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.ori );
 
 				if ( backEnd.currentEntity->e.renderfx & RF_NODEPTH ) {
 					// No depth at all, very rare but some things for seeing through walls
@@ -687,7 +1006,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				// we have to reset the shaderTime as well otherwise image animations on
 				// the world (like water) continue with the wrong frame
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-				R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
 			}
 
 			GL_SetModelviewMatrix( backEnd.ori.modelViewMatrix );
@@ -1256,7 +1574,7 @@ static const void	*RB_DrawSurfs( const void *data ) {
 
 		backEnd.depthFill = qtrue;
 		qglColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+		RB_RenderDrawSurfListSolidsOnly( cmd->drawSurfs, cmd->numDrawSurfs );
 		qglColorMask(!backEnd.colorMask[0], !backEnd.colorMask[1], !backEnd.colorMask[2], !backEnd.colorMask[3]);
 		backEnd.depthFill = qfalse;
 
@@ -1455,7 +1773,9 @@ static const void	*RB_DrawSurfs( const void *data ) {
 
 	if (!(backEnd.viewParms.flags & VPF_DEPTHSHADOW))
 	{
-		RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
+		RB_RenderDrawSurfListSolidsOnly( cmd->drawSurfs, cmd->numDrawSurfs );
+		RB_LightSolidSurfaces( backEnd.refdef.dlights, backEnd.refdef.num_dlights );
+		RB_RenderDrawSurfListTransparentsOnly( cmd->drawSurfs, cmd->numDrawSurfs );
 
 		if (r_drawSun->integer)
 		{
@@ -1793,10 +2113,12 @@ const void *RB_PostProcess(const void *data)
 		FBO_FastBlit(tr.renderFbo, NULL, tr.msaaResolveFbo, NULL, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 		srcFbo = tr.msaaResolveFbo;
 
+#if 0
 		if ( r_dynamicGlow->integer )
 		{
 			FBO_FastBlitIndexed(tr.renderFbo, tr.msaaResolveFbo, 1, 1, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 		}
+#endif
 	}
 
 	dstBox[0] = backEnd.viewParms.viewportX;
@@ -1818,6 +2140,7 @@ const void *RB_PostProcess(const void *data)
 		FBO_Blit(tr.screenSsaoFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO);
 	}
 
+#if 0
 	if (r_dynamicGlow->integer)
 	{
 		RB_BloomDownscale(tr.glowImage, tr.glowFboScaled[0]);
@@ -1828,6 +2151,7 @@ const void *RB_PostProcess(const void *data)
 		for ( int i = numPasses - 2; i >= 0; i-- )
 			RB_BloomUpscale(tr.glowFboScaled[i + 1], tr.glowFboScaled[i]);
 	}
+#endif
 	srcBox[0] = backEnd.viewParms.viewportX;
 	srcBox[1] = backEnd.viewParms.viewportY;
 	srcBox[2] = backEnd.viewParms.viewportWidth;
@@ -1905,6 +2229,7 @@ const void *RB_PostProcess(const void *data)
 	}
 #endif
 
+#if 0
 	if (r_dynamicGlow->integer != 0)
 	{
 		// Composite the glow/bloom texture
@@ -1929,6 +2254,7 @@ const void *RB_PostProcess(const void *data)
 
 		FBO_BlitFromTexture (tr.glowFboScaled[0]->colorImage[0], NULL, NULL, NULL, NULL, NULL, color, blendFunc);
 	}
+#endif
 
 	backEnd.framePostProcessed = qtrue;
 

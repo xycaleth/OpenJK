@@ -52,65 +52,6 @@ void R_TransformDlights( int count, dlight_t *dl, orientationr_t *ori) {
 }
 
 /*
-=============
-R_DlightBmodel
-
-Determine which dynamic lights may effect this bmodel
-=============
-*/
-void R_DlightBmodel( bmodel_t *bmodel ) {
-	int			i, j;
-	dlight_t	*dl;
-	int			mask;
-	msurface_t	*surf;
-
-	// transform all the lights
-	R_TransformDlights( tr.refdef.num_dlights, tr.refdef.dlights, &tr.ori );
-
-	mask = 0;
-	for ( i=0 ; i<tr.refdef.num_dlights ; i++ ) {
-		dl = &tr.refdef.dlights[i];
-
-		// see if the point is close enough to the bounds to matter
-		for ( j = 0 ; j < 3 ; j++ ) {
-			if ( dl->transformed[j] - bmodel->bounds[1][j] > dl->radius ) {
-				break;
-			}
-			if ( bmodel->bounds[0][j] - dl->transformed[j] > dl->radius ) {
-				break;
-			}
-		}
-		if ( j < 3 ) {
-			continue;
-		}
-
-		// we need to check this light
-		mask |= 1 << i;
-	}
-
-	tr.currentEntity->needDlights = (qboolean)(mask != 0);
-
-	// set the dlight bits in all the surfaces
-	for ( i = 0 ; i < bmodel->numSurfaces ; i++ ) {
-		surf = tr.world->surfaces + bmodel->firstSurface + i;
-
-		switch(*surf->data)
-		{
-			case SF_FACE:
-			case SF_GRID:
-			case SF_TRIANGLES:
-			case SF_VBO_MESH:
-				((srfBspSurface_t *)surf->data)->dlightBits = mask;
-				break;
-
-			default:
-				break;
-		}
-	}
-}
-
-
-/*
 =============================================================================
 
 LIGHT SAMPLING

@@ -50,7 +50,7 @@ uniform vec4 u_CubeMapInfo;
 #endif
 #endif
 
-
+in vec3 var_Position;
 in vec4 var_TexCoords;
 in vec4 var_Color;
 
@@ -63,6 +63,8 @@ in vec4 var_Bitangent;
 in vec3 var_Normal;
 in vec3 var_ViewDir;
   #endif
+#else
+in vec3 var_Normal;
 #endif
 
 #if defined(USE_LIGHT) && !defined(USE_FAST_LIGHT)
@@ -74,7 +76,9 @@ in vec4 var_PrimaryLightDir;
 #endif
 
 out vec4 out_Color;
-out vec4 out_Glow;
+out vec4 out_SpecularAndGloss;
+out vec4 out_Normal;
+out vec4 out_Light;
 
 #define EPSILON 0.00000001
 
@@ -228,6 +232,12 @@ float CalcLightAttenuation(float point, float normDist)
 	return attenuation;
 }
 
+vec2 EncodeNormal( in vec3 N )
+{
+	float f = sqrt(8.0 * N.z + 8.0);
+	return N.xy / f + 0.5;
+}
+
 // from http://www.thetenthplanet.de/archives/1180
 mat3 cotangent_frame( vec3 N, vec3 p, vec2 uv )
 {
@@ -253,6 +263,8 @@ void main()
 	vec3 viewDir, lightColor, ambientColor;
 	vec3 L, N, E, H;
 	float NL, NH, NE, EH, attenuation;
+	vec4 lightmapColor = vec4(0.0);
+	vec4 specular = vec4(vec3(0.04), 0.1);
 
 #if defined(USE_LIGHT) && !defined(USE_FAST_LIGHT)
   #if defined(USE_VERT_TANGENT_SPACE)
@@ -273,7 +285,7 @@ void main()
 #endif
 
 #if defined(USE_LIGHTMAP)
-	vec4 lightmapColor = texture(u_LightMap, var_TexCoords.zw);
+	lightmapColor = texture(u_LightMap, var_TexCoords.zw);
   #if defined(RGBM_LIGHTMAP)
 	lightmapColor.rgb *= lightmapColor.a;
   #endif
@@ -289,7 +301,8 @@ void main()
 	texCoords += offsetDir.xy * RayIntersectDisplaceMap(texCoords, offsetDir.xy, u_NormalMap);
 #endif
 
-	vec4 diffuse = texture(u_DiffuseMap, texCoords);
+	vec4 albedo = texture(u_DiffuseMap, texCoords);
+	vec4 diffuse = albedo;
 
 #if defined(USE_LIGHT) && !defined(USE_FAST_LIGHT)
   #if defined(USE_LIGHTMAP)
@@ -360,9 +373,9 @@ void main()
 	NE = clamp(dot(N, E), 0.0, 1.0);
 
   #if defined(USE_SPECULARMAP)
-	vec4 specular = texture(u_SpecularMap, texCoords);
+	specular = texture(u_SpecularMap, texCoords);
   #else
-	vec4 specular = vec4(1.0);
+	specular = vec4(1.0);
   #endif
 
 	specular *= u_SpecularScale;
@@ -383,93 +396,15 @@ void main()
 
 	reflectance = diffuse.rgb;
 
-  #if defined(r_deluxeSpecular) || defined(USE_LIGHT_VECTOR)
-	float adjGloss = gloss;
-	float adjShininess = shininess;
-
-    #if !defined(USE_LIGHT_VECTOR)
-	adjGloss *= r_deluxeSpecular;
-	adjShininess = exp2(adjGloss * 13.0);
-    #endif
-
-	H = normalize(L + E);
-
-	EH = clamp(dot(E, H), 0.0, 1.0);
-	NH = clamp(dot(N, H), 0.0, 1.0);
-
-    #if !defined(USE_LIGHT_VECTOR)
-	reflectance += CalcSpecular(specular.rgb, NH, NL, NE, EH, adjGloss, adjShininess) * r_deluxeSpecular;
-    #else
-	reflectance += CalcSpecular(specular.rgb, NH, NL, NE, EH, adjGloss, adjShininess);
-    #endif
-  #endif
 
 	out_Color.rgb  = lightColor   * reflectance * (attenuation * NL);
 
-#if 0
-	vec3 aSpecular = EnvironmentBRDF(gloss, NE, specular.rgb);
-
-	// do ambient as two hemisphere lights, one straight up one straight down
-	float hemiDiffuseUp    = N.z * 0.5 + 0.5;
-	float hemiDiffuseDown  = 1.0 - hemiDiffuseUp;
-	float hemiSpecularUp   = mix(hemiDiffuseUp, float(N.z >= 0.0), gloss);
-	float hemiSpecularDown = 1.0 - hemiSpecularUp;
-
-	out_Color.rgb += ambientColor * 0.75 * (diffuse.rgb * hemiDiffuseUp   + aSpecular * hemiSpecularUp);
-	out_Color.rgb += ambientColor * 0.25 * (diffuse.rgb * hemiDiffuseDown + aSpecular * hemiSpecularDown);
-#else
 	out_Color.rgb += ambientColor * (diffuse.rgb + specular.rgb);
-#endif
 
-  #if defined(USE_CUBEMAP)
-	reflectance = EnvironmentBRDF(gloss, NE, specular.rgb);
-
-	vec3 R = reflect(E, N);
-
-	// parallax corrected cubemap (cheaper trick)
-	// from http://seblagarde.wordpress.com/2012/09/29/image-based-lighting-approaches-and-parallax-corrected-cubemap/
-	vec3 parallax = u_CubeMapInfo.xyz + u_CubeMapInfo.w * viewDir;
-
-	vec3 cubeLightColor = textureLod(u_CubeMap, R + parallax, 7.0 - gloss * 7.0).rgb * u_EnableTextures.w;
-
-	out_Color.rgb += cubeLightColor * reflectance;
-  #endif
-
-  #if defined(USE_PRIMARY_LIGHT)
-	vec3 L2, H2;
-	float NL2, EH2, NH2;
-
-	L2 = var_PrimaryLightDir.xyz;
-
-	// enable when point lights are supported as primary lights
-	//sqrLightDist = dot(L2, L2);
-	//L2 /= sqrt(sqrLightDist);
-
-	NL2 = clamp(dot(N, L2), 0.0, 1.0);
-
-	H2 = normalize(L2 + E);
-	EH2 = clamp(dot(E, H2), 0.0, 1.0);
-	NH2 = clamp(dot(N, H2), 0.0, 1.0);
-
-	reflectance  = diffuse.rgb;
-	reflectance += CalcSpecular(specular.rgb, NH2, NL2, NE, EH2, gloss, shininess);
-
-	lightColor = u_PrimaryLightColor * var_Color.rgb;
-
-	// enable when point lights are supported as primary lights
-	//lightColor *= CalcLightAttenuation(float(u_PrimaryLightDir.w > 0.0), u_PrimaryLightDir.w / sqrLightDist);
-
-    #if defined(USE_SHADOWMAP)
-	lightColor *= shadowValue;
-    #endif
-
-	// enable when point lights are supported as primary lights
-	//lightColor *= CalcLightAttenuation(float(u_PrimaryLightDir.w > 0.0), u_PrimaryLightDir.w / sqrLightDist);
-
-	out_Color.rgb += lightColor * reflectance * NL2;
-  #endif
 
 #else
+	N = normalize(var_Normal);
+
 	lightColor = var_Color.rgb;
   #if defined(USE_LIGHTMAP) 
 	lightColor *= lightmapColor.rgb;
@@ -478,11 +413,16 @@ void main()
     out_Color.rgb = diffuse.rgb * lightColor;
 #endif
 	
-	out_Color.a = diffuse.a * var_Color.a;
+	out_Color = albedo * var_Color;
+	out_Normal = vec4(EncodeNormal(N), 0.0, 0.0);
+	out_Light.rgb = (out_Color * lightmapColor).rgb;
+	out_SpecularAndGloss = specular;
 
+#if 0
 #if defined(USE_GLOW_BUFFER)
 	out_Glow = out_Color;
 #else
 	out_Glow = vec4(0.0);
+#endif
 #endif
 }

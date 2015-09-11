@@ -2142,7 +2142,6 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump ) {
 	s_worldData.surfaces = out;
 	s_worldData.numsurfaces = count;
 	s_worldData.surfacesViewCount = (int *)ri->Hunk_Alloc ( count * sizeof(*s_worldData.surfacesViewCount), h_low );
-	s_worldData.surfacesDlightBits = (int *)ri->Hunk_Alloc ( count * sizeof(*s_worldData.surfacesDlightBits), h_low );
 	s_worldData.surfacesPshadowBits = (int *)ri->Hunk_Alloc ( count * sizeof(*s_worldData.surfacesPshadowBits), h_low );
 
 	// load hdr vertex colors
@@ -3179,7 +3178,6 @@ void R_MergeLeafSurfaces(void)
 	// Allocate merged surfaces
 	s_worldData.mergedSurfaces = (msurface_t *)ri->Hunk_Alloc(sizeof(*s_worldData.mergedSurfaces) * numMergedSurfaces, h_low);
 	s_worldData.mergedSurfacesViewCount = (int *)ri->Hunk_Alloc(sizeof(*s_worldData.mergedSurfacesViewCount) * numMergedSurfaces, h_low);
-	s_worldData.mergedSurfacesDlightBits = (int *)ri->Hunk_Alloc(sizeof(*s_worldData.mergedSurfacesDlightBits) * numMergedSurfaces, h_low);
 	s_worldData.mergedSurfacesPshadowBits = (int *)ri->Hunk_Alloc(sizeof(*s_worldData.mergedSurfacesPshadowBits) * numMergedSurfaces, h_low);
 	s_worldData.numMergedSurfaces = numMergedSurfaces;
 	
@@ -3470,6 +3468,77 @@ void RE_LoadWorldMap( const char *name ) {
 	R_LoadVisibility( &header->lumps[LUMP_VISIBILITY] );
 	R_LoadLightGrid( &header->lumps[LUMP_LIGHTGRID] );
 	R_LoadLightGridArray( &header->lumps[LUMP_LIGHTARRAY] );
+
+	// Upload light grid as 3D textures
+	byte *ambientBase = (byte *)ri->Hunk_AllocateTempMemory(s_worldData.numGridArrayElements * sizeof(byte) * 4);
+	byte *directionalBase = (byte *)ri->Hunk_AllocateTempMemory(s_worldData.numGridArrayElements * sizeof(byte) * 4);
+	byte *directionBase = (byte *)ri->Hunk_AllocateTempMemory(s_worldData.numGridArrayElements * sizeof(byte) * 4);
+
+	byte *ambient = ambientBase;
+	byte *directional = directionalBase;
+	byte *direction = directionBase;
+	for ( i = 0 ; i < s_worldData.numGridArrayElements; i++ )
+	{
+		float lat, lng;
+		float clat, slong, slat, clong;
+		mgrid_t *data = s_worldData.lightGridData + s_worldData.lightGridArray[i];
+
+		ambient[0] = data->ambientLight[0][0];
+		ambient[1] = data->ambientLight[0][1];
+		ambient[2] = data->ambientLight[0][2];
+		ambient[3] = 0;
+
+		directional[0] = data->directLight[0][0];
+		directional[1] = data->directLight[0][1];
+		directional[2] = data->directLight[0][2];
+		directional[3] = 0;
+
+		lat = (data->latLong[1] / 255.0f) * 2.0f * M_PI;
+		lng = (data->latLong[0] / 255.0f) * 2.0f * M_PI;
+
+		// decode X as cos( lat ) * sin( long )
+		// decode Y as sin( lat ) * sin( long )
+		// decode Z as cos( long )
+
+		slat = sinf(lat);
+		clat = cosf(lat);
+		slong = sinf(lng);
+		clong = cosf(lng);
+
+		direction[0] = (byte)floorf(clat * slong);
+		direction[1] = (byte)floorf(slat * slong);
+		direction[2] = (byte)floorf(clong);
+		direction[3] = 0;
+
+		ambient += 4;
+		directional += 4;
+		direction += 4;
+	}
+
+	s_worldData.ambientLightImages[0] = R_CreateImage3D(
+		"*bsp_ambientLightGrid", ambientBase,
+		s_worldData.lightGridBounds[0],
+		s_worldData.lightGridBounds[1],
+		s_worldData.lightGridBounds[2],
+		GL_RGB8 );
+
+	s_worldData.directionalLightImages[0] = R_CreateImage3D(
+		"*bsp_directionalLightGrid", directionalBase,
+		s_worldData.lightGridBounds[0],
+		s_worldData.lightGridBounds[1],
+		s_worldData.lightGridBounds[2],
+		GL_RGB8 );
+
+	s_worldData.directionImages = R_CreateImage3D(
+		"*bsp_directionsGrid", directionBase,
+		s_worldData.lightGridBounds[0],
+		s_worldData.lightGridBounds[1],
+		s_worldData.lightGridBounds[2],
+		GL_RGB8 );
+
+	ri->Hunk_FreeTempMemory(ambientBase);
+	ri->Hunk_FreeTempMemory(directionalBase);
+	ri->Hunk_FreeTempMemory(directionBase);
 	
 	// determine vertex light directions
 	R_CalcVertexLightDirs();

@@ -64,6 +64,7 @@ uniform mat4x3 u_BoneMatrices[20];
 
 out vec2 var_DiffuseTex;
 out vec4 var_Color;
+out vec3 var_Normal;
 
 #if defined(USE_DEFORM_VERTEXES)
 float GetNoiseValue( float x, float y, float z, float t )
@@ -355,4 +356,6 @@ void main()
 #if defined(USE_FOG)
 	var_Color *= vec4(1.0) - u_FogColorMask * sqrt(clamp(CalcFog(position), 0.0, 1.0));
 #endif
+
+	var_Normal = normalize(normal);
 }

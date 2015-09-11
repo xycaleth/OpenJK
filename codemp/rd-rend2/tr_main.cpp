@@ -1772,8 +1772,7 @@ uint32_t R_CreateSortKey(int sortedShaderIndex, int cubemapIndex, int fogIndex, 
 R_AddDrawSurf
 =================
 */
-void R_AddDrawSurf( surfaceType_t *surface, int entityNum, shader_t *shader,  int fogIndex,
-					int dlightMap, int postRender, int cubemap ) {
+void R_AddDrawSurf( surfaceType_t *surface, int entityNum, shader_t *shader,  int fogIndex, int postRender, int cubemap ) {
 	int index;
 	drawSurf_t *surf;
 
@@ -1794,7 +1793,6 @@ void R_AddDrawSurf( surfaceType_t *surface, int entityNum, shader_t *shader,  in
 
 	surf->sort = R_CreateSortKey(shader->sortedIndex, cubemap, fogIndex, postRender);
 	surf->entityNum = entityNum;
-	surf->lit = (qboolean)dlightMap;
 	surf->surface = surface;
 
 	tr.refdef.numDrawSurfs++;
@@ -1897,7 +1895,7 @@ static void R_AddEntitySurface (int entityNum)
 			return;
 		}
 		shader = R_GetShaderByHandle( ent->e.customShader );
-		R_AddDrawSurf( &entitySurface, entityNum, shader, R_SpriteFogNum( ent ), 0, R_IsPostRenderEntity (entityNum, ent), 0 /* cubeMap */ );
+		R_AddDrawSurf( &entitySurface, entityNum, shader, R_SpriteFogNum( ent ), R_IsPostRenderEntity (entityNum, ent), 0 /* cubeMap */ );
 		break;
 
 	case RT_MODEL:
@@ -1906,7 +1904,7 @@ static void R_AddEntitySurface (int entityNum)
 
 		tr.currentModel = R_GetModelByHandle( ent->e.hModel );
 		if (!tr.currentModel) {
-			R_AddDrawSurf( &entitySurface, entityNum, tr.defaultShader, 0, 0, R_IsPostRenderEntity (entityNum, ent), 0/* cubeMap */ );
+			R_AddDrawSurf( &entitySurface, entityNum, tr.defaultShader, 0, R_IsPostRenderEntity (entityNum, ent), 0/* cubeMap */ );
 		} else {
 			switch ( tr.currentModel->type ) {
 			case MOD_MESH:
@@ -1936,7 +1934,7 @@ static void R_AddEntitySurface (int entityNum)
 					break;
 				}
 
-				R_AddDrawSurf( &entitySurface, entityNum, tr.defaultShader, 0, 0, R_IsPostRenderEntity (entityNum, ent), 0 /* cubeMap */ );
+				R_AddDrawSurf( &entitySurface, entityNum, tr.defaultShader, 0, R_IsPostRenderEntity (entityNum, ent), 0 /* cubeMap */ );
 				break;
 			default:
 				ri->Error( ERR_DROP, "R_AddEntitySurfaces: Bad modeltype" );
@@ -1946,7 +1944,7 @@ static void R_AddEntitySurface (int entityNum)
 		break;
 	case RT_ENT_CHAIN:
 			shader = R_GetShaderByHandle( ent->e.customShader );
-			R_AddDrawSurf( &entitySurface, entityNum, shader, R_SpriteFogNum( ent ), false, R_IsPostRenderEntity (entityNum, ent), 0 /* cubeMap */ );
+			R_AddDrawSurf( &entitySurface, entityNum, shader, R_SpriteFogNum( ent ), R_IsPostRenderEntity (entityNum, ent), 0 /* cubeMap */ );
 			break;
 	default:
 		ri->Error( ERR_DROP, "R_AddEntitySurfaces: Bad reType" );
@@ -2101,8 +2099,10 @@ void R_RenderDlightCubemaps(const refdef_t *fd)
 		int j;
 
 		// use previous frame to determine visible dlights
+#if 0
 		if ((1 << i) & tr.refdef.dlightMask)
 			continue;
+#endif
 
 		Com_Memset( &shadowParms, 0, sizeof( shadowParms ) );
 

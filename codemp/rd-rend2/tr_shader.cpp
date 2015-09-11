@@ -3550,6 +3550,23 @@ static shader_t *FinishShader( void ) {
 	// determine which vertex attributes this shader needs
 	ComputeVertexAttribs();
 
+	for ( int stage = 0; stage < MAX_SHADER_STAGES; stage++ )
+	{
+		shaderStage_t *pStage = &stages[stage];
+
+		if ( !pStage->active ) 
+			break;
+
+		if (pStage->glslShaderGroup == tr.lightallShader)
+		{
+			if ( (pStage->glslShaderIndex & LIGHTDEF_LIGHTTYPE_MASK) == LIGHTDEF_USE_LIGHTMAP )
+			{
+				shader.isLightmapped = qtrue;
+				break;
+			}
+		}
+	}
+
 	return GeneratePermanentShader();
 }
 

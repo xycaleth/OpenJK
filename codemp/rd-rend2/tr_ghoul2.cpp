@@ -80,7 +80,7 @@ void G2Time_ReportTimers(void)
 
 //rww - RAGDOLL_END
 
-static const int MAX_RENDERABLE_SURFACES = 2048;
+static const int MAX_RENDERABLE_SURFACES = 2048*8;
 static CRenderableSurface renderSurfHeap[MAX_RENDERABLE_SURFACES];
 static int currentRenderSurfIndex = 0;
 
@@ -2452,7 +2452,7 @@ void RenderSurfaces(CRenderSurface &RS, int entityNum) //also ended up just ripp
 			newSurf->surfaceData = surface;
 			newSurf->boneCache = RS.boneCache;
 
-			R_AddDrawSurf ((surfaceType_t *)newSurf, entityNum, (shader_t *)shader, RS.fogNum, qfalse, R_IsPostRenderEntity (entityNum, tr.currentEntity), cubemapIndex);
+			R_AddDrawSurf ((surfaceType_t *)newSurf, entityNum, (shader_t *)shader, RS.fogNum, R_IsPostRenderEntity (entityNum, tr.currentEntity), cubemapIndex);
 
 #ifdef _G2_GORE
 			if (RS.gore_set && drawGore)
@@ -2532,7 +2532,7 @@ void RenderSurfaces(CRenderSurface &RS, int entityNum) //also ended up just ripp
 
 						last->goreChain=newSurf2;
 						last=newSurf2;
-						R_AddDrawSurf ((surfaceType_t *)newSurf2, entityNum, gshader, RS.fogNum, qfalse, R_IsPostRenderEntity (entityNum, tr.currentEntity), cubemapIndex);
+						R_AddDrawSurf ((surfaceType_t *)newSurf2, entityNum, gshader, RS.fogNum, R_IsPostRenderEntity (entityNum, tr.currentEntity), cubemapIndex);
 					}
 				}
 			}

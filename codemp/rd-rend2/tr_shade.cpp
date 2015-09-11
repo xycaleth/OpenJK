@@ -192,7 +192,6 @@ void RB_BeginSurface( shader_t *shader, int fogNum, int cubemapIndex ) {
 	tess.shader = state;
 	tess.fogNum = fogNum;
 	tess.cubemapIndex = cubemapIndex;
-	tess.dlightBits = 0;		// will be OR'd in by surface functions
 	tess.pshadowBits = 0;       // will be OR'd in by surface functions
 	tess.xstages = state->stages;
 	tess.numPasses = state->numUnfoggedPasses;
@@ -397,7 +396,7 @@ static void ComputeDeformValues(deform_t *type, genFunc_t *waveFunc, float defor
 	}
 }
 
-
+#if 0
 static void ProjectDlightTexture( void ) {
 	int		l;
 	vec3_t	origin;
@@ -485,6 +484,7 @@ static void ProjectDlightTexture( void ) {
 		RB_BinTriangleCounts();
 	}
 }
+#endif
 
 
 static void ComputeShaderColors( shaderStage_t *pStage, vec4_t baseColor, vec4_t vertColor, int blend, colorGen_t *forceRGBGen, alphaGen_t *forceAlphaGen )
@@ -824,6 +824,7 @@ static void CaptureDrawData(shaderCommands_t *input, shaderStage_t *stage, int g
 	}
 }
 
+#if 0
 static void ForwardDlight( void ) {
 	int		l;
 	//vec3_t	origin;
@@ -1007,6 +1008,7 @@ static void ForwardDlight( void ) {
 		RB_BinTriangleCounts();
 	}
 }
+#endif
 
 
 static void ProjectPshadowVBOGLSL( void ) {
@@ -1863,6 +1865,7 @@ void RB_StageIteratorGeneric( void )
 	}
 
 
+#if 0
 	// 
 	// now do any dynamic lighting needed
 	//
@@ -1878,6 +1881,7 @@ void RB_StageIteratorGeneric( void )
 			ProjectDlightTexture();
 		}
 	}
+#endif
 
 	//
 	// now do fog

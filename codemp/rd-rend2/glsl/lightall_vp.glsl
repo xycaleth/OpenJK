@@ -73,9 +73,9 @@ uniform vec4 u_PrimaryLightOrigin;
 uniform float u_PrimaryLightRadius;
 #endif
 
+out vec3 var_Position;
 out vec4 var_TexCoords;
 out vec4 var_Color;
-out vec3 var_N;
 
 #if defined(USE_LIGHT) && !defined(USE_FAST_LIGHT)
   #if defined(USE_VERT_TANGENT_SPACE)
@@ -86,6 +86,8 @@ out vec4 var_Bitangent;
 out vec3 var_Normal;
 out vec3 var_ViewDir;
   #endif
+#else
+out vec3 var_Normal;
 #endif
 
 #if defined(USE_LIGHT) && !defined(USE_FAST_LIGHT)
@@ -288,5 +290,8 @@ void main()
 	var_Normal = normal;
 	var_ViewDir = viewDir;
   #endif
+#else
+	var_Normal = normal;
 #endif
+	var_Position = position;
 }

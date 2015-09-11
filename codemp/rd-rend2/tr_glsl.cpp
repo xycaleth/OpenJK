@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 void GLSL_BindNullProgram(void);
 
+// FIXME: This is horrible. How can we make this better?
 extern const char *fallbackShader_bokeh_vp;
 extern const char *fallbackShader_bokeh_fp;
 extern const char *fallbackShader_calclevels4x_vp;
@@ -58,6 +59,8 @@ extern const char *fallbackShader_dglow_downsample_vp;
 extern const char *fallbackShader_dglow_downsample_fp;
 extern const char *fallbackShader_dglow_upsample_vp;
 extern const char *fallbackShader_dglow_upsample_fp;
+extern const char *fallbackShader_deferred_pointlight_vp;
+extern const char *fallbackShader_deferred_pointlight_fp;
 
 typedef struct uniformInfo_s
 {
@@ -82,6 +85,17 @@ static uniformInfo_t uniformsInfo[] =
 
 	{ "u_ScreenImageMap", GLSL_INT, 1 },
 	{ "u_ScreenDepthMap", GLSL_INT, 1 },
+	{ "u_ScreenNormalMap", GLSL_INT, 1 },
+	{ "u_ScreenSpecularAndGlossMap", GLSL_INT, 1 },
+	{ "u_ScreenDiffuseMap", GLSL_INT, 1 },
+
+	{ "u_LightGridDirectionMap", GLSL_INT, 1 },
+	{ "u_LightGridDirectionalLightMap", GLSL_INT, 1 },
+	{ "u_LightGridAmbientLightMap", GLSL_INT, 1 },
+	{ "u_LightGridOrigin", GLSL_VEC3, 1 },
+	{ "u_LightGridCellInverseSize", GLSL_VEC3, 1 },
+	{ "u_StyleColor", GLSL_VEC3, 1 },
+	{ "u_LightGridLightScale", GLSL_VEC2, 1 },
 
 	{ "u_ShadowMap",  GLSL_INT, 1 },
 	{ "u_ShadowMap2", GLSL_INT, 1 },
@@ -118,6 +132,8 @@ static uniformInfo_t uniformsInfo[] =
 	{ "u_LightRadius",   GLSL_FLOAT, 1 },
 	{ "u_AmbientLight",  GLSL_VEC3, 1 },
 	{ "u_DirectedLight", GLSL_VEC3, 1 },
+	{ "u_DlightTransforms", GLSL_VEC4, MAX_DLIGHTS },
+	{ "u_DlightColors", GLSL_VEC3, MAX_DLIGHTS },
 
 	{ "u_PortalRange", GLSL_FLOAT, 1 },
 
@@ -128,6 +144,7 @@ static uniformInfo_t uniformsInfo[] =
 
 	{ "u_ModelMatrix",               GLSL_MAT4x4, 1 },
 	{ "u_ModelViewProjectionMatrix", GLSL_MAT4x4, 1 },
+	{ "u_ProjectionMatrix", GLSL_MAT4x4, 1 },
 
 	{ "u_Time",          GLSL_FLOAT, 1 },
 	{ "u_VertexLerp" ,   GLSL_FLOAT, 1 },
@@ -140,6 +157,7 @@ static uniformInfo_t uniformsInfo[] =
 	{ "u_ViewForward",			GLSL_VEC3, 1 },
 	{ "u_ViewLeft",				GLSL_VEC3, 1 },
 	{ "u_ViewUp",				GLSL_VEC3, 1 },
+	{ "u_WorldSpaceFarPlaneCorners", GLSL_VEC3, 4 },
 
 	{ "u_InvTexRes",           GLSL_VEC2, 1 },
 	{ "u_AutoExposureMinMax",  GLSL_VEC2, 1 },
@@ -577,7 +595,9 @@ static bool GLSL_EndLoadGPUShader (shaderProgram_t *program)
 	qglAttachShader(program->program, program->fragmentShader);
 
 	qglBindFragDataLocation (program->program, 0, "out_Color");
-	qglBindFragDataLocation (program->program, 1, "out_Glow");
+	qglBindFragDataLocation (program->program, 1, "out_SpecularAndGloss");
+	qglBindFragDataLocation (program->program, 2, "out_Normal");
+	qglBindFragDataLocation (program->program, 3, "out_Light");
 
 	if(attribs & ATTR_POSITION)
 		qglBindAttribLocation(program->program, ATTR_INDEX_POSITION, "attr_Position");
@@ -854,7 +874,106 @@ void GLSL_SetUniformVec4(shaderProgram_t *program, int uniformNum, const vec4_t 
 	qglUniform4f(uniforms[uniformNum], v[0], v[1], v[2], v[3]);
 }
 
-void GLSL_SetUniformFloatN(shaderProgram_t *program, int uniformNum, const float *v, int numFloats)
+void GLSL_SetUniformVec2N(shaderProgram_t *program, int uniformNum, const vec2_t *v, int numVec2s)
+{
+	GLint *uniforms = program->uniforms;
+	float *compare = (float *)(program->uniformBuffer + program->uniformBufferOffsets[uniformNum]);
+
+	if (uniforms[uniformNum] == -1)
+		return;
+
+	if (uniformsInfo[uniformNum].type != GLSL_VEC2)
+	{
+		ri->Printf( PRINT_WARNING, "GLSL_SetUniformVec4N: wrong type for uniform %i in program %s\n", uniformNum, program->name);
+		return;
+	}
+
+	if (uniformsInfo[uniformNum].size < numVec2s)
+	{
+		ri->Printf( PRINT_WARNING, "GLSL_SetUniformVec4N: uniform %i only has %d elements! Tried to set %d\n",
+					uniformNum,
+					uniformsInfo[uniformNum].size,
+					numVec2s );
+		return;
+	}
+
+	if ( memcmp( compare, v, sizeof( vec2_t ) * numVec2s ) == 0 )
+	{
+		return;
+	}
+
+	memcpy( compare, v, sizeof( vec2_t ) * numVec2s );
+
+	qglUniform2fv(uniforms[uniformNum], numVec2s, (float *)v);
+}
+
+void GLSL_SetUniformVec3N(shaderProgram_t *program, int uniformNum, const vec3_t *v, int numVec3s)
+{
+	GLint *uniforms = program->uniforms;
+	float *compare = (float *)(program->uniformBuffer + program->uniformBufferOffsets[uniformNum]);
+
+	if (uniforms[uniformNum] == -1)
+		return;
+
+	if (uniformsInfo[uniformNum].type != GLSL_VEC3)
+	{
+		ri->Printf( PRINT_WARNING, "GLSL_SetUniformVec3N: wrong type for uniform %i in program %s\n", uniformNum, program->name);
+		return;
+	}
+
+	if (uniformsInfo[uniformNum].size < numVec3s)
+	{
+		ri->Printf( PRINT_WARNING, "GLSL_SetUniformVec3N: uniform %i only has %d elements! Tried to set %d\n",
+					uniformNum,
+					uniformsInfo[uniformNum].size,
+					numVec3s );
+		return;
+	}
+
+	if ( memcmp( compare, v, sizeof( vec3_t ) * numVec3s ) == 0 )
+	{
+		return;
+	}
+
+	memcpy( compare, v, sizeof( vec3_t ) * numVec3s );
+
+	qglUniform3fv(uniforms[uniformNum], numVec3s, (float *)v);
+}
+
+void GLSL_SetUniformVec4N(shaderProgram_t *program, int uniformNum, const vec4_t *v, int numVec4s)
+{
+	GLint *uniforms = program->uniforms;
+	float *compare = (float *)(program->uniformBuffer + program->uniformBufferOffsets[uniformNum]);
+
+	if (uniforms[uniformNum] == -1)
+		return;
+
+	if (uniformsInfo[uniformNum].type != GLSL_VEC4)
+	{
+		ri->Printf( PRINT_WARNING, "GLSL_SetUniformVec4N: wrong type for uniform %i in program %s\n", uniformNum, program->name);
+		return;
+	}
+
+	if (uniformsInfo[uniformNum].size < numVec4s)
+	{
+		ri->Printf( PRINT_WARNING, "GLSL_SetUniformVec4N: uniform %i only has %d elements! Tried to set %d\n",
+					uniformNum,
+					uniformsInfo[uniformNum].size,
+					numVec4s );
+		return;
+	}
+
+	if ( memcmp( compare, v, sizeof( vec4_t ) * numVec4s ) == 0 )
+	{
+		return;
+	}
+
+	memcpy( compare, v, sizeof( vec4_t ) * numVec4s );
+
+	qglUniform4fv(uniforms[uniformNum], numVec4s, (float *)v);
+}
+
+void GLSL_SetUniformFloatN(shaderProgram_t *program, int uniformNum, const GLfloat *v, int numFloats)
 {
 	GLint *uniforms = program->uniforms;
 	float *compare = (float *)(program->uniformBuffer + program->uniformBufferOffsets[uniformNum]);
@@ -877,12 +996,12 @@ void GLSL_SetUniformFloatN(shaderProgram_t *program, int uniformNum, const float
 		return;
 	}
 
-	if ( memcmp( compare, v, sizeof( float ) * numFloats ) == 0 )
+	if ( memcmp( compare, v, sizeof( GLfloat ) * numFloats ) == 0 )
 	{
 		return;
 	}
 
-	memcpy( compare, v, sizeof( float ) * numFloats );
+	memcpy( compare, v, sizeof( GLfloat ) * numFloats );
 
 	qglUniform1fv(uniforms[uniformNum], numFloats, v);
 }
@@ -1055,34 +1174,34 @@ int GLSL_BeginLoadGPUShaders(void)
 		extradefines[0] = '\0';
 
 		if (i & GENERICDEF_USE_DEFORM_VERTEXES)
-			Q_strcat(extradefines, 1024, "#define USE_DEFORM_VERTEXES\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_DEFORM_VERTEXES\n");
 
 		if (i & GENERICDEF_USE_TCGEN_AND_TCMOD)
 		{
-			Q_strcat(extradefines, 1024, "#define USE_TCGEN\n");
-			Q_strcat(extradefines, 1024, "#define USE_TCMOD\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_TCGEN\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_TCMOD\n");
 		}
 
 		if (i & GENERICDEF_USE_VERTEX_ANIMATION)
 		{
-			Q_strcat(extradefines, 1024, "#define USE_VERTEX_ANIMATION\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_VERTEX_ANIMATION\n");
 			attribs |= ATTR_POSITION2 | ATTR_NORMAL2;
 		}
 
 		if (i & GENERICDEF_USE_SKELETAL_ANIMATION)
 		{
-			Q_strcat(extradefines, 1024, "#define USE_SKELETAL_ANIMATION\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_SKELETAL_ANIMATION\n");
 			attribs |= ATTR_BONE_INDEXES | ATTR_BONE_WEIGHTS;
 		}
 
 		if (i & GENERICDEF_USE_FOG)
-			Q_strcat(extradefines, 1024, "#define USE_FOG\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_FOG\n");
 
 		if (i & GENERICDEF_USE_RGBAGEN)
-			Q_strcat(extradefines, 1024, "#define USE_RGBAGEN\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_RGBAGEN\n");
 
 		if (i & GENERICDEF_USE_GLOW_BUFFER)
-			Q_strcat(extradefines, 1024, "#define USE_GLOW_BUFFER\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_GLOW_BUFFER\n");
 
 		if (!GLSL_BeginLoadGPUShader(&tr.genericShader[i], "generic", attribs, qtrue, extradefines, fallbackShader_generic_vp, fallbackShader_generic_fp))
 		{
@@ -1109,13 +1228,13 @@ int GLSL_BeginLoadGPUShaders(void)
 		extradefines[0] = '\0';
 
 		if (i & FOGDEF_USE_DEFORM_VERTEXES)
-			Q_strcat(extradefines, 1024, "#define USE_DEFORM_VERTEXES\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_DEFORM_VERTEXES\n");
 
 		if (i & FOGDEF_USE_VERTEX_ANIMATION)
-			Q_strcat(extradefines, 1024, "#define USE_VERTEX_ANIMATION\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_VERTEX_ANIMATION\n");
 
 		if (i & FOGDEF_USE_SKELETAL_ANIMATION)
-			Q_strcat(extradefines, 1024, "#define USE_SKELETAL_ANIMATION\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_SKELETAL_ANIMATION\n");
 
 		if (!GLSL_BeginLoadGPUShader(&tr.fogShader[i], "fogpass", attribs, qtrue, extradefines, fallbackShader_fogpass_vp, fallbackShader_fogpass_fp))
 		{
@@ -1131,7 +1250,7 @@ int GLSL_BeginLoadGPUShaders(void)
 
 		if (i & DLIGHTDEF_USE_DEFORM_VERTEXES)
 		{
-			Q_strcat(extradefines, 1024, "#define USE_DEFORM_VERTEXES\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_DEFORM_VERTEXES\n");
 		}
 
 		if (!GLSL_BeginLoadGPUShader(&tr.dlightShader[i], "dlight", attribs, qtrue, extradefines, fallbackShader_dlight_vp, fallbackShader_dlight_fp))
@@ -1157,40 +1276,40 @@ int GLSL_BeginLoadGPUShaders(void)
 		extradefines[0] = '\0';
 
 		if (r_deluxeSpecular->value > 0.000001f)
-			Q_strcat(extradefines, 1024, va("#define r_deluxeSpecular %f\n", r_deluxeSpecular->value));
+			Q_strcat(extradefines, sizeof(extradefines), va("#define r_deluxeSpecular %f\n", r_deluxeSpecular->value));
 
 		if (r_specularIsMetallic->value)
-			Q_strcat(extradefines, 1024, "#define SPECULAR_IS_METALLIC\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define SPECULAR_IS_METALLIC\n");
 
 		if (r_dlightMode->integer >= 2)
-			Q_strcat(extradefines, 1024, "#define USE_SHADOWMAP\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_SHADOWMAP\n");
 
 		if (1)
-			Q_strcat(extradefines, 1024, "#define SWIZZLE_NORMALMAP\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define SWIZZLE_NORMALMAP\n");
 
 		if (r_hdr->integer && !glRefConfig.floatLightmap)
-			Q_strcat(extradefines, 1024, "#define RGBM_LIGHTMAP\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define RGBM_LIGHTMAP\n");
 
 		if (lightType)
 		{
-			Q_strcat(extradefines, 1024, "#define USE_LIGHT\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_LIGHT\n");
 
 			if (fastLight)
-				Q_strcat(extradefines, 1024, "#define USE_FAST_LIGHT\n");
+				Q_strcat(extradefines, sizeof(extradefines), "#define USE_FAST_LIGHT\n");
 
 			switch (lightType)
 			{
 				case LIGHTDEF_USE_LIGHTMAP:
-					Q_strcat(extradefines, 1024, "#define USE_LIGHTMAP\n");
+					Q_strcat(extradefines, sizeof(extradefines), "#define USE_LIGHTMAP\n");
 					if (r_deluxeMapping->integer && !fastLight)
-						Q_strcat(extradefines, 1024, "#define USE_DELUXEMAP\n");
+						Q_strcat(extradefines, sizeof(extradefines), "#define USE_DELUXEMAP\n");
 					attribs |= ATTR_TEXCOORD1 | ATTR_LIGHTDIRECTION;
 					break;
 				case LIGHTDEF_USE_LIGHT_VECTOR:
-					Q_strcat(extradefines, 1024, "#define USE_LIGHT_VECTOR\n");
+					Q_strcat(extradefines, sizeof(extradefines), "#define USE_LIGHT_VECTOR\n");
 					break;
 				case LIGHTDEF_USE_LIGHT_VERTEX:
-					Q_strcat(extradefines, 1024, "#define USE_LIGHT_VERTEX\n");
+					Q_strcat(extradefines, sizeof(extradefines), "#define USE_LIGHT_VERTEX\n");
 					attribs |= ATTR_LIGHTDIRECTION;
 					break;
 				default:
@@ -1202,56 +1321,56 @@ int GLSL_BeginLoadGPUShaders(void)
 				Q_strcat(extradefines, 1024, "#define USE_NORMALMAP\n");
 
 				if (r_normalMapping->integer == 2)
-					Q_strcat(extradefines, 1024, "#define USE_OREN_NAYAR\n");
+					Q_strcat(extradefines, sizeof(extradefines), "#define USE_OREN_NAYAR\n");
 
 				if (r_normalMapping->integer == 3)
-					Q_strcat(extradefines, 1024, "#define USE_TRIACE_OREN_NAYAR\n");
+					Q_strcat(extradefines, sizeof(extradefines), "#define USE_TRIACE_OREN_NAYAR\n");
 
-				Q_strcat(extradefines, 1024, "#define USE_VERT_TANGENT_SPACE\n");
+				Q_strcat(extradefines, sizeof(extradefines), "#define USE_VERT_TANGENT_SPACE\n");
 				attribs |= ATTR_TANGENT;
 
 				if ((i & LIGHTDEF_USE_PARALLAXMAP) && r_parallaxMapping->integer)
-					Q_strcat(extradefines, 1024, "#define USE_PARALLAXMAP\n");
+					Q_strcat(extradefines, sizeof(extradefines), "#define USE_PARALLAXMAP\n");
 			}
 
 			if (r_specularMapping->integer)
 			{
-				Q_strcat(extradefines, 1024, "#define USE_SPECULARMAP\n");
+				Q_strcat(extradefines, sizeof(extradefines), "#define USE_SPECULARMAP\n");
 			}
 
 			if (r_cubeMapping->integer)
-				Q_strcat(extradefines, 1024, "#define USE_CUBEMAP\n");
+				Q_strcat(extradefines, sizeof(extradefines), "#define USE_CUBEMAP\n");
 		}
 
 		if (i & LIGHTDEF_USE_SHADOWMAP)
 		{
-			Q_strcat(extradefines, 1024, "#define USE_SHADOWMAP\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_SHADOWMAP\n");
 
 			if (r_sunlightMode->integer == 1)
-				Q_strcat(extradefines, 1024, "#define SHADOWMAP_MODULATE\n");
+				Q_strcat(extradefines, sizeof(extradefines), "#define SHADOWMAP_MODULATE\n");
 			else if (r_sunlightMode->integer == 2)
-				Q_strcat(extradefines, 1024, "#define USE_PRIMARY_LIGHT\n");
+				Q_strcat(extradefines, sizeof(extradefines), "#define USE_PRIMARY_LIGHT\n");
 		}
 
 		if (i & LIGHTDEF_USE_TCGEN_AND_TCMOD)
 		{
-			Q_strcat(extradefines, 1024, "#define USE_TCGEN\n");
-			Q_strcat(extradefines, 1024, "#define USE_TCMOD\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_TCGEN\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_TCMOD\n");
 		}
 
 		if (i & LIGHTDEF_ENTITY)
 		{
 			if (i & LIGHTDEF_USE_VERTEX_ANIMATION)
 			{
-				Q_strcat(extradefines, 1024, "#define USE_VERTEX_ANIMATION\n");
+				Q_strcat(extradefines, sizeof(extradefines), "#define USE_VERTEX_ANIMATION\n");
 			}
 			else if (i & LIGHTDEF_USE_SKELETAL_ANIMATION)
 			{
-				Q_strcat(extradefines, 1024, "#define USE_SKELETAL_ANIMATION\n");
+				Q_strcat(extradefines, sizeof(extradefines), "#define USE_SKELETAL_ANIMATION\n");
 				attribs |= ATTR_BONE_INDEXES | ATTR_BONE_WEIGHTS;
 			}
 
-			Q_strcat(extradefines, 1024, "#define USE_MODELMATRIX\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_MODELMATRIX\n");
 			attribs |= ATTR_POSITION2 | ATTR_NORMAL2;
 
 			if (r_normalMapping->integer)
@@ -1261,7 +1380,7 @@ int GLSL_BeginLoadGPUShaders(void)
 		}
 
 		if (i & LIGHTDEF_USE_GLOW_BUFFER)
-			Q_strcat(extradefines, 1024, "#define USE_GLOW_BUFFER\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_GLOW_BUFFER\n");
 
 		if (!GLSL_BeginLoadGPUShader(&tr.lightallShader[i], "lightall", attribs, qtrue, extradefines, fallbackShader_lightall_vp, fallbackShader_lightall_fp))
 		{
@@ -1281,7 +1400,7 @@ int GLSL_BeginLoadGPUShaders(void)
 	attribs = ATTR_POSITION | ATTR_NORMAL;
 	extradefines[0] = '\0';
 
-	Q_strcat(extradefines, 1024, "#define USE_PCF\n#define USE_DISCARD\n");
+	Q_strcat(extradefines, sizeof(extradefines), "#define USE_PCF\n#define USE_DISCARD\n");
 
 	if (!GLSL_BeginLoadGPUShader(&tr.pshadowShader, "pshadow", attribs, qtrue, extradefines, fallbackShader_pshadow_vp, fallbackShader_pshadow_fp))
 	{
@@ -1322,7 +1441,7 @@ int GLSL_BeginLoadGPUShaders(void)
 		extradefines[0] = '\0';
 
 		if (!i)
-			Q_strcat(extradefines, 1024, "#define FIRST_PASS\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define FIRST_PASS\n");
 
 		if (!GLSL_BeginLoadGPUShader(&tr.calclevels4xShader[i], "calclevels4x", attribs, qtrue, extradefines, fallbackShader_calclevels4x_vp, fallbackShader_calclevels4x_fp))
 		{
@@ -1335,15 +1454,15 @@ int GLSL_BeginLoadGPUShaders(void)
 	extradefines[0] = '\0';
 
 	if (r_shadowFilter->integer >= 1)
-		Q_strcat(extradefines, 1024, "#define USE_SHADOW_FILTER\n");
+		Q_strcat(extradefines, sizeof(extradefines), "#define USE_SHADOW_FILTER\n");
 
 	if (r_shadowFilter->integer >= 2)
-		Q_strcat(extradefines, 1024, "#define USE_SHADOW_FILTER2\n");
+		Q_strcat(extradefines, sizeof(extradefines), "#define USE_SHADOW_FILTER2\n");
 
-	Q_strcat(extradefines, 1024, "#define USE_SHADOW_CASCADE\n");
+	Q_strcat(extradefines, sizeof(extradefines), "#define USE_SHADOW_CASCADE\n");
 
-	Q_strcat(extradefines, 1024, va("#define r_shadowMapSize %d\n", r_shadowMapSize->integer));
-	Q_strcat(extradefines, 1024, va("#define r_shadowCascadeZFar %f\n", r_shadowCascadeZFar->value));
+	Q_strcat(extradefines, sizeof(extradefines), va("#define r_shadowMapSize %d\n", r_shadowMapSize->integer));
+	Q_strcat(extradefines, sizeof(extradefines), va("#define r_shadowCascadeZFar %f\n", r_shadowCascadeZFar->value));
 
 
 	if (!GLSL_BeginLoadGPUShader(&tr.shadowmaskShader, "shadowmask", attribs, qtrue, extradefines, fallbackShader_shadowmask_vp, fallbackShader_shadowmask_fp))
@@ -1367,9 +1486,9 @@ int GLSL_BeginLoadGPUShaders(void)
 		extradefines[0] = '\0';
 
 		if (i & 1)
-			Q_strcat(extradefines, 1024, "#define USE_VERTICAL_BLUR\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_VERTICAL_BLUR\n");
 		else
-			Q_strcat(extradefines, 1024, "#define USE_HORIZONTAL_BLUR\n");
+			Q_strcat(extradefines, sizeof(extradefines), "#define USE_HORIZONTAL_BLUR\n");
 
 
 		if (!GLSL_BeginLoadGPUShader(&tr.depthBlurShader[i], "depthBlur", attribs, qtrue, extradefines, fallbackShader_depthblur_vp, fallbackShader_depthblur_fp))
@@ -1427,6 +1546,23 @@ int GLSL_BeginLoadGPUShaders(void)
 	if (!GLSL_BeginLoadGPUShader(&tr.dglowUpsample, "dglow_upsample", attribs, qtrue, extradefines, fallbackShader_dglow_upsample_vp, fallbackShader_dglow_upsample_fp))
 	{
 		ri->Error(ERR_FATAL, "Could not load dynamic glow upsample shader!");
+	}
+
+	attribs = ATTR_POSITION;
+	extradefines[0] = '\0';
+	Q_strcat(extradefines, sizeof(extradefines), va("#define MAX_DLIGHTS %d\n", MAX_DLIGHTS));
+	Q_strcat(extradefines, sizeof(extradefines), "#define LIGHT_POINT\n");
+	if (!GLSL_BeginLoadGPUShader(&tr.deferredPointLightShader, "deferred_pointlight_shader", attribs, qtrue, extradefines, fallbackShader_deferred_pointlight_vp, fallbackShader_deferred_pointlight_fp))
+	{
+		ri->Error(ERR_FATAL, "Could not load deferred point light shader!");
+	}
+
+	attribs = 0;
+	extradefines[0] = '\0';
+	Q_strcat(extradefines, sizeof(extradefines), "#define LIGHT_GRID\n");
+	if (!GLSL_BeginLoadGPUShader(&tr.deferredLightGridShader, "deferred_lightgrid_shader", attribs, qtrue, extradefines, fallbackShader_deferred_pointlight_vp, fallbackShader_deferred_pointlight_fp))
+	{
+		ri->Error(ERR_FATAL, "Could not load deferred light grid shader!");
 	}
 
 	return startTime;
@@ -1752,6 +1888,47 @@ void GLSL_EndLoadGPUShaders ( int startTime )
 
 #if defined(_DEBUG)
 	GLSL_FinishGPUShader(&tr.dglowUpsample);
+#endif
+
+	numEtcShaders++;
+
+	if (!GLSL_EndLoadGPUShader(&tr.deferredPointLightShader))
+	{
+		ri->Error(ERR_FATAL, "Could not load deferred point light shader!");
+	}
+
+	GLSL_InitUniforms(&tr.deferredPointLightShader);
+	qglUseProgram(tr.deferredPointLightShader.program);
+	GLSL_SetUniformInt(&tr.deferredPointLightShader, UNIFORM_SCREENDIFFUSEMAP, 0);
+	GLSL_SetUniformInt(&tr.deferredPointLightShader, UNIFORM_SCREENDEPTHMAP, 1);
+	GLSL_SetUniformInt(&tr.deferredPointLightShader, UNIFORM_SCREENNORMALMAP, 2);
+	GLSL_SetUniformInt(&tr.deferredPointLightShader, UNIFORM_SCREENSPECULARANDGLOSSMAP, 3);
+	qglUseProgram(0);
+
+#if defined(_DEBUG)
+	GLSL_FinishGPUShader(&tr.deferredPointLightShader);
+#endif
+
+	numEtcShaders++;
+
+	if (!GLSL_EndLoadGPUShader(&tr.deferredLightGridShader))
+	{
+		ri->Error(ERR_FATAL, "Could not load deferred light grid shader!");
+	}
+
+	GLSL_InitUniforms(&tr.deferredLightGridShader);
+	qglUseProgram(tr.deferredLightGridShader.program);
+	GLSL_SetUniformInt(&tr.deferredLightGridShader, UNIFORM_SCREENDIFFUSEMAP, 0);
+	GLSL_SetUniformInt(&tr.deferredLightGridShader, UNIFORM_SCREENDEPTHMAP, 1);
+	GLSL_SetUniformInt(&tr.deferredLightGridShader, UNIFORM_SCREENNORMALMAP, 2);
+	GLSL_SetUniformInt(&tr.deferredLightGridShader, UNIFORM_SCREENSPECULARANDGLOSSMAP, 3);
+	GLSL_SetUniformInt(&tr.deferredLightGridShader, UNIFORM_LIGHTGRIDDIRECTIONMAP, 4);
+	GLSL_SetUniformInt(&tr.deferredLightGridShader, UNIFORM_LIGHTGRIDDIRECTIONALLIGHTMAP, 5);
+	GLSL_SetUniformInt(&tr.deferredLightGridShader, UNIFORM_LIGHTGRIDAMBIENTLIGHTMAP, 6);
+	qglUseProgram(0);
+
+#if defined(_DEBUG)
+	GLSL_FinishGPUShader(&tr.deferredLightGridShader);
 #endif
 
 	numEtcShaders++;

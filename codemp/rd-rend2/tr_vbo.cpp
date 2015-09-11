@@ -593,3 +593,35 @@ void RB_CommitInternalBufferData()
 	tess.internalIBOCommitOffset = tess.internalIBOWriteOffset;
 	tess.internalVBOCommitOffset = tess.internalVBOWriteOffset;
 }
+
+/*
+============
+R_CreateVertexFormats
+============
+*/
+void R_CreateVertexFormats()
+{
+	/*
+	{
+		vec3 position;
+		vec2 texcoord;
+	}
+	size 12 + 8 = 20 bytes
+	*/
+	vertexFormat_t basicVertexFormat;
+	basicVertexFormat.numVertexAttribs = 2;
+
+	// position
+	basicVertexFormat.attributes[0].integerAttribute = qfalse;
+	basicVertexFormat.attributes[0].normalize = qfalse;
+	basicVertexFormat.attributes[0].numComponents = 3;
+	basicVertexFormat.attributes[0].offset = 0;
+	basicVertexFormat.attributes[0].type = GL_FLOAT;
+
+	// texcoord
+	basicVertexFormat.attributes[1].integerAttribute = qfalse;
+	basicVertexFormat.attributes[1].normalize = qfalse;
+	basicVertexFormat.attributes[1].numComponents = 2;
+	basicVertexFormat.attributes[1].offset = sizeof(vec3_t);
+	basicVertexFormat.attributes[1].type = GL_FLOAT;
+}

@@ -310,6 +310,7 @@ typedef enum
 	IMGFLAG_SRGB           = 0x0080,
 	IMGFLAG_GENNORMALMAP   = 0x0100,
 	IMGFLAG_MUTABLE        = 0x0200,
+	IMGFLAG_3D             = 0x0400,
 } imgFlags_t;
 
 typedef enum
@@ -342,7 +343,7 @@ enum
 
 typedef struct image_s {
 	char		imgName[MAX_QPATH];		// game path, including extension
-	int			width, height;				// source image
+	int			width, height, depth;		// source image. depth is ignored for non 3d textures
 	int			uploadWidth, uploadHeight;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
 	GLuint		texnum;					// gl texture binding
 
@@ -415,6 +416,21 @@ typedef struct IBO_s
 	int             indexesSize;	// amount of memory data allocated for all triangles in bytes
 //  uint32_t        ofsIndexes;
 } IBO_t;
+
+typedef struct vertexAttrib_s
+{
+	int numComponents;
+	qboolean integerAttribute;
+	GLenum type;
+	qboolean normalize;
+	int offset;
+} vertexAttrib_t;
+
+typedef struct vertexFormat_s
+{
+	int numVertexAttribs;
+	vertexAttrib_t attributes[ATTR_INDEX_MAX];
+} vertexFormat_t;
 
 //===============================================================================
 
@@ -757,6 +773,8 @@ typedef struct shader_s {
 	qboolean	isSky;
 	skyParms_t	sky;
 	fogParms_t	fogParms;
+	qboolean	isLightmapped;
+
 
 	float		portalRange;			// distance to fog out at
 	qboolean	isPortal;
@@ -1000,6 +1018,17 @@ typedef enum
 
 	UNIFORM_SCREENIMAGEMAP,
 	UNIFORM_SCREENDEPTHMAP,
+	UNIFORM_SCREENNORMALMAP,
+	UNIFORM_SCREENSPECULARANDGLOSSMAP,
+	UNIFORM_SCREENDIFFUSEMAP,
+
+	UNIFORM_LIGHTGRIDDIRECTIONMAP,
+	UNIFORM_LIGHTGRIDDIRECTIONALLIGHTMAP,
+	UNIFORM_LIGHTGRIDAMBIENTLIGHTMAP,
+	UNIFORM_LIGHTGRIDORIGIN,
+	UNIFORM_LIGHTGRIDCELLINVERSESIZE,
+	UNIFORM_LIGHTSTYLECOLOR,
+	UNIFORM_LIGHTGRIDLIGHTSCALE,
 
 	UNIFORM_SHADOWMAP,
 	UNIFORM_SHADOWMAP2,
@@ -1037,6 +1066,8 @@ typedef enum
 	UNIFORM_LIGHTRADIUS,
 	UNIFORM_AMBIENTLIGHT,
 	UNIFORM_DIRECTEDLIGHT,
+	UNIFORM_DLIGHTTRANSFORMS,
+	UNIFORM_DLIGHTCOLORS,
 
 	UNIFORM_PORTALRANGE,
 
@@ -1047,6 +1078,7 @@ typedef enum
 
 	UNIFORM_MODELMATRIX,
 	UNIFORM_MODELVIEWPROJECTIONMATRIX,
+	UNIFORM_PROJECTIONMATRIX,
 
 	UNIFORM_TIME,
 	UNIFORM_VERTEXLERP,
@@ -1059,6 +1091,7 @@ typedef enum
 	UNIFORM_VIEWFORWARD,
 	UNIFORM_VIEWLEFT,
 	UNIFORM_VIEWUP,
+	UNIFORM_WORLDSPACEFARPLANECORNERS,
 
 	UNIFORM_INVTEXRES,
 	UNIFORM_AUTOEXPOSUREMINMAX,
@@ -1130,7 +1163,6 @@ typedef struct {
 	int			numDrawSurfs;
 	struct drawSurf_s	*drawSurfs;
 
-	unsigned int dlightMask;
 	int         num_pshadows;
 	struct pshadow_s *pshadows;
 
@@ -1256,7 +1288,6 @@ compared quickly during the qsorting process
 typedef struct drawSurf_s {
 	uint32_t sort; // bit combination for fast compares
 	int entityNum;
-	qboolean lit;
 	surfaceType_t *surface; // any of surface*_t
 } drawSurf_t;
 
@@ -1303,7 +1334,6 @@ typedef struct srfBspSurface_s
 	surfaceType_t   surfaceType;
 
 	// dynamic lighting information
-	int				dlightBits;
 	int             pshadowBits;
 
 	// culling information
@@ -1537,13 +1567,11 @@ typedef struct {
 	int			numsurfaces;
 	msurface_t	*surfaces;
 	int         *surfacesViewCount;
-	int         *surfacesDlightBits;
 	int			*surfacesPshadowBits;
 
 	int			numMergedSurfaces;
 	msurface_t	*mergedSurfaces;
 	int         *mergedSurfacesViewCount;
-	int         *mergedSurfacesDlightBits;
 	int			*mergedSurfacesPshadowBits;
 
 	int			nummarksurfaces;
@@ -1574,6 +1602,10 @@ typedef struct {
 
 	char		*entityString;
 	char		*entityParsePoint;
+
+	image_t		*ambientLightImages[MAXLIGHTMAPS];
+	image_t		*directionalLightImages[MAXLIGHTMAPS];
+	image_t		*directionImages;
 } world_t;
 
 
@@ -1905,6 +1937,22 @@ typedef struct {
 	qboolean    depthFill;
 } backEndState_t;
 
+typedef struct gpuMesh_s
+{
+	shaderProgram_t *program;
+	VBO_t *vbo;
+	IBO_t *ibo;
+
+	// vertexFormat_t *vertexFormat;
+	// constants
+	// additional GL state
+
+	int numVerts;
+	int numIndexes;
+	int indexOffset;
+	int baseVertex;
+} gpuMesh_t;
+
 /*
 ** trGlobals_t 
 **
@@ -1949,10 +1997,11 @@ typedef struct trGlobals_s {
 	image_t					*identityLightImage;	// full of tr.identityLightByte
 
 	image_t                 *shadowCubemaps[MAX_DLIGHTS];
-	
 
 	image_t					*renderImage;
-	image_t					*glowImage;
+	image_t					*gbufferNormals;
+	image_t					*gbufferLight;
+	image_t					*gbufferSpecularAndGloss;
 	image_t					*glowImageScaled[6];
 	image_t					*sunRaysImage;
 	image_t					*renderDepthImage;
@@ -1971,6 +2020,7 @@ typedef struct trGlobals_s {
 	image_t					*textureDepthImage;
 
 	FBO_t					*renderFbo;
+	FBO_t					*deferredLightFbo;
 	FBO_t					*glowFboScaled[6];
 	FBO_t					*msaaResolveFbo;
 	FBO_t					*sunRaysFbo;
@@ -2034,6 +2084,14 @@ typedef struct trGlobals_s {
 	shaderProgram_t glowCompositeShader;
 	shaderProgram_t dglowDownsample;
 	shaderProgram_t dglowUpsample;
+	shaderProgram_t deferredPointLightShader;
+	shaderProgram_t deferredLightGridShader;
+
+
+	//
+	// Built-in meshes
+	//
+	gpuMesh_t lightSphereVolume;
 
 
 	// -----------------------------------------
@@ -2320,8 +2378,7 @@ void R_AddPolygonSurfaces( void );
 
 void R_DecomposeSort( uint32_t sort, shader_t **shader, int *cubemap, int *fogNum, int *postRender );
 uint32_t R_CreateSortKey(int sortedShaderIndex, int cubemapIndex, int fogIndex, int postRender);
-void R_AddDrawSurf( surfaceType_t *surface, int entityNum, shader_t *shader, 
-				   int fogIndex, int dlightMap, int postRender, int cubemap );
+void R_AddDrawSurf( surfaceType_t *surface, int entityNum, shader_t *shader, int fogIndex, int postRender, int cubemap );
 bool R_IsPostRenderEntity ( int refEntityNum, const trRefEntity_t *refEntity );
 
 void R_CalcTexDirs(vec3_t sdir, vec3_t tdir, const vec3_t v1, const vec3_t v2,
@@ -2467,7 +2524,6 @@ struct shaderCommands_s
 	vec2_t		texCoords[SHADER_MAX_VERTEXES][2] QALIGN(16);
 	vec4_t		vertexColors[SHADER_MAX_VERTEXES] QALIGN(16);
 	uint32_t    lightdir[SHADER_MAX_VERTEXES] QALIGN(16);
-	//int			vertexDlightBits[SHADER_MAX_VERTEXES] QALIGN(16);
 
 	VBO_t       *vbo;
 	IBO_t       *ibo;
@@ -2488,7 +2544,6 @@ struct shaderCommands_s
 	int			fogNum;
 	int         cubemapIndex;
 
-	int			dlightBits;	// or together of all vertexDlightBits
 	int         pshadowBits;
 
 	int			firstIndex;
@@ -2573,9 +2628,7 @@ LIGHTS
 ============================================================
 */
 
-void R_DlightBmodel( bmodel_t *bmodel );
 void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent );
-void R_TransformDlights( int count, dlight_t *dl, orientationr_t *ori );
 int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir );
 int R_LightDirForPoint( vec3_t point, vec3_t lightDir, vec3_t normal, world_t *world );
 int R_CubemapForPoint( vec3_t point );
@@ -2699,10 +2752,15 @@ void GLSL_BindNullProgram(void);
 
 void GLSL_SetUniformInt(shaderProgram_t *program, int uniformNum, GLint value);
 void GLSL_SetUniformFloat(shaderProgram_t *program, int uniformNum, GLfloat value);
-void GLSL_SetUniformFloatN(shaderProgram_t *program, int uniformNum, const float *v, int numFloats);
 void GLSL_SetUniformVec2(shaderProgram_t *program, int uniformNum, const vec2_t v);
 void GLSL_SetUniformVec3(shaderProgram_t *program, int uniformNum, const vec3_t v);
 void GLSL_SetUniformVec4(shaderProgram_t *program, int uniformNum, const vec4_t v);
+
+void GLSL_SetUniformFloatN(shaderProgram_t *program, int uniformNum, const GLfloat *v, int numFloats);
+void GLSL_SetUniformVec2N(shaderProgram_t *program, int uniformNum, const vec2_t *v, int numVec2s);
+void GLSL_SetUniformVec3N(shaderProgram_t *program, int uniformNum, const vec3_t *v, int numVec3s);
+void GLSL_SetUniformVec4N(shaderProgram_t *program, int uniformNum, const vec4_t *v, int numVec4s);
+
 void GLSL_SetUniformMatrix4x3(shaderProgram_t *program, int uniformNum, const float *matrix, int numElements = 1);
 void GLSL_SetUniformMatrix4x4(shaderProgram_t *program, int uniformNum, const float *matrix, int numElements = 1);
 
@@ -3062,6 +3120,7 @@ qhandle_t RE_RegisterShader( const char *name );
 qhandle_t RE_RegisterShaderNoMip( const char *name );
 const char		*RE_ShaderNameFromIndex(int index);
 image_t *R_CreateImage( const char *name, byte *pic, int width, int height, imgType_t type, int flags, int internalFormat );
+image_t *R_CreateImage3D( const char *name, byte *data, int width, int height, int depth, int internalFormat );
 
 float ProjectRadius( float r, vec3_t location );
 void RE_RegisterModels_StoreShaderRequest(const char *psModelFileName, const char *psShaderName, int *piShaderIndexPoke);

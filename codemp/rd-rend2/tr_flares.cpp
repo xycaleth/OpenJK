@@ -470,7 +470,8 @@ void RB_RenderFlares (void) {
 	qboolean	draw;
 	matrix_t    oldmodelview, oldprojection, matrix;
 
-	if ( !r_flares->integer ) {
+	//if ( !r_flares->integer )
+	{
 		return;
 	}
 

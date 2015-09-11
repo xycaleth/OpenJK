@@ -290,7 +290,7 @@ typedef struct _skinSurface_s {
 typedef struct skin_s {
 	char		name[MAX_QPATH];		// game path, including extension
 	int			numSurfaces;
-	_skinSurface_t	*surfaces[128];
+	_skinSurface_t	*surfaces[1024];
 } skin_t;
 
 /*

@@ -1791,7 +1791,7 @@ static qboolean RawImage_HasAlpha(const byte *scan, int numPixels)
 static GLenum RawImage_GetFormat(const byte *data, int numPixels, qboolean lightMap, imgType_t type, int flags)
 {
 	int samples = 3;
-	GLenum internalFormat = GL_RGB;
+	GLenum internalFormat = GL_RGB8;
 	qboolean forceNoCompression = (qboolean)(flags & IMGFLAG_NO_COMPRESSION);
 	qboolean normalmap = (qboolean)(type == IMGTYPE_NORMAL || type == IMGTYPE_NORMALHEIGHT);
 
@@ -1817,7 +1817,7 @@ static GLenum RawImage_GetFormat(const byte *data, int numPixels, qboolean light
 			}
 			else
 			{
-				internalFormat = GL_RGBA;
+				internalFormat = GL_RGBA8;
 			}
 		}
 	}
@@ -1826,7 +1826,7 @@ static GLenum RawImage_GetFormat(const byte *data, int numPixels, qboolean light
 		if(r_greyscale->integer)
 			internalFormat = GL_LUMINANCE;
 		else
-			internalFormat = GL_RGBA;
+			internalFormat = GL_RGBA8;
 	}
 	else
 	{
@@ -1871,7 +1871,7 @@ static GLenum RawImage_GetFormat(const byte *data, int numPixels, qboolean light
 				}
 				else
 				{
-					internalFormat = GL_RGB;
+					internalFormat = GL_RGB8;
 				}
 			}
 		}
@@ -1906,7 +1906,7 @@ static GLenum RawImage_GetFormat(const byte *data, int numPixels, qboolean light
 				}
 				else
 				{
-					internalFormat = GL_RGBA;
+					internalFormat = GL_RGBA8;
 				}
 			}
 		}
@@ -1916,7 +1916,7 @@ static GLenum RawImage_GetFormat(const byte *data, int numPixels, qboolean light
 			switch(internalFormat)
 			{
 				case GL_RGB:
-					internalFormat = GL_SRGB;
+					internalFormat = GL_SRGB8;
 					break;
 
 				case GL_RGB4:
@@ -2021,6 +2021,10 @@ static void RawImage_UploadTexture( byte *data, int x, int y, int width, int hei
 		case GL_DEPTH_COMPONENT32:
 			dataFormat = GL_DEPTH_COMPONENT;
 			dataType = GL_UNSIGNED_BYTE;
+			break;
+		case GL_DEPTH24_STENCIL8:
+			dataFormat = GL_DEPTH_STENCIL;
+			dataType = GL_UNSIGNED_INT_24_8;
 			break;
 		case GL_RGBA16F:
 			dataFormat = GL_RGBA;
@@ -2375,6 +2379,54 @@ static void R_FreeImage( image_t *imageToFree )
 			}
 		}
 	}
+}
+
+image_t *R_CreateImage3D( const char *name, byte *data, int width, int height, int depth, int internalFormat )
+{
+	image_t *image;
+	long hash;
+
+	if (strlen(name) >= MAX_QPATH ) {
+		ri->Error (ERR_DROP, "R_CreateImage3D: \"%s\" is too long", name);
+	}
+
+	image = R_AllocImage();
+	qglGenTextures(1, &image->texnum);
+
+	image->type = IMGTYPE_COLORALPHA;
+	image->flags = IMGFLAG_3D;
+
+	Q_strncpyz (image->imgName, name, sizeof (image->imgName));
+
+	image->width = width;
+	image->height = height;
+	image->depth = depth;
+
+	GL_Bind(image);
+	if ( ShouldUseImmutableTextures( image->flags, internalFormat ) )
+	{
+		qglTexStorage3D( GL_TEXTURE_3D, 1, internalFormat, width, height, depth );
+		if ( data )
+		{
+			qglTexSubImage3D( GL_TEXTURE_3D, 0, 0, 0, 0, width, height, depth, GL_RGBA, GL_UNSIGNED_BYTE, data );
+		}
+	}
+	else
+	{
+		qglTexImage3D( GL_TEXTURE_3D, 0, internalFormat, width, height, depth, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+	}
+
+	qglTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	qglTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	qglTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	qglTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	qglTexParameteri( GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+
+	hash = generateHashValue(name);
+	image->next = hashTable[hash];
+	hashTable[hash] = image;
+
+	return image;
 }
 
 /*
@@ -2997,8 +3049,9 @@ void R_CreateBuiltinImages( void ) {
 	rgbFormat = GL_RGBA8;
 
 	tr.renderImage = R_CreateImage("_render", NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, hdrFormat);
-
-	tr.glowImage = R_CreateImage("*glow", NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, hdrFormat);
+	tr.gbufferNormals = R_CreateImage("*normals", NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, hdrFormat);
+	tr.gbufferLight = R_CreateImage("*lighting", NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, hdrFormat);
+	tr.gbufferSpecularAndGloss = R_CreateImage("*specularGloss", NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, hdrFormat);
 
 	int glowImageWidth = width;
 	int glowImageHeight = height;
@@ -3012,7 +3065,7 @@ void R_CreateBuiltinImages( void ) {
 	if (r_drawSunRays->integer)
 		tr.sunRaysImage = R_CreateImage("*sunRays", NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, rgbFormat);
 
-	tr.renderDepthImage  = R_CreateImage("*renderdepth",  NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, GL_DEPTH_COMPONENT24);
+	tr.renderDepthImage  = R_CreateImage("*renderdepth",  NULL, width, height, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, GL_DEPTH24_STENCIL8);
 	tr.textureDepthImage = R_CreateImage("*texturedepth", NULL, PSHADOW_MAP_SIZE, PSHADOW_MAP_SIZE, IMGTYPE_COLORALPHA, IMGFLAG_NO_COMPRESSION | IMGFLAG_CLAMPTOEDGE, GL_DEPTH_COMPONENT24);
 
 	{

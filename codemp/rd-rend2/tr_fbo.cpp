@@ -279,13 +279,12 @@ void R_AttachFBOTextureDepth(int texId)
 
 /*
 =================
-R_AttachFBOTexturePackedDepthStencil
+FBO_AttachTexturePackedDepthStencil
 =================
 */
-void R_AttachFBOTexturePackedDepthStencil(int texId)
+void FBO_AttachTexturePackedDepthStencil(int texId)
 {
-	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texId, 0);
-	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, texId, 0);
+	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, texId, 0);
 }
 
 void FBO_AttachTextureImage(image_t *img, int index)
@@ -434,9 +433,11 @@ void FBO_Init(void)
 		FBO_Bind(tr.msaaResolveFbo);
 
 		FBO_AttachTextureImage(tr.renderImage, 0);
-		FBO_AttachTextureImage(tr.glowImage, 1);
+		FBO_AttachTextureImage(tr.gbufferSpecularAndGloss, 1);
+		FBO_AttachTextureImage(tr.gbufferNormals, 2);
+		FBO_AttachTextureImage(tr.gbufferLight, 3);
 
-		R_AttachFBOTextureDepth(tr.renderDepthImage->texnum);
+		FBO_AttachTexturePackedDepthStencil(tr.renderDepthImage->texnum);
 
 		FBO_SetupDrawBuffers();
 
@@ -447,14 +448,39 @@ void FBO_Init(void)
 		tr.renderFbo = FBO_Create("_render", tr.renderDepthImage->width, tr.renderDepthImage->height);
 		FBO_Bind(tr.renderFbo);
 
+		/*
+			+-----------+-----------+-----------+-----------+
+		RT0 | diffuse r | diffuse g | diffuse b | alpha     |
+			+-----------+-----------+-----------+-----------+
+		RT1 | spec r    | spec g    | spec b    | roughness |
+			+-----------+-----------+-----------+-----------+
+		RT2 | normal x  | normal y  | glow r    | glow g    |
+			+-----------+-----------+-----------+-----------+
+		RT3 | light r   | light g   | light b   | glow b    |
+			+-----------+-----------+-----------+-----------+
+		*/
 		FBO_AttachTextureImage(tr.renderImage, 0);
-		FBO_AttachTextureImage(tr.glowImage, 1);
+		FBO_AttachTextureImage(tr.gbufferSpecularAndGloss, 1);
+		FBO_AttachTextureImage(tr.gbufferNormals, 2);
+		FBO_AttachTextureImage(tr.gbufferLight, 3);
 
-		R_AttachFBOTextureDepth(tr.renderDepthImage->texnum);
+		FBO_AttachTexturePackedDepthStencil(tr.renderDepthImage->texnum);
 
 		FBO_SetupDrawBuffers();
 
 		R_CheckFBO(tr.renderFbo);
+	}
+
+	{
+		tr.deferredLightFbo = FBO_Create("_deferredLightPass", tr.renderDepthImage->width, tr.renderDepthImage->height);
+		FBO_Bind(tr.deferredLightFbo);
+
+		FBO_AttachTextureImage(tr.gbufferLight, 0);
+		FBO_AttachTexturePackedDepthStencil(tr.renderDepthImage->texnum);
+
+		FBO_SetupDrawBuffers();
+
+		R_CheckFBO(tr.deferredLightFbo);
 	}
 
 	// clear render buffer
