@@ -151,6 +151,7 @@ extern cvar_t  *r_forceAutoExposureMax;
 
 extern cvar_t  *r_srgb;
 
+extern cvar_t  *r_refraction;
 extern cvar_t  *r_depthPrepass;
 extern cvar_t  *r_ssao;
 
@@ -1410,6 +1411,7 @@ typedef enum {
 	SF_VBO_MESH,
 	SF_VBO_MDVMESH,
 	SF_SPRITES,
+	SF_REFRACTIVE,
 
 	SF_NUM_SURFACE_TYPES,
 	SF_MAX = 0x7fffffff			// ensures that sizeof( surfaceType_t ) == sizeof( int )
@@ -2234,6 +2236,7 @@ typedef struct trGlobals_s {
 	shaderProgram_t fogShader[FOGDEF_COUNT];
 	shaderProgram_t dlightShader[DLIGHTDEF_COUNT];
 	shaderProgram_t lightallShader[LIGHTDEF_COUNT];
+	shaderProgram_t refractionShader;
 	shaderProgram_t shadowmapShader;
 	shaderProgram_t pshadowShader;
 	shaderProgram_t down4xShader;
@@ -2699,8 +2702,16 @@ struct shaderCommands_s
 	uint32_t    lightdir[SHADER_MAX_VERTEXES] QALIGN(16);
 	//int			vertexDlightBits[SHADER_MAX_VERTEXES] QALIGN(16);
 
+	VBO_t       *vbo;
+	IBO_t       *ibo;
+	void		*vboData; // If immutable buffers
+	void		*iboData; // are available
 	IBO_t		*externalIBO;
 	qboolean    useInternalVBO;
+	int			internalVBOWriteOffset;
+	int			internalVBOCommitOffset;
+	int			internalIBOWriteOffset;
+	int			internalIBOCommitOffset;
 
 	float		minDepthRange;
 	float		maxDepthRange;
@@ -3297,6 +3308,9 @@ typedef struct backEndData_s {
 	Pass *currentPass;
 
 	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
+
+	drawSurf_t	refractiveSurfs[MAX_DRAWSURFS];
+	int			numRefractiveSurfs;
 	dlight_t	dlights[MAX_DLIGHTS];
 	trRefEntity_t	entities[MAX_REFENTITIES];
 	srfPoly_t	*polys;//[MAX_POLYS];
@@ -3427,4 +3441,49 @@ struct DrawItem
 	DrawCommand draw;
 };
 
+//
+// tr_shade.cpp
+//
+
+class UniformDataWriter
+{
+public:
+	UniformDataWriter();
+
+	UniformDataWriter(const UniformDataWriter&) = delete;
+	UniformDataWriter& operator=(const UniformDataWriter&) = delete;
+	void Start(shaderProgram_t *sp);
+	UniformDataWriter& SetUniformInt(uniform_t uniform, int value);
+	UniformDataWriter& SetUniformFloat(uniform_t uniform, float value);
+	UniformDataWriter& SetUniformFloat(uniform_t uniform, float *values, size_t count);
+	UniformDataWriter& SetUniformVec2(uniform_t uniform, float *values, size_t count = 1);
+	UniformDataWriter& SetUniformVec3(uniform_t uniform, float *values, size_t count = 1);
+	UniformDataWriter& SetUniformVec4(uniform_t uniform, float *values, size_t count = 1);
+	UniformDataWriter& SetUniformMatrix4x3(uniform_t uniform, float *matrix, size_t count = 1);
+	UniformDataWriter& SetUniformMatrix4x4(uniform_t uniform, float *matrix, size_t count = 1);
+	UniformData *Finish(Allocator& destHeap);
+
+private:
+	bool failed;
+	shaderProgram_t *shaderProgram;
+	char scratchBuffer[2048];
+	Allocator scratch;
+};
+
+class SamplerBindingsWriter
+{
+public:
+	SamplerBindingsWriter();
+
+	SamplerBindingsWriter(const SamplerBindingsWriter&) = delete;
+	SamplerBindingsWriter& operator=(const SamplerBindingsWriter&) = delete;
+	SamplerBindingsWriter& AddStaticImage(image_t *image, int unit);
+	SamplerBindingsWriter& AddAnimatedImage(textureBundle_t *bundle, int unit);
+	SamplerBinding *Finish(Allocator& destHeap, int* numBindings = 0);
+
+private:
+	SamplerBinding scratch[32];
+	bool failed;
+	int count;
+};
 #endif //TR_LOCAL_H

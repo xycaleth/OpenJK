@@ -2173,6 +2173,81 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	qglDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0, surf->numSprites);
 }
 
+struct packedVertex_t
+{
+	vec3_t position;
+	uint32_t normal;
+	uint32_t tangent;
+	vec2_t texcoords[1 + MAXLIGHTMAPS];
+	vec4_t colors[MAXLIGHTMAPS];
+	uint32_t lightDirection;
+};
+
+void RB_Refractive(srfVBOMDVMesh_t * surface)
+{
+	GLimp_LogComment("--- RB_SurfaceVBOMDVMesh ---\n");
+
+	if (!surface->vbo || !surface->ibo)
+		return;
+
+	if (surface->vbo == NULL)
+		return;
+	//FBO_BlitFromTexture(tr.renderDepthImage, NULL, NULL, tr.hdrDepthFbo, NULL, NULL, NULL, 0);
+
+	tess.useInternalVBO = qfalse;
+	tess.externalIBO = surface->ibo;
+
+	tess.numIndexes += surface->numIndexes;
+	tess.numVertexes += surface->numVerts;
+	tess.minIndex = surface->minIndex;
+	tess.maxIndex = surface->maxIndex;
+
+	shader_t *shader = tess.shader;
+	shaderStage_t *firstStage = shader->stages[0];
+
+	surface->mdvModel->numVBOSurfaces;
+
+	DrawItem newRefractiveItem;
+	newRefractiveItem.program = &tr.refractionShader;
+	newRefractiveItem.stateBits = firstStage->stateBits;
+	newRefractiveItem.cullType = CT_TWO_SIDED;
+	newRefractiveItem.maxDepthRange = 1.0f;
+	newRefractiveItem.numAttributes = 0;
+	newRefractiveItem.numSamplerBindings = 1;
+	newRefractiveItem.ibo = surface->ibo;
+	
+	unsigned int vertexAttribs = shader->vertexAttribs;
+	VertexArraysProperties vertexArrays;
+	vertexAttribute_t attribs[ATTR_INDEX_MAX] = {};
+	CalculateVertexArraysFromVBO(vertexAttribs, surface->vbo, &vertexArrays);
+
+	GL_VertexArraysToAttribs(attribs, ARRAY_LEN(attribs), &vertexArrays);
+	newRefractiveItem.attributes = attribs;
+	
+	UniformDataWriter uniformDataWriter;
+	uniformDataWriter.Start(&tr.refractionShader);
+	uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
+	newRefractiveItem.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
+
+	SamplerBindingsWriter samplerBindingsWriter;
+	samplerBindingsWriter.AddAnimatedImage(&firstStage->bundle[TB_DIFFUSEMAP], TB_DIFFUSEMAP);
+	newRefractiveItem.samplerBindings = samplerBindingsWriter.Finish(
+		*backEndData->perFrameMemory, (int *)&newRefractiveItem.numSamplerBindings);
+
+	newRefractiveItem.draw.primitiveType = GL_TRIANGLES;
+	newRefractiveItem.draw.numInstances = 1;
+
+	newRefractiveItem.draw.type = DRAW_COMMAND_INDEXED;
+	newRefractiveItem.draw.params.indexed.firstIndex = surface->minIndex;
+	newRefractiveItem.draw.params.indexed.numIndices = surface->numIndexes;
+	const DrawItem item = newRefractiveItem;
+
+	uint32_t key = 1;
+	RB_AddDrawItem(0, key, item);
+
+	//RB_AddDrawItem(backEndData->currentPass, 0, item);
+}
+
 void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( void *) = {
 	(void(*)(void*))RB_SurfaceBad,			// SF_BAD, 
 	(void(*)(void*))RB_SurfaceSkip,			// SF_SKIP, 
@@ -2189,4 +2264,5 @@ void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( void *) = {
 	(void(*)(void*))RB_SurfaceVBOMesh,	    // SF_VBO_MESH,
 	(void(*)(void*))RB_SurfaceVBOMDVMesh,   // SF_VBO_MDVMESH
 	(void(*)(void*))RB_SurfaceSprites,      // SF_SPRITES
+	(void(*)(void*))RB_Refractive,			// SF_REFRACTIVE
 };
