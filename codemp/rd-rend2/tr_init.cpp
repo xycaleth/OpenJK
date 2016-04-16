@@ -123,6 +123,7 @@ cvar_t  *r_forceAutoExposureMax;
 
 cvar_t  *r_srgb;
 
+cvar_t  *r_refraction;
 cvar_t  *r_depthPrepass;
 cvar_t  *r_ssao;
 
@@ -1409,6 +1410,7 @@ void R_Register( void )
 
 	r_srgb = ri->Cvar_Get( "r_srgb", "0", CVAR_ARCHIVE | CVAR_LATCH, "" );
 
+	r_refraction = ri->Cvar_Get("r_refraction", "1", CVAR_ARCHIVE | CVAR_LATCH, "");
 	r_depthPrepass = ri->Cvar_Get( "r_depthPrepass", "1", CVAR_ARCHIVE, "" );
 	r_ssao = ri->Cvar_Get( "r_ssao", "0", CVAR_LATCH | CVAR_ARCHIVE, "" );
 
