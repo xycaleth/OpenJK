@@ -1716,18 +1716,19 @@ static const void	*RB_DrawSurfs( const void *data ) {
 		int             cubemapIndex;
 		drawSurf_t		*drawSurf;
 		int i;
-
+		FBO_t *oldFbo = glState.currentFBO;
 		for (i = 0, drawSurf = backEndData->refractiveSurfs; i < backEndData->numRefractiveSurfs; i++) {
 			R_DecomposeSort(drawSurf->sort, &shader, &cubemapIndex, &postRender);
-			ri->Printf(PRINT_ALL, "Number of Refractive Surfaces: %s\n", shader->name);
+			ri->Printf(PRINT_ALL, "Refractive Surface Shader: %s\n", shader->name);
 			tess.shader = shader;
-
+			FBO_Bind(tr.renderFbo);
 			// force the renderer to use the refractive shader
 			rb_surfaceTable[SF_REFRACTIVE](drawSurf->surface);						//RB_SurfaceVBOMDVMesh(*drawSurf->surface) would be called if "SF_REFRACTIVE" would be "drawSurf->surface"
 
 		}
 		//ri->Printf(PRINT_ALL, "Number of Refractive Surfaces: %d\n", backEndData->numRefractiveSurfs);			//debug info
 		backEndData->numRefractiveSurfs = 0;
+		FBO_Bind(oldFbo);
 	}
 
 	if (tr.renderCubeFbo != NULL && backEnd.viewParms.targetFbo == tr.renderCubeFbo)

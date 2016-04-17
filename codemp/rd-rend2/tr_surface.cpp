@@ -2186,33 +2186,29 @@ struct packedVertex_t
 void RB_Refractive(srfVBOMDVMesh_t * surface)
 {
 	GLimp_LogComment("--- RB_SurfaceVBOMDVMesh ---\n");
-
+	FBO_t *srcFbo = NULL;
 	if (!surface->vbo || !surface->ibo)
 		return;
 
-	if (surface->vbo == NULL)
-		return;
 	//FBO_BlitFromTexture(tr.renderDepthImage, NULL, NULL, tr.hdrDepthFbo, NULL, NULL, NULL, 0);
+	srcFbo = tr.renderFbo;
 
-	tess.useInternalVBO = qfalse;
-	tess.externalIBO = surface->ibo;
-
-	tess.numIndexes += surface->numIndexes;
-	tess.numVertexes += surface->numVerts;
-	tess.minIndex = surface->minIndex;
-	tess.maxIndex = surface->maxIndex;
+	//tess.useInternalVBO = qfalse;
+	//tess.externalIBO = surface->ibo;
+	//tess.numIndexes += surface->numIndexes;
+	//tess.numVertexes += surface->numVerts;
+	//tess.minIndex = surface->minIndex;
+	//tess.maxIndex = surface->maxIndex;
 
 	shader_t *shader = tess.shader;
 	shaderStage_t *firstStage = shader->stages[0];
 
-	surface->mdvModel->numVBOSurfaces;
-
 	DrawItem newRefractiveItem;
 	newRefractiveItem.program = &tr.refractionShader;
 	newRefractiveItem.stateBits = firstStage->stateBits;
-	newRefractiveItem.cullType = CT_TWO_SIDED;
+	newRefractiveItem.cullType = CT_FRONT_SIDED;
 	newRefractiveItem.maxDepthRange = 1.0f;
-	newRefractiveItem.numAttributes = 0;
+	newRefractiveItem.numAttributes = 3;
 	newRefractiveItem.numSamplerBindings = 1;
 	newRefractiveItem.ibo = surface->ibo;
 	
@@ -2227,6 +2223,8 @@ void RB_Refractive(srfVBOMDVMesh_t * surface)
 	UniformDataWriter uniformDataWriter;
 	uniformDataWriter.Start(&tr.refractionShader);
 	uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
+	uniformDataWriter.SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
+	uniformDataWriter.SetUniformVec3(UNIFORM_LOCALVIEWORIGIN, backEnd.ori.viewOrigin);
 	newRefractiveItem.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 
 	SamplerBindingsWriter samplerBindingsWriter;
@@ -2240,11 +2238,10 @@ void RB_Refractive(srfVBOMDVMesh_t * surface)
 	newRefractiveItem.draw.type = DRAW_COMMAND_INDEXED;
 	newRefractiveItem.draw.params.indexed.firstIndex = surface->minIndex;
 	newRefractiveItem.draw.params.indexed.numIndices = surface->numIndexes;
-	const DrawItem item = newRefractiveItem;
 
-	uint32_t key = 1;
-	RB_AddDrawItem(0, key, item);
+	RB_AddDrawItem(NULL, 0, newRefractiveItem);
 
+	//FBO_FastBlit(tr.renderFbo, NULL, tr.msaaResolveFbo, NULL, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 	//RB_AddDrawItem(backEndData->currentPass, 0, item);
 }
 
