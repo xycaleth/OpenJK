@@ -2173,16 +2173,6 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	qglDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0, surf->numSprites);
 }
 
-struct packedVertex_t
-{
-	vec3_t position;
-	uint32_t normal;
-	uint32_t tangent;
-	vec2_t texcoords[1 + MAXLIGHTMAPS];
-	vec4_t colors[MAXLIGHTMAPS];
-	uint32_t lightDirection;
-};
-
 void RB_Refractive(srfVBOMDVMesh_t * surface)
 {
 	GLimp_LogComment("--- RB_SurfaceVBOMDVMesh ---\n");
