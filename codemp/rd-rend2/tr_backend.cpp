@@ -1729,6 +1729,7 @@ void RB_DrawRefractive() {
 	
 	//refraction shading
 	if ((r_refraction->integer == 1) && (backEnd.numRefractiveSurfs > 0)) {
+		FBO_t *oldFbo = glState.currentFBO;
 		shader_t		*shader;
 		int				postRender;
 		int             cubemapIndex;
