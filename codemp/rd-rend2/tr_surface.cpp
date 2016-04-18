@@ -2175,20 +2175,14 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 
 void RB_Refractive(srfVBOMDVMesh_t * surface)
 {
-	GLimp_LogComment("--- RB_SurfaceVBOMDVMesh ---\n");
 	FBO_t *srcFbo = NULL;
+	GLimp_LogComment("--- RB_Refractive ---\n");
+	RB_EndSurface();
 	if (!surface->vbo || !surface->ibo)
 		return;
 
 	//FBO_BlitFromTexture(tr.renderDepthImage, NULL, NULL, tr.hdrDepthFbo, NULL, NULL, NULL, 0);
 	srcFbo = tr.renderFbo;
-
-	//tess.useInternalVBO = qfalse;
-	//tess.externalIBO = surface->ibo;
-	//tess.numIndexes += surface->numIndexes;
-	//tess.numVertexes += surface->numVerts;
-	//tess.minIndex = surface->minIndex;
-	//tess.maxIndex = surface->maxIndex;
 
 	shader_t *shader = tess.shader;
 	shaderStage_t *firstStage = shader->stages[0];
@@ -2196,18 +2190,19 @@ void RB_Refractive(srfVBOMDVMesh_t * surface)
 	DrawItem newRefractiveItem;
 	newRefractiveItem.program = &tr.refractionShader;
 	newRefractiveItem.stateBits = firstStage->stateBits;
-	newRefractiveItem.cullType = CT_FRONT_SIDED;
+	newRefractiveItem.cullType = CT_TWO_SIDED;
 	newRefractiveItem.maxDepthRange = 1.0f;
-	newRefractiveItem.numAttributes = 3;
+	
 	newRefractiveItem.numSamplerBindings = 1;
 	newRefractiveItem.ibo = surface->ibo;
 	
-	unsigned int vertexAttribs = shader->vertexAttribs;
 	VertexArraysProperties vertexArrays;
 	vertexAttribute_t attribs[ATTR_INDEX_MAX] = {};
-	CalculateVertexArraysFromVBO(vertexAttribs, surface->vbo, &vertexArrays);
-
+	
+	CalculateVertexArraysFromVBO(shader->vertexAttribs, surface->vbo, &vertexArrays);
+	
 	GL_VertexArraysToAttribs(attribs, ARRAY_LEN(attribs), &vertexArrays);
+	newRefractiveItem.numAttributes = vertexArrays.numVertexArrays;
 	newRefractiveItem.attributes = attribs;
 	
 	UniformDataWriter uniformDataWriter;
@@ -2226,7 +2221,7 @@ void RB_Refractive(srfVBOMDVMesh_t * surface)
 	newRefractiveItem.draw.numInstances = 1;
 
 	newRefractiveItem.draw.type = DRAW_COMMAND_INDEXED;
-	newRefractiveItem.draw.params.indexed.firstIndex = surface->minIndex;
+	newRefractiveItem.draw.params.indexed.firstIndex = (glIndex_t)0;
 	newRefractiveItem.draw.params.indexed.numIndices = surface->numIndexes;
 
 	RB_AddDrawItem(NULL, 0, newRefractiveItem);

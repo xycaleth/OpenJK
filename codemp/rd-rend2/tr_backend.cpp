@@ -946,9 +946,9 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 
 		//  
-		if (r_refraction->integer && backEnd.currentEntity->e.renderfx & RF_DISTORTION && !(backEnd.viewParms.flags & VPF_SHADOWMAP) && !backEnd.depthFill) {
-			backEndData->refractiveSurfs[backEndData->numRefractiveSurfs] = *drawSurf;
-			backEndData->numRefractiveSurfs++;
+		if (backEnd.currentEntity->e.renderfx & RF_DISTORTION) {
+			backEnd.refractiveSurfs[backEnd.numRefractiveSurfs] = *drawSurf;
+			backEnd.numRefractiveSurfs++;
 			continue;
 		}
 
@@ -1669,6 +1669,8 @@ static const void	*RB_DrawSurfs( const void *data ) {
 		SetViewportAndScissor();
 	}
 
+	RB_DrawRefractive();
+
 	if (backEnd.viewParms.flags & VPF_DEPTHCLAMP)
 	{
 		qglDisable(GL_DEPTH_CLAMP);
@@ -1709,28 +1711,6 @@ static const void	*RB_DrawSurfs( const void *data ) {
 		
 	}
 
-	//refraction shading
-	if (r_refraction->integer) {
-		shader_t		*shader;
-		int				postRender;
-		int             cubemapIndex;
-		drawSurf_t		*drawSurf;
-		int i;
-		FBO_t *oldFbo = glState.currentFBO;
-		for (i = 0, drawSurf = backEndData->refractiveSurfs; i < backEndData->numRefractiveSurfs; i++) {
-			R_DecomposeSort(drawSurf->sort, &shader, &cubemapIndex, &postRender);
-			ri->Printf(PRINT_ALL, "Refractive Surface Shader: %s\n", shader->name);
-			tess.shader = shader;
-			FBO_Bind(tr.renderFbo);
-			// force the renderer to use the refractive shader
-			rb_surfaceTable[SF_REFRACTIVE](drawSurf->surface);						//RB_SurfaceVBOMDVMesh(*drawSurf->surface) would be called if "SF_REFRACTIVE" would be "drawSurf->surface"
-
-		}
-		//ri->Printf(PRINT_ALL, "Number of Refractive Surfaces: %d\n", backEndData->numRefractiveSurfs);			//debug info
-		backEndData->numRefractiveSurfs = 0;
-		FBO_Bind(oldFbo);
-	}
-
 	if (tr.renderCubeFbo != NULL && backEnd.viewParms.targetFbo == tr.renderCubeFbo)
 	{
 		FBO_Bind(NULL);
@@ -1740,7 +1720,49 @@ static const void	*RB_DrawSurfs( const void *data ) {
 		GL_SelectTexture(0);
 	}
 
+	
+
 	return (const void *)(cmd + 1);
+}
+
+void RB_DrawRefractive() {
+	
+	//refraction shading
+	if ((r_refraction->integer == 1) && (backEnd.numRefractiveSurfs > 0)) {
+		shader_t		*shader;
+		int				postRender;
+		int             cubemapIndex;
+		drawSurf_t		*drawSurf;
+		int i;
+		int entityNum;
+		float originalTime;
+		originalTime = backEnd.refdef.floatTime;
+		RB_BeginDrawingView();
+
+		for (i = 0; i < backEnd.numRefractiveSurfs; i++) {
+			drawSurf = &backEnd.refractiveSurfs[i];
+			R_DecomposeSort(drawSurf->sort, &shader, &cubemapIndex, &postRender);
+			entityNum = drawSurf->entityNum;
+			backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
+			backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
+			R_RotateForEntity(backEnd.currentEntity, &backEnd.viewParms, &backEnd.ori);
+
+			GL_SetModelviewMatrix(backEnd.ori.modelViewMatrix);
+			GL_SetProjectionMatrix(backEnd.viewParms.projectionMatrix);
+
+			ri->Printf(PRINT_ALL, "Refractive Surface Shader: %s\n", shader->name);
+			tess.shader = shader;
+			FBO_Bind(tr.renderFbo);
+			qglViewport(0, 0, tr.quarterFbo[0]->width, tr.quarterFbo[0]->height);
+			qglScissor(0, 0, tr.quarterFbo[0]->width, tr.quarterFbo[0]->height);
+			// force the renderer to use the refractive shader
+			rb_surfaceTable[SF_REFRACTIVE](drawSurf->surface);						//RB_SurfaceVBOMDVMesh(*drawSurf->surface) would be called if "SF_REFRACTIVE" would be "drawSurf->surface"
+		}
+		//ri->Printf(PRINT_ALL, "Number of Refractive Surfaces: %d\n", backEndData->numRefractiveSurfs);			//debug info
+		backEnd.numRefractiveSurfs = 0;
+		FBO_Bind(oldFbo);
+	}
+	return;
 }
 
 

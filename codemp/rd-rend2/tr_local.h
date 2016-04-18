@@ -2110,6 +2110,9 @@ typedef struct {
 	trRefEntity_t	*currentEntity;
 	qboolean	skyRenderedThisView;	// flag for drawing sun
 
+	drawSurf_t	refractiveSurfs[MAX_DRAWSURFS];
+	int			numRefractiveSurfs;
+
 	qboolean	projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
 	float		color2D[4];
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
@@ -2769,6 +2772,7 @@ void RB_CheckOverflow( int verts, int indexes );
 void R_DrawElementsVBO( int numIndexes, glIndex_t firstIndex, glIndex_t minIndex, glIndex_t maxIndex );
 void RB_StageIteratorGeneric( void );
 void RB_StageIteratorSky( void );
+void RB_DrawRefractive();
 
 void RB_AddQuadStamp( vec3_t origin, vec3_t left, vec3_t up, float color[4] );
 void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, float color[4], float s1, float t1, float s2, float t2 );
@@ -3310,8 +3314,6 @@ typedef struct backEndData_s {
 
 	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
 
-	drawSurf_t	refractiveSurfs[MAX_DRAWSURFS];
-	int			numRefractiveSurfs;
 	dlight_t	dlights[MAX_DLIGHTS];
 	trRefEntity_t	entities[MAX_REFENTITIES];
 	srfPoly_t	*polys;//[MAX_POLYS];
