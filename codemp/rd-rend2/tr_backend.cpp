@@ -777,6 +777,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	// draw everything
 	oldEntityNum = -1;
 	backEnd.currentEntity = &tr.worldEntity;
+	//backEnd.refractiveSurfs = new drawSurf_t[MAX_DRAWSURFS];
 	oldShader = NULL;
 	oldFogNum = -1;
 	oldDepthRange = 0;
@@ -945,17 +946,15 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			oldEntityNum = entityNum;
 		}
 
-		//  
 		if (backEnd.currentEntity->e.renderfx & RF_DISTORTION) {
-			backEnd.refractiveSurfs[backEnd.numRefractiveSurfs] = *drawSurf;
+			backEnd.refractiveSurfs[backEnd.numRefractiveSurfs] = drawSurf;
 			backEnd.numRefractiveSurfs++;
 			continue;
 		}
-
+		
 		// add the triangles for this surface
 		rb_surfaceTable[ *drawSurf->surface ]( drawSurf->surface );
 	}
-
 	backEnd.refdef.floatTime = originalTime;
 
 	// draw the contents of the last shader batch
@@ -1459,7 +1458,7 @@ static const void	*RB_DrawSurfs( const void *data ) {
 	}
 
 	cmd = (const drawSurfsCommand_t *)data;
-
+	
 	backEnd.refdef = cmd->refdef;
 	backEnd.viewParms = cmd->viewParms;
 
@@ -1480,7 +1479,7 @@ static const void	*RB_DrawSurfs( const void *data ) {
 		RB_RenderDrawSurfList( cmd->drawSurfs, cmd->numDrawSurfs );
 		qglColorMask(!backEnd.colorMask[0], !backEnd.colorMask[1], !backEnd.colorMask[2], !backEnd.colorMask[3]);
 		backEnd.depthFill = qfalse;
-
+		
 		if (tr.msaaResolveFbo)
 		{
 			// If we're using multisampling, resolve the depth first
@@ -1663,13 +1662,13 @@ static const void	*RB_DrawSurfs( const void *data ) {
 
 			RB_InstantQuad2(quadVerts, texCoords); //, color, shaderProgram, invTexRes);
 		}
-
+		
 		// reset viewport and scissor
 		FBO_Bind(oldFbo);
 		SetViewportAndScissor();
 	}
 
-	RB_DrawRefractive();
+	
 
 	if (backEnd.viewParms.flags & VPF_DEPTHCLAMP)
 	{
@@ -1720,7 +1719,7 @@ static const void	*RB_DrawSurfs( const void *data ) {
 		GL_SelectTexture(0);
 	}
 
-	
+	RB_DrawRefractive();
 
 	return (const void *)(cmd + 1);
 }
@@ -1729,6 +1728,7 @@ void RB_DrawRefractive() {
 	
 	//refraction shading
 	if ((r_refraction->integer == 1) && (backEnd.numRefractiveSurfs > 0)) {
+
 		FBO_t *oldFbo = glState.currentFBO;
 		shader_t		*shader;
 		int				postRender;
@@ -1741,7 +1741,7 @@ void RB_DrawRefractive() {
 		RB_BeginDrawingView();
 
 		for (i = 0; i < backEnd.numRefractiveSurfs; i++) {
-			drawSurf = &backEnd.refractiveSurfs[i];
+			drawSurf = backEnd.refractiveSurfs[i];
 			R_DecomposeSort(drawSurf->sort, &shader, &cubemapIndex, &postRender);
 			entityNum = drawSurf->entityNum;
 			backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
@@ -1752,20 +1752,20 @@ void RB_DrawRefractive() {
 			GL_SetProjectionMatrix(backEnd.viewParms.projectionMatrix);
 
 			ri->Printf(PRINT_ALL, "Refractive Surface Shader: %s\n", shader->name);
+
 			tess.shader = shader;
-			FBO_Bind(tr.renderFbo);
-			qglViewport(0, 0, tr.quarterFbo[0]->width, tr.quarterFbo[0]->height);
-			qglScissor(0, 0, tr.quarterFbo[0]->width, tr.quarterFbo[0]->height);
+			FBO_Bind(tr.refractiveFbo);
+
 			// force the renderer to use the refractive shader
 			rb_surfaceTable[SF_REFRACTIVE](drawSurf->surface);						//RB_SurfaceVBOMDVMesh(*drawSurf->surface) would be called if "SF_REFRACTIVE" would be "drawSurf->surface"
 		}
 		//ri->Printf(PRINT_ALL, "Number of Refractive Surfaces: %d\n", backEndData->numRefractiveSurfs);			//debug info
 		backEnd.numRefractiveSurfs = 0;
 		FBO_Bind(oldFbo);
+		SetViewportAndScissor();
 	}
 	return;
 }
-
 
 /*
 =============
@@ -2091,6 +2091,22 @@ const void *RB_PostProcess(const void *data)
 		srcBox[3] = -srcBox[3];
 
 		FBO_Blit(tr.screenSsaoFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO);
+	}
+
+	if (r_refraction->integer)
+	{
+		srcBox[0] = backEnd.viewParms.viewportX      * tr.refractiveImage->width / (float)glConfig.vidWidth;
+		srcBox[1] = backEnd.viewParms.viewportY      * tr.refractiveImage->height / (float)glConfig.vidHeight;
+		srcBox[2] = backEnd.viewParms.viewportWidth  * tr.refractiveImage->width / (float)glConfig.vidWidth;
+		srcBox[3] = backEnd.viewParms.viewportHeight * tr.refractiveImage->height / (float)glConfig.vidHeight;
+
+		//srcBox[1] = tr.refractiveImage->height - srcBox[1];
+		//srcBox[3] = -srcBox[3];
+
+		FBO_Blit(tr.refractiveFbo, srcBox, NULL, srcFbo, dstBox, NULL, NULL, GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO);
+		FBO_Bind(tr.refractiveFbo);
+		qglClearColor(1, 1, 1, 0);
+		qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 
 	if (r_dynamicGlow->integer)

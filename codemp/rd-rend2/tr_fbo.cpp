@@ -620,6 +620,17 @@ void FBO_Init(void)
 		R_CheckFBO(tr.screenSsaoFbo);
 	}
 
+	if (r_refraction->integer) {
+		tr.refractiveFbo = FBO_Create("_refractiveFbo", tr.refractiveImage->width, tr.refractiveImage->height);
+		FBO_Bind(tr.refractiveFbo);
+
+		FBO_AttachTextureImage(tr.refractiveImage, 0);
+
+		FBO_SetupDrawBuffers();
+
+		R_CheckFBO(tr.refractiveFbo);
+	}
+
 	if (tr.renderCubeImage != NULL)
 	{
 		tr.renderCubeFbo = FBO_Create("_renderCubeFbo", tr.renderCubeImage->width, tr.renderCubeImage->height);

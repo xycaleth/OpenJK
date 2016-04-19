@@ -2110,7 +2110,7 @@ typedef struct {
 	trRefEntity_t	*currentEntity;
 	qboolean	skyRenderedThisView;	// flag for drawing sun
 
-	drawSurf_t	refractiveSurfs[MAX_DRAWSURFS];
+	drawSurf_t*	refractiveSurfs[MAX_DRAWSURFS];
 	int			numRefractiveSurfs;
 
 	qboolean	projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
@@ -2174,6 +2174,7 @@ typedef struct trGlobals_s {
 	image_t					*renderImage;
 	image_t					*glowImage;
 	image_t					*glowImageScaled[6];
+	image_t					*refractiveImage;
 	image_t					*sunRaysImage;
 	image_t					*renderDepthImage;
 	image_t					*pshadowMaps[MAX_DRAWN_PSHADOWS];
@@ -2191,6 +2192,7 @@ typedef struct trGlobals_s {
 	image_t					*textureDepthImage;
 
 	FBO_t					*renderFbo;
+	FBO_t					*refractiveFbo;
 	FBO_t					*glowFboScaled[6];
 	FBO_t					*msaaResolveFbo;
 	FBO_t					*sunRaysFbo;
@@ -3447,6 +3449,8 @@ struct DrawItem
 //
 // tr_shade.cpp
 //
+
+static unsigned int RB_CalcShaderVertexAttribs(const shader_t *shader);
 
 class UniformDataWriter
 {

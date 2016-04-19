@@ -2175,14 +2175,21 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 
 void RB_Refractive(srfVBOMDVMesh_t * surface)
 {
-	FBO_t *srcFbo = NULL;
 	GLimp_LogComment("--- RB_Refractive ---\n");
 	RB_EndSurface();
 	if (!surface->vbo || !surface->ibo)
 		return;
-
-	//FBO_BlitFromTexture(tr.renderDepthImage, NULL, NULL, tr.hdrDepthFbo, NULL, NULL, NULL, 0);
+	FBO_t *srcFbo = NULL;
+	//get background
+	vec4i_t dstBox;
+	dstBox[0] = backEnd.viewParms.viewportX;
+	dstBox[1] = backEnd.viewParms.viewportY;
+	dstBox[2] = backEnd.viewParms.viewportWidth;
+	dstBox[3] = backEnd.viewParms.viewportHeight;
+	FBO_BlitFromTexture(tr.renderImage, NULL, NULL, tr.renderFbo, dstBox, NULL, NULL, 0);
 	srcFbo = tr.renderFbo;
+
+	R_BindVBO(surface->vbo); //have to bind it, not sure why ?
 
 	shader_t *shader = tess.shader;
 	shaderStage_t *firstStage = shader->stages[0];
@@ -2190,9 +2197,8 @@ void RB_Refractive(srfVBOMDVMesh_t * surface)
 	DrawItem newRefractiveItem;
 	newRefractiveItem.program = &tr.refractionShader;
 	newRefractiveItem.stateBits = firstStage->stateBits;
-	newRefractiveItem.cullType = CT_TWO_SIDED;
+	newRefractiveItem.cullType = CT_FRONT_SIDED;
 	newRefractiveItem.maxDepthRange = 1.0f;
-	
 	newRefractiveItem.numSamplerBindings = 1;
 	newRefractiveItem.ibo = surface->ibo;
 	
@@ -2200,20 +2206,21 @@ void RB_Refractive(srfVBOMDVMesh_t * surface)
 	vertexAttribute_t attribs[ATTR_INDEX_MAX] = {};
 	
 	CalculateVertexArraysFromVBO(shader->vertexAttribs, surface->vbo, &vertexArrays);
-	
 	GL_VertexArraysToAttribs(attribs, ARRAY_LEN(attribs), &vertexArrays);
 	newRefractiveItem.numAttributes = vertexArrays.numVertexArrays;
 	newRefractiveItem.attributes = attribs;
-	
+
 	UniformDataWriter uniformDataWriter;
 	uniformDataWriter.Start(&tr.refractionShader);
 	uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
+	uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELMATRIX, backEnd.ori.modelMatrix);
 	uniformDataWriter.SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
 	uniformDataWriter.SetUniformVec3(UNIFORM_LOCALVIEWORIGIN, backEnd.ori.viewOrigin);
 	newRefractiveItem.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 
 	SamplerBindingsWriter samplerBindingsWriter;
-	samplerBindingsWriter.AddAnimatedImage(&firstStage->bundle[TB_DIFFUSEMAP], TB_DIFFUSEMAP);
+	samplerBindingsWriter.AddAnimatedImage(&firstStage->bundle[TB_DIFFUSEMAP], TB_COLORMAP);
+	samplerBindingsWriter.AddStaticImage(tr.renderImage, TB_DIFFUSEMAP);
 	newRefractiveItem.samplerBindings = samplerBindingsWriter.Finish(
 		*backEndData->perFrameMemory, (int *)&newRefractiveItem.numSamplerBindings);
 
