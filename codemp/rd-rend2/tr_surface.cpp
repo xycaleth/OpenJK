@@ -2176,20 +2176,16 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 void RB_Refractive(srfVBOMDVMesh_t * surface)
 {
 	GLimp_LogComment("--- RB_Refractive ---\n");
-	RB_EndSurface();
-	if (!surface->vbo || !surface->ibo)
-		return;
-	FBO_t *srcFbo = NULL;
-	//get background
-	vec4i_t dstBox;
-	dstBox[0] = backEnd.viewParms.viewportX;
-	dstBox[1] = backEnd.viewParms.viewportY;
-	dstBox[2] = backEnd.viewParms.viewportWidth;
-	dstBox[3] = backEnd.viewParms.viewportHeight;
-	FBO_BlitFromTexture(tr.renderImage, NULL, NULL, tr.renderFbo, dstBox, NULL, NULL, 0);
-	srcFbo = tr.renderFbo;
 
-	R_BindVBO(surface->vbo); //have to bind it, not sure why ?
+	if (!r_refraction->integer || !surface->vbo || !surface->ibo)
+	{
+		return;
+	}
+
+	RB_EndSurface();
+
+	R_BindVBO(surface->vbo);
+	R_BindIBO(surface->ibo);
 
 	shader_t *shader = tess.shader;
 	shaderStage_t *firstStage = shader->stages[0];
@@ -2199,7 +2195,7 @@ void RB_Refractive(srfVBOMDVMesh_t * surface)
 	newRefractiveItem.stateBits = firstStage->stateBits;
 	newRefractiveItem.cullType = CT_FRONT_SIDED;
 	newRefractiveItem.maxDepthRange = 1.0f;
-	newRefractiveItem.numSamplerBindings = 1;
+	newRefractiveItem.numSamplerBindings = 2;
 	newRefractiveItem.ibo = surface->ibo;
 	
 	VertexArraysProperties vertexArrays;
@@ -2216,6 +2212,15 @@ void RB_Refractive(srfVBOMDVMesh_t * surface)
 	uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELMATRIX, backEnd.ori.modelMatrix);
 	uniformDataWriter.SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
 	uniformDataWriter.SetUniformVec3(UNIFORM_LOCALVIEWORIGIN, backEnd.ori.viewOrigin);
+	
+	vec4_t viewInfo;
+	float zmax = backEnd.viewParms.zFar;
+	float zmin = r_znear->value;
+	float x = tr.refractiveImage->width;
+	float y = tr.refractiveImage->height;
+	VectorSet4(viewInfo, zmax / zmin, zmax, x, y);
+	uniformDataWriter.SetUniformVec4(UNIFORM_VIEWINFO, viewInfo);
+	
 	newRefractiveItem.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 
 	SamplerBindingsWriter samplerBindingsWriter;
@@ -2232,9 +2237,6 @@ void RB_Refractive(srfVBOMDVMesh_t * surface)
 	newRefractiveItem.draw.params.indexed.numIndices = surface->numIndexes;
 
 	RB_AddDrawItem(NULL, 0, newRefractiveItem);
-
-	//FBO_FastBlit(tr.renderFbo, NULL, tr.msaaResolveFbo, NULL, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-	//RB_AddDrawItem(backEndData->currentPass, 0, item);
 }
 
 void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( void *) = {
