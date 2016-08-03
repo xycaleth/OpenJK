@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "tr_cache.h"
 #include <vector>
+#include <cmath>
 
 /*
 
@@ -3436,7 +3437,7 @@ static void R_GenerateSurfaceSprites(
 		const vec2_t p01 = {p1[0] - p0[0], p1[1] - p0[1]};
 		const vec2_t p02 = {p2[0] - p0[0], p2[1] - p0[1]};
 
-		const float zarea = std::fabsf(p02[0]*p01[1] - p02[1]*p01[0]);
+		const float zarea = std::fabs(p02[0]*p01[1] - p02[1]*p01[0]);
 		if ( zarea <= 1.0 )
 		{
 			// Triangle's area is too small to consider.
@@ -3471,7 +3472,7 @@ static void R_GenerateSurfaceSprites(
 				// => y*y = 1.0 - x*x
 				// => y = -/+sqrt(1.0 - x*x)
 				float nx = flrand(-1.0f, 1.0f);
-				float ny = std::sqrtf(1.0f - nx*nx);
+				float ny = std::sqrt(1.0f - nx*nx);
 				ny *= irand(0, 1) ? -1 : 1;
 
 				VectorSet(sprite.normal, nx, ny, 0.0f);
