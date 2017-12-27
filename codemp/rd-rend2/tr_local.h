@@ -2049,6 +2049,7 @@ typedef struct {
 	int maxColorAttachments;
 
 	int textureCompression;
+	int uniformBufferOffsetAlignment;
 
 	qboolean immutableTextures;
 	qboolean immutableBuffers;
