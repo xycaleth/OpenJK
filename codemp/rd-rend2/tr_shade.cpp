@@ -927,7 +927,6 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		uniformDataWriter.Start(sp);
 
 		uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
-		uniformDataWriter.SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
 		uniformDataWriter.SetUniformVec3(UNIFORM_LOCALVIEWORIGIN, backEnd.ori.viewOrigin);
 
 		uniformDataWriter.SetUniformFloat(UNIFORM_VERTEXLERP, glState.vertexAttribsInterpolation);
@@ -1031,6 +1030,12 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		// FIXME: This is a bit ugly with the casting
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
+
+		item.numUniformBlockBindings = 1;
+		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(*backEndData->perFrameMemory, item.numUniformBlockBindings);
+		item.uniformBlockBindings[0].data = nullptr;
+		item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
+		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1178,7 +1183,6 @@ static void RB_FogPass( shaderCommands_t *input, const fog_t *fog, const VertexA
 	uniformDataWriter.SetUniformFloat(
 		UNIFORM_FOGDEPTHTOOPAQUE,
 		sqrtf(-logf(1.0f / 255.0f)) / fog->parms.depthForOpaque);
-	uniformDataWriter.SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.refdef.vieworg);
 
 	uint32_t stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 	if ( tess.shader->fogPass == FP_EQUAL )
@@ -1426,7 +1430,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 
 		uniformDataWriter.Start(sp);
 		uniformDataWriter.SetUniformMatrix4x4( UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
-		uniformDataWriter.SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
 		uniformDataWriter.SetUniformVec3(UNIFORM_LOCALVIEWORIGIN, backEnd.ori.viewOrigin);
 
 		if (glState.skeletalAnimation)
@@ -1451,7 +1454,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 			uniformDataWriter.SetUniformVec4(UNIFORM_FOGPLANE, fog->surface);
 			uniformDataWriter.SetUniformInt(UNIFORM_FOGHASPLANE, fog->hasSurface);
 			uniformDataWriter.SetUniformFloat(UNIFORM_FOGDEPTHTOOPAQUE, fog->parms.depthForOpaque);
-			uniformDataWriter.SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.refdef.vieworg);
 
 			vec4_t fogColorMask;
 			ComputeFogColorMask(pStage, fogColorMask);
@@ -1462,7 +1464,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		if ( backEnd.currentEntity->e.renderfx & RF_VOLUMETRIC )
 		{
 			volumetricBaseValue = backEnd.currentEntity->e.shaderRGBA[0] / 255.0f;
-			uniformDataWriter.SetUniformVec3(UNIFORM_VIEWFORWARD, backEnd.refdef.viewaxis[0]);
 		}
 		else
 		{
@@ -1698,6 +1699,12 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		// FIXME: This is a bit ugly with the casting
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
+
+		item.numUniformBlockBindings = 1;
+		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(*backEndData->perFrameMemory, item.numUniformBlockBindings);
+		item.uniformBlockBindings[0].data = nullptr;
+		item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
+		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 

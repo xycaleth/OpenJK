@@ -2099,7 +2099,6 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	UniformDataWriter uniformDataWriter;
 	uniformDataWriter.Start(program);
 	uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
-	uniformDataWriter.SetUniformVec3(UNIFORM_VIEWORIGIN, backEnd.viewParms.ori.origin);
 
 	SamplerBindingsWriter samplerBindingsWriter;
 	samplerBindingsWriter.AddAnimatedImage(&firstStage->bundle[0], TB_COLORMAP);
@@ -2117,10 +2116,13 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 		*backEndData->perFrameMemory, surf->numAttributes);
 	memcpy(item.attributes, surf->attributes, sizeof(*item.attributes)*surf->numAttributes);
 
-	item.numUniformBlockBindings = 1;
+	item.numUniformBlockBindings = 2;
 	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(*backEndData->perFrameMemory, item.numUniformBlockBindings);
 	item.uniformBlockBindings[0].data = surfaceSpriteBlock;
 	item.uniformBlockBindings[0].block = UNIFORM_BLOCK_SURFACESPRITE;
+	item.uniformBlockBindings[1].data = nullptr;
+	item.uniformBlockBindings[1].offset = tr.cameraUboOffset;
+	item.uniformBlockBindings[1].block = UNIFORM_BLOCK_CAMERA;
 
 	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 	item.samplerBindings = samplerBindingsWriter.Finish(

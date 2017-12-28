@@ -650,6 +650,20 @@ struct SurfaceSpriteBlock
 	float fadeScale;
 	float widthVariance;
 	float heightVariance;
+	float pad0;
+};
+
+struct CameraBlock
+{
+	vec4_t viewInfo;
+	vec3_t viewOrigin;
+	float pad0;
+	vec3_t viewForward;
+	float pad1;
+	vec3_t viewLeft;
+	float pad2;
+	vec3_t viewUp;
+	float pad3;
 };
 
 struct surfaceSprite_t
@@ -1088,6 +1102,7 @@ enum
 
 enum uniformBlock_t
 {
+	UNIFORM_BLOCK_CAMERA,
 	UNIFORM_BLOCK_SURFACESPRITE,
 	UNIFORM_BLOCK_COUNT
 };
@@ -2050,6 +2065,7 @@ typedef struct {
 
 	int textureCompression;
 	int uniformBufferOffsetAlignment;
+	int maxUniformBlockSize;
 
 	qboolean immutableTextures;
 	qboolean immutableBuffers;
@@ -2271,6 +2287,8 @@ typedef struct trGlobals_s {
 	shaderProgram_t dglowUpsample;
 	shaderProgram_t spriteShader[SSDEF_COUNT];
 	shaderProgram_t weatherShader;
+
+	int cameraUboOffset;
 
 	// -----------------------------------------
 
@@ -2926,8 +2944,8 @@ void            R_VBOList_f(void);
 
 void            RB_UpdateVBOs(unsigned int attribBits);
 void			RB_CommitInternalBufferData();
-void			RB_BindUniformBlock(uniformBlock_t block);
-void			RB_BindAndUpdateUniformBlock(uniformBlock_t block, void *data);
+void			RB_BindUniformBlock(uniformBlock_t block, int offset);
+int				RB_BindAndUpdateUniformBlock(uniformBlock_t block, void *data);
 void			CalculateVertexArraysProperties(uint32_t attributes, VertexArraysProperties *properties);
 void			CalculateVertexArraysFromVBO(uint32_t attributes, const VBO_t *vbo, VertexArraysProperties *properties);
 
@@ -3440,6 +3458,7 @@ struct SamplerBinding
 struct UniformBlockBinding
 {
 	void *data;
+	int offset;
 	uniformBlock_t block;
 };
 

@@ -937,7 +937,7 @@ static void RB_BindAndUpdateUniformBlocks(
 		if (binding.data)
 			RB_BindAndUpdateUniformBlock(binding.block, binding.data);
 		else
-			RB_BindUniformBlock(binding.block);
+			RB_BindUniformBlock(binding.block, binding.offset);
 	}
 }
 
@@ -2176,6 +2176,21 @@ static void RB_TransformAllAnimations( drawSurf_t *drawSurfs, int numDrawSurfs )
 	}
 }
 
+static void RB_UpdateCameraConstants()
+{
+	const float zmax = backEnd.viewParms.zFar;
+	const float zmin = r_znear->value;
+
+	CameraBlock cameraBlock = {};
+	VectorSet4(cameraBlock.viewInfo, zmax / zmin, zmax, 0.0f, 0.0f);
+	VectorCopy(backEnd.refdef.viewaxis[0], cameraBlock.viewForward);
+	VectorCopy(backEnd.refdef.viewaxis[1], cameraBlock.viewLeft);
+	VectorCopy(backEnd.refdef.viewaxis[2], cameraBlock.viewUp);
+	VectorCopy(backEnd.refdef.vieworg, cameraBlock.viewOrigin);
+	tr.cameraUboOffset =
+		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_CAMERA, &cameraBlock);
+}
+
 /*
 =============
 RB_DrawSurfs
@@ -2197,6 +2212,8 @@ static const void *RB_DrawSurfs( const void *data ) {
 
 	// clear the z buffer, set the modelview, etc
 	RB_BeginDrawingView ();
+
+	RB_UpdateCameraConstants();
 
 	RB_TransformAllAnimations(cmd->drawSurfs, cmd->numDrawSurfs);
 

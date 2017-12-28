@@ -28,19 +28,23 @@ in vec4 attr_BoneWeights;
 in vec3 attr_LightDirection;
 #endif
 
+layout(std140) uniform Camera
+{
+	vec4 u_ViewInfo;
+	vec3 u_ViewOrigin;
+	vec3 u_ViewForward;
+	vec3 u_ViewLeft;
+	vec3 u_ViewUp;
+};
+
 #if defined(USE_DELUXEMAP)
 uniform vec4   u_EnableTextures; // x = normal, y = deluxe, z = specular, w = cube
-#endif
-
-#if defined(PER_PIXEL_LIGHTING)
-uniform vec3 u_ViewOrigin;
 #endif
 
 #if defined(USE_TCGEN) || defined(USE_LIGHTMAP)
 uniform int u_TCGen0;
 uniform vec3 u_TCGen0Vector0;
 uniform vec3 u_TCGen0Vector1;
-uniform vec3 u_LocalViewOrigin;
 uniform int u_TCGen1;
 #endif
 
@@ -53,6 +57,7 @@ uniform mat4 u_ModelViewProjectionMatrix;
 uniform vec4 u_BaseColor;
 uniform vec4 u_VertColor;
 uniform mat4 u_ModelMatrix;
+uniform vec3 u_LocalViewOrigin;
 
 #if defined(USE_VERTEX_ANIMATION)
 uniform float u_VertexLerp;
@@ -74,7 +79,6 @@ uniform vec4 u_PrimaryLightOrigin;
 uniform float u_PrimaryLightRadius;
 #endif
 
-uniform vec3 u_ViewForward;
 uniform float u_FXVolumetricBase;
 
 out vec4 var_TexCoords;
@@ -256,7 +260,7 @@ void main()
 
 	if ( u_FXVolumetricBase > 0.0 )
 	{
-		vec3 viewForward = u_ViewForward;
+		vec3 viewForward = u_ViewForward.xyz;
 
 		float d = clamp(dot(normalize(viewForward), normalize(normal)), 0.0, 1.0);
 		d = d * d;
@@ -294,7 +298,7 @@ void main()
 #endif
 
 #if defined(PER_PIXEL_LIGHTING)
-	vec3 viewDir = u_ViewOrigin - position;
+	vec3 viewDir = u_ViewOrigin.xyz - position;
 
 	// store view direction in tangent space to save on outs
 	var_Normal    = vec4(normal,    viewDir.x);
@@ -307,6 +311,15 @@ void main()
 #if defined(USE_LIGHT) && !defined(USE_VERTEX_LIGHTING)
 #define PER_PIXEL_LIGHTING
 #endif
+
+layout(std140) uniform Camera
+{
+	vec4 u_ViewInfo;
+	vec3 u_ViewOrigin;
+	vec3 u_ViewForward;
+	vec3 u_ViewLeft;
+	vec3 u_ViewUp;
+};
 
 uniform sampler2D u_DiffuseMap;
 

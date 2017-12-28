@@ -48,7 +48,8 @@ extern const GPUProgramDesc fallback_weatherProgram;
 
 
 const uniformBlockInfo_t uniformBlocksInfo[UNIFORM_BLOCK_COUNT] = {
-	{ 10, "SurfaceSprite", sizeof(SurfaceSpriteBlock) }
+	{ 1, "Camera", sizeof(CameraBlock) },
+	{ 10, "SurfaceSprite", sizeof(SurfaceSpriteBlock) },
 };
 
 typedef struct uniformInfo_s
@@ -826,19 +827,111 @@ void GLSL_InitUniforms(shaderProgram_t *program)
 
 	program->uniformBuffer = (char *)Z_Malloc(size, TAG_SHADERTEXT, qtrue);
 
+	ri.Printf(PRINT_DEVELOPER, "PROGRAM '%s'\n", program->name);
+
 	program->uniformBlocks = 0;
 	for ( int i = 0; i < UNIFORM_BLOCK_COUNT; ++i )
 	{
-		GLuint blockIndex = qglGetUniformBlockIndex(program->program,
-								uniformBlocksInfo[i].name);
-		if ( blockIndex == GL_INVALID_INDEX )
-		{
+		const GLuint blockIndex = qglGetUniformBlockIndex(
+			program->program, uniformBlocksInfo[i].name);
+		if (blockIndex == GL_INVALID_INDEX)
 			continue;
-		}
 
-		qglUniformBlockBinding(program->program, blockIndex,
-				uniformBlocksInfo[i].slot);
+		ri.Printf(
+			PRINT_DEVELOPER
+			"Binding block %d (name '%s', size %zu bytes) to slot %d\n",
+			blockIndex,
+			uniformBlocksInfo[i].name,
+			uniformBlocksInfo[i].size,
+			uniformBlocksInfo[i].slot);
+		qglUniformBlockBinding(
+			program->program, blockIndex, uniformBlocksInfo[i].slot);
+
 		program->uniformBlocks |= (1u << i);
+	}
+
+	GLint numActiveUniformBlocks = 0;
+	qglGetProgramiv(program->program, GL_ACTIVE_UNIFORM_BLOCKS, &numActiveUniformBlocks);
+	ri.Printf(PRINT_DEVELOPER "..num uniform blocks: %d\n", numActiveUniformBlocks);
+	for (int i = 0; i < numActiveUniformBlocks; ++i)
+	{
+		char blockName[512];
+		qglGetActiveUniformBlockName(
+			program->program, 
+			i,
+			sizeof(blockName),
+			nullptr,
+			blockName);
+
+		GLint blockSize = 0;
+		qglGetActiveUniformBlockiv(
+			program->program, i, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
+
+		ri.Printf(PRINT_DEVELOPER "..block %d: %s (%d bytes)\n", i, blockName, blockSize);
+		GLint numMembers = 0;
+		qglGetActiveUniformBlockiv(
+			program->program, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &numMembers);
+
+		if (numMembers > 0)
+		{
+			GLuint memberIndices[64];
+			qglGetActiveUniformBlockiv(
+				program->program,
+				i,
+				GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES,
+				(GLint *)memberIndices);
+
+			GLint memberOffsets[64];
+			qglGetActiveUniformsiv(
+				program->program,
+				numMembers,
+				memberIndices,
+				GL_UNIFORM_OFFSET,
+				memberOffsets);
+
+			GLint memberTypes[64];
+			qglGetActiveUniformsiv(
+				program->program,
+				numMembers,
+				memberIndices,
+				GL_UNIFORM_TYPE,
+				memberTypes);
+
+			for (int j = 0; j < numMembers; ++j)
+			{
+				char memberName[512];
+				qglGetActiveUniformName(
+					program->program,
+					memberIndices[j],
+					sizeof(memberName),
+					nullptr,
+					memberName);
+
+				ri.Printf(PRINT_DEVELOPER "....uniform '%s'\n", memberName);
+				ri.Printf(PRINT_DEVELOPER "......offset: %d\n", memberOffsets[j]);
+				switch (memberTypes[j])
+				{
+					case GL_FLOAT:
+						ri.Printf(PRINT_DEVELOPER "......type: float\n");
+						break;
+					case GL_FLOAT_VEC2:
+						ri.Printf(PRINT_DEVELOPER "......type: vec2\n");
+						break;
+					case GL_FLOAT_VEC3:
+						ri.Printf(PRINT_DEVELOPER "......type: vec3\n");
+						break;
+					case GL_FLOAT_VEC4:
+						ri.Printf(PRINT_DEVELOPER "......type: vec4\n");
+						break;
+					case GL_INT:
+						ri.Printf(PRINT_DEVELOPER "......type: int\n");
+						break;
+					default:
+						ri.Printf(PRINT_DEVELOPER "......type: other\n");
+						break;
+				}
+			}
+		}
 	}
 }
 

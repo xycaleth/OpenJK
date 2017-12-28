@@ -215,6 +215,15 @@ void main()
 }
 
 /*[Fragment]*/
+layout(std140) uniform Camera
+{
+	vec4 u_ViewInfo;
+	vec3 u_ViewOrigin;
+	vec3 u_ViewForward;
+	vec3 u_ViewLeft;
+	vec3 u_ViewUp;
+};
+
 uniform vec4 u_Color;
 #if defined(USE_ALPHA_TEST)
 uniform int u_AlphaTestType;
@@ -223,7 +232,6 @@ uniform int u_AlphaTestType;
 uniform vec4 u_FogPlane;
 uniform float u_FogDepthToOpaque;
 uniform bool u_FogHasPlane;
-uniform vec3 u_ViewOrigin;
 in vec3 var_WSPosition;
 
 out vec4 out_Color;

@@ -17,12 +17,17 @@ in vec2 attr_TexCoord0;
 in vec2 attr_TexCoord1;
 #endif
 
+layout(std140) uniform Camera
+{
+	vec4 u_ViewInfo;
+	vec3 u_ViewOrigin;
+	vec3 u_ViewForward;
+	vec3 u_ViewLeft;
+	vec3 u_ViewUp;
+};
+
 uniform vec4 u_DiffuseTexMatrix;
 uniform vec4 u_DiffuseTexOffTurb;
-
-#if defined(USE_TCGEN) || defined(USE_RGBAGEN)
-uniform vec3 u_LocalViewOrigin;
-#endif
 
 #if defined(USE_TCGEN)
 uniform int u_TCGen0;
@@ -41,8 +46,8 @@ uniform mat4 u_ModelViewProjectionMatrix;
 uniform mat4 u_ModelMatrix;
 uniform vec4 u_BaseColor;
 uniform vec4 u_VertColor;
+uniform vec3 u_LocalViewOrigin;
 
-uniform vec3 u_ViewForward;
 uniform float u_FXVolumetricBase;
 
 #if defined(USE_RGBAGEN)
@@ -333,7 +338,7 @@ void main()
 
 	if ( u_FXVolumetricBase >= 0.0 )
 	{
-		vec3 viewForward = u_ViewForward;
+		vec3 viewForward = u_ViewForward.xyz;
 		float d = clamp(dot(normalize(viewForward), normalize(normal)), 0.0, 1.0);
 		d = d * d;
 		d = d * d;
@@ -356,6 +361,15 @@ void main()
 
 
 /*[Fragment]*/
+layout(std140) uniform Camera
+{
+	vec4 u_ViewInfo;
+	vec3 u_ViewOrigin;
+	vec3 u_ViewForward;
+	vec3 u_ViewLeft;
+	vec3 u_ViewUp;
+};
+
 uniform sampler2D u_DiffuseMap;
 #if defined(USE_ALPHA_TEST)
 uniform int u_AlphaTestType;
@@ -365,7 +379,6 @@ uniform int u_AlphaTestType;
 uniform vec4 u_FogPlane;
 uniform float u_FogDepthToOpaque;
 uniform bool u_FogHasPlane;
-uniform vec3 u_ViewOrigin;
 uniform vec4 u_FogColorMask;
 #endif
 
@@ -440,7 +453,7 @@ void main()
 #endif
 
 #if defined(USE_FOG)
-	float fog = CalcFog(u_ViewOrigin, var_WSPosition, u_FogPlane, u_FogDepthToOpaque, u_FogHasPlane);
+	float fog = CalcFog(u_ViewOrigin.xyz, var_WSPosition, u_FogPlane, u_FogDepthToOpaque, u_FogHasPlane);
 	color *= vec4(1.0) - u_FogColorMask * fog;
 #endif
 
