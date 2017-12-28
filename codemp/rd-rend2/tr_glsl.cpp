@@ -838,7 +838,7 @@ void GLSL_InitUniforms(shaderProgram_t *program)
 			continue;
 
 		ri.Printf(
-			PRINT_DEVELOPER
+			PRINT_DEVELOPER,
 			"Binding block %d (name '%s', size %zu bytes) to slot %d\n",
 			blockIndex,
 			uniformBlocksInfo[i].name,
@@ -852,7 +852,7 @@ void GLSL_InitUniforms(shaderProgram_t *program)
 
 	GLint numActiveUniformBlocks = 0;
 	qglGetProgramiv(program->program, GL_ACTIVE_UNIFORM_BLOCKS, &numActiveUniformBlocks);
-	ri.Printf(PRINT_DEVELOPER "..num uniform blocks: %d\n", numActiveUniformBlocks);
+	ri.Printf(PRINT_DEVELOPER, "..num uniform blocks: %d\n", numActiveUniformBlocks);
 	for (int i = 0; i < numActiveUniformBlocks; ++i)
 	{
 		char blockName[512];
@@ -867,7 +867,7 @@ void GLSL_InitUniforms(shaderProgram_t *program)
 		qglGetActiveUniformBlockiv(
 			program->program, i, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
 
-		ri.Printf(PRINT_DEVELOPER "..block %d: %s (%d bytes)\n", i, blockName, blockSize);
+		ri.Printf(PRINT_DEVELOPER, "..block %d: %s (%d bytes)\n", i, blockName, blockSize);
 		GLint numMembers = 0;
 		qglGetActiveUniformBlockiv(
 			program->program, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &numMembers);
@@ -907,27 +907,27 @@ void GLSL_InitUniforms(shaderProgram_t *program)
 					nullptr,
 					memberName);
 
-				ri.Printf(PRINT_DEVELOPER "....uniform '%s'\n", memberName);
-				ri.Printf(PRINT_DEVELOPER "......offset: %d\n", memberOffsets[j]);
+				ri.Printf(PRINT_DEVELOPER, "....uniform '%s'\n", memberName);
+				ri.Printf(PRINT_DEVELOPER, "......offset: %d\n", memberOffsets[j]);
 				switch (memberTypes[j])
 				{
 					case GL_FLOAT:
-						ri.Printf(PRINT_DEVELOPER "......type: float\n");
+						ri.Printf(PRINT_DEVELOPER, "......type: float\n");
 						break;
 					case GL_FLOAT_VEC2:
-						ri.Printf(PRINT_DEVELOPER "......type: vec2\n");
+						ri.Printf(PRINT_DEVELOPER, "......type: vec2\n");
 						break;
 					case GL_FLOAT_VEC3:
-						ri.Printf(PRINT_DEVELOPER "......type: vec3\n");
+						ri.Printf(PRINT_DEVELOPER, "......type: vec3\n");
 						break;
 					case GL_FLOAT_VEC4:
-						ri.Printf(PRINT_DEVELOPER "......type: vec4\n");
+						ri.Printf(PRINT_DEVELOPER, "......type: vec4\n");
 						break;
 					case GL_INT:
-						ri.Printf(PRINT_DEVELOPER "......type: int\n");
+						ri.Printf(PRINT_DEVELOPER, "......type: int\n");
 						break;
 					default:
-						ri.Printf(PRINT_DEVELOPER "......type: other\n");
+						ri.Printf(PRINT_DEVELOPER, "......type: other\n");
 						break;
 				}
 			}
