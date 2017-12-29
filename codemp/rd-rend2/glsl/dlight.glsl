@@ -3,15 +3,26 @@ in vec3 attr_Position;
 in vec2 attr_TexCoord0;
 in vec3 attr_Normal;
 
+struct Light
+{
+	vec4 origin;
+	float radius;
+};
+
+layout(std140) uniform Lights
+{
+	int u_NumLights;
+	Light u_Lights[32];
+};
+
+uniform int u_LightIndex;
+
 #if defined(USE_DEFORM_VERTEXES)
 uniform int u_DeformType;
 uniform int u_DeformFunc;
 uniform float u_DeformParams[7];
 uniform float u_Time;
 #endif
-
-uniform vec4 u_LightOrigin;
-uniform float u_LightRadius;
 
 uniform mat4 u_ModelMatrix;
 uniform mat4 u_ModelViewProjectionMatrix;
@@ -170,11 +181,12 @@ void main()
 	gl_Position = u_ModelViewProjectionMatrix * vec4(position, 1.0);
 	
 	vec3 positionWS = (u_ModelMatrix * vec4(position, 1.0)).xyz;
-	vec3 L = u_LightOrigin.xyz - positionWS;
+	Light light = u_Lights[u_LightIndex];
+	vec3 L = light.origin.xyz - positionWS;
 	L = (u_ModelMatrix * vec4(L, 0.0)).xyz;
 
 	var_Normal = normalize((u_ModelMatrix * vec4(normal, 0.0)).xyz);
-	var_LightDirAndRadiusSq = vec4(L, u_LightRadius * u_LightRadius);
+	var_LightDirAndRadiusSq = vec4(L, light.radius * light.radius);
 }
 
 /*[Fragment]*/

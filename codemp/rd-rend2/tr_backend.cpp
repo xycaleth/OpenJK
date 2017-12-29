@@ -2191,6 +2191,44 @@ static void RB_UpdateCameraConstants()
 		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_CAMERA, &cameraBlock);
 }
 
+static void RB_UpdateSceneConstants()
+{
+	SceneBlock sceneBlock = {};
+	VectorCopy4(backEnd.refdef.sunDir, sceneBlock.primaryLightOrigin);
+	VectorCopy(backEnd.refdef.sunAmbCol, sceneBlock.primaryLightAmbient);
+	VectorCopy(backEnd.refdef.sunCol, sceneBlock.primaryLightColor);
+
+	tr.sceneUboOffset =
+		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_SCENE, &sceneBlock);
+}
+
+static void RB_UpdateLightsConstants()
+{
+	LightsBlock lightsBlock = {};
+	lightsBlock.numLights = backEnd.refdef.num_dlights;
+	for (int i = 0; i < lightsBlock.numLights; ++i)
+	{
+		const dlight_t *dlight = backEnd.refdef.dlights + i;
+
+		VectorSet4(
+			lightsBlock.lights[i].origin,
+			dlight->origin[0],
+			dlight->origin[1],
+			dlight->origin[2],
+			1.0f);
+		lightsBlock.lights[i].radius = dlight->radius;
+	}
+
+	tr.lightsUboOffset =
+		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_LIGHTS, &lightsBlock);
+}
+
+static void RB_UpdateConstants()
+{
+	RB_UpdateCameraConstants();
+	RB_UpdateSceneConstants();
+}
+
 /*
 =============
 RB_DrawSurfs
@@ -2213,7 +2251,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// clear the z buffer, set the modelview, etc
 	RB_BeginDrawingView ();
 
-	RB_UpdateCameraConstants();
+	RB_UpdateConstants();
 
 	RB_TransformAllAnimations(cmd->drawSurfs, cmd->numDrawSurfs);
 

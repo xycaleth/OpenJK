@@ -666,6 +666,30 @@ struct CameraBlock
 	float pad3;
 };
 
+struct SceneBlock
+{
+	vec4_t primaryLightOrigin;
+	vec3_t primaryLightAmbient;
+	float pad0;
+	vec3_t primaryLightColor;
+	float primaryLightRadius;
+};
+
+struct LightsBlock
+{
+	int numLights;
+	float pad0[3];
+
+	struct
+	{
+		vec4_t origin;
+		float radius;
+		float pad0;
+		float pad1;
+		float pad2;
+	} lights[MAX_DLIGHTS];
+};
+
 struct surfaceSprite_t
 {
 	surfaceSpriteType_t type;
@@ -1103,6 +1127,8 @@ enum
 enum uniformBlock_t
 {
 	UNIFORM_BLOCK_CAMERA,
+	UNIFORM_BLOCK_SCENE,
+	UNIFORM_BLOCK_LIGHTS,
 	UNIFORM_BLOCK_SURFACESPRITE,
 	UNIFORM_BLOCK_COUNT
 };
@@ -1204,6 +1230,7 @@ typedef enum
 	UNIFORM_LIGHTRADIUS,
 	UNIFORM_AMBIENTLIGHT,
 	UNIFORM_DIRECTEDLIGHT,
+	UNIFORM_LIGHTINDEX,
 
 	UNIFORM_PORTALRANGE,
 
@@ -1233,11 +1260,6 @@ typedef enum
 	UNIFORM_INVTEXRES,
 	UNIFORM_AUTOEXPOSUREMINMAX,
 	UNIFORM_TONEMINAVGMAXLINEAR,
-
-	UNIFORM_PRIMARYLIGHTORIGIN,
-	UNIFORM_PRIMARYLIGHTCOLOR,
-	UNIFORM_PRIMARYLIGHTAMBIENT,
-	UNIFORM_PRIMARYLIGHTRADIUS,
 
 	UNIFORM_CUBEMAPINFO,
 
@@ -2289,6 +2311,8 @@ typedef struct trGlobals_s {
 	shaderProgram_t weatherShader;
 
 	int cameraUboOffset;
+	int sceneUboOffset;
+	int lightsUboOffset;
 
 	// -----------------------------------------
 

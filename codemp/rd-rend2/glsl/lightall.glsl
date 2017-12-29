@@ -37,6 +37,14 @@ layout(std140) uniform Camera
 	vec3 u_ViewUp;
 };
 
+layout(std140) uniform Scene
+{
+	vec4 u_PrimaryLightOrigin;
+	vec3 u_PrimaryLightAmbient;
+	vec3 u_PrimaryLightColor;
+	float u_PrimaryLightRadius;
+};
+
 #if defined(USE_DELUXEMAP)
 uniform vec4   u_EnableTextures; // x = normal, y = deluxe, z = specular, w = cube
 #endif
@@ -72,11 +80,6 @@ uniform float u_LightRadius;
 uniform vec3 u_DirectedLight;
 uniform vec3 u_AmbientLight;
   #endif
-#endif
-
-#if defined(USE_PRIMARY_LIGHT) || defined(USE_SHADOWMAP)
-uniform vec4 u_PrimaryLightOrigin;
-uniform float u_PrimaryLightRadius;
 #endif
 
 uniform float u_FXVolumetricBase;
@@ -311,6 +314,13 @@ void main()
 #if defined(USE_LIGHT) && !defined(USE_VERTEX_LIGHTING)
 #define PER_PIXEL_LIGHTING
 #endif
+layout(std140) uniform Scene
+{
+	vec4 u_PrimaryLightOrigin;
+	vec3 u_PrimaryLightAmbient;
+	vec3 u_PrimaryLightColor;
+	float u_PrimaryLightRadius;
+};
 
 layout(std140) uniform Camera
 {
@@ -356,11 +366,6 @@ uniform vec4 u_EnableTextures;
 #if defined(USE_LIGHT_VECTOR) && !defined(USE_VERTEX_LIGHTING)
 uniform vec3 u_DirectedLight;
 uniform vec3 u_AmbientLight;
-#endif
-
-#if defined(USE_PRIMARY_LIGHT) || defined(USE_SHADOWMAP)
-uniform vec3 u_PrimaryLightColor;
-uniform vec3 u_PrimaryLightAmbient;
 #endif
 
 #if defined(PER_PIXEL_LIGHTING)

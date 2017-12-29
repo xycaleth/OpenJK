@@ -48,7 +48,9 @@ extern const GPUProgramDesc fallback_weatherProgram;
 
 
 const uniformBlockInfo_t uniformBlocksInfo[UNIFORM_BLOCK_COUNT] = {
-	{ 1, "Camera", sizeof(CameraBlock) },
+	{ 0, "Camera", sizeof(CameraBlock) },
+	{ 1, "Scene", sizeof(SceneBlock) },
+	{ 2, "Lights", sizeof(SceneBlock) },
 	{ 10, "SurfaceSprite", sizeof(SurfaceSpriteBlock) },
 };
 
@@ -113,6 +115,7 @@ static uniformInfo_t uniformsInfo[] =
 	{ "u_LightRadius",   GLSL_FLOAT, 1 },
 	{ "u_AmbientLight",  GLSL_VEC3, 1 },
 	{ "u_DirectedLight", GLSL_VEC3, 1 },
+	{ "u_LightIndex",    GLSL_INT, 1 },
 
 	{ "u_PortalRange", GLSL_FLOAT, 1 },
 
@@ -142,11 +145,6 @@ static uniformInfo_t uniformsInfo[] =
 	{ "u_InvTexRes",           GLSL_VEC2, 1 },
 	{ "u_AutoExposureMinMax",  GLSL_VEC2, 1 },
 	{ "u_ToneMinAvgMaxLinear", GLSL_VEC3, 1 },
-
-	{ "u_PrimaryLightOrigin",  GLSL_VEC4, 1  },
-	{ "u_PrimaryLightColor",   GLSL_VEC3, 1  },
-	{ "u_PrimaryLightAmbient", GLSL_VEC3, 1  },
-	{ "u_PrimaryLightRadius",  GLSL_FLOAT, 1 },
 
 	{ "u_CubeMapInfo", GLSL_VEC4, 1 },
 

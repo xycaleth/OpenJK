@@ -967,6 +967,7 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		vector[3] = 1.0f;
 		uniformDataWriter.SetUniformVec4(UNIFORM_LIGHTORIGIN, vector);
 		uniformDataWriter.SetUniformFloat(UNIFORM_LIGHTRADIUS, radius);
+		uniformDataWriter.SetUniformInt(UNIFORM_LIGHTINDEX, l);
 
 		uniformDataWriter.SetUniformVec4(UNIFORM_NORMALSCALE, pStage->normalScale);
 		uniformDataWriter.SetUniformVec4(UNIFORM_SPECULARSCALE, pStage->specularScale);
@@ -1031,11 +1032,15 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 1;
-		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(*backEndData->perFrameMemory, item.numUniformBlockBindings);
+		item.numUniformBlockBindings = 2;
+		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
+			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
 		item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
 		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
+		item.uniformBlockBindings[1].data = nullptr;
+		item.uniformBlockBindings[1].offset = tr.sceneUboOffset;
+		item.uniformBlockBindings[1].block = UNIFORM_BLOCK_SCENE;
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1561,9 +1566,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 					(pStage->glslShaderIndex & LIGHTDEF_LIGHTTYPE_MASK))
 			{
 				samplerBindingsWriter.AddStaticImage(tr.screenShadowImage, TB_SHADOWMAP);
-				uniformDataWriter.SetUniformVec3(UNIFORM_PRIMARYLIGHTAMBIENT, backEnd.refdef.sunAmbCol);
-				uniformDataWriter.SetUniformVec3(UNIFORM_PRIMARYLIGHTCOLOR,   backEnd.refdef.sunCol);
-				uniformDataWriter.SetUniformVec4(UNIFORM_PRIMARYLIGHTORIGIN,  backEnd.refdef.sunDir);
 			}
 
 			if ((r_lightmap->integer == 1 || r_lightmap->integer == 2) &&
@@ -1700,11 +1702,15 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 1;
-		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(*backEndData->perFrameMemory, item.numUniformBlockBindings);
+		item.numUniformBlockBindings = 2;
+		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
+			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
 		item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
 		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
+		item.uniformBlockBindings[1].data = nullptr;
+		item.uniformBlockBindings[1].offset = tr.sceneUboOffset;
+		item.uniformBlockBindings[1].block = UNIFORM_BLOCK_SCENE;
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
