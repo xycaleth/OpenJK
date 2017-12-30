@@ -533,6 +533,7 @@ vec3 CalcIBLContribution(
 	in float roughness,
 	in vec3 N,
 	in vec3 E,
+	in vec3 viewOrigin,
 	in vec3 viewDir,
 	in float NE,
 	in vec3 specular
@@ -545,7 +546,8 @@ vec3 CalcIBLContribution(
 
 	// parallax corrected cubemap (cheaper trick)
 	// from http://seblagarde.wordpress.com/2012/09/29/image-based-lighting-approaches-and-parallax-corrected-cubemap/
-	vec3 parallax = u_CubeMapInfo.xyz + u_CubeMapInfo.w * viewDir;
+	vec3 eyeToCubeCenter = (u_CubeMapInfo.xyz - viewOrigin) * 0.001;
+	vec3 parallax = eyeToCubeCenter + u_CubeMapInfo.w * viewDir * 0.001;
 
 	vec3 cubeLightColor = textureLod(u_CubeMap, R + parallax, roughness * ROUGHNESS_MIPS).rgb * u_EnableTextures.w;
 
@@ -735,7 +737,8 @@ void main()
 	out_Color.rgb += lightColor * reflectance * NL2;
   #endif
 	
-	out_Color.rgb += CalcIBLContribution(roughness, N, E, viewDir, NE, specular.rgb);
+	out_Color.rgb += CalcIBLContribution(
+		roughness, N, E, u_ViewOrigin, viewDir, NE, specular.rgb);
 
 #else
 	lightColor = var_Color.rgb;

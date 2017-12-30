@@ -1673,19 +1673,16 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		//
 		if ( enableCubeMaps )
 		{
-			vec4_t vec;
+			samplerBindingsWriter.AddStaticImage(
+				tr.cubemaps[input->cubemapIndex - 1], TB_CUBEMAP);
+			samplerBindingsWriter.AddStaticImage(
+				tr.envBrdfImage, TB_ENVBRDFMAP);
 
-			samplerBindingsWriter.AddStaticImage(tr.cubemaps[input->cubemapIndex - 1], TB_CUBEMAP);
-			samplerBindingsWriter.AddStaticImage(tr.envBrdfImage, TB_ENVBRDFMAP);
+			vec4_t cubeMapInfo;
+			VectorCopy(tr.cubemapOrigins[input->cubemapIndex - 1], cubeMapInfo);
+			cubeMapInfo[3] = 1.0f;
 
-			vec[0] = tr.cubemapOrigins[input->cubemapIndex - 1][0] - backEnd.viewParms.ori.origin[0];
-			vec[1] = tr.cubemapOrigins[input->cubemapIndex - 1][1] - backEnd.viewParms.ori.origin[1];
-			vec[2] = tr.cubemapOrigins[input->cubemapIndex - 1][2] - backEnd.viewParms.ori.origin[2];
-			vec[3] = 1.0f;
-
-			VectorScale4(vec, 1.0f / 1000.0f, vec);
-
-			uniformDataWriter.SetUniformVec4(UNIFORM_CUBEMAPINFO, vec);
+			uniformDataWriter.SetUniformVec4(UNIFORM_CUBEMAPINFO, cubeMapInfo);
 		}
 
 		CaptureDrawData(input, pStage, index, stage);
