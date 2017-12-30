@@ -1025,7 +1025,10 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		item.numAttributes = vertexArrays->numVertexArrays;
 		item.attributes = ojkAllocArray<vertexAttribute_t>(
 			*backEndData->perFrameMemory, vertexArrays->numVertexArrays);
-		memcpy(item.attributes, attribs, sizeof(*item.attributes)*vertexArrays->numVertexArrays);
+		memcpy(
+			item.attributes,
+			attribs,
+			sizeof(*item.attributes)*vertexArrays->numVertexArrays);
 
 		item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 		// FIXME: This is a bit ugly with the casting
@@ -1185,9 +1188,7 @@ static void RB_FogPass( shaderCommands_t *input, const fog_t *fog, const VertexA
 	uniformDataWriter.SetUniformVec4(UNIFORM_COLOR, fog->color);
 	uniformDataWriter.SetUniformVec4(UNIFORM_FOGPLANE, fog->surface);
 	uniformDataWriter.SetUniformInt(UNIFORM_FOGHASPLANE, fog->hasSurface);
-	uniformDataWriter.SetUniformFloat(
-		UNIFORM_FOGDEPTHTOOPAQUE,
-		sqrtf(-logf(1.0f / 255.0f)) / fog->parms.depthForOpaque);
+	uniformDataWriter.SetUniformFloat(UNIFORM_FOGDEPTHTOOPAQUE, fog->parms.depthForOpaque);
 
 	uint32_t stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 	if ( tess.shader->fogPass == FP_EQUAL )
