@@ -2036,6 +2036,14 @@ struct vertexAttribute_t
 	int stepRate;
 };
 
+#define MAX_UBO_BINDINGS (16)
+struct bufferBinding_t
+{
+	GLuint buffer;
+	int offset;
+	int size;
+};
+
 // the renderer front end should never modify glstate_t
 typedef struct glstate_s {
 	int			currenttextures[NUM_TEXTURE_BUNDLES];
@@ -2059,6 +2067,7 @@ typedef struct glstate_s {
 	FBO_t          *currentFBO;
 	VBO_t          *currentVBO;
 	IBO_t          *currentIBO;
+	bufferBinding_t currentUBOs[MAX_UBO_BINDINGS];
 	matrix_t        modelview;
 	matrix_t        projection;
 	matrix_t		modelviewProjection;

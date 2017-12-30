@@ -686,8 +686,24 @@ void RB_BindUniformBlock(uniformBlock_t block, int offset)
 	const uniformBlockInfo_t *blockInfo = uniformBlocksInfo + block;
 	gpuFrame_t *thisFrame = backEndData->currentFrame;
 
-	qglBindBufferRange(GL_UNIFORM_BUFFER, blockInfo->slot,
-			thisFrame->ubo, offset, blockInfo->size);
+	assert(blockInfo->slot < MAX_UBO_BINDINGS);
+
+	bufferBinding_t *currentBinding = glState.currentUBOs + blockInfo->slot;
+	if (currentBinding->buffer != thisFrame->ubo ||
+		currentBinding->offset != offset ||
+		currentBinding->size != blockInfo->size)
+	{
+		qglBindBufferRange(
+			GL_UNIFORM_BUFFER,
+			blockInfo->slot,
+			thisFrame->ubo,
+			offset,
+			blockInfo->size);
+
+		currentBinding->buffer = thisFrame->ubo;
+		currentBinding->offset = offset;
+		currentBinding->size = blockInfo->size;
+	}
 }
 
 int RB_BindAndUpdateUniformBlock(uniformBlock_t block, void *data)
