@@ -1035,15 +1035,12 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 2;
+		item.numUniformBlockBindings = 1;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
-		item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
-		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
-		item.uniformBlockBindings[1].data = nullptr;
-		item.uniformBlockBindings[1].offset = tr.sceneUboOffset;
-		item.uniformBlockBindings[1].block = UNIFORM_BLOCK_SCENE;
+		item.uniformBlockBindings[0].offset = tr.lightsUboOffset;
+		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_LIGHTS;
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1138,7 +1135,7 @@ RB_FogPass
 Blends a fog texture on top of everything else
 ===================
 */
-static void RB_FogPass( shaderCommands_t *input, const fog_t *fog, const VertexArraysProperties *vertexArrays )
+static void RB_FogPass( shaderCommands_t *input, int fogIndex, const VertexArraysProperties *vertexArrays )
 {
 	shaderProgram_t *sp;
 
@@ -1171,11 +1168,15 @@ static void RB_FogPass( shaderCommands_t *input, const fog_t *fog, const VertexA
 
 	backEnd.pc.c_fogDraws++;
 
-	uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
-	uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELMATRIX, backEnd.ori.modelMatrix);
+	uniformDataWriter.SetUniformMatrix4x4(
+		UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
+	uniformDataWriter.SetUniformMatrix4x4(
+		UNIFORM_MODELMATRIX, backEnd.ori.modelMatrix);
 
-	uniformDataWriter.SetUniformFloat(UNIFORM_VERTEXLERP, glState.vertexAttribsInterpolation);
-	uniformDataWriter.SetUniformMatrix4x3(UNIFORM_BONE_MATRICES, &glState.boneMatrices[0][0], glState.numBones);
+	uniformDataWriter.SetUniformFloat(
+		UNIFORM_VERTEXLERP, glState.vertexAttribsInterpolation);
+	uniformDataWriter.SetUniformMatrix4x3(
+		UNIFORM_BONE_MATRICES, &glState.boneMatrices[0][0], glState.numBones);
 	
 	uniformDataWriter.SetUniformInt(UNIFORM_DEFORMTYPE, deformType);
 	if (deformType != DEFORM_NONE)
@@ -1185,10 +1186,7 @@ static void RB_FogPass( shaderCommands_t *input, const fog_t *fog, const VertexA
 		uniformDataWriter.SetUniformFloat(UNIFORM_TIME, tess.shaderTime);
 	}
 
-	uniformDataWriter.SetUniformVec4(UNIFORM_COLOR, fog->color);
-	uniformDataWriter.SetUniformVec4(UNIFORM_FOGPLANE, fog->surface);
-	uniformDataWriter.SetUniformInt(UNIFORM_FOGHASPLANE, fog->hasSurface);
-	uniformDataWriter.SetUniformFloat(UNIFORM_FOGDEPTHTOOPAQUE, fog->parms.depthForOpaque);
+	uniformDataWriter.SetUniformInt(UNIFORM_FOGINDEX, fogIndex - 1);
 
 	uint32_t stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 	if ( tess.shader->fogPass == FP_EQUAL )
@@ -1207,6 +1205,16 @@ static void RB_FogPass( shaderCommands_t *input, const fog_t *fog, const VertexA
 	memcpy(item.attributes, attribs, sizeof(*item.attributes)*vertexArrays->numVertexArrays);
 
 	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
+
+	item.numUniformBlockBindings = 2;
+	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
+		*backEndData->perFrameMemory, item.numUniformBlockBindings);
+	item.uniformBlockBindings[0].data = nullptr;
+	item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
+	item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
+	item.uniformBlockBindings[1].data = nullptr;
+	item.uniformBlockBindings[1].offset = tr.fogsUboOffset;
+	item.uniformBlockBindings[1].block = UNIFORM_BLOCK_FOGS;
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1455,11 +1463,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 
 		if ( input->fogNum ) {
 			const fog_t *fog = tr.world->fogs + input->fogNum;
-
-			uniformDataWriter.SetUniformVec4(UNIFORM_COLOR, fog->color);
-			uniformDataWriter.SetUniformVec4(UNIFORM_FOGPLANE, fog->surface);
-			uniformDataWriter.SetUniformInt(UNIFORM_FOGHASPLANE, fog->hasSurface);
-			uniformDataWriter.SetUniformFloat(UNIFORM_FOGDEPTHTOOPAQUE, fog->parms.depthForOpaque);
+			uniformDataWriter.SetUniformInt(UNIFORM_FOGINDEX, input->fogNum - 1);
 
 			vec4_t fogColorMask;
 			ComputeFogColorMask(pStage, fogColorMask);
@@ -1703,7 +1707,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 2;
+		item.numUniformBlockBindings = 3;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
@@ -1712,6 +1716,9 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		item.uniformBlockBindings[1].data = nullptr;
 		item.uniformBlockBindings[1].offset = tr.sceneUboOffset;
 		item.uniformBlockBindings[1].block = UNIFORM_BLOCK_SCENE;
+		item.uniformBlockBindings[2].data = nullptr;
+		item.uniformBlockBindings[2].offset = tr.fogsUboOffset;
+		item.uniformBlockBindings[2].block = UNIFORM_BLOCK_FOGS;
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1878,7 +1885,7 @@ void RB_StageIteratorGeneric( void )
 		}
 
 		if ( fog && tess.shader->fogPass ) {
-			RB_FogPass( &tess, fog, &vertexArrays );
+			RB_FogPass( &tess, fog - tr.world->fogs, &vertexArrays );
 		}
 	}
 

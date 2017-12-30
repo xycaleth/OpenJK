@@ -50,7 +50,8 @@ extern const GPUProgramDesc fallback_weatherProgram;
 const uniformBlockInfo_t uniformBlocksInfo[UNIFORM_BLOCK_COUNT] = {
 	{ 0, "Camera", sizeof(CameraBlock) },
 	{ 1, "Scene", sizeof(SceneBlock) },
-	{ 2, "Lights", sizeof(SceneBlock) },
+	{ 2, "Lights", sizeof(LightsBlock) },
+	{ 3, "Fogs", sizeof(FogsBlock) },
 	{ 10, "SurfaceSprite", sizeof(SurfaceSpriteBlock) },
 };
 
@@ -63,7 +64,7 @@ typedef struct uniformInfo_s
 uniformInfo_t;
 
 // These must be in the same order as in uniform_t in tr_local.h.
-static uniformInfo_t uniformsInfo[] =
+static uniformInfo_t uniformsInfo[UNIFORM_COUNT] =
 {
 	{ "u_DiffuseMap",  GLSL_INT, 1 },
 	{ "u_LightMap",    GLSL_INT, 1 },
@@ -119,13 +120,8 @@ static uniformInfo_t uniformsInfo[] =
 
 	{ "u_PortalRange", GLSL_FLOAT, 1 },
 
-	{ "u_FogDistance",  GLSL_VEC4, 1 },
-	{ "u_FogDepth",     GLSL_VEC4, 1 },
-	{ "u_FogEyeT",      GLSL_FLOAT, 1 },
 	{ "u_FogColorMask", GLSL_VEC4, 1 },
-	{ "u_FogPlane",		GLSL_VEC4, 1 },
-	{ "u_FogHasPlane",	GLSL_INT, 1 },
-	{ "u_FogDepthToOpaque", GLSL_FLOAT, 1 },
+	{ "u_FogIndex",		GLSL_INT, 1 },
 
 	{ "u_ModelMatrix",               GLSL_MAT4x4, 1 },
 	{ "u_ModelViewProjectionMatrix", GLSL_MAT4x4, 1 },

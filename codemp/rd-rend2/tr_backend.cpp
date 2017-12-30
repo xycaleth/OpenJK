@@ -2223,10 +2223,32 @@ static void RB_UpdateLightsConstants()
 		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_LIGHTS, &lightsBlock);
 }
 
+static void RB_UpdateFogsConstants()
+{
+	FogsBlock fogsBlock = {};
+	fogsBlock.numFogs = tr.world->numfogs - 1; // Don't reserve fog 0 as 'null'
+
+	for (int i = 0; i < fogsBlock.numFogs; ++i)
+	{
+		const fog_t *fog = tr.world->fogs + i + 1;
+		FogsBlock::Fog *fogData = fogsBlock.fogs + i;
+
+		VectorCopy4(fog->surface, fogData->plane);
+		VectorCopy4(fog->color, fogData->color);
+		fogData->depthToOpaque = fog->parms.depthForOpaque;
+		fogData->hasPlane = fog->hasSurface ? 1 : 0;
+	}
+
+	tr.fogsUboOffset =
+		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_FOGS, &fogsBlock);
+}
+
 static void RB_UpdateConstants()
 {
 	RB_UpdateCameraConstants();
 	RB_UpdateSceneConstants();
+	RB_UpdateLightsConstants();
+	RB_UpdateFogsConstants();
 }
 
 /*

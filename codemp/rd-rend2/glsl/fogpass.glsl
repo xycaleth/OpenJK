@@ -28,8 +28,6 @@ uniform float u_VertexLerp;
 uniform mat4x3 u_BoneMatrices[20];
 #endif
 
-uniform vec4 u_Color;
-
 out vec3 var_WSPosition;
 
 #if defined(USE_DEFORM_VERTEXES)
@@ -215,6 +213,21 @@ void main()
 }
 
 /*[Fragment]*/
+struct Fog
+{
+	vec4 plane;
+	vec4 color;
+	float depthToOpaque;
+	bool hasPlane;
+};
+
+layout(std140) uniform Fogs
+{
+	int u_NumFogs;
+	Fog u_Fogs[16];
+};
+uniform int u_FogIndex;
+
 layout(std140) uniform Camera
 {
 	vec4 u_ViewInfo;
@@ -224,20 +237,16 @@ layout(std140) uniform Camera
 	vec3 u_ViewUp;
 };
 
-uniform vec4 u_Color;
 #if defined(USE_ALPHA_TEST)
 uniform int u_AlphaTestType;
 #endif
 
-uniform vec4 u_FogPlane;
-uniform float u_FogDepthToOpaque;
-uniform bool u_FogHasPlane;
 in vec3 var_WSPosition;
 
 out vec4 out_Color;
 out vec4 out_Glow;
 
-float CalcFog(in vec3 viewOrigin, in vec3 position, in vec4 fogPlane, in float depthToOpaque, in bool hasPlane)
+float CalcFog(in vec3 viewOrigin, in vec3 position, in Fog fog)
 {
 	// line: x = o + tv
 	// plane: (x . n) + d = 0
@@ -248,9 +257,9 @@ float CalcFog(in vec3 viewOrigin, in vec3 position, in vec4 fogPlane, in float d
 	vec3 V = position - viewOrigin;
 
 	// fogPlane is inverted in tr_bsp for some reason.
-	float t = -(fogPlane.w + dot(viewOrigin, -fogPlane.xyz)) / dot(V, -fogPlane.xyz);
+	float t = -(fog.plane.w + dot(viewOrigin, -fog.plane.xyz)) / dot(V, -fog.plane.xyz);
 
-	bool inFog = ((dot(viewOrigin, fogPlane.xyz) - fogPlane.w) >= 0.0) || !hasPlane;
+	bool inFog = !fog.hasPlane || ((dot(viewOrigin, fog.plane.xyz) - fog.plane.w) >= 0.0);
 	bool intersects = (t > 0.0 && t <= 1.0);
 
 	// this is valid only when t > 0.0. When t < 0.0, then intersection point is behind
@@ -266,18 +275,19 @@ float CalcFog(in vec3 viewOrigin, in vec3 position, in vec4 fogPlane, in float d
 							 !inFog && intersects);
 
 	float distSquared = distToVertex * distToVertex;
-	float depthToOpaqueSquared = depthToOpaque * depthToOpaque;
+	float depthToOpaqueSquared = fog.depthToOpaque * fog.depthToOpaque;
 
-	// -5.54126 = log(1.0 / 255.0)
+	// -5.54126 = ln(1.0 / 255.0)
 	return 1.0 - clamp(
 		exp(-5.54126 * distSquared / depthToOpaqueSquared), 0.0, 1.0);
 }
 
 void main()
 {
-	float fog = CalcFog(u_ViewOrigin, var_WSPosition, u_FogPlane, u_FogDepthToOpaque, u_FogHasPlane);
-	out_Color.rgb = u_Color.rgb;
-	out_Color.a = sqrt(clamp(fog, 0.0, 1.0));
+	Fog fog = u_Fogs[u_FogIndex];
+	float fogFactor = CalcFog(u_ViewOrigin, var_WSPosition, fog);
+	out_Color.rgb = fog.color.rgb;
+	out_Color.a = sqrt(fogFactor);
 
 #if defined(USE_ALPHA_TEST)
 	if (u_AlphaTestType == ALPHA_TEST_GT0)

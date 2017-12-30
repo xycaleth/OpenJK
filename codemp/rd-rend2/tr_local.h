@@ -690,6 +690,22 @@ struct LightsBlock
 	} lights[MAX_DLIGHTS];
 };
 
+struct FogsBlock
+{
+	struct Fog
+	{
+		vec4_t plane;
+		vec4_t color;
+		float depthToOpaque;
+		int hasPlane;
+		float pad1[2];
+	};
+
+	int numFogs;
+	float pad0[3];
+	Fog fogs[16];
+};
+
 struct surfaceSprite_t
 {
 	surfaceSpriteType_t type;
@@ -1129,6 +1145,7 @@ enum uniformBlock_t
 	UNIFORM_BLOCK_CAMERA,
 	UNIFORM_BLOCK_SCENE,
 	UNIFORM_BLOCK_LIGHTS,
+	UNIFORM_BLOCK_FOGS,
 	UNIFORM_BLOCK_SURFACESPRITE,
 	UNIFORM_BLOCK_COUNT
 };
@@ -1234,13 +1251,8 @@ typedef enum
 
 	UNIFORM_PORTALRANGE,
 
-	UNIFORM_FOGDISTANCE,
-	UNIFORM_FOGDEPTH,
-	UNIFORM_FOGEYET,
 	UNIFORM_FOGCOLORMASK,
-	UNIFORM_FOGPLANE,
-	UNIFORM_FOGHASPLANE,
-	UNIFORM_FOGDEPTHTOOPAQUE,
+	UNIFORM_FOGINDEX,
 
 	UNIFORM_MODELMATRIX,
 	UNIFORM_MODELVIEWPROJECTIONMATRIX,
@@ -2313,6 +2325,7 @@ typedef struct trGlobals_s {
 	int cameraUboOffset;
 	int sceneUboOffset;
 	int lightsUboOffset;
+	int fogsUboOffset;
 
 	// -----------------------------------------
 

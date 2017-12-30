@@ -361,6 +361,22 @@ void main()
 
 
 /*[Fragment]*/
+struct Fog
+{
+	vec4 plane;
+	vec4 color;
+	float depthToOpaque;
+	bool hasPlane;
+};
+
+layout(std140) uniform Fogs
+{
+	int u_NumFogs;
+	Fog u_Fogs[16];
+};
+uniform int u_FogIndex;
+uniform vec4 u_FogColorMask;
+
 layout(std140) uniform Camera
 {
 	vec4 u_ViewInfo;
@@ -375,13 +391,6 @@ uniform sampler2D u_DiffuseMap;
 uniform int u_AlphaTestType;
 #endif
 
-#if defined(USE_FOG)
-uniform vec4 u_FogPlane;
-uniform float u_FogDepthToOpaque;
-uniform bool u_FogHasPlane;
-uniform vec4 u_FogColorMask;
-#endif
-
 in vec2 var_DiffuseTex;
 in vec4 var_Color;
 #if defined(USE_FOG)
@@ -393,7 +402,7 @@ out vec4 out_Glow;
 
 
 #if defined(USE_FOG)
-float CalcFog(in vec3 viewOrigin, in vec3 position, in vec4 fogPlane, in float depthToOpaque, in bool hasPlane)
+float CalcFog(in vec3 viewOrigin, in vec3 position, in Fog fog)
 {
 	// line: x = o + tv
 	// plane: (x . n) + d = 0
@@ -403,10 +412,10 @@ float CalcFog(in vec3 viewOrigin, in vec3 position, in vec4 fogPlane, in float d
 	//             t = -(d + dot(o, n)) / dot(n, v)
 	vec3 V = position - viewOrigin;
 
-	// fogPlane is inverted in tr_bsp for some reason.
-	float t = -(fogPlane.w + dot(viewOrigin, -fogPlane.xyz)) / dot(V, -fogPlane.xyz);
+	// fog.plane is inverted in tr_bsp for some reason.
+	float t = -(fog.plane.w + dot(viewOrigin, -fog.plane.xyz)) / dot(V, -fog.plane.xyz);
 
-	bool inFog = ((dot(viewOrigin, fogPlane.xyz) - fogPlane.w) >= 0.0) || !hasPlane;
+	bool inFog = !fog.hasPlane || ((dot(viewOrigin, fog.plane.xyz) - fog.plane.w) >= 0.0);
 	bool intersects = (t > 0.0 && t <= 1.0);
 
 	// this is valid only when t > 0.0. When t < 0.0, then intersection point is behind
@@ -421,7 +430,7 @@ float CalcFog(in vec3 viewOrigin, in vec3 position, in vec4 fogPlane, in float d
 							 distToVertexFromIntersection,
 							 !inFog && intersects);
 
-	return min(distToVertex / depthToOpaque, 1.0);
+	return min(distToVertex / fog.depthToOpaque, 1.0);
 }
 #endif
 
@@ -453,8 +462,9 @@ void main()
 #endif
 
 #if defined(USE_FOG)
-	float fog = CalcFog(u_ViewOrigin.xyz, var_WSPosition, u_FogPlane, u_FogDepthToOpaque, u_FogHasPlane);
-	color *= vec4(1.0) - u_FogColorMask * fog;
+	Fog fog = u_Fogs[u_FogIndex];
+	float fogFactor = CalcFog(u_ViewOrigin.xyz, var_WSPosition, fog);
+	color *= vec4(1.0) - u_FogColorMask * fogFactor;
 #endif
 
 	out_Color = color * var_Color;
