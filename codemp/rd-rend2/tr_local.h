@@ -706,6 +706,21 @@ struct FogsBlock
 	Fog fogs[16];
 };
 
+struct EntityBlock
+{
+	matrix_t modelMatrix;
+	matrix_t modelViewProjectionMatrix;
+	vec4_t lightOrigin;
+	vec3_t ambientLight;
+	float lightRadius;
+	vec3_t directedLight;
+	float fxVolumetricBase;
+	vec3_t modelLightDir;
+	float vertexLerp;
+	vec3_t localViewOrigin;
+	float pad0;
+};
+
 struct surfaceSprite_t
 {
 	surfaceSpriteType_t type;
@@ -1146,6 +1161,7 @@ enum uniformBlock_t
 	UNIFORM_BLOCK_SCENE,
 	UNIFORM_BLOCK_LIGHTS,
 	UNIFORM_BLOCK_FOGS,
+	UNIFORM_BLOCK_ENTITY,
 	UNIFORM_BLOCK_SURFACESPRITE,
 	UNIFORM_BLOCK_COUNT
 };
@@ -2109,6 +2125,7 @@ typedef struct {
 	int textureCompression;
 	int uniformBufferOffsetAlignment;
 	int maxUniformBlockSize;
+	int maxUniformBufferBindings;
 
 	qboolean immutableTextures;
 	qboolean immutableBuffers;
@@ -2335,6 +2352,7 @@ typedef struct trGlobals_s {
 	int sceneUboOffset;
 	int lightsUboOffset;
 	int fogsUboOffset;
+	int entityUboOffsets[MAX_REFENTITIES + 1];
 
 	// -----------------------------------------
 

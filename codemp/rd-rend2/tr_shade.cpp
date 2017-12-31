@@ -1035,12 +1035,19 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 1;
+		const int refEntityNum = (backEnd.currentEntity == &tr.worldEntity)
+			? REFENTITYNUM_WORLD
+			: backEnd.currentEntity - backEnd.refdef.entities;
+
+		item.numUniformBlockBindings = 2;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
 		item.uniformBlockBindings[0].offset = tr.lightsUboOffset;
 		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_LIGHTS;
+		item.uniformBlockBindings[1].data = nullptr;
+		item.uniformBlockBindings[1].offset = tr.entityUboOffsets[refEntityNum];
+		item.uniformBlockBindings[1].block = UNIFORM_BLOCK_ENTITY;
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1462,7 +1469,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		}
 
 		if ( input->fogNum ) {
-			const fog_t *fog = tr.world->fogs + input->fogNum;
 			uniformDataWriter.SetUniformInt(UNIFORM_FOGINDEX, input->fogNum - 1);
 
 			vec4_t fogColorMask;
@@ -1499,25 +1505,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		}
 
 		uniformDataWriter.SetUniformFloat(UNIFORM_FX_VOLUMETRIC_BASE, volumetricBaseValue);
-
-		if (pStage->rgbGen == CGEN_LIGHTING_DIFFUSE ||
-			pStage->rgbGen == CGEN_LIGHTING_DIFFUSE_ENTITY)
-		{
-			vec4_t vec;
-
-			VectorScale(backEnd.currentEntity->ambientLight, 1.0f / 255.0f, vec);
-			uniformDataWriter.SetUniformVec3(UNIFORM_AMBIENTLIGHT, vec);
-
-			VectorScale(backEnd.currentEntity->directedLight, 1.0f / 255.0f, vec);
-			uniformDataWriter.SetUniformVec3(UNIFORM_DIRECTEDLIGHT, vec);
-			
-			VectorCopy(backEnd.currentEntity->lightDir, vec);
-			vec[3] = 0.0f;
-			uniformDataWriter.SetUniformVec4(UNIFORM_LIGHTORIGIN, vec);
-			uniformDataWriter.SetUniformVec3(UNIFORM_MODELLIGHTDIR, backEnd.currentEntity->modelLightDir);
-
-			uniformDataWriter.SetUniformFloat(UNIFORM_LIGHTRADIUS, 0.0f);
-		}
 
 		if (pStage->alphaGen == AGEN_PORTAL)
 		{
@@ -1704,7 +1691,11 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 3;
+		const int refEntityNum = (backEnd.currentEntity == &tr.worldEntity)
+			? REFENTITYNUM_WORLD
+			: backEnd.currentEntity - backEnd.refdef.entities;
+
+		item.numUniformBlockBindings = 4;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
@@ -1716,6 +1707,9 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		item.uniformBlockBindings[2].data = nullptr;
 		item.uniformBlockBindings[2].offset = tr.fogsUboOffset;
 		item.uniformBlockBindings[2].block = UNIFORM_BLOCK_FOGS;
+		item.uniformBlockBindings[3].data = nullptr;
+		item.uniformBlockBindings[3].offset = tr.entityUboOffsets[refEntityNum];
+		item.uniformBlockBindings[3].block = UNIFORM_BLOCK_ENTITY;
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 

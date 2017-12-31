@@ -26,6 +26,20 @@ layout(std140) uniform Camera
 	vec3 u_ViewUp;
 };
 
+layout(std140) uniform Entity
+{
+	mat4 _u_ModelMatrix;
+	mat4 _u_ModelViewProjectionMatrix;
+	vec4 u_LocalLightOrigin;
+	vec3 u_AmbientLight;
+	float u_LocalLightRadius;
+	vec3 u_DirectedLight;
+	float _u_FXVolumetricBase;
+	vec3 u_ModelLightDir;
+	float _u_VertexLerp;
+	vec3 _u_LocalViewOrigin;
+};
+
 uniform vec4 u_DiffuseTexMatrix;
 uniform vec4 u_DiffuseTexOffTurb;
 
@@ -48,16 +62,12 @@ uniform vec4 u_BaseColor;
 uniform vec4 u_VertColor;
 uniform vec3 u_LocalViewOrigin;
 
-uniform float u_FXVolumetricBase;
-
 #if defined(USE_RGBAGEN)
 uniform int u_ColorGen;
 uniform int u_AlphaGen;
-uniform vec3 u_AmbientLight;
-uniform vec3 u_DirectedLight;
-uniform vec3 u_ModelLightDir;
 uniform float u_PortalRange;
 #endif
+uniform float u_FXVolumetricBase;
 
 #if defined(USE_VERTEX_ANIMATION)
 uniform float u_VertexLerp;
@@ -386,10 +396,25 @@ layout(std140) uniform Camera
 	vec3 u_ViewUp;
 };
 
+layout(std140) uniform Entity
+{
+	mat4 _u_ModelMatrix;
+	mat4 _u_ModelViewProjectionMatrix;
+	vec4 u_LocalLightOrigin;
+	vec3 u_AmbientLight;
+	float u_LocalLightRadius;
+	vec3 u_DirectedLight;
+	float _u_FXVolumetricBase;
+	vec3 u_ModelLightDir;
+	float _u_VertexLerp;
+	vec3 _u_LocalViewOrigin;
+};
+
 uniform sampler2D u_DiffuseMap;
 #if defined(USE_ALPHA_TEST)
 uniform int u_AlphaTestType;
 #endif
+
 
 in vec2 var_DiffuseTex;
 in vec4 var_Color;

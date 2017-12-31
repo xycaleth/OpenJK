@@ -45,6 +45,21 @@ layout(std140) uniform Scene
 	float u_PrimaryLightRadius;
 };
 
+layout(std140) uniform Entity
+{
+	mat4 _u_ModelMatrix;
+	mat4 _u_ModelViewProjectionMatrix;
+	vec4 u_LocalLightOrigin;
+	vec3 u_AmbientLight;
+	float u_LocalLightRadius;
+	vec3 u_DirectedLight;
+	float _u_FXVolumetricBase;
+	vec3 u_ModelLightDir;
+	float _u_VertexLerp;
+	vec3 _u_LocalViewOrigin;
+};
+uniform float u_FXVolumetricBase;
+
 #if defined(USE_DELUXEMAP)
 uniform vec4   u_EnableTextures; // x = normal, y = deluxe, z = specular, w = cube
 #endif
@@ -72,17 +87,6 @@ uniform float u_VertexLerp;
 #elif defined(USE_SKELETAL_ANIMATION)
 uniform mat4x3 u_BoneMatrices[20];
 #endif
-
-#if defined(USE_LIGHT_VECTOR)
-uniform vec4 u_LightOrigin;
-uniform float u_LightRadius;
-  #if defined(USE_FAST_LIGHT)
-uniform vec3 u_DirectedLight;
-uniform vec3 u_AmbientLight;
-  #endif
-#endif
-
-uniform float u_FXVolumetricBase;
 
 out vec4 var_TexCoords;
 out vec4 var_Color;
@@ -251,7 +255,7 @@ void main()
 #endif
 
 #if defined(USE_LIGHT_VECTOR)
-	vec3 L = u_LightOrigin.xyz - (position * u_LightOrigin.w);
+	vec3 L = u_LocalLightOrigin.xyz - (position * u_LocalLightOrigin.w);
 #elif defined(PER_PIXEL_LIGHTING)
 	vec3 L = attr_LightDirection * 2.0 - vec3(1.0);
 	L = (u_ModelMatrix * vec4(L, 0.0)).xyz;
@@ -277,7 +281,7 @@ void main()
 
 #if defined(USE_LIGHT_VECTOR) && defined(USE_FAST_LIGHT)
 		float sqrLightDist = dot(L, L);
-		float attenuation = CalcLightAttenuation(u_LightOrigin.w, u_LightRadius * u_LightRadius / sqrLightDist);
+		float attenuation = CalcLightAttenuation(u_LocalLightOrigin.w, u_LocalLightRadius * u_LocalLightRadius / sqrLightDist);
 		float NL = clamp(dot(normalize(normal), L) / sqrt(sqrLightDist), 0.0, 1.0);
 
 		var_Color.rgb *= u_DirectedLight * (attenuation * NL) + u_AmbientLight;
@@ -291,7 +295,7 @@ void main()
 
 #if defined(PER_PIXEL_LIGHTING)
   #if defined(USE_LIGHT_VECTOR)
-	var_LightDir = vec4(L, u_LightRadius * u_LightRadius);
+	var_LightDir = vec4(L, u_LocalLightRadius * u_LocalLightRadius);
   #else
 	var_LightDir = vec4(L, 0.0);
   #endif
@@ -331,6 +335,20 @@ layout(std140) uniform Camera
 	vec3 u_ViewUp;
 };
 
+layout(std140) uniform Entity
+{
+	mat4 _u_ModelMatrix;
+	mat4 _u_ModelViewProjectionMatrix;
+	vec4 u_LocalLightOrigin;
+	vec3 u_AmbientLight;
+	float u_LocalLightRadius;
+	vec3 u_DirectedLight;
+	float _u_FXVolumetricBase;
+	vec3 u_ModelLightDir;
+	float _u_VertexLerp;
+	vec3 _u_LocalViewOrigin;
+};
+
 uniform sampler2D u_DiffuseMap;
 
 #if defined(USE_LIGHTMAP)
@@ -361,11 +379,6 @@ uniform sampler2D u_EnvBrdfMap;
 #if defined(USE_NORMALMAP) || defined(USE_DELUXEMAP) || defined(USE_SPECULARMAP) || defined(USE_CUBEMAP)
 // y = deluxe, w = cube
 uniform vec4 u_EnableTextures;
-#endif
-
-#if defined(USE_LIGHT_VECTOR) && !defined(USE_VERTEX_LIGHTING)
-uniform vec3 u_DirectedLight;
-uniform vec3 u_AmbientLight;
 #endif
 
 #if defined(PER_PIXEL_LIGHTING)

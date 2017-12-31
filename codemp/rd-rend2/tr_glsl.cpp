@@ -52,6 +52,7 @@ const uniformBlockInfo_t uniformBlocksInfo[UNIFORM_BLOCK_COUNT] = {
 	{ 1, "Scene", sizeof(SceneBlock) },
 	{ 2, "Lights", sizeof(LightsBlock) },
 	{ 3, "Fogs", sizeof(FogsBlock) },
+	{ 4, "Entity", sizeof(EntityBlock) },
 	{ 10, "SurfaceSprite", sizeof(SurfaceSpriteBlock) },
 };
 

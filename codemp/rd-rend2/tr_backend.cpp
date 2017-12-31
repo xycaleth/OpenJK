@@ -2246,12 +2246,52 @@ static void RB_UpdateFogsConstants()
 		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_FOGS, &fogsBlock);
 }
 
-static void RB_UpdateConstants()
+static void RB_UpdateEntityConstants(
+	const drawSurf_t *drawSurfs, int numDrawSurfs)
+{
+	memset(tr.entityUboOffsets, 0, sizeof(tr.entityUboOffsets));
+	for (int i = 0; i < numDrawSurfs; ++i)
+	{
+		const drawSurf_t *drawSurf = drawSurfs + i;
+
+		shader_t *shader;
+		int ignored;
+		int entityNum;
+
+		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &ignored, &ignored);
+
+		if (tr.entityUboOffsets[entityNum] != 0)
+			continue;
+
+		const float normalizeFactor = 1.0f / 255.0f;
+		const trRefEntity_t *refEntity = backEnd.refdef.entities + entityNum;
+		EntityBlock entityBlock = {};
+
+		VectorScale(refEntity->ambientLight, normalizeFactor, entityBlock.ambientLight);
+		VectorScale(refEntity->directedLight, normalizeFactor, entityBlock.directedLight);
+		VectorCopy(refEntity->modelLightDir, entityBlock.modelLightDir);
+
+		VectorCopy(refEntity->lightDir, entityBlock.lightOrigin);
+		entityBlock.lightOrigin[3] = 0.0f;
+		entityBlock.lightRadius = 0.0f;
+
+		entityBlock.fxVolumetricBase = -1.0f;
+		if (refEntity->e.renderfx & RF_VOLUMETRIC)
+			entityBlock.fxVolumetricBase = refEntity->e.shaderRGBA[0] / 255.0f;
+
+		tr.entityUboOffsets[entityNum] =
+			RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entityBlock);
+	}
+}
+
+static void RB_UpdateConstants(const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
 	RB_UpdateCameraConstants();
 	RB_UpdateSceneConstants();
 	RB_UpdateLightsConstants();
 	RB_UpdateFogsConstants();
+
+	RB_UpdateEntityConstants(drawSurfs, numDrawSurfs);
 }
 
 /*
@@ -2276,7 +2316,7 @@ static const void *RB_DrawSurfs( const void *data ) {
 	// clear the z buffer, set the modelview, etc
 	RB_BeginDrawingView ();
 
-	RB_UpdateConstants();
+	RB_UpdateConstants(cmd->drawSurfs, cmd->numDrawSurfs);
 
 	RB_TransformAllAnimations(cmd->drawSurfs, cmd->numDrawSurfs);
 
