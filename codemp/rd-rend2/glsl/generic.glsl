@@ -28,8 +28,8 @@ layout(std140) uniform Camera
 
 layout(std140) uniform Entity
 {
-	mat4 _u_ModelMatrix;
-	mat4 _u_ModelViewProjectionMatrix;
+	mat4 u_ModelMatrix;
+	mat4 u_ModelViewProjectionMatrix;
 	vec4 u_LocalLightOrigin;
 	vec3 u_AmbientLight;
 	float u_LocalLightRadius;
@@ -37,7 +37,7 @@ layout(std140) uniform Entity
 	float _u_FXVolumetricBase;
 	vec3 u_ModelLightDir;
 	float _u_VertexLerp;
-	vec3 _u_LocalViewOrigin;
+	vec3 u_LocalViewOrigin;
 };
 
 uniform vec4 u_DiffuseTexMatrix;
@@ -56,11 +56,8 @@ uniform float u_DeformParams[7];
 uniform float u_Time;
 #endif
 
-uniform mat4 u_ModelViewProjectionMatrix;
-uniform mat4 u_ModelMatrix;
 uniform vec4 u_BaseColor;
 uniform vec4 u_VertColor;
-uniform vec3 u_LocalViewOrigin;
 
 #if defined(USE_RGBAGEN)
 uniform int u_ColorGen;
@@ -398,8 +395,8 @@ layout(std140) uniform Camera
 
 layout(std140) uniform Entity
 {
-	mat4 _u_ModelMatrix;
-	mat4 _u_ModelViewProjectionMatrix;
+	mat4 u_ModelMatrix;
+	mat4 u_ModelViewProjectionMatrix;
 	vec4 u_LocalLightOrigin;
 	vec3 u_AmbientLight;
 	float u_LocalLightRadius;
@@ -407,7 +404,7 @@ layout(std140) uniform Entity
 	float _u_FXVolumetricBase;
 	vec3 u_ModelLightDir;
 	float _u_VertexLerp;
-	vec3 _u_LocalViewOrigin;
+	vec3 u_LocalViewOrigin;
 };
 
 uniform sampler2D u_DiffuseMap;

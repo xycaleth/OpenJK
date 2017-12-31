@@ -2246,6 +2246,7 @@ static void RB_UpdateFogsConstants()
 		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_FOGS, &fogsBlock);
 }
 
+void myGlMultMatrix( const float *a, const float *b, float *out );
 static void RB_UpdateEntityConstants(
 	const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
@@ -2277,7 +2278,37 @@ static void RB_UpdateEntityConstants(
 
 		entityBlock.fxVolumetricBase = -1.0f;
 		if (refEntity->e.renderfx & RF_VOLUMETRIC)
-			entityBlock.fxVolumetricBase = refEntity->e.shaderRGBA[0] / 255.0f;
+			entityBlock.fxVolumetricBase = refEntity->e.shaderRGBA[0] * normalizeFactor;
+
+		matrix_t modelViewMatrix;
+		if (entityNum == REFENTITYNUM_WORLD)
+		{
+			Matrix16Copy(
+				backEnd.viewParms.world.modelMatrix,
+				entityBlock.modelMatrix);
+
+			Matrix16Copy(
+				backEnd.viewParms.world.modelViewMatrix,
+				modelViewMatrix);
+
+			VectorCopy(
+				backEnd.viewParms.world.viewOrigin,
+				entityBlock.localViewOrigin);
+		}
+		else
+		{
+			orientationr_t ori;
+			R_RotateForEntity(refEntity, &backEnd.viewParms, &ori);
+
+			Matrix16Copy(ori.modelMatrix, entityBlock.modelMatrix);
+			Matrix16Copy(ori.modelViewMatrix, modelViewMatrix);
+			VectorCopy(ori.viewOrigin, entityBlock.localViewOrigin);
+		}
+
+		Matrix16Multiply(
+			backEnd.viewParms.projectionMatrix,
+			modelViewMatrix,
+			entityBlock.modelViewProjectionMatrix);	
 
 		tr.entityUboOffsets[entityNum] =
 			RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entityBlock);

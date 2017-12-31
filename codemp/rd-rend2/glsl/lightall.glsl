@@ -47,8 +47,8 @@ layout(std140) uniform Scene
 
 layout(std140) uniform Entity
 {
-	mat4 _u_ModelMatrix;
-	mat4 _u_ModelViewProjectionMatrix;
+	mat4 u_ModelMatrix;
+	mat4 u_ModelViewProjectionMatrix;
 	vec4 u_LocalLightOrigin;
 	vec3 u_AmbientLight;
 	float u_LocalLightRadius;
@@ -56,7 +56,7 @@ layout(std140) uniform Entity
 	float _u_FXVolumetricBase;
 	vec3 u_ModelLightDir;
 	float _u_VertexLerp;
-	vec3 _u_LocalViewOrigin;
+	vec3 u_LocalViewOrigin;
 };
 uniform float u_FXVolumetricBase;
 
@@ -76,11 +76,8 @@ uniform vec4 u_DiffuseTexMatrix;
 uniform vec4 u_DiffuseTexOffTurb;
 #endif
 
-uniform mat4 u_ModelViewProjectionMatrix;
 uniform vec4 u_BaseColor;
 uniform vec4 u_VertColor;
-uniform mat4 u_ModelMatrix;
-uniform vec3 u_LocalViewOrigin;
 
 #if defined(USE_VERTEX_ANIMATION)
 uniform float u_VertexLerp;
@@ -337,8 +334,8 @@ layout(std140) uniform Camera
 
 layout(std140) uniform Entity
 {
-	mat4 _u_ModelMatrix;
-	mat4 _u_ModelViewProjectionMatrix;
+	mat4 u_ModelMatrix;
+	mat4 u_ModelViewProjectionMatrix;
 	vec4 u_LocalLightOrigin;
 	vec3 u_AmbientLight;
 	float u_LocalLightRadius;
@@ -346,7 +343,7 @@ layout(std140) uniform Entity
 	float _u_FXVolumetricBase;
 	vec3 u_ModelLightDir;
 	float _u_VertexLerp;
-	vec3 _u_LocalViewOrigin;
+	vec3 u_LocalViewOrigin;
 };
 
 uniform sampler2D u_DiffuseMap;
