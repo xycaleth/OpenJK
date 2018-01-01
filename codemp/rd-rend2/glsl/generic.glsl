@@ -36,7 +36,7 @@ layout(std140) uniform Entity
 	vec3 u_DirectedLight;
 	float _u_FXVolumetricBase;
 	vec3 u_ModelLightDir;
-	float _u_VertexLerp;
+	float u_VertexLerp;
 	vec3 u_LocalViewOrigin;
 };
 
@@ -67,7 +67,6 @@ uniform float u_PortalRange;
 uniform float u_FXVolumetricBase;
 
 #if defined(USE_VERTEX_ANIMATION)
-uniform float u_VertexLerp;
 #elif defined(USE_SKELETAL_ANIMATION)
 uniform mat4x3 u_BoneMatrices[20];
 #endif
@@ -403,7 +402,7 @@ layout(std140) uniform Entity
 	vec3 u_DirectedLight;
 	float _u_FXVolumetricBase;
 	vec3 u_ModelLightDir;
-	float _u_VertexLerp;
+	float u_VertexLerp;
 	vec3 u_LocalViewOrigin;
 };
 

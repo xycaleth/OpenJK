@@ -6,6 +6,7 @@ in vec3 attr_Normal;
 struct Light
 {
 	vec4 origin;
+	vec3 color;
 	float radius;
 };
 

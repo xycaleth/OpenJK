@@ -677,17 +677,17 @@ struct SceneBlock
 
 struct LightsBlock
 {
-	int numLights;
-	float pad0[3];
-
-	struct
+	struct Light
 	{
 		vec4_t origin;
+		vec3_t color;
 		float radius;
-		float pad0;
-		float pad1;
-		float pad2;
-	} lights[MAX_DLIGHTS];
+	};
+
+	int numLights;
+	float pad0[3];
+	
+	Light lights[MAX_DLIGHTS];
 };
 
 struct FogsBlock

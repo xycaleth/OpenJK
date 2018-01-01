@@ -2212,14 +2212,16 @@ static void RB_UpdateLightsConstants()
 	for (int i = 0; i < lightsBlock.numLights; ++i)
 	{
 		const dlight_t *dlight = backEnd.refdef.dlights + i;
+		LightsBlock::Light *lightData = lightsBlock.lights + i;
 
 		VectorSet4(
-			lightsBlock.lights[i].origin,
+			lightData->origin,
 			dlight->origin[0],
 			dlight->origin[1],
 			dlight->origin[2],
 			1.0f);
-		lightsBlock.lights[i].radius = dlight->radius;
+		VectorCopy(dlight->color, lightData->color);
+		lightData->radius = dlight->radius;
 	}
 
 	tr.lightsUboOffset =
@@ -2246,7 +2248,6 @@ static void RB_UpdateFogsConstants()
 		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_FOGS, &fogsBlock);
 }
 
-void myGlMultMatrix( const float *a, const float *b, float *out );
 static void RB_UpdateEntityConstants(
 	const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
@@ -2281,34 +2282,25 @@ static void RB_UpdateEntityConstants(
 			entityBlock.fxVolumetricBase = refEntity->e.shaderRGBA[0] * normalizeFactor;
 
 		matrix_t modelViewMatrix;
+		orientationr_t ori;
 		if (entityNum == REFENTITYNUM_WORLD)
-		{
-			Matrix16Copy(
-				backEnd.viewParms.world.modelMatrix,
-				entityBlock.modelMatrix);
-
-			Matrix16Copy(
-				backEnd.viewParms.world.modelViewMatrix,
-				modelViewMatrix);
-
-			VectorCopy(
-				backEnd.viewParms.world.viewOrigin,
-				entityBlock.localViewOrigin);
-		}
+			ori = backEnd.viewParms.world;
 		else
-		{
-			orientationr_t ori;
 			R_RotateForEntity(refEntity, &backEnd.viewParms, &ori);
 
-			Matrix16Copy(ori.modelMatrix, entityBlock.modelMatrix);
-			Matrix16Copy(ori.modelViewMatrix, modelViewMatrix);
-			VectorCopy(ori.viewOrigin, entityBlock.localViewOrigin);
-		}
+		Matrix16Copy(ori.modelMatrix, entityBlock.modelMatrix);
+		Matrix16Copy(ori.modelViewMatrix, modelViewMatrix);
+		VectorCopy(ori.viewOrigin, entityBlock.localViewOrigin);
 
 		Matrix16Multiply(
 			backEnd.viewParms.projectionMatrix,
 			modelViewMatrix,
 			entityBlock.modelViewProjectionMatrix);	
+
+		entityBlock.vertexLerp = 0.0f;
+		if (refEntity->e.oldframe || refEntity->e.frame)
+			if (refEntity->e.oldframe != refEntity->e.frame)
+				entityBlock.vertexLerp = refEntity->e.backlerp;
 
 		tr.entityUboOffsets[entityNum] =
 			RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entityBlock);
