@@ -1175,11 +1175,6 @@ static void RB_FogPass( shaderCommands_t *input, int fogIndex, const VertexArray
 
 	backEnd.pc.c_fogDraws++;
 
-	uniformDataWriter.SetUniformMatrix4x4(
-		UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
-	uniformDataWriter.SetUniformMatrix4x4(
-		UNIFORM_MODELMATRIX, backEnd.ori.modelMatrix);
-
 	uniformDataWriter.SetUniformFloat(
 		UNIFORM_VERTEXLERP, glState.vertexAttribsInterpolation);
 	uniformDataWriter.SetUniformMatrix4x3(
