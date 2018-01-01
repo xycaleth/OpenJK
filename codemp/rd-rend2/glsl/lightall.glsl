@@ -79,8 +79,7 @@ uniform vec4 u_DiffuseTexOffTurb;
 uniform vec4 u_BaseColor;
 uniform vec4 u_VertColor;
 
-#if defined(USE_VERTEX_ANIMATION)
-#elif defined(USE_SKELETAL_ANIMATION)
+#if defined(USE_SKELETAL_ANIMATION)
 uniform mat4x3 u_BoneMatrices[20];
 #endif
 

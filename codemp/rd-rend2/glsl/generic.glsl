@@ -66,8 +66,7 @@ uniform float u_PortalRange;
 #endif
 uniform float u_FXVolumetricBase;
 
-#if defined(USE_VERTEX_ANIMATION)
-#elif defined(USE_SKELETAL_ANIMATION)
+#if defined(USE_SKELETAL_ANIMATION)
 uniform mat4x3 u_BoneMatrices[20];
 #endif
 

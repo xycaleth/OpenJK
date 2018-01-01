@@ -16,6 +16,20 @@ layout(std140) uniform Lights
 	Light u_Lights[32];
 };
 
+layout(std140) uniform Entity
+{
+	mat4 u_ModelMatrix;
+	mat4 u_ModelViewProjectionMatrix;
+	vec4 u_LocalLightOrigin;
+	vec3 u_AmbientLight;
+	float u_LocalLightRadius;
+	vec3 _u_DirectedLight;
+	float _u_FXVolumetricBase;
+	vec3 u_ModelLightDir;
+	float u_VertexLerp;
+	vec3 u_LocalViewOrigin;
+};
+
 uniform int u_LightIndex;
 
 #if defined(USE_DEFORM_VERTEXES)
@@ -24,9 +38,6 @@ uniform int u_DeformFunc;
 uniform float u_DeformParams[7];
 uniform float u_Time;
 #endif
-
-uniform mat4 u_ModelMatrix;
-uniform mat4 u_ModelViewProjectionMatrix;
 
 out vec3 var_Normal;
 out vec4 var_LightDirAndRadiusSq;

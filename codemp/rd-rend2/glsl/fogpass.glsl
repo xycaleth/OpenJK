@@ -12,6 +12,20 @@ in uvec4 attr_BoneIndexes;
 in vec4 attr_BoneWeights;
 #endif
 
+layout(std140) uniform Entity
+{
+	mat4 u_ModelMatrix;
+	mat4 u_ModelViewProjectionMatrix;
+	vec4 u_LocalLightOrigin;
+	vec3 u_AmbientLight;
+	float u_LocalLightRadius;
+	vec3 u_DirectedLight;
+	float _u_FXVolumetricBase;
+	vec3 u_ModelLightDir;
+	float u_VertexLerp;
+	vec3 u_LocalViewOrigin;
+};
+
 #if defined(USE_DEFORM_VERTEXES)
 uniform int u_DeformType;
 uniform int u_DeformFunc;
@@ -19,12 +33,8 @@ uniform float u_DeformParams[7];
 #endif
 
 uniform float u_Time;
-uniform mat4 u_ModelMatrix;
-uniform mat4 u_ModelViewProjectionMatrix;
 
-#if defined(USE_VERTEX_ANIMATION)
-uniform float u_VertexLerp;
-#elif defined(USE_SKELETAL_ANIMATION)
+#if defined(USE_SKELETAL_ANIMATION)
 uniform mat4x3 u_BoneMatrices[20];
 #endif
 

@@ -1213,7 +1213,11 @@ static void RB_FogPass( shaderCommands_t *input, int fogIndex, const VertexArray
 
 	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 
-	item.numUniformBlockBindings = 2;
+	const int refEntityNum = (backEnd.currentEntity == &tr.worldEntity)
+		? REFENTITYNUM_WORLD
+		: backEnd.currentEntity - backEnd.refdef.entities;
+
+	item.numUniformBlockBindings = 3;
 	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 		*backEndData->perFrameMemory, item.numUniformBlockBindings);
 	item.uniformBlockBindings[0].data = nullptr;
@@ -1222,6 +1226,9 @@ static void RB_FogPass( shaderCommands_t *input, int fogIndex, const VertexArray
 	item.uniformBlockBindings[1].data = nullptr;
 	item.uniformBlockBindings[1].offset = tr.fogsUboOffset;
 	item.uniformBlockBindings[1].block = UNIFORM_BLOCK_FOGS;
+	item.uniformBlockBindings[2].data = nullptr;
+	item.uniformBlockBindings[2].offset = tr.entityUboOffsets[refEntityNum];
+	item.uniformBlockBindings[2].block = UNIFORM_BLOCK_ENTITY;
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
