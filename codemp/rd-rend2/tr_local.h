@@ -2348,6 +2348,9 @@ typedef struct trGlobals_s {
 	shaderProgram_t spriteShader[SSDEF_COUNT];
 	shaderProgram_t weatherShader;
 
+	GLuint staticUbo;
+	int entity2DUboOffset;
+
 	int cameraUboOffset;
 	int sceneUboOffset;
 	int lightsUboOffset;

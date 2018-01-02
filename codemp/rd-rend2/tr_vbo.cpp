@@ -315,6 +315,7 @@ void R_InitVBOs(void)
 	// actually created on first bind.
 	qglGenBuffers(MAX_IBOS, tr.iboNames);
 	qglGenBuffers(MAX_VBOS, tr.vboNames);
+	qglGenBuffers(1, &tr.staticUbo);
 
 	tr.numVBOs = 0;
 	tr.numIBOs = 0;
@@ -337,6 +338,7 @@ void R_ShutdownVBOs(void)
 	R_BindNullVBO();
 	R_BindNullIBO();
 
+	qglDeleteBuffers(1, &tr.staticUbo);
 	qglDeleteBuffers(MAX_IBOS, tr.iboNames);
 	qglDeleteBuffers(MAX_VBOS, tr.vboNames);
 

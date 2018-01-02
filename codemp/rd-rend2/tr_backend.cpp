@@ -2305,6 +2305,22 @@ static void RB_UpdateEntityConstants(
 		tr.entityUboOffsets[entityNum] =
 			RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entityBlock);
 	}
+
+	EntityBlock entity2DBlock = {};
+	entity2DBlock.fxVolumetricBase = -1.0f;
+
+	Matrix16Identity(entity2DBlock.modelMatrix);
+	Matrix16Ortho(
+		0.0f,
+		640.0f,
+		480.0f,
+		0.0f,
+		0.0f,
+		1.0f,
+		entity2DBlock.modelViewProjectionMatrix);
+
+	tr.entity2DUboOffset =
+		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entity2DBlock);
 }
 
 static void RB_UpdateConstants(const drawSurf_t *drawSurfs, int numDrawSurfs)
