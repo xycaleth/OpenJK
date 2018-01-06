@@ -1,5 +1,5 @@
 /*[Vertex]*/
-#if defined(USE_LIGHT) && !defined(USE_FAST_LIGHT)
+#if defined(USE_LIGHT) && !defined(USE_FAST_LIGHT) && !defined(USE_LIGHT_VECTOR)
 #define PER_PIXEL_LIGHTING
 #endif
 in vec2 attr_TexCoord0;
@@ -250,7 +250,7 @@ void main()
 #endif
 
 #if defined(USE_LIGHT_VECTOR)
-	vec3 L = u_LocalLightOrigin.xyz - (position * u_LocalLightOrigin.w);
+	vec3 L = vec3(0.0);
 #elif defined(PER_PIXEL_LIGHTING)
 	vec3 L = attr_LightDirection * 2.0 - vec3(1.0);
 	L = (u_ModelMatrix * vec4(L, 0.0)).xyz;
@@ -273,14 +273,6 @@ void main()
 	else
 	{
 		var_Color = u_VertColor * attr_Color + u_BaseColor;
-
-#if defined(USE_LIGHT_VECTOR) && defined(USE_FAST_LIGHT)
-		float sqrLightDist = dot(L, L);
-		float attenuation = CalcLightAttenuation(u_LocalLightOrigin.w, u_LocalLightRadius * u_LocalLightRadius / sqrLightDist);
-		float NL = clamp(dot(normalize(normal), L) / sqrt(sqrLightDist), 0.0, 1.0);
-
-		var_Color.rgb *= u_DirectedLight * (attenuation * NL) + u_AmbientLight;
-#endif
 	}
 
 #if defined(USE_PRIMARY_LIGHT) || defined(USE_SHADOWMAP)
@@ -289,11 +281,7 @@ void main()
 #endif
 
 #if defined(PER_PIXEL_LIGHTING)
-  #if defined(USE_LIGHT_VECTOR)
-	var_LightDir = vec4(L, u_LocalLightRadius * u_LocalLightRadius);
-  #else
 	var_LightDir = vec4(L, 0.0);
-  #endif
   #if defined(USE_DELUXEMAP)
 	var_LightDir -= u_EnableTextures.y * var_LightDir;
   #endif
@@ -310,7 +298,7 @@ void main()
 }
 
 /*[Fragment]*/
-#if defined(USE_LIGHT) && !defined(USE_VERTEX_LIGHTING)
+#if defined(USE_LIGHT) && !defined(USE_VERTEX_LIGHTING) && !defined(USE_LIGHT_VECTOR)
 #define PER_PIXEL_LIGHTING
 #endif
 layout(std140) uniform Scene
@@ -376,10 +364,8 @@ uniform sampler2D u_EnvBrdfMap;
 uniform vec4 u_EnableTextures;
 #endif
 
-#if defined(PER_PIXEL_LIGHTING)
 uniform vec4 u_NormalScale;
 uniform vec4 u_SpecularScale;
-#endif
 
 #if defined(PER_PIXEL_LIGHTING) && defined(USE_CUBEMAP)
 uniform vec4 u_CubeMapInfo;
@@ -650,15 +636,15 @@ void main()
 	float attenuation;
 
   #if defined(USE_LIGHTMAP)
-	lightColor	= lightmapColor.rgb * var_Color.rgb;
+	lightColor = lightmapColor.rgb * var_Color.rgb;
 	ambientColor = vec3 (0.0);
 	attenuation = 1.0;
   #elif defined(USE_LIGHT_VECTOR)
-	lightColor	= u_DirectedLight * var_Color.rgb;
-	ambientColor = u_AmbientLight * var_Color.rgb;
-	attenuation = CalcLightAttenuation(float(var_LightDir.w > 0.0), var_LightDir.w / sqrLightDist);
+	lightColor = vec3(0.0);
+	ambientColor = vec3(0.0);
+	attenuation = 0.0;
   #elif defined(USE_LIGHT_VERTEX)
-	lightColor	= var_Color.rgb;
+	lightColor = var_Color.rgb;
 	ambientColor = vec3 (0.0);
 	attenuation = 1.0;
   #endif
@@ -716,12 +702,6 @@ void main()
 	vec3  Fd = CalcDiffuse(diffuse.rgb, NE, NL, LH, roughness);
 	vec3  Fs = vec3(0.0);
 
-  #if defined(USE_LIGHT_VECTOR)
-	float NH = clamp(dot(N, H), 0.0, 1.0);
-
-	Fs = CalcSpecular(specular.rgb, NH, NL, NE, LH, roughness);
-  #endif
-
 	vec3 reflectance = Fd + Fs;
 
 	out_Color.rgb  = lightColor * reflectance * (attenuation * NL);
@@ -747,7 +727,6 @@ void main()
 	
 	out_Color.rgb += CalcIBLContribution(
 		roughness, N, E, u_ViewOrigin, viewDir, NE, specular.rgb);
-
 #else
 	lightColor = var_Color.rgb;
   #if defined(USE_LIGHTMAP) 
