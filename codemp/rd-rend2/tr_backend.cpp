@@ -2251,6 +2251,8 @@ static void RB_UpdateFogsConstants()
 static void RB_UpdateEntityConstants(
 	const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
+	bool updatedEntities[MAX_REFENTITIES] = {};
+
 	memset(tr.entityUboOffsets, 0, sizeof(tr.entityUboOffsets));
 	for (int i = 0; i < numDrawSurfs; ++i)
 	{
@@ -2262,7 +2264,7 @@ static void RB_UpdateEntityConstants(
 
 		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &ignored, &ignored);
 
-		if (tr.entityUboOffsets[entityNum] != 0)
+		if (updatedEntities[entityNum])
 			continue;
 
 		const float normalizeFactor = 1.0f / 255.0f;
@@ -2304,6 +2306,7 @@ static void RB_UpdateEntityConstants(
 
 		tr.entityUboOffsets[entityNum] =
 			RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entityBlock);
+		updatedEntities[entityNum] = true;
 	}
 
 	EntityBlock entity2DBlock = {};
