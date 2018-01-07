@@ -1168,22 +1168,22 @@ RB_FogPass
 Blends a fog texture on top of everything else
 ===================
 */
-static void RB_FogPass( shaderCommands_t *input, int fogIndex, const VertexArraysProperties *vertexArrays )
+static void RB_FogPass(
+	shaderCommands_t *input,
+	int fogIndex,
+	const VertexArraysProperties *vertexArrays)
 {
-	shaderProgram_t *sp;
-
 	deform_t deformType;
 	genFunc_t deformGen;
-	vec5_t deformParams;
+	float deformParams[7];
 
 	ComputeDeformValues(&deformType, &deformGen, deformParams);
 
-	cullType_t cullType = RB_GetCullType(&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
+	cullType_t cullType = RB_GetCullType(
+		&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
 
 	vertexAttribute_t attribs[ATTR_INDEX_MAX] = {};
 	GL_VertexArraysToAttribs(attribs, ARRAY_LEN(attribs), vertexArrays);
-
-	UniformDataWriter uniformDataWriter;
 
 	int shaderBits = 0;
 
@@ -1192,31 +1192,30 @@ static void RB_FogPass( shaderCommands_t *input, int fogIndex, const VertexArray
 
 	if (glState.vertexAnimation)
 		shaderBits |= FOGDEF_USE_VERTEX_ANIMATION;
-
-	if (glState.skeletalAnimation)
+	else if (glState.skeletalAnimation)
 		shaderBits |= FOGDEF_USE_SKELETAL_ANIMATION;
 	
-	sp = tr.fogShader + shaderBits;
-	uniformDataWriter.Start(sp);
+	shaderProgram_t *sp = tr.fogShader + shaderBits;
 
 	backEnd.pc.c_fogDraws++;
 
-	uniformDataWriter.SetUniformFloat(
-		UNIFORM_VERTEXLERP, glState.vertexAttribsInterpolation);
+	UniformDataWriter uniformDataWriter;
+	uniformDataWriter.Start(sp);
 	uniformDataWriter.SetUniformMatrix4x3(
 		UNIFORM_BONE_MATRICES, &glState.boneMatrices[0][0], glState.numBones);
-	
+	uniformDataWriter.SetUniformInt(UNIFORM_FOGINDEX, fogIndex - 1);
+
 	uniformDataWriter.SetUniformInt(UNIFORM_DEFORMTYPE, deformType);
 	if (deformType != DEFORM_NONE)
 	{
 		uniformDataWriter.SetUniformInt(UNIFORM_DEFORMFUNC, deformGen);
-		uniformDataWriter.SetUniformFloat(UNIFORM_DEFORMPARAMS, deformParams, 7);
+		uniformDataWriter.SetUniformFloat(
+			UNIFORM_DEFORMPARAMS, deformParams, ARRAY_LEN(deformParams));
 		uniformDataWriter.SetUniformFloat(UNIFORM_TIME, tess.shaderTime);
 	}
 
-	uniformDataWriter.SetUniformInt(UNIFORM_FOGINDEX, fogIndex - 1);
-
-	uint32_t stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+	uint32_t stateBits =
+		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 	if ( tess.shader->fogPass == FP_EQUAL )
 		stateBits |= GLS_DEPTHFUNC_EQUAL;
 
@@ -1225,12 +1224,17 @@ static void RB_FogPass( shaderCommands_t *input, int fogIndex, const VertexArray
 	item.cullType = cullType;
 	item.program = sp;
 	item.depthRange = RB_GetDepthRange(backEnd.currentEntity, input->shader);
-	item.ibo = input->externalIBO ? input->externalIBO : backEndData->currentFrame->dynamicIbo;
+	item.ibo = input->externalIBO
+		? input->externalIBO
+		: backEndData->currentFrame->dynamicIbo;
 
 	item.numAttributes = vertexArrays->numVertexArrays;
 	item.attributes = ojkAllocArray<vertexAttribute_t>(
 		*backEndData->perFrameMemory, vertexArrays->numVertexArrays);
-	memcpy(item.attributes, attribs, sizeof(*item.attributes)*vertexArrays->numVertexArrays);
+	memcpy(
+		item.attributes,
+		attribs,
+		sizeof(*item.attributes)*vertexArrays->numVertexArrays);
 
 	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 
@@ -1248,7 +1252,7 @@ static void RB_FogPass( shaderCommands_t *input, int fogIndex, const VertexArray
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
-	uint32_t key = RB_CreateSortKey(item, 15, input->shader->sort);
+	const uint32_t key = RB_CreateSortKey(item, 15, input->shader->sort);
 	RB_AddDrawItem(backEndData->currentPass, key, item);
 }
 
