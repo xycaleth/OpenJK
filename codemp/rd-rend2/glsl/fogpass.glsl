@@ -24,6 +24,7 @@ layout(std140) uniform Entity
 	vec3 u_ModelLightDir;
 	float u_VertexLerp;
 	vec3 u_LocalViewOrigin;
+	int u_FogIndex;
 };
 
 #if defined(USE_DEFORM_VERTEXES)
@@ -236,7 +237,6 @@ layout(std140) uniform Fogs
 	int u_NumFogs;
 	Fog u_Fogs[16];
 };
-uniform int u_FogIndex;
 
 layout(std140) uniform Camera
 {
@@ -245,6 +245,21 @@ layout(std140) uniform Camera
 	vec3 u_ViewForward;
 	vec3 u_ViewLeft;
 	vec3 u_ViewUp;
+};
+
+layout(std140) uniform Entity
+{
+	mat4 u_ModelMatrix;
+	mat4 u_ModelViewProjectionMatrix;
+	vec4 u_LocalLightOrigin;
+	vec3 u_AmbientLight;
+	float u_LocalLightRadius;
+	vec3 u_DirectedLight;
+	float _u_FXVolumetricBase;
+	vec3 u_ModelLightDir;
+	float u_VertexLerp;
+	vec3 u_LocalViewOrigin;
+	int u_FogIndex;
 };
 
 #if defined(USE_ALPHA_TEST)

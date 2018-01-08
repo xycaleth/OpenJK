@@ -122,7 +122,6 @@ static uniformInfo_t uniformsInfo[UNIFORM_COUNT] =
 	{ "u_PortalRange", GLSL_FLOAT, 1 },
 
 	{ "u_FogColorMask", GLSL_VEC4, 1 },
-	{ "u_FogIndex",		GLSL_INT, 1 },
 
 	{ "u_ModelMatrix",               GLSL_MAT4x4, 1 },
 	{ "u_ModelViewProjectionMatrix", GLSL_MAT4x4, 1 },

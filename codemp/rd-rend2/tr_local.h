@@ -718,7 +718,7 @@ struct EntityBlock
 	vec3_t modelLightDir;
 	float vertexLerp;
 	vec3_t localViewOrigin;
-	float pad0;
+	int fogIndex;
 };
 
 struct surfaceSprite_t
@@ -1268,7 +1268,6 @@ typedef enum
 	UNIFORM_PORTALRANGE,
 
 	UNIFORM_FOGCOLORMASK,
-	UNIFORM_FOGINDEX,
 
 	UNIFORM_MODELMATRIX,
 	UNIFORM_MODELVIEWPROJECTIONMATRIX,

@@ -2248,6 +2248,59 @@ static void RB_UpdateFogsConstants()
 		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_FOGS, &fogsBlock);
 }
 
+static void RB_UpdateEntityLightConstants(
+	EntityBlock& entityBlock,
+	const trRefEntity_t *refEntity)
+{
+	static const float normalizeFactor = 1.0f / 255.0f;
+
+	VectorScale(refEntity->ambientLight, normalizeFactor, entityBlock.ambientLight);
+	VectorScale(refEntity->directedLight, normalizeFactor, entityBlock.directedLight);
+	VectorCopy(refEntity->modelLightDir, entityBlock.modelLightDir);
+
+	VectorCopy(refEntity->lightDir, entityBlock.lightOrigin);
+	entityBlock.lightOrigin[3] = 0.0f;
+	entityBlock.lightRadius = 0.0f;
+}
+
+static void RB_UpdateEntityMatrixConstants(
+	EntityBlock& entityBlock,
+	const trRefEntity_t *refEntity,
+	int entityNum)
+{
+	matrix_t modelViewMatrix;
+	orientationr_t ori;
+	if (entityNum == REFENTITYNUM_WORLD)
+		ori = backEnd.viewParms.world;
+	else
+		R_RotateForEntity(refEntity, &backEnd.viewParms, &ori);
+
+	Matrix16Copy(ori.modelMatrix, entityBlock.modelMatrix);
+	Matrix16Copy(ori.modelViewMatrix, modelViewMatrix);
+	VectorCopy(ori.viewOrigin, entityBlock.localViewOrigin);
+
+	Matrix16Multiply(
+		backEnd.viewParms.projectionMatrix,
+		modelViewMatrix,
+		entityBlock.modelViewProjectionMatrix);	
+}
+
+static void RB_UpdateEntityModelConstants(
+	EntityBlock& entityBlock,
+	const trRefEntity_t *refEntity)
+{
+	static const float normalizeFactor = 1.0f / 255.0f;
+
+	entityBlock.fxVolumetricBase = -1.0f;
+	if (refEntity->e.renderfx & RF_VOLUMETRIC)
+		entityBlock.fxVolumetricBase = refEntity->e.shaderRGBA[0] * normalizeFactor;
+
+	entityBlock.vertexLerp = 0.0f;
+	if (refEntity->e.oldframe || refEntity->e.frame)
+		if (refEntity->e.oldframe != refEntity->e.frame)
+			entityBlock.vertexLerp = refEntity->e.backlerp;
+}
+
 static void RB_UpdateEntityConstants(
 	const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
@@ -2267,42 +2320,17 @@ static void RB_UpdateEntityConstants(
 		if (updatedEntities[entityNum])
 			continue;
 
-		const float normalizeFactor = 1.0f / 255.0f;
 		const trRefEntity_t *refEntity = backEnd.refdef.entities + entityNum;
 		EntityBlock entityBlock = {};
 
-		VectorScale(refEntity->ambientLight, normalizeFactor, entityBlock.ambientLight);
-		VectorScale(refEntity->directedLight, normalizeFactor, entityBlock.directedLight);
-		VectorCopy(refEntity->modelLightDir, entityBlock.modelLightDir);
+		RB_UpdateEntityLightConstants(entityBlock, refEntity);
+		RB_UpdateEntityMatrixConstants(entityBlock, refEntity, entityNum);
+		RB_UpdateEntityModelConstants(entityBlock, refEntity);
 
-		VectorCopy(refEntity->lightDir, entityBlock.lightOrigin);
-		entityBlock.lightOrigin[3] = 0.0f;
-		entityBlock.lightRadius = 0.0f;
-
-		entityBlock.fxVolumetricBase = -1.0f;
-		if (refEntity->e.renderfx & RF_VOLUMETRIC)
-			entityBlock.fxVolumetricBase = refEntity->e.shaderRGBA[0] * normalizeFactor;
-
-		matrix_t modelViewMatrix;
-		orientationr_t ori;
-		if (entityNum == REFENTITYNUM_WORLD)
-			ori = backEnd.viewParms.world;
-		else
-			R_RotateForEntity(refEntity, &backEnd.viewParms, &ori);
-
-		Matrix16Copy(ori.modelMatrix, entityBlock.modelMatrix);
-		Matrix16Copy(ori.modelViewMatrix, modelViewMatrix);
-		VectorCopy(ori.viewOrigin, entityBlock.localViewOrigin);
-
-		Matrix16Multiply(
-			backEnd.viewParms.projectionMatrix,
-			modelViewMatrix,
-			entityBlock.modelViewProjectionMatrix);	
-
-		entityBlock.vertexLerp = 0.0f;
-		if (refEntity->e.oldframe || refEntity->e.frame)
-			if (refEntity->e.oldframe != refEntity->e.frame)
-				entityBlock.vertexLerp = refEntity->e.backlerp;
+		if (tr.world->globalFog != nullptr)
+			entityBlock.fogIndex = tr.world->globalFog - tr.world->fogs - 1;
+		else if (drawSurf->fogIndex > 0)
+			entityBlock.fogIndex = drawSurf->fogIndex - 1;
 
 		tr.entityUboOffsets[entityNum] =
 			RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entityBlock);

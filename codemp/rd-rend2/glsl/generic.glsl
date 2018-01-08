@@ -38,6 +38,7 @@ layout(std140) uniform Entity
 	vec3 u_ModelLightDir;
 	float u_VertexLerp;
 	vec3 u_LocalViewOrigin;
+	int u_FogIndex;
 };
 
 uniform vec4 u_DiffuseTexMatrix;
@@ -379,7 +380,7 @@ layout(std140) uniform Fogs
 	int u_NumFogs;
 	Fog u_Fogs[16];
 };
-uniform int u_FogIndex;
+
 uniform vec4 u_FogColorMask;
 
 layout(std140) uniform Camera
@@ -403,6 +404,7 @@ layout(std140) uniform Entity
 	vec3 u_ModelLightDir;
 	float u_VertexLerp;
 	vec3 u_LocalViewOrigin;
+	int u_FogIndex;
 };
 
 uniform sampler2D u_DiffuseMap;

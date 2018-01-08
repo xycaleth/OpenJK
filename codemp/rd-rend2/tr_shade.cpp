@@ -627,45 +627,6 @@ static void ComputeShaderColors( shaderStage_t *pStage, vec4_t baseColor, vec4_t
 #endif
 }
 
-
-static void ComputeFogValues(vec4_t fogDistanceVector, vec4_t fogDepthVector, float *eyeT)
-{
-	// from RB_CalcFogTexCoords()
-	fog_t  *fog;
-	vec3_t  local;
-
-	if (!tess.fogNum)
-		return;
-
-	fog = tr.world->fogs + tess.fogNum;
-
-	VectorSubtract( backEnd.ori.origin, backEnd.viewParms.ori.origin, local );
-	fogDistanceVector[0] = -backEnd.ori.modelViewMatrix[2];
-	fogDistanceVector[1] = -backEnd.ori.modelViewMatrix[6];
-	fogDistanceVector[2] = -backEnd.ori.modelViewMatrix[10];
-	fogDistanceVector[3] = DotProduct( local, backEnd.viewParms.ori.axis[0] );
-
-	// scale the fog vectors based on the fog's thickness
-	VectorScale4(fogDistanceVector, fog->tcScale, fogDistanceVector);
-
-	// rotate the gradient vector for this orientation
-	if ( fog->hasSurface ) {
-		fogDepthVector[0] = fog->surface[0] * backEnd.ori.axis[0][0] + 
-			fog->surface[1] * backEnd.ori.axis[0][1] + fog->surface[2] * backEnd.ori.axis[0][2];
-		fogDepthVector[1] = fog->surface[0] * backEnd.ori.axis[1][0] + 
-			fog->surface[1] * backEnd.ori.axis[1][1] + fog->surface[2] * backEnd.ori.axis[1][2];
-		fogDepthVector[2] = fog->surface[0] * backEnd.ori.axis[2][0] + 
-			fog->surface[1] * backEnd.ori.axis[2][1] + fog->surface[2] * backEnd.ori.axis[2][2];
-		fogDepthVector[3] = -fog->surface[3] + DotProduct( backEnd.ori.origin, fog->surface );
-
-		*eyeT = DotProduct( backEnd.ori.viewOrigin, fogDepthVector ) + fogDepthVector[3];
-	} else {
-		VectorClear4(fogDepthVector);
-		*eyeT = 1;	// non-surface fog always has eye inside
-	}
-}
-
-
 static void ComputeFogColorMask( shaderStage_t *pStage, vec4_t fogColorMask )
 {
 	switch(pStage->adjustColorsForFog)
@@ -1170,7 +1131,6 @@ Blends a fog texture on top of everything else
 */
 static void RB_FogPass(
 	shaderCommands_t *input,
-	int fogIndex,
 	const VertexArraysProperties *vertexArrays)
 {
 	deform_t deformType;
@@ -1203,7 +1163,6 @@ static void RB_FogPass(
 	uniformDataWriter.Start(sp);
 	uniformDataWriter.SetUniformMatrix4x3(
 		UNIFORM_BONE_MATRICES, &glState.boneMatrices[0][0], glState.numBones);
-	uniformDataWriter.SetUniformInt(UNIFORM_FOGINDEX, fogIndex - 1);
 
 	uniformDataWriter.SetUniformInt(UNIFORM_DEFORMTYPE, deformType);
 	if (deformType != DEFORM_NONE)
@@ -1496,8 +1455,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		}
 
 		if ( input->fogNum ) {
-			uniformDataWriter.SetUniformInt(UNIFORM_FOGINDEX, input->fogNum - 1);
-
 			vec4_t fogColorMask;
 			ComputeFogColorMask(pStage, fogColorMask);
 			uniformDataWriter.SetUniformVec4(UNIFORM_FOGCOLORMASK, fogColorMask);
@@ -1894,7 +1851,7 @@ void RB_StageIteratorGeneric( void )
 		}
 
 		if ( fog && tess.shader->fogPass ) {
-			RB_FogPass( &tess, fog - tr.world->fogs, &vertexArrays );
+			RB_FogPass( &tess, &vertexArrays );
 		}
 	}
 
