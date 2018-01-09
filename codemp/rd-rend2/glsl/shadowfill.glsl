@@ -11,9 +11,21 @@ uniform int u_DeformFunc;
 uniform float u_DeformParams[7];
 
 uniform float u_Time;
-uniform mat4 u_ModelViewProjectionMatrix;
 
-uniform float u_VertexLerp;
+layout(std140) uniform Entity
+{
+	mat4 u_ModelMatrix;
+	mat4 u_ModelViewProjectionMatrix;
+	vec4 u_LocalLightOrigin;
+	vec3 u_AmbientLight;
+	float u_LocalLightRadius;
+	vec3 u_DirectedLight;
+	float _u_FXVolumetricBase;
+	vec3 u_ModelLightDir;
+	float u_VertexLerp;
+	vec3 u_LocalViewOrigin;
+	int u_FogIndex;
+};
 
 float GetNoiseValue( float x, float y, float z, float t )
 {
@@ -165,5 +177,5 @@ void main()
 out vec4 out_Color;
 void main()
 {
-	out_Color = vec4(0, 0, 0, 1);
+	out_Color = vec4(0.0, 0.0, 0.0, 1.0);
 }

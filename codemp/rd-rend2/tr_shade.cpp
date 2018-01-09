@@ -1711,7 +1711,8 @@ static void RB_RenderShadowmap( shaderCommands_t *input, const VertexArraysPrope
 
 	ComputeDeformValues(&deformType, &deformGen, deformParams);
 
-	cullType_t cullType = RB_GetCullType(&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
+	cullType_t cullType = RB_GetCullType(
+		&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
 
 	vertexAttribute_t attribs[ATTR_INDEX_MAX] = {};
 	GL_VertexArraysToAttribs(attribs, ARRAY_LEN(attribs), vertexArrays);
@@ -1720,8 +1721,6 @@ static void RB_RenderShadowmap( shaderCommands_t *input, const VertexArraysPrope
 
 	shaderProgram_t *sp = &tr.shadowmapShader;
 	uniformDataWriter.Start(sp);
-	uniformDataWriter.SetUniformMatrix4x4(UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
-	uniformDataWriter.SetUniformFloat(UNIFORM_VERTEXLERP, glState.vertexAttribsInterpolation);
 	uniformDataWriter.SetUniformInt(UNIFORM_DEFORMTYPE, deformType);
 	uniformDataWriter.SetUniformInt(UNIFORM_DEFORMFUNC, deformGen);
 	uniformDataWriter.SetUniformFloat(UNIFORM_DEFORMPARAMS, deformParams, 7);
@@ -1731,14 +1730,24 @@ static void RB_RenderShadowmap( shaderCommands_t *input, const VertexArraysPrope
 	item.cullType = cullType;
 	item.program = sp;
 	item.depthRange = RB_GetDepthRange(backEnd.currentEntity, input->shader);
-	item.ibo = input->externalIBO ? input->externalIBO : backEndData->currentFrame->dynamicIbo;
+	item.ibo = input->externalIBO
+		? input->externalIBO
+		: backEndData->currentFrame->dynamicIbo;
 
 	item.numAttributes = vertexArrays->numVertexArrays;
 	item.attributes = ojkAllocArray<vertexAttribute_t>(
 		*backEndData->perFrameMemory, vertexArrays->numVertexArrays);
-	memcpy(item.attributes, attribs, sizeof(*item.attributes)*vertexArrays->numVertexArrays);
+	memcpy(
+		item.attributes, attribs,
+		sizeof(*item.attributes)*vertexArrays->numVertexArrays);
 
 	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
+
+	item.numUniformBlockBindings = 1;
+	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
+		*backEndData->perFrameMemory, item.numUniformBlockBindings);
+	item.uniformBlockBindings[0] =
+		GetEntityBlockUniformBinding(backEnd.currentEntity);
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
