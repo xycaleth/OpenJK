@@ -2301,6 +2301,47 @@ static void RB_UpdateEntityModelConstants(
 			entityBlock.vertexLerp = refEntity->e.backlerp;
 }
 
+static void RB_UpdateEntity2DConstants()
+{
+	EntityBlock entity2DBlock = {};
+	entity2DBlock.fxVolumetricBase = -1.0f;
+
+	Matrix16Identity(entity2DBlock.modelMatrix);
+	Matrix16Ortho(
+		0.0f,
+		640.0f,
+		480.0f,
+		0.0f,
+		0.0f,
+		1.0f,
+		entity2DBlock.modelViewProjectionMatrix);
+
+	tr.entity2DUboOffset =
+		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entity2DBlock);
+}
+
+static void RB_UpdateSkyEntityConstants()
+{
+	EntityBlock skyEntityBlock = {};
+	skyEntityBlock.fxVolumetricBase = -1.0f;
+
+	matrix_t translation;
+	Matrix16Translation(backEnd.viewParms.ori.origin, translation);
+
+	matrix_t modelViewMatrix;
+	Matrix16Multiply(
+		backEnd.viewParms.world.modelViewMatrix,
+		translation,
+		modelViewMatrix);
+	Matrix16Multiply(
+		backEnd.viewParms.projectionMatrix,
+		modelViewMatrix,
+		skyEntityBlock.modelViewProjectionMatrix);
+
+	tr.skyEntityUboOffset =
+		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &skyEntityBlock);
+}
+
 static void RB_UpdateEntityConstants(
 	const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
@@ -2337,21 +2378,8 @@ static void RB_UpdateEntityConstants(
 		updatedEntities[entityNum] = true;
 	}
 
-	EntityBlock entity2DBlock = {};
-	entity2DBlock.fxVolumetricBase = -1.0f;
-
-	Matrix16Identity(entity2DBlock.modelMatrix);
-	Matrix16Ortho(
-		0.0f,
-		640.0f,
-		480.0f,
-		0.0f,
-		0.0f,
-		1.0f,
-		entity2DBlock.modelViewProjectionMatrix);
-
-	tr.entity2DUboOffset =
-		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entity2DBlock);
+	RB_UpdateEntity2DConstants();
+	RB_UpdateSkyEntityConstants();
 }
 
 static void RB_UpdateConstants(const drawSurf_t *drawSurfs, int numDrawSurfs)

@@ -2354,6 +2354,7 @@ typedef struct trGlobals_s {
 	int sceneUboOffset;
 	int lightsUboOffset;
 	int fogsUboOffset;
+	int skyEntityUboOffset;
 	int entityUboOffsets[MAX_REFENTITIES + 1];
 
 	// -----------------------------------------

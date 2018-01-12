@@ -439,8 +439,6 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 	shaderProgram_t *sp = &tr.lightallShader[0];
 	float colorScale = backEnd.refdef.colorScale;
 	uniformDataWriter.Start(sp);
-	uniformDataWriter.SetUniformMatrix4x4(
-		UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
 	uniformDataWriter.SetUniformVec4(
 		UNIFORM_BASECOLOR, colorScale, colorScale, colorScale, 1.0f);
 	uniformDataWriter.SetUniformVec4(
@@ -466,6 +464,13 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 	item.samplerBindings = samplerBindingsWriter.Finish(
 		*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
+
+	item.numUniformBlockBindings = 1;
+	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
+		*backEndData->perFrameMemory, item.numUniformBlockBindings);
+	item.uniformBlockBindings[0].offset = tr.skyEntityUboOffset;
+	item.uniformBlockBindings[0].data = nullptr;
+	item.uniformBlockBindings[0].block = UNIFORM_BLOCK_ENTITY;
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, &tess);
 	item.draw.params.indexed.numIndices -= tess.firstIndex;
@@ -838,17 +843,7 @@ void RB_StageIteratorSky( void ) {
 	// draw the outer skybox
 	if ( tess.shader->sky.outerbox[0] &&
 			tess.shader->sky.outerbox[0] != tr.defaultImage ) {
-		// FIXME: this could be a lot cleaner
-		matrix_t trans, product;
-		matrix_t oldmodelview;
-
-		Matrix16Copy( glState.modelview, oldmodelview );
-		Matrix16Translation( backEnd.viewParms.ori.origin, trans );
-		Matrix16Multiply( glState.modelview, trans, product );
-
-		GL_SetModelviewMatrix( product );
 		DrawSkyBox( tess.shader );
-		GL_SetModelviewMatrix( oldmodelview );
 	}
 
 	// generate the vertexes for all the clouds, which will be drawn
