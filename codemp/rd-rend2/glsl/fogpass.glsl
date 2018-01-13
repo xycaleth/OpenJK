@@ -27,13 +27,14 @@ layout(std140) uniform Entity
 	int u_FogIndex;
 };
 
-#if defined(USE_DEFORM_VERTEXES)
-uniform int u_DeformType;
-uniform int u_DeformFunc;
-uniform float u_DeformParams[7];
-#endif
-
-uniform float u_Time;
+layout(std140) uniform ShaderInstance
+{
+	float u_DeformParams[7];
+	float u_Time;
+	float u_PortalRange;
+	int u_DeformType;
+	int u_DeformFunc;
+};
 
 #if defined(USE_SKELETAL_ANIMATION)
 uniform mat4x3 u_BoneMatrices[20];

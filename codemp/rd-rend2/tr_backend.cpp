@@ -2342,12 +2342,186 @@ static void RB_UpdateSkyEntityConstants()
 		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &skyEntityBlock);
 }
 
-static void RB_UpdateEntityConstants(
+static uint32_t RB_HashEntityShaderKey(int entityNum, int shaderNum)
+{
+	uint32_t hash = 0;
+	hash += entityNum;
+	hash += shaderNum * 119;
+	return (hash ^ (hash >> 10) ^ (hash >> 20));
+}
+
+void RB_InsertEntityShaderUboOffset(
+	EntityShaderUboOffset *offsetMap,
+	int mapSize,
+	int entityNum,
+	int shaderNum,
+	int uboOffset)
+{
+	int hash = RB_HashEntityShaderKey(entityNum, shaderNum) % mapSize;
+	while (offsetMap[hash].inuse)
+		hash = (hash + 1) % mapSize;
+
+	EntityShaderUboOffset& offset = offsetMap[hash];
+	offset.inuse = true;
+	offset.entityNum = entityNum;
+	offset.shaderNum = shaderNum;
+	offset.offset = uboOffset;
+}
+
+int RB_GetEntityShaderUboOffset(
+	EntityShaderUboOffset *offsetMap,
+	int mapSize,
+	int entityNum,
+	int shaderNum)
+{
+	int hash = RB_HashEntityShaderKey(entityNum, shaderNum) % mapSize;
+	while (offsetMap[hash].inuse)
+	{
+		const EntityShaderUboOffset& uboOffset = offsetMap[hash];
+		if (uboOffset.entityNum == entityNum &&
+			uboOffset.shaderNum == shaderNum)
+		{
+			return uboOffset.offset;
+		}
+
+		hash = (hash + 1) % mapSize;
+	}
+
+	return -1;
+}
+
+static void ComputeDeformValues(
+	const shader_t *shader,
+	deform_t *type,
+	genFunc_t *waveFunc,
+	float deformParams[7])
+{
+	// u_DeformGen
+	*type = DEFORM_NONE;
+	*waveFunc = GF_NONE;
+
+	if(!ShaderRequiresCPUDeforms(shader))
+	{
+		// only support the first one
+		const deformStage_t  *ds = &shader->deforms[0];
+
+		switch (ds->deformation)
+		{
+			case DEFORM_WAVE:
+				*type = DEFORM_WAVE;
+				*waveFunc = ds->deformationWave.func;
+
+				deformParams[0] = ds->deformationWave.base;
+				deformParams[1] = ds->deformationWave.amplitude;
+				deformParams[2] = ds->deformationWave.phase;
+				deformParams[3] = ds->deformationWave.frequency;
+				deformParams[4] = ds->deformationSpread;
+				deformParams[5] = 0.0f;
+				deformParams[6] = 0.0f;
+				break;
+
+			case DEFORM_BULGE:
+				*type = DEFORM_BULGE;
+
+				deformParams[0] = 0.0f;
+				deformParams[1] = ds->bulgeHeight; // amplitude
+				deformParams[2] = ds->bulgeWidth;  // phase
+				deformParams[3] = ds->bulgeSpeed;  // frequency
+				deformParams[4] = 0.0f;
+				deformParams[5] = 0.0f;
+				deformParams[6] = 0.0f;
+				break;
+
+			case DEFORM_MOVE:
+				*type = DEFORM_MOVE;
+				*waveFunc = ds->deformationWave.func;
+
+				deformParams[0] = ds->deformationWave.base;
+				deformParams[1] = ds->deformationWave.amplitude;
+				deformParams[2] = ds->deformationWave.phase;
+				deformParams[3] = ds->deformationWave.frequency;
+				deformParams[4] = ds->moveVector[0];
+				deformParams[5] = ds->moveVector[1];
+				deformParams[6] = ds->moveVector[2];
+
+				break;
+
+			case DEFORM_NORMALS:
+				*type = DEFORM_NORMALS;
+
+				deformParams[0] = 0.0f;
+				deformParams[1] = ds->deformationWave.amplitude; // amplitude
+				deformParams[2] = 0.0f;  // phase
+				deformParams[3] = ds->deformationWave.frequency;  // frequency
+				deformParams[4] = 0.0f;
+				deformParams[5] = 0.0f;
+				deformParams[6] = 0.0f;
+				break;
+
+			case DEFORM_PROJECTION_SHADOW:
+				*type = DEFORM_PROJECTION_SHADOW;
+
+				deformParams[0] = backEnd.ori.axis[0][2];
+				deformParams[1] = backEnd.ori.axis[1][2];
+				deformParams[2] = backEnd.ori.axis[2][2];
+				deformParams[3] = backEnd.ori.origin[2] - backEnd.currentEntity->e.shadowPlane;
+				deformParams[4] = backEnd.currentEntity->lightDir[0];
+				deformParams[5] = backEnd.currentEntity->lightDir[1];
+				deformParams[6] = backEnd.currentEntity->lightDir[2];
+				break;
+
+			default:
+				break;
+		}
+	}
+}
+
+
+static void RB_UpdateShaderEntityConstants(
+	const int entityNum,
+	const trRefEntity_t *refEntity,
+	const shader_t *shader)
+{
+	ShaderInstanceBlock shaderInstanceBlock = {};
+	ComputeDeformValues(
+		shader,
+		(deform_t *)&shaderInstanceBlock.deformType,
+		(genFunc_t *)&shaderInstanceBlock.deformFunc,
+		shaderInstanceBlock.deformParams);
+	shaderInstanceBlock.portalRange = shader->portalRange;
+	shaderInstanceBlock.time =
+		backEnd.refdef.floatTime - shader->timeOffset;
+	if (entityNum == REFENTITYNUM_WORLD)
+		shaderInstanceBlock.time -= refEntity->e.shaderTime;
+
+	const int uboOffset = RB_BindAndUpdateUniformBlock(
+		UNIFORM_BLOCK_SHADER_INSTANCE, &shaderInstanceBlock);
+
+	RB_InsertEntityShaderUboOffset(
+		tr.shaderInstanceUboOffsetsMap,
+		tr.shaderInstanceUboOffsetsMapSize,
+		entityNum,
+		shader->index,
+		uboOffset);
+}
+
+static void RB_UpdateShaderAndEntityConstants(
 	const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
 	bool updatedEntities[MAX_REFENTITIES] = {};
 
+	// Make the map bigger than it needs to be. Eases collisions and iterations
+	// through the map during lookup/insertion.
+	tr.shaderInstanceUboOffsetsMapSize = numDrawSurfs * 2;
+	tr.shaderInstanceUboOffsetsMap = ojkAllocArray<EntityShaderUboOffset>(
+		*backEndData->perFrameMemory,
+		tr.shaderInstanceUboOffsetsMapSize);
+
 	memset(tr.entityUboOffsets, 0, sizeof(tr.entityUboOffsets));
+	memset(
+		tr.shaderInstanceUboOffsetsMap, 0,
+		sizeof(EntityShaderUboOffset) * tr.shaderInstanceUboOffsetsMapSize);
+
 	for (int i = 0; i < numDrawSurfs; ++i)
 	{
 		const drawSurf_t *drawSurf = drawSurfs + i;
@@ -2356,26 +2530,29 @@ static void RB_UpdateEntityConstants(
 		int ignored;
 		int entityNum;
 
-		R_DecomposeSort(drawSurf->sort, &entityNum, &shader, &ignored, &ignored);
-
-		if (updatedEntities[entityNum])
-			continue;
+		R_DecomposeSort(
+			drawSurf->sort, &entityNum, &shader, &ignored, &ignored);
 
 		const trRefEntity_t *refEntity = backEnd.refdef.entities + entityNum;
-		EntityBlock entityBlock = {};
+		if (!updatedEntities[entityNum])
+		{
+			EntityBlock entityBlock = {};
 
-		RB_UpdateEntityLightConstants(entityBlock, refEntity);
-		RB_UpdateEntityMatrixConstants(entityBlock, refEntity, entityNum);
-		RB_UpdateEntityModelConstants(entityBlock, refEntity);
+			RB_UpdateEntityLightConstants(entityBlock, refEntity);
+			RB_UpdateEntityMatrixConstants(entityBlock, refEntity, entityNum);
+			RB_UpdateEntityModelConstants(entityBlock, refEntity);
 
-		if (tr.world->globalFog != nullptr)
-			entityBlock.fogIndex = tr.world->globalFog - tr.world->fogs - 1;
-		else if (drawSurf->fogIndex > 0)
-			entityBlock.fogIndex = drawSurf->fogIndex - 1;
+			if (tr.world->globalFog != nullptr)
+				entityBlock.fogIndex = tr.world->globalFog - tr.world->fogs - 1;
+			else if (drawSurf->fogIndex > 0)
+				entityBlock.fogIndex = drawSurf->fogIndex - 1;
 
-		tr.entityUboOffsets[entityNum] =
-			RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entityBlock);
-		updatedEntities[entityNum] = true;
+			tr.entityUboOffsets[entityNum] = RB_BindAndUpdateUniformBlock(
+				UNIFORM_BLOCK_ENTITY, &entityBlock);
+			updatedEntities[entityNum] = true;
+		}
+
+		RB_UpdateShaderEntityConstants(entityNum, refEntity, shader);
 	}
 
 	RB_UpdateEntity2DConstants();
@@ -2389,7 +2566,7 @@ static void RB_UpdateConstants(const drawSurf_t *drawSurfs, int numDrawSurfs)
 	RB_UpdateLightsConstants();
 	RB_UpdateFogsConstants();
 
-	RB_UpdateEntityConstants(drawSurfs, numDrawSurfs);
+	RB_UpdateShaderAndEntityConstants(drawSurfs, numDrawSurfs);
 }
 
 /*

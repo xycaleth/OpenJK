@@ -721,6 +721,16 @@ struct EntityBlock
 	int fogIndex;
 };
 
+struct ShaderInstanceBlock
+{
+	float deformParams[7];
+	float time;
+	float portalRange;
+	int deformType;
+	int deformFunc;
+	float pad0;
+};
+
 struct surfaceSprite_t
 {
 	surfaceSpriteType_t type;
@@ -1162,6 +1172,7 @@ enum uniformBlock_t
 	UNIFORM_BLOCK_LIGHTS,
 	UNIFORM_BLOCK_FOGS,
 	UNIFORM_BLOCK_ENTITY,
+	UNIFORM_BLOCK_SHADER_INSTANCE,
 	UNIFORM_BLOCK_SURFACESPRITE,
 	UNIFORM_BLOCK_COUNT
 };
@@ -1244,10 +1255,6 @@ typedef enum
 	UNIFORM_TCGEN0VECTOR1,
 	UNIFORM_TCGEN1,
 
-	UNIFORM_DEFORMTYPE,
-	UNIFORM_DEFORMFUNC,
-	UNIFORM_DEFORMPARAMS,
-
 	UNIFORM_COLORGEN,
 	UNIFORM_ALPHAGEN,
 	UNIFORM_COLOR,
@@ -1264,8 +1271,6 @@ typedef enum
 	UNIFORM_AMBIENTLIGHT,
 	UNIFORM_DIRECTEDLIGHT,
 	UNIFORM_LIGHTINDEX,
-
-	UNIFORM_PORTALRANGE,
 
 	UNIFORM_FOGCOLORMASK,
 
@@ -2206,6 +2211,14 @@ typedef struct {
 	qboolean    depthFill;
 } backEndState_t;
 
+struct EntityShaderUboOffset
+{
+	bool inuse;
+	int entityNum;
+	int shaderNum;
+	int offset;
+};
+
 /*
 ** trGlobals_t 
 **
@@ -2356,6 +2369,8 @@ typedef struct trGlobals_s {
 	int fogsUboOffset;
 	int skyEntityUboOffset;
 	int entityUboOffsets[MAX_REFENTITIES + 1];
+	EntityShaderUboOffset *shaderInstanceUboOffsetsMap;
+	int shaderInstanceUboOffsetsMapSize;
 
 	// -----------------------------------------
 

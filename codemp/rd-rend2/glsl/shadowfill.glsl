@@ -6,12 +6,6 @@ in vec4 attr_TexCoord0;
 in vec3 attr_Position2;
 in vec3 attr_Normal2;
 
-uniform int u_DeformType;
-uniform int u_DeformFunc;
-uniform float u_DeformParams[7];
-
-uniform float u_Time;
-
 layout(std140) uniform Entity
 {
 	mat4 u_ModelMatrix;
@@ -25,6 +19,15 @@ layout(std140) uniform Entity
 	float u_VertexLerp;
 	vec3 u_LocalViewOrigin;
 	int u_FogIndex;
+};
+
+layout(std140) uniform ShaderInstance
+{
+	float u_DeformParams[7];
+	float u_Time;
+	float u_PortalRange;
+	int u_DeformType;
+	int u_DeformFunc;
 };
 
 float GetNoiseValue( float x, float y, float z, float t )

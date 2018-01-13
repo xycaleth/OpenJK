@@ -324,90 +324,6 @@ static void ComputeTexMods( shaderStage_t *pStage, int bundleNum, float *outMatr
 }
 
 
-static void ComputeDeformValues(deform_t *type, genFunc_t *waveFunc, float deformParams[7])
-{
-	// u_DeformGen
-	*type = DEFORM_NONE;
-	*waveFunc = GF_NONE;
-
-	if(!ShaderRequiresCPUDeforms(tess.shader))
-	{
-		deformStage_t  *ds;
-
-		// only support the first one
-		ds = &tess.shader->deforms[0];
-
-		switch (ds->deformation)
-		{
-			case DEFORM_WAVE:
-				*type = DEFORM_WAVE;
-				*waveFunc = ds->deformationWave.func;
-
-				deformParams[0] = ds->deformationWave.base;
-				deformParams[1] = ds->deformationWave.amplitude;
-				deformParams[2] = ds->deformationWave.phase;
-				deformParams[3] = ds->deformationWave.frequency;
-				deformParams[4] = ds->deformationSpread;
-				deformParams[5] = 0.0f;
-				deformParams[6] = 0.0f;
-				break;
-
-			case DEFORM_BULGE:
-				*type = DEFORM_BULGE;
-
-				deformParams[0] = 0.0f;
-				deformParams[1] = ds->bulgeHeight; // amplitude
-				deformParams[2] = ds->bulgeWidth;  // phase
-				deformParams[3] = ds->bulgeSpeed;  // frequency
-				deformParams[4] = 0.0f;
-				deformParams[5] = 0.0f;
-				deformParams[6] = 0.0f;
-				break;
-
-			case DEFORM_MOVE:
-				*type = DEFORM_MOVE;
-				*waveFunc = ds->deformationWave.func;
-
-				deformParams[0] = ds->deformationWave.base;
-				deformParams[1] = ds->deformationWave.amplitude;
-				deformParams[2] = ds->deformationWave.phase;
-				deformParams[3] = ds->deformationWave.frequency;
-				deformParams[4] = ds->moveVector[0];
-				deformParams[5] = ds->moveVector[1];
-				deformParams[6] = ds->moveVector[2];
-
-				break;
-
-			case DEFORM_NORMALS:
-				*type = DEFORM_NORMALS;
-
-				deformParams[0] = 0.0f;
-				deformParams[1] = ds->deformationWave.amplitude; // amplitude
-				deformParams[2] = 0.0f;  // phase
-				deformParams[3] = ds->deformationWave.frequency;  // frequency
-				deformParams[4] = 0.0f;
-				deformParams[5] = 0.0f;
-				deformParams[6] = 0.0f;
-				break;
-
-			case DEFORM_PROJECTION_SHADOW:
-				*type = DEFORM_PROJECTION_SHADOW;
-
-				deformParams[0] = backEnd.ori.axis[0][2];
-				deformParams[1] = backEnd.ori.axis[1][2];
-				deformParams[2] = backEnd.ori.axis[2][2];
-				deformParams[3] = backEnd.ori.origin[2] - backEnd.currentEntity->e.shadowPlane;
-				deformParams[4] = backEnd.currentEntity->lightDir[0];
-				deformParams[5] = backEnd.currentEntity->lightDir[1];
-				deformParams[6] = backEnd.currentEntity->lightDir[2];
-				break;
-
-			default:
-				break;
-		}
-	}
-}
-
 static void ComputeShaderColors( shaderStage_t *pStage, vec4_t baseColor, vec4_t vertColor, int blend, colorGen_t *forceRGBGen, alphaGen_t *forceAlphaGen )
 {
 	colorGen_t rgbGen = pStage->rgbGen;
@@ -820,7 +736,8 @@ void RB_FillDrawCommand(
 	}
 }
 
-static UniformBlockBinding GetEntityBlockUniformBinding(const trRefEntity_t *refEntity)
+static UniformBlockBinding GetEntityBlockUniformBinding(
+	const trRefEntity_t *refEntity)
 {
 	UniformBlockBinding binding = {};
 	binding.block = UNIFORM_BLOCK_ENTITY;
@@ -838,18 +755,48 @@ static UniformBlockBinding GetEntityBlockUniformBinding(const trRefEntity_t *ref
 	return binding;
 }
 
+int RB_GetEntityShaderUboOffset(
+	EntityShaderUboOffset *offsetMap,
+	int mapSize,
+	int entityNum,
+	int shaderNum);
+static UniformBlockBinding GetShaderInstanceBlockUniformBinding(
+	const trRefEntity_t *refEntity, const shader_t *shader)
+{
+	UniformBlockBinding binding = {};
+	binding.block = UNIFORM_BLOCK_SHADER_INSTANCE;
+
+	if (refEntity == &tr.worldEntity)
+	{
+		binding.offset = RB_GetEntityShaderUboOffset(
+			tr.shaderInstanceUboOffsetsMap,
+			tr.shaderInstanceUboOffsetsMapSize,
+			REFENTITYNUM_WORLD,
+			shader->index);
+	}
+	else if (refEntity == &backEnd.entity2D)
+	{
+		binding.offset = 0; // FIXME: FIX THIS!
+	}
+	else
+	{
+		const int refEntityNum = refEntity - backEnd.refdef.entities;
+		binding.offset = RB_GetEntityShaderUboOffset(
+			tr.shaderInstanceUboOffsetsMap,
+			tr.shaderInstanceUboOffsetsMapSize,
+			refEntityNum,
+			shader->index);
+	}
+
+	return binding;
+}
+
 static void ForwardDlight( const shaderCommands_t *input,  VertexArraysProperties *vertexArrays )
 {
-	deform_t deformType;
-	genFunc_t deformGen;
-	float deformParams[7];
-
 	if ( !backEnd.refdef.num_dlights ) {
 		return;
 	}
 	
-	ComputeDeformValues(&deformType, &deformGen, deformParams);
-
 	cullType_t cullType = RB_GetCullType(
 		&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
 
@@ -890,8 +837,11 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 			GLS_DEPTHFUNC_EQUAL;
 
 		shaderGroup = tr.dlightShader;
-		if ( deformGen != DGEN_NONE )
+		if (input->shader->numDeforms &&
+			!ShaderRequiresCPUDeforms(input->shader))
+		{
 			index |= DLIGHTDEF_USE_DEFORM_VERTEXES;
+		}
 	}
 
 	shaderProgram_t *sp = shaderGroup + index;
@@ -911,15 +861,6 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 			&glState.boneMatrices[0][0],
 			glState.numBones);
 
-		uniformDataWriter.SetUniformInt(UNIFORM_DEFORMTYPE, deformType);
-		if (deformType != DEFORM_NONE)
-		{
-			uniformDataWriter.SetUniformInt(UNIFORM_DEFORMFUNC, deformGen);
-			uniformDataWriter.SetUniformFloat(
-				UNIFORM_DEFORMPARAMS, deformParams, ARRAY_LEN(deformParams));
-			uniformDataWriter.SetUniformFloat(UNIFORM_TIME, tess.shaderTime);
-		}
-
 		{
 			vec4_t baseColor;
 			vec4_t vertColor;
@@ -936,9 +877,11 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 			uniformDataWriter.SetUniformVec4(UNIFORM_VERTCOLOR, vertColor);
 		}
 
+#if 0 // TODO: Revisit this later
 		if (pStage->alphaGen == AGEN_PORTAL)
 			uniformDataWriter.SetUniformFloat(
 				UNIFORM_PORTALRANGE, tess.shader->portalRange);
+#endif
 
 		uniformDataWriter.SetUniformInt(UNIFORM_COLORGEN, pStage->rgbGen);
 		uniformDataWriter.SetUniformInt(UNIFORM_ALPHAGEN, pStage->alphaGen);
@@ -1027,7 +970,7 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 2;
+		item.numUniformBlockBindings = 3;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
@@ -1035,6 +978,8 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_LIGHTS;
 		item.uniformBlockBindings[1] =
 			GetEntityBlockUniformBinding(backEnd.currentEntity);
+		item.uniformBlockBindings[2] = GetShaderInstanceBlockUniformBinding(
+			backEnd.currentEntity, input->shader);
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1133,12 +1078,6 @@ static void RB_FogPass(
 	shaderCommands_t *input,
 	const VertexArraysProperties *vertexArrays)
 {
-	deform_t deformType;
-	genFunc_t deformGen;
-	float deformParams[7];
-
-	ComputeDeformValues(&deformType, &deformGen, deformParams);
-
 	cullType_t cullType = RB_GetCullType(
 		&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
 
@@ -1147,7 +1086,7 @@ static void RB_FogPass(
 
 	int shaderBits = 0;
 
-	if (deformGen != DGEN_NONE)
+	if (input->shader->numDeforms && !ShaderRequiresCPUDeforms(input->shader))
 		shaderBits |= FOGDEF_USE_DEFORM_VERTEXES;
 
 	if (glState.vertexAnimation)
@@ -1163,15 +1102,6 @@ static void RB_FogPass(
 	uniformDataWriter.Start(sp);
 	uniformDataWriter.SetUniformMatrix4x3(
 		UNIFORM_BONE_MATRICES, &glState.boneMatrices[0][0], glState.numBones);
-
-	uniformDataWriter.SetUniformInt(UNIFORM_DEFORMTYPE, deformType);
-	if (deformType != DEFORM_NONE)
-	{
-		uniformDataWriter.SetUniformInt(UNIFORM_DEFORMFUNC, deformGen);
-		uniformDataWriter.SetUniformFloat(
-			UNIFORM_DEFORMPARAMS, deformParams, ARRAY_LEN(deformParams));
-		uniformDataWriter.SetUniformFloat(UNIFORM_TIME, tess.shaderTime);
-	}
 
 	uint32_t stateBits =
 		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
@@ -1197,7 +1127,7 @@ static void RB_FogPass(
 
 	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 
-	item.numUniformBlockBindings = 3;
+	item.numUniformBlockBindings = 4;
 	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 		*backEndData->perFrameMemory, item.numUniformBlockBindings);
 	item.uniformBlockBindings[0].data = nullptr;
@@ -1208,6 +1138,8 @@ static void RB_FogPass(
 	item.uniformBlockBindings[1].block = UNIFORM_BLOCK_FOGS;
 	item.uniformBlockBindings[2] = 
 			GetEntityBlockUniformBinding(backEnd.currentEntity);
+	item.uniformBlockBindings[3] = GetShaderInstanceBlockUniformBinding(
+			backEnd.currentEntity, input->shader);
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1366,12 +1298,6 @@ static shaderProgram_t *SelectShaderProgram(
 
 static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArraysProperties *vertexArrays )
 {
-	deform_t deformType;
-	genFunc_t deformGen;
-	float deformParams[7];
-
-	ComputeDeformValues(&deformType, &deformGen, deformParams);
-
 	cullType_t cullType = RB_GetCullType(&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
 
 	vertexAttribute_t attribs[ATTR_INDEX_MAX] = {};
@@ -1446,14 +1372,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 			uniformDataWriter.SetUniformMatrix4x3(UNIFORM_BONE_MATRICES, &glState.boneMatrices[0][0], glState.numBones);
 		}
 
-		uniformDataWriter.SetUniformInt(UNIFORM_DEFORMTYPE, deformType);
-		if (deformType != DEFORM_NONE)
-		{
-			uniformDataWriter.SetUniformInt(UNIFORM_DEFORMFUNC, deformGen);
-			uniformDataWriter.SetUniformFloat(UNIFORM_DEFORMPARAMS, deformParams, 7);
-			uniformDataWriter.SetUniformFloat(UNIFORM_TIME, tess.shaderTime);
-		}
-
 		if ( input->fogNum ) {
 			vec4_t fogColorMask;
 			ComputeFogColorMask(pStage, fogColorMask);
@@ -1490,8 +1408,10 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 
 		uniformDataWriter.SetUniformFloat(UNIFORM_FX_VOLUMETRIC_BASE, volumetricBaseValue);
 
+#if 0 // TODO: Revisit this
 		if (pStage->alphaGen == AGEN_PORTAL)
 			uniformDataWriter.SetUniformFloat(UNIFORM_PORTALRANGE, tess.shader->portalRange);
+#endif
 
 		uniformDataWriter.SetUniformInt(UNIFORM_COLORGEN, forceRGBGen);
 		uniformDataWriter.SetUniformInt(UNIFORM_ALPHAGEN, forceAlphaGen);
@@ -1671,7 +1591,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 4;
+		item.numUniformBlockBindings = 5;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
@@ -1685,6 +1605,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		item.uniformBlockBindings[2].block = UNIFORM_BLOCK_FOGS;
 		item.uniformBlockBindings[3] =
 			GetEntityBlockUniformBinding(backEnd.currentEntity);
+		item.uniformBlockBindings[4] = GetShaderInstanceBlockUniformBinding(
+			backEnd.currentEntity, input->shader);
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1703,32 +1625,19 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 }
 
 
-static void RB_RenderShadowmap( shaderCommands_t *input, const VertexArraysProperties *vertexArrays )
+static void RB_RenderShadowmap(
+	shaderCommands_t *input,
+	const VertexArraysProperties *vertexArrays)
 {
-	deform_t deformType;
-	genFunc_t deformGen;
-	float deformParams[7];
-
-	ComputeDeformValues(&deformType, &deformGen, deformParams);
-
 	cullType_t cullType = RB_GetCullType(
 		&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
 
 	vertexAttribute_t attribs[ATTR_INDEX_MAX] = {};
 	GL_VertexArraysToAttribs(attribs, ARRAY_LEN(attribs), vertexArrays);
 
-	UniformDataWriter uniformDataWriter;
-
-	shaderProgram_t *sp = &tr.shadowmapShader;
-	uniformDataWriter.Start(sp);
-	uniformDataWriter.SetUniformInt(UNIFORM_DEFORMTYPE, deformType);
-	uniformDataWriter.SetUniformInt(UNIFORM_DEFORMFUNC, deformGen);
-	uniformDataWriter.SetUniformFloat(UNIFORM_DEFORMPARAMS, deformParams, 7);
-	uniformDataWriter.SetUniformFloat(UNIFORM_TIME, tess.shaderTime);
-
 	DrawItem item = {};
 	item.cullType = cullType;
-	item.program = sp;
+	item.program = &tr.shadowmapShader;
 	item.depthRange = RB_GetDepthRange(backEnd.currentEntity, input->shader);
 	item.ibo = input->externalIBO
 		? input->externalIBO
@@ -1741,13 +1650,13 @@ static void RB_RenderShadowmap( shaderCommands_t *input, const VertexArraysPrope
 		item.attributes, attribs,
 		sizeof(*item.attributes)*vertexArrays->numVertexArrays);
 
-	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
-
-	item.numUniformBlockBindings = 1;
+	item.numUniformBlockBindings = 2;
 	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 		*backEndData->perFrameMemory, item.numUniformBlockBindings);
 	item.uniformBlockBindings[0] =
 		GetEntityBlockUniformBinding(backEnd.currentEntity);
+	item.uniformBlockBindings[1] = GetShaderInstanceBlockUniformBinding(
+			backEnd.currentEntity, input->shader);
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 

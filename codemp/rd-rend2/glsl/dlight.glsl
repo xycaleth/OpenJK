@@ -32,12 +32,14 @@ layout(std140) uniform Entity
 
 uniform int u_LightIndex;
 
-#if defined(USE_DEFORM_VERTEXES)
-uniform int u_DeformType;
-uniform int u_DeformFunc;
-uniform float u_DeformParams[7];
-uniform float u_Time;
-#endif
+layout(std140) uniform ShaderInstance
+{
+	float u_DeformParams[7];
+	float u_Time;
+	float u_PortalRange;
+	int u_DeformType;
+	int u_DeformFunc;
+};
 
 out vec3 var_Normal;
 out vec4 var_LightDirAndRadiusSq;

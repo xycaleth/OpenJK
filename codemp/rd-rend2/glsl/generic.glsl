@@ -41,6 +41,15 @@ layout(std140) uniform Entity
 	int u_FogIndex;
 };
 
+layout(std140) uniform ShaderInstance
+{
+	float u_DeformParams[7];
+	float u_Time;
+	float u_PortalRange;
+	int u_DeformType;
+	int u_DeformFunc;
+};
+
 uniform vec4 u_DiffuseTexMatrix;
 uniform vec4 u_DiffuseTexOffTurb;
 
@@ -50,20 +59,12 @@ uniform vec3 u_TCGen0Vector0;
 uniform vec3 u_TCGen0Vector1;
 #endif
 
-#if defined(USE_DEFORM_VERTEXES)
-uniform int u_DeformType;
-uniform int u_DeformFunc;
-uniform float u_DeformParams[7];
-uniform float u_Time;
-#endif
-
 uniform vec4 u_BaseColor;
 uniform vec4 u_VertColor;
 
 #if defined(USE_RGBAGEN)
 uniform int u_ColorGen;
 uniform int u_AlphaGen;
-uniform float u_PortalRange;
 #endif
 uniform float u_FXVolumetricBase;
 

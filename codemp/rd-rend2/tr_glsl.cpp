@@ -53,6 +53,7 @@ const uniformBlockInfo_t uniformBlocksInfo[UNIFORM_BLOCK_COUNT] = {
 	{ 2, "Lights", sizeof(LightsBlock) },
 	{ 3, "Fogs", sizeof(FogsBlock) },
 	{ 4, "Entity", sizeof(EntityBlock) },
+	{ 5, "ShaderInstance", sizeof(ShaderInstanceBlock) },
 	{ 10, "SurfaceSprite", sizeof(SurfaceSpriteBlock) },
 };
 
@@ -98,10 +99,6 @@ static uniformInfo_t uniformsInfo[UNIFORM_COUNT] =
 	{ "u_TCGen0Vector1", GLSL_VEC3, 1 },
 	{ "u_TCGen1",        GLSL_INT, 1 },
 
-	{ "u_DeformType",    GLSL_INT, 1 },
-	{ "u_DeformFunc",    GLSL_INT, 1 },
-	{ "u_DeformParams", GLSL_FLOAT, 7 },
-
 	{ "u_ColorGen",  GLSL_INT, 1 },
 	{ "u_AlphaGen",  GLSL_INT, 1 },
 	{ "u_Color",     GLSL_VEC4, 1 },
@@ -118,8 +115,6 @@ static uniformInfo_t uniformsInfo[UNIFORM_COUNT] =
 	{ "u_AmbientLight",  GLSL_VEC3, 1 },
 	{ "u_DirectedLight", GLSL_VEC3, 1 },
 	{ "u_LightIndex",    GLSL_INT, 1 },
-
-	{ "u_PortalRange", GLSL_FLOAT, 1 },
 
 	{ "u_FogColorMask", GLSL_VEC4, 1 },
 
