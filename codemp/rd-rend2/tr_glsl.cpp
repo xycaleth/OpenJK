@@ -54,6 +54,7 @@ const uniformBlockInfo_t uniformBlocksInfo[UNIFORM_BLOCK_COUNT] = {
 	{ 3, "Fogs", sizeof(FogsBlock) },
 	{ 4, "Entity", sizeof(EntityBlock) },
 	{ 5, "ShaderInstance", sizeof(ShaderInstanceBlock) },
+	{ 6, "Bones", sizeof(SkeletonBoneMatricesBlock) },
 	{ 10, "SurfaceSprite", sizeof(SurfaceSpriteBlock) },
 };
 
@@ -139,7 +140,6 @@ static uniformInfo_t uniformsInfo[UNIFORM_COUNT] =
 
 	{ "u_CubeMapInfo", GLSL_VEC4, 1 },
 
-	{ "u_BoneMatrices",			GLSL_MAT4x3, 20 },
 	{ "u_AlphaTestType",		GLSL_INT, 1 },
 
 	{ "u_FXVolumetricBase",		GLSL_FLOAT, 1 },
@@ -934,6 +934,9 @@ void GLSL_FinishGPUShader(shaderProgram_t *program)
 
 void GLSL_SetUniforms( shaderProgram_t *program, UniformData *uniformData )
 {
+	if (uniformData == nullptr)
+		return;
+
 	UniformData *data = uniformData;
 	while ( data->index != UNIFORM_COUNT )
 	{

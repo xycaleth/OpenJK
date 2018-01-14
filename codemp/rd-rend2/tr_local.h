@@ -731,6 +731,11 @@ struct ShaderInstanceBlock
 	float pad0;
 };
 
+struct SkeletonBoneMatricesBlock
+{
+	mat3x4_t matrices[20];
+};
+
 struct surfaceSprite_t
 {
 	surfaceSpriteType_t type;
@@ -1173,6 +1178,7 @@ enum uniformBlock_t
 	UNIFORM_BLOCK_FOGS,
 	UNIFORM_BLOCK_ENTITY,
 	UNIFORM_BLOCK_SHADER_INSTANCE,
+	UNIFORM_BLOCK_BONES,
 	UNIFORM_BLOCK_SURFACESPRITE,
 	UNIFORM_BLOCK_COUNT
 };
@@ -1295,7 +1301,6 @@ typedef enum
 
 	UNIFORM_CUBEMAPINFO,
 
-	UNIFORM_BONE_MATRICES,
 	UNIFORM_ALPHA_TEST_TYPE,
 
 	UNIFORM_FX_VOLUMETRIC_BASE,
@@ -2081,8 +2086,6 @@ typedef struct glstate_s {
 	int				vertexAttribsTexCoordOffset[2];
 	qboolean        vertexAnimation;
 	qboolean		skeletalAnimation;
-	mat4x3_t       *boneMatrices;
-	int				numBones;
 	shaderProgram_t *currentProgram;
 	FBO_t          *currentFBO;
 	VBO_t          *currentVBO;
@@ -2199,6 +2202,7 @@ typedef struct {
 	orientationr_t	ori;
 	backEndCounters_t	pc;
 	trRefEntity_t	*currentEntity;
+	int currentDrawSurfIndex;
 	qboolean	skyRenderedThisView;	// flag for drawing sun
 
 	qboolean	projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
@@ -2369,8 +2373,11 @@ typedef struct trGlobals_s {
 	int fogsUboOffset;
 	int skyEntityUboOffset;
 	int entityUboOffsets[MAX_REFENTITIES + 1];
+
+	int *animationBoneUboOffsets;
 	EntityShaderUboOffset *shaderInstanceUboOffsetsMap;
 	int shaderInstanceUboOffsetsMapSize;
+
 
 	// -----------------------------------------
 
@@ -3194,6 +3201,7 @@ public:
 
 void R_AddGhoulSurfaces( trRefEntity_t *ent, int entityNum );
 void RB_SurfaceGhoul( CRenderableSurface *surface );
+void RB_TransformBones(CRenderableSurface *surf, mat3x4_t *outMatrices);
 /*
 Ghoul2 Insert End
 */

@@ -50,6 +50,11 @@ layout(std140) uniform ShaderInstance
 	int u_DeformFunc;
 };
 
+layout(std140) uniform Bones
+{
+	mat3x4 u_BoneMatrices[20];
+};
+
 uniform vec4 u_DiffuseTexMatrix;
 uniform vec4 u_DiffuseTexOffTurb;
 
@@ -67,10 +72,6 @@ uniform int u_ColorGen;
 uniform int u_AlphaGen;
 #endif
 uniform float u_FXVolumetricBase;
-
-#if defined(USE_SKELETAL_ANIMATION)
-uniform mat4x3 u_BoneMatrices[20];
-#endif
 
 out vec2 var_DiffuseTex;
 out vec4 var_Color;
@@ -290,6 +291,16 @@ vec4 CalcColor(vec3 position, vec3 normal)
 }
 #endif
 
+mat4 GetBoneMatrix(uint index)
+{
+	mat3x4 bone = u_BoneMatrices[index];
+	return mat4(
+		bone[0].xyz, 0.0,
+		bone[1].xyz, 0.0,
+		bone[2].xyz, 0.0,
+		bone[0].w, bone[1].w, bone[2].w, 1.0);
+}
+
 void main()
 {
 #if defined(USE_VERTEX_ANIMATION)
@@ -305,14 +316,7 @@ void main()
 	for (int i = 0; i < 4; i++)
 	{
 		uint boneIndex = attr_BoneIndexes[i];
-
-		mat4 boneMatrix = mat4(
-			vec4(u_BoneMatrices[boneIndex][0], 0.0),
-			vec4(u_BoneMatrices[boneIndex][1], 0.0),
-			vec4(u_BoneMatrices[boneIndex][2], 0.0),
-			vec4(u_BoneMatrices[boneIndex][3], 1.0)
-		);
-
+		mat4 boneMatrix = GetBoneMatrix(boneIndex);
 		position4 += (boneMatrix * originalPosition) * attr_BoneWeights[i];
 		normal4 += (boneMatrix * originalNormal) * attr_BoneWeights[i];
 	}

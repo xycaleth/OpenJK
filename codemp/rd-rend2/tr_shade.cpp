@@ -755,6 +755,25 @@ static UniformBlockBinding GetEntityBlockUniformBinding(
 	return binding;
 }
 
+static UniformBlockBinding GetBonesBlockUniformBinding(
+	const trRefEntity_t *refEntity)
+{
+	UniformBlockBinding binding = {};
+	binding.block = UNIFORM_BLOCK_BONES;
+
+	if (refEntity == &tr.worldEntity)
+		binding.offset = 0;
+	else if (refEntity == &backEnd.entity2D)
+		binding.offset = 0;
+	else
+	{
+		const int drawSurfNum = backEnd.currentDrawSurfIndex;
+		binding.offset = tr.animationBoneUboOffsets[drawSurfNum];
+	}
+
+	return binding;
+}
+
 int RB_GetEntityShaderUboOffset(
 	EntityShaderUboOffset *offsetMap,
 	int mapSize,
@@ -855,11 +874,6 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		backEnd.pc.c_lightallDraws++;
 
 		uniformDataWriter.Start(sp);
-
-		uniformDataWriter.SetUniformMatrix4x3(
-			UNIFORM_BONE_MATRICES,
-			&glState.boneMatrices[0][0],
-			glState.numBones);
 
 		{
 			vec4_t baseColor;
@@ -970,7 +984,7 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 3;
+		item.numUniformBlockBindings = 4;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
@@ -980,6 +994,8 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 			GetEntityBlockUniformBinding(backEnd.currentEntity);
 		item.uniformBlockBindings[2] = GetShaderInstanceBlockUniformBinding(
 			backEnd.currentEntity, input->shader);
+		item.uniformBlockBindings[3] = GetBonesBlockUniformBinding(
+			backEnd.currentEntity);
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1098,11 +1114,6 @@ static void RB_FogPass(
 
 	backEnd.pc.c_fogDraws++;
 
-	UniformDataWriter uniformDataWriter;
-	uniformDataWriter.Start(sp);
-	uniformDataWriter.SetUniformMatrix4x3(
-		UNIFORM_BONE_MATRICES, &glState.boneMatrices[0][0], glState.numBones);
-
 	uint32_t stateBits =
 		GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 	if ( tess.shader->fogPass == FP_EQUAL )
@@ -1125,9 +1136,7 @@ static void RB_FogPass(
 		attribs,
 		sizeof(*item.attributes)*vertexArrays->numVertexArrays);
 
-	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
-
-	item.numUniformBlockBindings = 4;
+	item.numUniformBlockBindings = 5;
 	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 		*backEndData->perFrameMemory, item.numUniformBlockBindings);
 	item.uniformBlockBindings[0].data = nullptr;
@@ -1137,9 +1146,11 @@ static void RB_FogPass(
 	item.uniformBlockBindings[1].offset = tr.fogsUboOffset;
 	item.uniformBlockBindings[1].block = UNIFORM_BLOCK_FOGS;
 	item.uniformBlockBindings[2] = 
-			GetEntityBlockUniformBinding(backEnd.currentEntity);
+		GetEntityBlockUniformBinding(backEnd.currentEntity);
 	item.uniformBlockBindings[3] = GetShaderInstanceBlockUniformBinding(
-			backEnd.currentEntity, input->shader);
+		backEnd.currentEntity, input->shader);
+	item.uniformBlockBindings[4] = GetBonesBlockUniformBinding(
+		backEnd.currentEntity);
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1367,11 +1378,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 
 		uniformDataWriter.Start(sp);
 
-		if (glState.skeletalAnimation)
-		{
-			uniformDataWriter.SetUniformMatrix4x3(UNIFORM_BONE_MATRICES, &glState.boneMatrices[0][0], glState.numBones);
-		}
-
 		if ( input->fogNum ) {
 			vec4_t fogColorMask;
 			ComputeFogColorMask(pStage, fogColorMask);
@@ -1591,7 +1597,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		item.samplerBindings = samplerBindingsWriter.Finish(
 			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 5;
+		item.numUniformBlockBindings = 6;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
 		item.uniformBlockBindings[0].data = nullptr;
@@ -1607,6 +1613,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 			GetEntityBlockUniformBinding(backEnd.currentEntity);
 		item.uniformBlockBindings[4] = GetShaderInstanceBlockUniformBinding(
 			backEnd.currentEntity, input->shader);
+		item.uniformBlockBindings[5] = GetBonesBlockUniformBinding(
+			backEnd.currentEntity);
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 

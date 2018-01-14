@@ -1724,40 +1724,6 @@ static void R_ShutdownBackEndFrameData()
 	}
 }
 
-static void R_InitStaticConstants()
-{
-	static const size_t STATIC_UBO_SIZE_IN_BYTES = 4 * 1024 * 1024;
-	qglBindBuffer(GL_UNIFORM_BUFFER, tr.staticUbo);
-	qglBufferData(
-		GL_UNIFORM_BUFFER,
-		STATIC_UBO_SIZE_IN_BYTES,
-		nullptr,
-		GL_STATIC_DRAW);
-
-	EntityBlock entity2DBlock = {};
-	entity2DBlock.fxVolumetricBase = -1.0f;
-
-	matrix_t identityMatrix;
-	Matrix16Identity(entity2DBlock.modelMatrix);
-
-	matrix_t projectionMatrix;
-	Matrix16Ortho(
-		0.0f,
-		640.0f,
-		480.0f,
-		0.0f,
-		0.0f,
-		1.0f,
-		entity2DBlock.modelViewProjectionMatrix);
-
-	qglBufferSubData(
-		GL_UNIFORM_BUFFER, 0, sizeof(entity2DBlock), &entity2DBlock);
-
-	tr.entity2DUboOffset = 0;
-
-	qglBindBuffer(GL_UNIFORM_BUFFER, 0);
-}
-
 /*
 ===============
 R_Init
@@ -1842,7 +1808,6 @@ void R_Init( void ) {
 	InitOpenGL();
 
 	R_InitVBOs();
-	//R_InitStaticConstants();
 
 	R_InitBackEndFrameData();
 	R_InitImages();

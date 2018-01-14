@@ -60,6 +60,11 @@ layout(std140) uniform Entity
 };
 uniform float u_FXVolumetricBase;
 
+layout(std140) uniform Bones
+{
+	mat3x4 u_BoneMatrices[20];
+};
+
 #if defined(USE_DELUXEMAP)
 uniform vec4   u_EnableTextures; // x = normal, y = deluxe, z = specular, w = cube
 #endif
@@ -78,10 +83,6 @@ uniform vec4 u_DiffuseTexOffTurb;
 
 uniform vec4 u_BaseColor;
 uniform vec4 u_VertColor;
-
-#if defined(USE_SKELETAL_ANIMATION)
-uniform mat4x3 u_BoneMatrices[20];
-#endif
 
 out vec4 var_TexCoords;
 out vec4 var_Color;
@@ -161,7 +162,6 @@ vec2 ModTexCoords(vec2 st, vec3 position, vec4 texMatrix, vec4 offTurb)
 }
 #endif
 
-
 float CalcLightAttenuation(in bool isPoint, float normDist)
 {
 	// zero light at 1.0, approximating q3 style
@@ -170,6 +170,15 @@ float CalcLightAttenuation(in bool isPoint, float normDist)
 	return clamp(attenuation, 0.0, 1.0);
 }
 
+mat4 GetBoneMatrix(uint index)
+{
+	mat3x4 bone = u_BoneMatrices[index];
+	return mat4(
+		bone[0].x, bone[1].x, bone[2].x, 0.0,
+		bone[0].y, bone[1].y, bone[2].y, 0.0,
+		bone[0].z, bone[1].z, bone[2].z, 0.0,
+		bone[0].w, bone[1].w, bone[2].w, 1.0);
+}
 
 void main()
 {
@@ -190,14 +199,7 @@ void main()
 	for (int i = 0; i < 4; i++)
 	{
 		uint boneIndex = attr_BoneIndexes[i];
-
-		mat4 boneMatrix = mat4(
-			vec4(u_BoneMatrices[boneIndex][0], 0.0),
-			vec4(u_BoneMatrices[boneIndex][1], 0.0),
-			vec4(u_BoneMatrices[boneIndex][2], 0.0),
-			vec4(u_BoneMatrices[boneIndex][3], 1.0)
-		);
-
+		mat4 boneMatrix = GetBoneMatrix(boneIndex);
 		position4 += (boneMatrix * originalPosition) * attr_BoneWeights[i];
 		normal4 += (boneMatrix * originalNormal) * attr_BoneWeights[i];
 #if defined(PER_PIXEL_LIGHTING)

@@ -1136,6 +1136,7 @@ static void RB_SubmitDrawSurfsForDepthFill(
 		if ( shader == oldShader &&	entityNum == oldEntityNum )
 		{
 			// fast path, same as previous sort
+			backEnd.currentDrawSurfIndex = i;
 			rb_surfaceTable[*drawSurf->surface](drawSurf->surface);
 			continue;
 		}
@@ -1171,6 +1172,8 @@ static void RB_SubmitDrawSurfsForDepthFill(
 			RB_PrepareForEntity(entityNum, &oldDepthRange, originalTime);
 			oldEntityNum = entityNum;
 		}
+
+		backEnd.currentDrawSurfIndex = i;
 
 		// add the triangles for this surface
 		rb_surfaceTable[*drawSurf->surface](drawSurf->surface);
@@ -1220,6 +1223,7 @@ static void RB_SubmitDrawSurfs(
 				dlighted == oldDlighted )
 		{
 			// fast path, same as previous sort
+			backEnd.currentDrawSurfIndex = i;
 			rb_surfaceTable[*drawSurf->surface](drawSurf->surface);
 			continue;
 		}
@@ -1266,6 +1270,8 @@ static void RB_SubmitDrawSurfs(
 
 			oldEntityNum = entityNum;
 		}
+
+		backEnd.currentDrawSurfIndex = i;
 
 		// add the triangles for this surface
 		rb_surfaceTable[*drawSurf->surface](drawSurf->surface);
@@ -2167,18 +2173,6 @@ static void RB_RenderAllDepthRelatedPasses( drawSurf_t *drawSurfs, int numDrawSu
 	}
 }
 
-static void RB_TransformAllAnimations( drawSurf_t *drawSurfs, int numDrawSurfs )
-{
-	drawSurf_t *drawSurf = drawSurfs;
-	for ( int i = 0; i < numDrawSurfs; ++i, ++drawSurf )
-	{
-		if ( *drawSurf->surface != SF_MDX )
-		{
-			continue;
-		}
-	}
-}
-
 static void RB_UpdateCameraConstants()
 {
 	const float zmax = backEnd.viewParms.zFar;
@@ -2559,6 +2553,29 @@ static void RB_UpdateShaderAndEntityConstants(
 	RB_UpdateSkyEntityConstants();
 }
 
+static void RB_UpdateAnimationConstants(
+	const drawSurf_t *drawSurfs, int numDrawSurfs)
+{
+	tr.animationBoneUboOffsets = ojkAllocArray<int>(
+		*backEndData->perFrameMemory, numDrawSurfs);
+	memset(tr.animationBoneUboOffsets, 0, sizeof(int) * numDrawSurfs);
+
+	for (int i = 0; i < numDrawSurfs; ++i)
+	{
+		const drawSurf_t *drawSurf = drawSurfs + i;
+		if (*drawSurf->surface != SF_MDX)
+			continue;
+
+		SkeletonBoneMatricesBlock bonesBlock = {};
+		RB_TransformBones(
+			(CRenderableSurface *)drawSurf->surface,
+			bonesBlock.matrices);
+
+		tr.animationBoneUboOffsets[i] = RB_BindAndUpdateUniformBlock(
+			UNIFORM_BLOCK_BONES, &bonesBlock);
+	}
+}
+
 static void RB_UpdateConstants(const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
 	RB_UpdateCameraConstants();
@@ -2567,6 +2584,7 @@ static void RB_UpdateConstants(const drawSurf_t *drawSurfs, int numDrawSurfs)
 	RB_UpdateFogsConstants();
 
 	RB_UpdateShaderAndEntityConstants(drawSurfs, numDrawSurfs);
+	RB_UpdateAnimationConstants(drawSurfs, numDrawSurfs);
 }
 
 /*
@@ -2592,8 +2610,6 @@ static const void *RB_DrawSurfs( const void *data ) {
 	RB_BeginDrawingView ();
 
 	RB_UpdateConstants(cmd->drawSurfs, cmd->numDrawSurfs);
-
-	RB_TransformAllAnimations(cmd->drawSurfs, cmd->numDrawSurfs);
 
 	RB_RenderAllDepthRelatedPasses(cmd->drawSurfs, cmd->numDrawSurfs);
 
