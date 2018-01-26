@@ -1,5 +1,5 @@
 #============================================================================
-# Copyright (C) 2013 - 2015, OpenJK contributors
+# Copyright (C) 2013 - 2018, OpenJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -16,20 +16,12 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Make sure the user is not executing this script directly
-if(NOT InOpenJK)
-	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
-
 set(MPGameIncludeDirectories
-	"${MPDir}"
-	"${SharedDir}"
-	"${GSLIncludeDirectory}"
-	)
-if(WIN32)
-	set(MPGameLibraries "winmm")
-endif(WIN32)
-set(MPGameDefines ${MPSharedDefines} "_GAME" )
+	${MPDir}
+	${SharedDir}
+	${GSLIncludeDirectory})
+
+set(MPGameDefines ${MPSharedDefines} "_GAME")
 set(MPGameGameFiles
 	"${MPDir}/game/ai_main.c"
 	"${MPDir}/game/ai_util.c"
@@ -139,8 +131,7 @@ set(MPGameGameFiles
 	"${MPDir}/game/say.h"
 	"${MPDir}/game/surfaceflags.h"
 	"${MPDir}/game/teams.h"
-	"${MPDir}/game/w_saber.h"
-	)
+	"${MPDir}/game/w_saber.h")
 source_group("game" FILES ${MPGameGameFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameGameFiles})
 
@@ -149,28 +140,22 @@ set(MPGameCommonFiles
 	"${MPDir}/qcommon/disablewarnings.h"
 	"${MPDir}/qcommon/q_shared.h"
 	"${MPDir}/qcommon/tags.h"
-	
-	${SharedCommonFiles}
-	)
+	${SharedCommonFiles})
 source_group("common" FILES ${MPGameCommonFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameCommonFiles})
 
-set(MPGameCommonSafeFiles
-	${SharedCommonSafeFiles}
-	)
+set(MPGameCommonSafeFiles ${SharedCommonSafeFiles})
 source_group("common/safe" FILES ${MPGameCommonSafeFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameCommonSafeFiles})
 
 set(MPGameCgameFiles
 	"${MPDir}/cgame/animtable.h"
-	"${MPDir}/cgame/cg_public.h"
-	)
+	"${MPDir}/cgame/cg_public.h")
 source_group("cgame" FILES ${MPGameCgameFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameCgameFiles})
 
 set(MPGameRendererFiles
-	"${MPDir}/rd-common/tr_types.h"
-	)
+	"${MPDir}/rd-common/tr_types.h")
 source_group("rd-common" FILES ${MPGameRendererFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameRendererFiles})
 
@@ -183,36 +168,40 @@ set(MPGameBotlibFiles
 	"${MPDir}/botlib/be_ai_move.h"
 	"${MPDir}/botlib/be_ai_weap.h"
 	"${MPDir}/botlib/be_ea.h"
-	"${MPDir}/botlib/botlib.h"
-	)
+	"${MPDir}/botlib/botlib.h")
 source_group("botlib" FILES ${MPGameBotlibFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameBotlibFiles})
 
 set(MPGameG2Files
-	"${MPDir}/ghoul2/G2.h"
-	)
+	"${MPDir}/ghoul2/G2.h")
 source_group("ghoul2" FILES ${MPGameG2Files})
 set(MPGameFiles ${MPGameFiles} ${MPGameG2Files})
 
 set(MPGameIcarusFiles
 	"${MPDir}/icarus/interpreter.h"
-	"${MPDir}/icarus/Q3_Interface.h"
-	)
+	"${MPDir}/icarus/Q3_Interface.h")
 source_group("icarus" FILES ${MPGameIcarusFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameIcarusFiles})
 
 set(MPGameUiFiles
-	"${MPDir}/ui/menudef.h"
-	)
+	"${MPDir}/ui/menudef.h")
 source_group("ui" FILES ${MPGameUiFiles})
 set(MPGameFiles ${MPGameFiles} ${MPGameUiFiles})
 
-add_library(${MPGame} SHARED ${MPGameFiles})
+add_library(${MPGame} MODULE ${MPGameFiles})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPGame} PROPERTIES PREFIX "")
+	set_target_properties(${MPGame}
+		PROPERTIES
+			PREFIX ""
+			SUFFIX ".so")
 endif()
+
+set_target_properties(${MPGame} PROPERTIES PROJECT_LABEL "MP Game Library")
+target_compile_options(${MPGame} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
+target_compile_definitions(${MPGame} PUBLIC "${MPGameDefines}")
+target_include_directories(${MPGame} PUBLIC "${MPGameIncludeDirectories}")
 
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPGame}
@@ -223,7 +212,7 @@ if(MakeApplicationBundles AND BuildMPEngine)
 		LIBRARY
 		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
 		COMPONENT ${JKAMPCoreComponent})
-elseif(WIN32)
+elseif()
 	install(TARGETS ${MPGame}
 		RUNTIME
 		DESTINATION "${JKAInstallDir}/OpenJK"
@@ -246,15 +235,3 @@ else()
 		DESTINATION "${JKAInstallDir}/base"
 		COMPONENT ${JKAMPCoreComponent})
 endif()
-
-set_target_properties(${MPGame} PROPERTIES COMPILE_DEFINITIONS "${MPGameDefines}")
-
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${MPGame} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
-
-set_target_properties(${MPGame} PROPERTIES INCLUDE_DIRECTORIES "${MPGameIncludeDirectories}")
-set_target_properties(${MPGame} PROPERTIES PROJECT_LABEL "MP Game Library")
-# no libraries used
-if(MPGameLibraries)
-	target_link_libraries(${MPGame} ${MPGameLibraries})
-endif(MPGameLibraries)

@@ -1,5 +1,5 @@
 #============================================================================
-# Copyright (C) 2013 - 2015, OpenJK contributors
+# Copyright (C) 2013 - 2018, OpenJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -16,20 +16,12 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Make sure the user is not executing this script directly
-if(NOT InOpenJK)
-	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
-
 set(MPCGameIncludeDirectories
-	"${MPDir}"
-	"${SharedDir}"
-	"${GSLIncludeDirectory}"
-	)
-if(WIN32)
-	set(MPCGameLibraries "odbc32" "odbccp32") # what are these even?
-endif(WIN32)
-set(MPCGameDefines ${MPSharedDefines} "_CGAME" )
+	${MPDir}
+	${SharedDir}
+	${GSLIncludeDirectory})
+
+set(MPCGameDefines ${MPSharedDefines} "_CGAME")
 set(MPCGameGameFiles
 	"${MPDir}/game/AnimalNPC.c"
 	"${MPDir}/game/bg_g2_utils.c"
@@ -50,8 +42,7 @@ set(MPCGameGameFiles
 	"${MPDir}/game/bg_public.h"
 	"${MPDir}/game/bg_saga.h"
 	"${MPDir}/game/bg_weapons.h"
-	"${MPDir}/game/surfaceflags.h"
-	)
+	"${MPDir}/game/surfaceflags.h")
 source_group("game" FILES ${MPCGameGameFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameGameFiles})
 
@@ -95,8 +86,7 @@ set(MPCGameCgameFiles
 	"${MPDir}/cgame/cg_local.h"
 	"${MPDir}/cgame/cg_public.h"
 	"${MPDir}/cgame/cg_xcvar.h"
-	"${MPDir}/cgame/fx_local.h"
-	)
+	"${MPDir}/cgame/fx_local.h")
 source_group("cgame" FILES ${MPCGameCgameFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameCgameFiles})
 
@@ -105,16 +95,12 @@ set(MPCGameCommonFiles
 	"${MPDir}/qcommon/disablewarnings.h"
 	"${MPDir}/qcommon/q_shared.h"
 	"${MPDir}/qcommon/qfiles.h"
-	"${MPDir}/qcommon/tags.h"
-	
-	${SharedCommonFiles}
-	)
+	"${MPDir}/qcommon/tags.h" 
+	${SharedCommonFiles})
 source_group("common" FILES ${MPCGameCommonFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameCommonFiles})
 
-set(MPCGameCommonSafeFiles
-	${SharedCommonSafeFiles}
-	)
+set(MPCGameCommonSafeFiles ${SharedCommonSafeFiles})
 source_group("common/safe" FILES ${MPCGameCommonSafeFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameCommonSafeFiles})
 
@@ -122,29 +108,34 @@ set(MPCGameUiFiles
 	"${MPDir}/ui/ui_shared.c"
 	"${MPDir}/ui/keycodes.h"
 	"${MPDir}/ui/menudef.h"
-	"${MPDir}/ui/ui_shared.h"
-	)
+	"${MPDir}/ui/ui_shared.h")
 source_group("ui" FILES ${MPCGameUiFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameUiFiles})
 
 set(MPCGameRendererFiles
-	"${MPDir}/rd-common/tr_types.h"
-	)
+	"${MPDir}/rd-common/tr_types.h")
 source_group("rd-common" FILES ${MPCGameRendererFiles})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameRendererFiles})
 
 set(MPCGameGFiles
-	"${MPDir}/ghoul2/G2.h"
-	)
+	"${MPDir}/ghoul2/G2.h")
 source_group("ghoul2" FILES ${MPCGameG2Files})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameG2Files})
 
-add_library(${MPCGame} SHARED ${MPCGameFiles})
+add_library(${MPCGame} MODULE ${MPCGameFiles})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPCGame} PROPERTIES PREFIX "")
+	set_target_properties(${MPCGame}
+		PROPERTIES
+			PREFIX ""
+			SUFFIX ".so")
 endif()
+
+set_target_properties(${MPCGame} PROPERTIES PROJECT_LABEL "MP Client Game Library")
+target_compile_options(${MPCGame} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
+target_compile_definitions(${MPCGame} PUBLIC "${MPCGameDefines}")
+target_include_directories(${MPCGame} PUBLIC "${MPCGameIncludeDirectories}")
 
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPCGame}
@@ -155,7 +146,7 @@ if(MakeApplicationBundles AND BuildMPEngine)
 		LIBRARY
 		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
 		COMPONENT ${JKAMPCoreComponent})
-elseif(WIN32)
+elseif()
 	install(TARGETS ${MPCGame}
 		RUNTIME
 		DESTINATION "${JKAInstallDir}/OpenJK"
@@ -178,15 +169,3 @@ else()
 		DESTINATION "${JKAInstallDir}/base"
 		COMPONENT ${JKAMPCoreComponent})
 endif()
-
-set_target_properties(${MPCGame} PROPERTIES COMPILE_DEFINITIONS "${MPCGameDefines}")
-
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${MPCGame} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
-
-set_target_properties(${MPCGame} PROPERTIES INCLUDE_DIRECTORIES "${MPCGameIncludeDirectories}")
-set_target_properties(${MPCGame} PROPERTIES PROJECT_LABEL "MP Client Game Library")
-# no libraries used
-if(MPCGameLibraries)
-	target_link_libraries(${MPCGame} ${MPCGameLibraries})
-endif(MPCGameLibraries)

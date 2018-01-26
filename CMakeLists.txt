@@ -16,21 +16,17 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 3.1)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
 
 # For checks in subdirectories
 set(InOpenJK TRUE)
-
-
 
 # Project name
 set(ProjectName "OpenJK" CACHE STRING "Project Name")
 project(${ProjectName})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-
 
 # Customizable options
 option(BuildPortableVersion "Build portable version (does not read or write files from your user/home directory" OFF)
@@ -51,7 +47,7 @@ option(BuildJK2SPRdVanilla "Whether to create projects for the jk2 sp renderer (
 
 option(BuildTests "Whether to build automatic unit tests (requires Boost)" OFF)
 
-Include(CMakeDependentOption)
+include(CMakeDependentOption)
 CMAKE_DEPENDENT_OPTION(BuildSymbolServer "Build WIP Windows Symbol Server (experimental and unused)" OFF "NOT WIN32 OR NOT MSVC" OFF)
 
 # Configure the use of bundled libraries.  By default, we assume the user is on
@@ -90,7 +86,7 @@ option(UseInternalSDL2   "If set, use bundled SDL2."    ${UseInternalSDL2Default
 
 # This option won't appear on non-Apple platforms.
 if(APPLE)
-  option(MakeApplicationBundles "Whether to build .app application bundles for engines built" ON)
+	option(MakeApplicationBundles "Whether to build .app application bundles for engines built" ON)
 endif()
 
 # Custom CMake Modules needed
@@ -98,14 +94,17 @@ list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/CMakeModules")
 
 Include(CheckTypeSize)
 check_type_size("void*" CMAKE_SIZEOF_VOID_P)
-
-
+if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+	set(BUILD_64BIT FALSE)
+else()
+	set(BUILD_64BIT TRUE)
+endif()
 
 # ${Architecture} must match ARCH_STRING in q_platform.h,
 # and is used in DLL names (jagamex86.dll, jagamex86.dylib, jagamei386.so).
 if(WIN32)
 	set(X86 ON)
-	if(CMAKE_SIZEOF_VOID_P MATCHES "8")
+	if(BUILD_64BIT)
 		set(Architecture "x86_64")
 		set(WIN64 TRUE)
 	else()
@@ -339,21 +338,21 @@ set(SharedCommonSafeFiles
 
 
 if(UseInternalJPEG)
-  add_subdirectory(lib/jpeg-9a)
+	add_subdirectory(lib/jpeg-9a)
 else()
-  find_package(JPEG REQUIRED)
+	find_package(JPEG REQUIRED)
 endif()
 
 if(UseInternalZlib)
-  add_subdirectory(lib/zlib)
+	add_subdirectory(lib/zlib)
 else()
-  find_package(ZLIB REQUIRED)
+	find_package(ZLIB REQUIRED)
 endif()
 
 if(UseInternalPNG)
-  add_subdirectory(lib/libpng)
+	add_subdirectory(lib/libpng)
 else()
-  find_package(PNG REQUIRED)
+	find_package(PNG REQUIRED)
 endif()
 
 # Always use bundled minizip (sets MINIZIP_{LIBRARIES,INCLUDE_DIR})
@@ -365,6 +364,7 @@ if(BuildJK2SPGame)
 	add_subdirectory("${JK2SPDir}/game")
 endif()
 add_subdirectory(${MPDir})
+
 # Windows Symbol Server tools
 if(BuildSymbolServer)
 	add_subdirectory("tools/WinSymbol")

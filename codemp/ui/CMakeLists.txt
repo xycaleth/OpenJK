@@ -1,5 +1,5 @@
 #============================================================================
-# Copyright (C) 2013 - 2015, OpenJK contributors
+# Copyright (C) 2013 - 2018, OpenJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -16,19 +16,11 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Make sure the user is not executing this script directly
-if(NOT InOpenJK)
-	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
-
 set(MPUIIncludeDirectories
-	"${MPDir}"
-	"${SharedDir}"
-	"${GSLIncludeDirectory}"
-	)
-if(WIN32)
-	set(MPUILibraries "odbc32" "odbccp32") # what are these even?
-endif(WIN32)
+	${MPDir}
+	${SharedDir}
+	${GSLIncludeDirectory})
+
 set(MPUIDefines ${MPSharedDefines} "UI_BUILD")
 
 set(MPUIGameFiles
@@ -42,8 +34,7 @@ set(MPUIGameFiles
 	"${MPDir}/game/bg_public.h"
 	"${MPDir}/game/bg_saga.h"
 	"${MPDir}/game/bg_weapons.h"
-	"${MPDir}/game/surfaceflags.h"
-	)
+	"${MPDir}/game/surfaceflags.h")
 source_group("game" FILES ${MPUIGameFiles})
 set(MPUIFiles ${MPUIFiles} ${MPUIGameFiles})
 
@@ -54,15 +45,11 @@ set(MPUICommonFiles
 	"${MPDir}/qcommon/q_shared.h"
 	"${MPDir}/qcommon/qfiles.h"
 	"${MPDir}/qcommon/tags.h"
-	
-	${SharedCommonFiles}
-	)
+	${SharedCommonFiles})
 source_group("common" FILES ${MPUICommonFiles})
 set(MPUIFiles ${MPUIFiles} ${MPUICommonFiles})
 
-set(MPUICommonSafeFiles
-	${SharedCommonSafeFiles}
-	)
+set(MPUICommonSafeFiles ${SharedCommonSafeFiles})
 source_group("common/safe" FILES ${MPUICommonSafeFiles})
 set(MPUIFiles ${MPUIFiles} ${MPUICommonSafeFiles})
 
@@ -81,23 +68,29 @@ set(MPUIUIFiles
 	"${MPDir}/ui/ui_local.h"
 	"${MPDir}/ui/ui_public.h"
 	"${MPDir}/ui/ui_shared.h"
-	"${MPDir}/ui/ui_xcvar.h"
-	)
+	"${MPDir}/ui/ui_xcvar.h")
 source_group("ui" FILES ${MPUIUIFiles})
 set(MPUIFiles ${MPUIFiles} ${MPUIUIFiles})
 
 set(MPUIRendererFiles
-	"${MPDir}/rd-common/tr_types.h"
-	)
+	"${MPDir}/rd-common/tr_types.h")
 source_group("rd-common" FILES ${MPUIRendererFiles})
 set(MPUIFiles ${MPUIFiles} ${MPUIRendererFiles})
 
-add_library(${MPUI} SHARED ${MPUIFiles})
+add_library(${MPUI} MODULE ${MPUIFiles})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPUI} PROPERTIES PREFIX "")
+	set_target_properties(${MPUI}
+		PROPERTIES
+			PREFIX ""
+			SUFFIX ".so")
 endif()
+
+set_target_properties(${MPUI} PROPERTIES PROJECT_LABEL "MP UI Library")
+target_compile_options(${MPUI} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
+target_compile_definitions(${MPUI} PUBLIC "${MPUIDefines}")
+target_include_directories(${MPUI} PUBLIC "${MPUIIncludeDirectories}")
 
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPUI}
@@ -131,15 +124,3 @@ else()
 		DESTINATION "${JKAInstallDir}/base"
 		COMPONENT ${JKAMPCoreComponent})
 endif()
-
-set_target_properties(${MPUI} PROPERTIES COMPILE_DEFINITIONS "${MPUIDefines}")
-
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${MPUI} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
-
-set_target_properties(${MPUI} PROPERTIES INCLUDE_DIRECTORIES "${MPUIIncludeDirectories}")
-set_target_properties(${MPUI} PROPERTIES PROJECT_LABEL "MP UI Library")
-# no libraries used
-if(MPUILibraries)
-	target_link_libraries(${MPUI} ${MPUILibraries})
-endif(MPUILibraries)

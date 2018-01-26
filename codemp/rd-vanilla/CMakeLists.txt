@@ -1,5 +1,5 @@
 #============================================================================
-# Copyright (C) 2013 - 2015, OpenJK contributors
+# Copyright (C) 2013 - 2018, OpenJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -16,21 +16,11 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Make sure the user is not executing this script directly
-if(NOT InOpenJK)
-	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
-
-# Check for dependencies first
-
-set(MPVanillaRendererIncludeDirectories ${MPDir})
 set(MPVanillaRendererIncludeDirectories
-	${MPVanillaRendererIncludeDirectories}
 	${SharedDir}
 	${MPDir}
-	"${MPDir}/rd-vanilla"
-	"${GSLIncludeDirectory}"
-	)
+	${MPDir}/rd-vanilla
+	${GSLIncludeDirectory})
 
 set(MPVanillaRendererFiles
 	"${MPDir}/rd-vanilla/glext.h"
@@ -69,8 +59,7 @@ set(MPVanillaRendererFiles
 	"${MPDir}/rd-vanilla/tr_surfacesprites.cpp"
 	"${MPDir}/rd-vanilla/tr_world.cpp"
 	"${MPDir}/rd-vanilla/tr_WorldEffects.cpp"
-	"${MPDir}/rd-vanilla/tr_WorldEffects.h"
-	)
+	"${MPDir}/rd-vanilla/tr_WorldEffects.h")
 source_group("renderer" FILES ${MPVanillaRendererFiles})
 
 set(MPVanillaRendererGhoul2Files
@@ -99,14 +88,12 @@ set(MPVanillaRendererFiles ${MPVanillaRendererFiles} ${MPVanillaRendererRdCommon
 set(MPVanillaRendererCommonFiles
 	"${MPDir}/qcommon/matcomp.cpp"
 	"${MPDir}/qcommon/q_shared.cpp"
-	
 	${SharedCommonFiles})
 source_group("common" FILES ${MPVanillaRendererCommonFiles})
 set(MPVanillaRendererFiles ${MPVanillaRendererFiles} ${MPVanillaRendererCommonFiles})
 
 set(MPVanillaRendererCommonSafeFiles
-	${SharedCommonSafeFiles}
-	)
+	${SharedCommonSafeFiles})
 source_group("common/safe" FILES ${MPVanillaRendererCommonSafeFiles})
 set(MPVanillaRendererFiles ${MPVanillaRendererFiles} ${MPVanillaRendererCommonSafeFiles})
 
@@ -132,19 +119,28 @@ set(MPVanillaRendererIncludeDirectories ${MPVanillaRendererIncludeDirectories} $
 set(MPVanillaRendererLibraries ${MPVanillaRendererLibraries} ${OPENGL_LIBRARIES})
 
 set(MPVanillaRendererIncludeDirectories ${MPVanillaRendererIncludeDirectories} ${OpenJKLibDir})
-add_library(${MPVanillaRenderer} SHARED ${MPVanillaRendererFiles})
+add_library(${MPVanillaRenderer} MODULE ${MPVanillaRendererFiles})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPVanillaRenderer} PROPERTIES PREFIX "")
+	set_target_properties(${MPVanillaRenderer}
+		PROPERTIES
+			PREFIX ""
+			SUFFIX ".so")
 endif()
+
+set_target_properties(${MPVanillaRenderer} PROPERTIES PROJECT_LABEL "MP Vanilla Renderer")
+target_link_libraries(${MPVanillaRenderer} ${MPVanillaRendererLibraries})
+target_compile_options(${MPVanillaRenderer} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
+target_compile_definitions(${MPVanillaRenderer} PUBLIC "${SharedDefines}")
+target_include_directories(${MPVanillaRenderer} PUBLIC "${MPVanillaRendererIncludeDirectories}")
 
 if(WIN32)
 	install(TARGETS ${MPVanillaRenderer}
 		RUNTIME
 		DESTINATION ${JKAInstallDir}
 		COMPONENT ${JKAMPClientComponent})
-else(WIN32)
+else()
 	if(MakeApplicationBundles AND BuildMPEngine)
 		install(TARGETS ${MPVanillaRenderer}
 			LIBRARY
@@ -158,11 +154,3 @@ else(WIN32)
 	endif()
 endif()
 
-set_target_properties(${MPVanillaRenderer} PROPERTIES COMPILE_DEFINITIONS "${SharedDefines}")
-
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${MPVanillaRenderer} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
-
-set_target_properties(${MPVanillaRenderer} PROPERTIES INCLUDE_DIRECTORIES "${MPVanillaRendererIncludeDirectories}")
-set_target_properties(${MPVanillaRenderer} PROPERTIES PROJECT_LABEL "MP Vanilla Renderer")
-target_link_libraries(${MPVanillaRenderer} ${MPVanillaRendererLibraries})
