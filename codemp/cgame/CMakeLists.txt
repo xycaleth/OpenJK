@@ -134,8 +134,8 @@ endif()
 
 set_target_properties(${MPCGame} PROPERTIES PROJECT_LABEL "MP Client Game Library")
 target_compile_options(${MPCGame} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
-target_compile_definitions(${MPCGame} PUBLIC "${MPCGameDefines}")
-target_include_directories(${MPCGame} PUBLIC "${MPCGameIncludeDirectories}")
+target_compile_definitions(${MPCGame} PUBLIC ${MPCGameDefines})
+target_include_directories(${MPCGame} PUBLIC ${MPCGameIncludeDirectories})
 
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPCGame}

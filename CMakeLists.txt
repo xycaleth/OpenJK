@@ -326,36 +326,54 @@ set(SharedCommonFiles
 	"${SharedDir}/qcommon/q_math.c"
 	"${SharedDir}/qcommon/q_string.h"
 	"${SharedDir}/qcommon/q_string.c"
-	"${SharedDir}/qcommon/q_platform.h"
-	)
+	"${SharedDir}/qcommon/q_platform.h")
 set(SharedCommonSafeFiles
 	"${SharedDir}/qcommon/safe/gsl.h"
 	"${SharedDir}/qcommon/safe/string.cpp"
 	"${SharedDir}/qcommon/safe/string.h"
 	"${SharedDir}/qcommon/safe/sscanf.h"
-	"${SharedDir}/qcommon/safe/limited_vector.h"
-	)
+	"${SharedDir}/qcommon/safe/limited_vector.h")
 
 
 if(UseInternalJPEG)
 	add_subdirectory(lib/jpeg-9a)
 else()
 	find_package(JPEG REQUIRED)
+	if(NOT TARGET JPEG::JPEG)
+		add_library(JPEG::JPEG STATIC IMPORTED)
+		set_property(TARGET JPEG::JPEG
+			PROPERTY
+				INTERFACE_LINK_LIBRARIES ${JPEG_LIBRARIES}
+				INTERFACE_INCLUDE_DIRECTORIES ${JPEG_INCLUDE_DIR})
+	endif()
 endif()
 
 if(UseInternalZlib)
 	add_subdirectory(lib/zlib)
 else()
 	find_package(ZLIB REQUIRED)
+	if(NOT TARGET ZLIB::ZLIB)
+		add_library(ZLIB::ZLIB STATIC IMPORTED)
+		set_property(TARGET ZLIB::ZLIB
+			PROPERTY
+				INTERFACE_LINK_LIBRARIES ${ZLIB_LIBRARIES}
+				INTERFACE_INCLUDE_DIRECTORIES ${ZLIB_INCLUDE_DIR})
+	endif()
 endif()
 
 if(UseInternalPNG)
 	add_subdirectory(lib/libpng)
 else()
 	find_package(PNG REQUIRED)
+	if(NOT TARGET PNG::PNG)
+		add_library(PNG::PNG STATIC IMPORTED)
+		set_property(TARGET PNG::PNG
+			PROPERTY
+				INTERFACE_LINK_LIBRARIES ${PNG_LIBRARIES}
+				INTERFACE_INCLUDE_DIRECTORIES ${PNG_INCLUDE_DIR})
+	endif()
 endif()
 
-# Always use bundled minizip (sets MINIZIP_{LIBRARIES,INCLUDE_DIR})
 add_subdirectory(lib/minizip)
 
 # Add projects
@@ -369,6 +387,7 @@ add_subdirectory(${MPDir})
 if(BuildSymbolServer)
 	add_subdirectory("tools/WinSymbol")
 endif()
+
 if(BuildTests)
 	enable_testing()
 	add_subdirectory("tests")

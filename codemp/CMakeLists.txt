@@ -52,13 +52,7 @@ if(BuildMPEngine OR BuildMPDed)
 		${SharedDir}
 		${GSLIncludeDirectory})
 
-	# Transparently use our bundled minizip.
-	list(APPEND MPEngineAndDedIncludeDirectories ${MINIZIP_INCLUDE_DIRS})
-	list(APPEND MPEngineAndDedLibraries          ${MINIZIP_LIBRARIES})
-
-	# Transparently use either bundled or system zlib.
-	list(APPEND MPEngineAndDedIncludeDirectories ${ZLIB_INCLUDE_DIR})
-	list(APPEND MPEngineAndDedLibraries          ${ZLIB_LIBRARIES})
+	list(APPEND MPEngineAndDedLibraries MINIZIP::MINIZIP)
 
 	set(MPEngineAndDedCgameFiles
 		"${MPDir}/cgame/cg_public.h")

@@ -97,29 +97,17 @@ set(MPVanillaRendererCommonSafeFiles
 source_group("common/safe" FILES ${MPVanillaRendererCommonSafeFiles})
 set(MPVanillaRendererFiles ${MPVanillaRendererFiles} ${MPVanillaRendererCommonSafeFiles})
 
-# Transparently use either bundled or system libjpeg.
-list(APPEND MPVanillaRendererIncludeDirectories ${JPEG_INCLUDE_DIR})
-list(APPEND MPVanillaRendererLibraries          ${JPEG_LIBRARIES})
-
-# Transparently use either bundled or system libpng.  Order is important --
-# libpng used zlib, so it must come before it on the linker command line.
-list(APPEND MPVanillaRendererIncludeDirectories ${PNG_INCLUDE_DIRS})
-list(APPEND MPVanillaRendererLibraries          ${PNG_LIBRARIES})
-
-# Transparently use either bundled or system zlib.
-list(APPEND MPVanillaRendererIncludeDirectories ${ZLIB_INCLUDE_DIR})
-list(APPEND MPVanillaRendererLibraries          ${ZLIB_LIBRARIES})
-
-# Transparently use our bundled minizip.
-list(APPEND MPVanillaRendererIncludeDirectories ${MINIZIP_INCLUDE_DIRS})
-list(APPEND MPVanillaRendererLibraries          ${MINIZIP_LIBRARIES})
-
 find_package(OpenGL REQUIRED)
-set(MPVanillaRendererIncludeDirectories ${MPVanillaRendererIncludeDirectories} ${OPENGL_INCLUDE_DIR})
-set(MPVanillaRendererLibraries ${MPVanillaRendererLibraries} ${OPENGL_LIBRARIES})
+list(APPEND MPVanillaRendererLibraries JPEG::JPEG PNG::PNG OpenGL::GL)
 
 set(MPVanillaRendererIncludeDirectories ${MPVanillaRendererIncludeDirectories} ${OpenJKLibDir})
+
 add_library(${MPVanillaRenderer} MODULE ${MPVanillaRendererFiles})
+set_target_properties(${MPVanillaRenderer} PROPERTIES PROJECT_LABEL "MP Vanilla Renderer")
+target_link_libraries(${MPVanillaRenderer} PRIVATE ${MPVanillaRendererLibraries})
+target_compile_options(${MPVanillaRenderer} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
+target_compile_definitions(${MPVanillaRenderer} PRIVATE ${SharedDefines})
+target_include_directories(${MPVanillaRenderer} PRIVATE ${MPVanillaRendererIncludeDirectories})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
@@ -128,12 +116,6 @@ if(NOT MSVC)
 			PREFIX ""
 			SUFFIX ".so")
 endif()
-
-set_target_properties(${MPVanillaRenderer} PROPERTIES PROJECT_LABEL "MP Vanilla Renderer")
-target_link_libraries(${MPVanillaRenderer} ${MPVanillaRendererLibraries})
-target_compile_options(${MPVanillaRenderer} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
-target_compile_definitions(${MPVanillaRenderer} PUBLIC "${SharedDefines}")
-target_include_directories(${MPVanillaRenderer} PUBLIC "${MPVanillaRendererIncludeDirectories}")
 
 if(WIN32)
 	install(TARGETS ${MPVanillaRenderer}

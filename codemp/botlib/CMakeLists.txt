@@ -17,8 +17,6 @@
 #============================================================================
 
 # Botlib
-# the files could arguably just be put into the engine and dedicated
-# projects without having a library for it.
 set(MPBotlibDefines ${SharedDefines} "BOTLIB")
 set(MPBotlibIncludeDirectories
 	${SharedDir}
@@ -121,8 +119,7 @@ source_group("server" FILES ${MPBotlibServerFiles})
 set(MPBotlibFiles ${MPBotlibFiles} ${MPBotlibServerFiles})
 
 add_library(${MPBotLib} STATIC ${MPBotlibFiles})
-
 set_target_properties(${MPBotLib} PROPERTIES PROJECT_LABEL "Bot Library")
 target_compile_options(${MPBotLib} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
-target_compile_definitions(${MPBotLib} PUBLIC "${MPBotlibDefines}")
-target_include_directories(${MPBotLib} PUBLIC "${MPBotlibIncludeDirectories}")
+target_compile_definitions(${MPBotLib} PUBLIC ${MPBotlibDefines})
+target_include_directories(${MPBotLib} PUBLIC ${MPBotlibIncludeDirectories})

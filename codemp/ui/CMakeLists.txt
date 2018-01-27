@@ -89,8 +89,8 @@ endif()
 
 set_target_properties(${MPUI} PROPERTIES PROJECT_LABEL "MP UI Library")
 target_compile_options(${MPUI} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
-target_compile_definitions(${MPUI} PUBLIC "${MPUIDefines}")
-target_include_directories(${MPUI} PUBLIC "${MPUIIncludeDirectories}")
+target_compile_definitions(${MPUI} PUBLIC ${MPUIDefines})
+target_include_directories(${MPUI} PUBLIC ${MPUIIncludeDirectories})
 
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPUI}
