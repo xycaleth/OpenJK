@@ -126,10 +126,11 @@ add_library(${MPCGame} MODULE ${MPCGameFiles})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPCGame}
-		PROPERTIES
-			PREFIX ""
-			SUFFIX ".so")
+	set_target_properties(${MPCGame} PROPERTIES PREFIX "")
+endif()
+
+if(APPLE)
+	set_target_properties(${MPCGame} PROPERTIES SUFFIX ".dylib")
 endif()
 
 set_target_properties(${MPCGame} PROPERTIES PROJECT_LABEL "MP Client Game Library")

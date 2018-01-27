@@ -81,10 +81,11 @@ add_library(${MPUI} MODULE ${MPUIFiles})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPUI}
-		PROPERTIES
-			PREFIX ""
-			SUFFIX ".so")
+	set_target_properties(${MPUI} PROPERTIES PREFIX "")
+endif()
+
+if(APPLE)
+	set_target_properties(${MPUI} PROPERTIES SUFFIX ".dylib")
 endif()
 
 set_target_properties(${MPUI} PROPERTIES PROJECT_LABEL "MP UI Library")

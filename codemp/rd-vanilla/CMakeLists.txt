@@ -111,10 +111,11 @@ target_include_directories(${MPVanillaRenderer} PRIVATE ${MPVanillaRendererInclu
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPVanillaRenderer}
-		PROPERTIES
-			PREFIX ""
-			SUFFIX ".so")
+	set_target_properties(${MPVanillaRenderer} PROPERTIES PREFIX "")
+endif()
+
+if(APPLE)
+	set_target_properties(${MPVanillaRenderer} PROPERTIES SUFFIX ".dylib")
 endif()
 
 if(WIN32)
