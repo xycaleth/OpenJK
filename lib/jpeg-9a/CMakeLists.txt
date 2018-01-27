@@ -73,15 +73,11 @@ add_library(bundled_libjpeg
     wrppm.c
     wrrle.c
     wrtarga.c)
-target_include_directories(bundled_libjpeg
-	PUBLIC include)
+target_include_directories(bundled_libjpeg PUBLIC include)
 if(MSVC)
-	target_compile_definitions(bundled_libjpeg
-		PRIVATE _CRT_SECURE_NO_WARNINGS)
+	target_compile_definitions(bundled_libjpeg PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
 
-# Build as position-independent code, since it will probably be linked into a
-# dynamic library.
 set_property(TARGET bundled_libjpeg PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(JPEG::JPEG ALIAS bundled_libjpeg)

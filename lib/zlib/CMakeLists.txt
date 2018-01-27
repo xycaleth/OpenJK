@@ -50,7 +50,6 @@ if(MSVC)
 	target_compile_options(bundled_zlib PRIVATE "/wd4996")
 	target_compile_definitions(bundled_zlib PUBLIC _CRT_SECURE_NO_WARNINGS)
 endif(MSVC)
-
 set_property(TARGET bundled_zlib PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(ZLIB::ZLIB ALIAS bundled_zlib)

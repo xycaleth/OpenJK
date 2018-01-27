@@ -200,9 +200,9 @@ if(APPLE)
 endif()
 
 set_target_properties(${MPGame} PROPERTIES PROJECT_LABEL "MP Game Library")
-target_compile_options(${MPGame} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
-target_compile_definitions(${MPGame} PUBLIC ${MPGameDefines})
-target_include_directories(${MPGame} PUBLIC ${MPGameIncludeDirectories})
+target_compile_options(${MPGame} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
+target_compile_definitions(${MPGame} PRIVATE ${MPGameDefines})
+target_include_directories(${MPGame} PRIVATE ${MPGameIncludeDirectories})
 
 if(MakeApplicationBundles AND BuildMPEngine)
 	install(TARGETS ${MPGame}

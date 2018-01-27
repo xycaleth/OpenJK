@@ -40,8 +40,7 @@ target_include_directories(bundled_minizip
 	PUBLIC include
 	PRIVATE include/minizip)
 if(MSVC)
-	target_compile_definitions(bundled_minizip
-		PRIVATE _CRT_SECURE_NO_WARNINGS)
+	target_compile_definitions(bundled_minizip PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
 set_property(TARGET bundled_minizip PROPERTY POSITION_INDEPENDENT_CODE ON)
 
