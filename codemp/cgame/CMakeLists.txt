@@ -122,51 +122,9 @@ set(MPCGameGFiles
 source_group("ghoul2" FILES ${MPCGameG2Files})
 set(MPCGameFiles ${MPCGameFiles} ${MPCGameG2Files})
 
-add_library(${MPCGame} MODULE ${MPCGameFiles})
-
-if(NOT MSVC)
-	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPCGame} PROPERTIES PREFIX "")
-endif()
-
-if(APPLE)
-	set_target_properties(${MPCGame} PROPERTIES SUFFIX ".dylib")
-endif()
-
-set_target_properties(${MPCGame} PROPERTIES PROJECT_LABEL "MP Client Game Library")
-target_compile_options(${MPCGame} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
-target_compile_definitions(${MPCGame} PRIVATE ${MPCGameDefines})
-target_include_directories(${MPCGame} PRIVATE ${MPCGameIncludeDirectories})
-
-if(MakeApplicationBundles AND BuildMPEngine)
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
-		COMPONENT ${JKAMPCoreComponent})
-elseif()
-	install(TARGETS ${MPCGame}
-		RUNTIME
-		DESTINATION "${JKAInstallDir}/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	if (WIN64)
-		# Don't do this on 32-bit Windows to avoid overwriting
-		# vanilla JKA's DLLs
-		install(TARGETS ${MPCGame}
-			RUNTIME
-			DESTINATION "${JKAInstallDir}/base"
-			COMPONENT ${JKAMPCoreComponent})
-	endif()
-else()
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	install(TARGETS ${MPCGame}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/base"
-		COMPONENT ${JKAMPCoreComponent})
-endif()
+add_mp_game_module(
+	MODULE ${MPCGame}
+	FILES ${MPCGameFiles}
+	DEFINES ${MPCGameDefines}
+	INCLUDES ${MPCGameIncludeDirectories}
+	LABEL "MP Client Game Library")

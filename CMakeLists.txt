@@ -376,6 +376,64 @@ endif()
 
 add_subdirectory(lib/minizip)
 
+include(CMakeParseArguments)
+function(add_mp_game_module)
+	set(oneValueArgs MODULE LABEL)
+	set(multiValueArgs FILES DEFINES INCLUDES)
+
+	cmake_parse_arguments(LOCAL "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+	add_library(${LOCAL_MODULE} MODULE ${LOCAL_FILES})
+
+	if(NOT MSVC)
+		# remove "lib" prefix for .so/.dylib files
+		set_target_properties(${LOCAL_MODULE} PROPERTIES PREFIX "")
+	endif()
+
+	if(APPLE)
+		set_target_properties(${LOCAL_MODULE} PROPERTIES SUFFIX ".dylib")
+	endif()
+
+	set_target_properties(${LOCAL_MODULE}
+		PROPERTIES PROJECT_LABEL ${LOCAL_LABEL})
+	target_compile_options(${LOCAL_MODULE} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
+	target_compile_definitions(${LOCAL_MODULE} PRIVATE ${LOCAL_DEFINES})
+	target_include_directories(${LOCAL_MODULE} PRIVATE ${LOCAL_INCLUDES})
+
+	if(MakeApplicationBundles AND BuildMPEngine)
+		install(TARGETS ${LOCAL_MODULE}
+			LIBRARY
+			DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
+			COMPONENT ${JKAMPCoreComponent})
+		install(TARGETS ${LOCAL_MODULE}
+			LIBRARY
+			DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
+			COMPONENT ${JKAMPCoreComponent})
+	elseif()
+		install(TARGETS ${LOCAL_MODULE}
+			RUNTIME
+			DESTINATION "${JKAInstallDir}/OpenJK"
+			COMPONENT ${JKAMPCoreComponent})
+		if (WIN64)
+			# Don't do this on 32-bit Windows to avoid overwriting
+			# vanilla JKA's DLLs
+			install(TARGETS ${LOCAL_MODULE}
+				RUNTIME
+				DESTINATION "${JKAInstallDir}/base"
+				COMPONENT ${JKAMPCoreComponent})
+		endif()
+	else()
+		install(TARGETS ${LOCAL_MODULE}
+			LIBRARY
+			DESTINATION "${JKAInstallDir}/OpenJK"
+			COMPONENT ${JKAMPCoreComponent})
+		install(TARGETS ${LOCAL_MODULE}
+			LIBRARY
+			DESTINATION "${JKAInstallDir}/base"
+			COMPONENT ${JKAMPCoreComponent})
+	endif()
+endfunction()
+
 # Add projects
 add_subdirectory(${SPDir})
 if(BuildJK2SPGame)

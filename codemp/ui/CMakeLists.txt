@@ -77,51 +77,9 @@ set(MPUIRendererFiles
 source_group("rd-common" FILES ${MPUIRendererFiles})
 set(MPUIFiles ${MPUIFiles} ${MPUIRendererFiles})
 
-add_library(${MPUI} MODULE ${MPUIFiles})
-
-if(NOT MSVC)
-	# remove "lib" prefix for .so/.dylib files
-	set_target_properties(${MPUI} PROPERTIES PREFIX "")
-endif()
-
-if(APPLE)
-	set_target_properties(${MPUI} PROPERTIES SUFFIX ".dylib")
-endif()
-
-set_target_properties(${MPUI} PROPERTIES PROJECT_LABEL "MP UI Library")
-target_compile_options(${MPUI} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
-target_compile_definitions(${MPUI} PRIVATE ${MPUIDefines})
-target_include_directories(${MPUI} PRIVATE ${MPUIIncludeDirectories})
-
-if(MakeApplicationBundles AND BuildMPEngine)
-	install(TARGETS ${MPUI}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	install(TARGETS ${MPUI}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/base"
-		COMPONENT ${JKAMPCoreComponent})
-elseif(WIN32)
-	install(TARGETS ${MPUI}
-		RUNTIME
-		DESTINATION "${JKAInstallDir}/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	if (WIN64)
-		# Don't do this on 32-bit Windows to avoid overwriting
-		# vanilla JKA's DLLs
-		install(TARGETS ${MPUI}
-			RUNTIME
-			DESTINATION "${JKAInstallDir}/base"
-			COMPONENT ${JKAMPCoreComponent})
-	endif()
-else()
-	install(TARGETS ${MPUI}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/OpenJK"
-		COMPONENT ${JKAMPCoreComponent})
-	install(TARGETS ${MPUI}
-		LIBRARY
-		DESTINATION "${JKAInstallDir}/base"
-		COMPONENT ${JKAMPCoreComponent})
-endif()
+add_mp_game_module(
+	MODULE ${MPUI}
+	FILES ${MPUIFiles}
+	DEFINES ${MPUIDefines}
+	INCLUDES ${MPUIIncludeDirectories}
+	LABEL "MP UI Library")
