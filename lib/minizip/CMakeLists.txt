@@ -42,6 +42,9 @@ target_include_directories(bundled_minizip
 if(MSVC)
 	target_compile_definitions(bundled_minizip PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
+if(CMAKE_SYSTEM_NAME MATCHES "BSD")
+	target_compile_definitions(bundled_minizip PRIVATE IOAPI_NO_64)
+endif()
 set_property(TARGET bundled_minizip PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(MINIZIP::MINIZIP ALIAS bundled_minizip)
