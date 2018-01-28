@@ -1,5 +1,5 @@
 #============================================================================
-# Copyright (C) 2013 - 2015, OpenJK contributors
+# Copyright (C) 2013 - 2018, OpenJK contributors
 #
 # This file is part of the OpenJK source code.
 #
@@ -16,22 +16,12 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Make sure the user is not executing this script directly
-if(NOT InOpenJK)
-	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
-
 set(SPGameDefines ${SharedDefines} "SP_GAME")
 set(SPGameIncludeDirectories
 	${SharedDir}
 	${SPDir}
 	"${SPDir}/game"
-	"${GSLIncludeDirectory}"
-	)
-
-if(WIN32)
-	set(SPGameLibraries "winmm")
-endif(WIN32)
+	"${GSLIncludeDirectory}")
 
 set(SPGameGameFiles
 	"${SPDir}/game/AI_Animal.cpp"
@@ -181,8 +171,7 @@ set(SPGameGameFiles
 	"${SPDir}/game/weapons.h"
 	"${SPDir}/game/w_local.h"
 	"${SPDir}/game/wp_saber.h"
-	"${SPDir}/game/g_vehicles.h"
-	)
+	"${SPDir}/game/g_vehicles.h")
 source_group("game" FILES ${SPGameGameFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameGameFiles})
 
@@ -240,15 +229,13 @@ set(SPGameCGameFiles
 	"${SPDir}/cgame/FxScheduler.h"
 	"${SPDir}/cgame/FxSystem.h"
 	"${SPDir}/cgame/FxUtil.h"
-	"${SPDir}/cgame/strip_objectives.h"
-	)
+	"${SPDir}/cgame/strip_objectives.h")
 source_group("cgame" FILES ${SPGameCGameFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameCGameFiles})
 
 set(SPGameUIFiles
 	"${SPDir}/ui/gameinfo.cpp"
-	"${SPDir}/ui/gameinfo.h"
-	)
+	"${SPDir}/ui/gameinfo.h")
 source_group("ui" FILES ${SPGameUIFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameUIFiles})
 
@@ -264,8 +251,7 @@ set(SPGameCommonFiles
 	"${SPDir}/qcommon/ojk_saved_game_helper.h"
 	"${SPDir}/qcommon/ojk_saved_game_helper_fwd.h"
 	"${SPDir}/qcommon/ojk_scope_guard.h"
-	${SharedCommonFiles}
-	)
+	${SharedCommonFiles})
 source_group("common" FILES ${SPGameCommonFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameCommonFiles})
 
@@ -273,8 +259,7 @@ set(SPGameCommonSafeFiles
 	${SharedCommonSafeFiles}
 	"${SharedDir}/qcommon/safe/files.h"
 	"${SharedDir}/qcommon/safe/files.cpp"
-	"${SPDir}/qcommon/safe/memory.h"
-	)
+	"${SPDir}/qcommon/safe/memory.h")
 source_group("common/safe" FILES ${SPGameCommonSafeFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameCommonSafeFiles})
 
@@ -290,8 +275,7 @@ set(SPGameIcarusFiles
 	"${SPDir}/icarus/sequence.h"
 	"${SPDir}/icarus/sequencer.h"
 	"${SPDir}/icarus/StdAfx.h"
-	"${SPDir}/icarus/taskmanager.h"
-	)
+	"${SPDir}/icarus/taskmanager.h")
 source_group("icarus" FILES ${SPGameIcarusFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameIcarusFiles})
 
@@ -311,8 +295,7 @@ set(SPGameRatlFiles
 	"${SPDir}/Ratl/scheduler_vs.h"
 	"${SPDir}/Ratl/stack_vs.h"
 	"${SPDir}/Ratl/string_vs.h"
-	"${SPDir}/Ratl/vector_vs.h"
-	)
+	"${SPDir}/Ratl/vector_vs.h")
 source_group("ratl" FILES ${SPGameRatlFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameRatlFiles})
 
@@ -321,8 +304,7 @@ set(SPGameRavlFiles
 	"${SPDir}/Ravl/CVec.cpp"
 	"${SPDir}/Ravl/CBounds.h"
 	"${SPDir}/Ravl/CMatrix.h"
-	"${SPDir}/Ravl/CVec.h"
-	)
+	"${SPDir}/Ravl/CVec.h")
 source_group("ravl" FILES ${SPGameRavlFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameRavlFiles})
 
@@ -330,8 +312,7 @@ set(SPGameRuflFiles
 	"${SPDir}/Rufl/hfile.cpp"
 	"${SPDir}/Rufl/hstring.cpp"
 	"${SPDir}/Rufl/hfile.h"
-	"${SPDir}/Rufl/hstring.h"
-	)
+	"${SPDir}/Rufl/hstring.h")
 source_group("rufl" FILES ${SPGameRuflFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameRuflFiles})
 
@@ -340,47 +321,48 @@ set(SPGameRaglFiles
 	"${SPDir}/Ragl/graph_triangulate.h"
 	"${SPDir}/Ragl/graph_vs.h"
 	"${SPDir}/Ragl/kdtree_vs.h"
-	"${SPDir}/Ragl/ragl_common.h"
-	)
+	"${SPDir}/Ragl/ragl_common.h")
 source_group("ragl" FILES ${SPGameRaglFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameRaglFiles})
 
 set(SPGameG2Files
 	"${SPDir}/ghoul2/G2.h"
-	"${SPDir}/ghoul2/ghoul2_gore.h"
-	)
+	"${SPDir}/ghoul2/ghoul2_gore.h")
 source_group("ghoul2" FILES ${SPGameG2Files})
 set(SPGameFiles ${SPGameFiles} ${SPGameG2Files})
 
 set(SPGameRendererFiles
 	"${SPDir}/rd-common/mdx_format.h"
-	"${SPDir}/rd-common/tr_types.h"
-	)
+	"${SPDir}/rd-common/tr_types.h")
 source_group("renderer" FILES ${SPGameRendererFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameRendererFiles})
 
 set(SPGameClientFiles
-	"${SPDir}/client/vmachine.h"
-	)
+	"${SPDir}/client/vmachine.h")
 source_group("client" FILES ${SPGameClientFiles})
 set(SPGameFiles ${SPGameFiles} ${SPGameClientFiles})
 
 if(WIN32)
-	set(SPGameWin32Files
-		"${SPDir}/win32/game.rc")
+	set(SPGameWin32Files "${SPDir}/win32/game.rc")
 	source_group("win32" FILES ${SPGameWin32Files})
 	set(SPGameFiles ${SPGameFiles} ${SPGameWin32Files})
 endif(WIN32)
 
-add_library(${SPGame} SHARED ${SPGameFiles})
-
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${SPGame} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
+add_library(${SPGame} MODULE ${SPGameFiles})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
 	set_target_properties(${SPGame} PROPERTIES PREFIX "")
 endif()
+
+if(APPLE)
+	set_target_properties(${SPGame} PROPERTIES SUFFIX ".dylib")
+endif()
+
+set_target_properties(${SPGame} PROPERTIES PROJECT_LABEL "SP Game Library")
+target_compile_options(${SPGame} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
+target_compile_definitions(${SPGame} PRIVATE ${SPGameDefines})
+target_include_directories(${SPGame} PRIVATE ${SPGameIncludeDirectories})
 
 if(WIN32)
 	install(TARGETS ${SPGame}
@@ -400,11 +382,3 @@ else(WIN32)
 			COMPONENT ${JKASPClientComponent})
 	endif()
 endif()
-
-set_target_properties(${SPGame} PROPERTIES COMPILE_DEFINITIONS "${SPGameDefines}")
-set_target_properties(${SPGame} PROPERTIES INCLUDE_DIRECTORIES "${SPGameIncludeDirectories}")
-set_target_properties(${SPGame} PROPERTIES PROJECT_LABEL "SP Game Library")
-# no libraries used
-if(SPGameLibraries)
-	target_link_libraries(${SPGame} ${SPGameLibraries})
-endif(SPGameLibraries)

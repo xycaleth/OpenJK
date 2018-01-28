@@ -1,5 +1,5 @@
 #============================================================================
-# Copyright (C) 2013 - 2015, OpenJK contributors
+# Copyright (C) 2013 - 2018, OpenJK contributors
 # 
 # This file is part of the OpenJK source code.
 # 
@@ -16,22 +16,13 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Make sure the user is not executing this script directly
-if(NOT InOpenJK)
-	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
-
 set(JK2SPGameDefines ${SharedDefines} "JK2_MODE" "SP_GAME")
 
 set(JK2SPGameIncludeDirectories
 	"${JK2SPDir}"
 	"${JK2SPDir}/game"
 	"${SharedDir}"
-	"${GSLIncludeDirectory}"
-	)
-if(WIN32)
-	set(JK2SPGameLibraries "winmm")
-endif(WIN32)
+	"${GSLIncludeDirectory}")
 
 set(JK2SPGameGameFiles
 	"${JK2SPDir}/game/AI_Atst.cpp"
@@ -160,8 +151,7 @@ set(JK2SPGameGameFiles
 	"${JK2SPDir}/game/teams.h"
 	"${JK2SPDir}/game/weapons.h"
 	"${JK2SPDir}/game/w_local.h"
-	"${JK2SPDir}/game/wp_saber.h"
-	)
+	"${JK2SPDir}/game/wp_saber.h")
 source_group("game" FILES ${JK2SPGameGameFiles})
 set(JK2SPGameFiles ${JK2SPGameFiles} ${JK2SPGameGameFiles})
 
@@ -213,15 +203,13 @@ set(JK2SPGameCGameFiles
 	"${JK2SPDir}/cgame/cg_text.cpp"
 	"${JK2SPDir}/cgame/cg_view.cpp"
 	"${JK2SPDir}/cgame/cg_weapons.cpp"
-	"${JK2SPDir}/cgame/strip_objectives.h"
-	)
+	"${JK2SPDir}/cgame/strip_objectives.h")
 source_group("cgame" FILES ${JK2SPGameCGameFiles})
 set(JK2SPGameFiles ${JK2SPGameFiles} ${JK2SPGameCGameFiles})
 
 set(JK2SPGameUIFiles
 	"${SPDir}/ui/gameinfo.cpp"
-	"${SPDir}/ui/gameinfo.h"
-	)
+	"${SPDir}/ui/gameinfo.h")
 source_group("ui" FILES ${JK2SPGameUIFiles})
 set(JK2SPGameFiles ${JK2SPGameFiles} ${JK2SPGameUIFiles})
 
@@ -236,8 +224,7 @@ set(JK2SPGameCommonFiles
 	"${SPDir}/qcommon/ojk_saved_game_helper.h"
 	"${SPDir}/qcommon/ojk_saved_game_helper_fwd.h"
 	"${SPDir}/qcommon/ojk_scope_guard.h"
-	${SharedCommonFiles}
-	)
+	${SharedCommonFiles})
 source_group("common" FILES ${JK2SPGameCommonFiles})
 set(JK2SPGameFiles ${JK2SPGameFiles} ${JK2SPGameCommonFiles})
 
@@ -245,8 +232,7 @@ set(JK2SPGameCommonSafeFiles
 	${SharedCommonSafeFiles}
 	"${SharedDir}/qcommon/safe/files.h"
 	"${SharedDir}/qcommon/safe/files.cpp"
-	"${JK2SPDir}/qcommon/safe/memory.h"
-	)
+	"${JK2SPDir}/qcommon/safe/memory.h")
 source_group("common/safe" FILES ${JK2SPGameCommonSafeFiles})
 set(JK2SPGameFiles ${JK2SPGameFiles} ${JK2SPGameCommonSafeFiles})
 
@@ -264,50 +250,50 @@ set(JK2SPGameIcarusFiles
 	"${JK2SPDir}/icarus/sequencer.h"
 	"${JK2SPDir}/icarus/taskmanager.h"
 	"${JK2SPDir}/icarus/instance.h"
-	"${JK2SPDir}/icarus/tokenizer.h"
-	)
+	"${JK2SPDir}/icarus/tokenizer.h")
 source_group("icarus" FILES ${JK2SPGameIcarusFiles})
 set(JK2SPGameFiles ${JK2SPGameFiles} ${JK2SPGameIcarusFiles})
 
 set(JK2SPGameRuflFiles
 	"${SPDir}/Rufl/hstring.cpp"
-	"${SPDir}/Rufl/hstring.h"
-	)
+	"${SPDir}/Rufl/hstring.h")
 source_group("rufl" FILES ${JK2SPGameRuflFiles})
 set(JK2SPGameFiles ${JK2SPGameFiles} ${JK2SPGameRuflFiles})
 
 if(WIN32)
-	set(JK2SPGameWin32Files
-		"${JK2SPDir}/win32/game.rc")
+	set(JK2SPGameWin32Files "${JK2SPDir}/win32/game.rc")
 	source_group("win32" FILES ${JK2SPGameWin32Files})
 	set(JK2SPGameFiles ${JK2SPGameFiles} ${JK2SPGameWin32Files})
-endif(WIN32)
+endif()
 
-add_library(${JK2SPGame} SHARED ${JK2SPGameFiles})
+add_library(${JK2SPGame} MODULE ${JK2SPGameFiles})
+
+set_target_properties(${JK2SPGame} PROPERTIES PROJECT_LABEL "JK2 SP Game Library")
+target_compile_options(${JK2SPGame} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
+target_compile_definitions(${JK2SPGame} PRIVATE ${JK2SPGameDefines})
+target_include_directories(${JK2SPGame} PRIVATE ${JK2SPGameIncludeDirectories})
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
 	set_target_properties(${JK2SPGame} PROPERTIES PREFIX "")
 endif()
 
+if(APPLE)
+	set_target_properties(${MPVanillaRenderer} PROPERTIES SUFFIX ".dylib")
+endif()
+
 if(WIN32)
-	install(TARGETS ${JK2SPGame} RUNTIME DESTINATION "${JK2InstallDir}/OpenJK")
-else(WIN32)
+	install(TARGETS ${JK2SPGame}
+		RUNTIME
+		DESTINATION "${JK2InstallDir}/OpenJK")
+else()
 	if(MakeApplicationBundles AND BuildJK2SPEngine)
-		install(TARGETS ${JK2SPGame} LIBRARY DESTINATION "${JK2InstallDir}/${JK2SPEngine}.app/Contents/MacOS/OpenJK")
-	else(MakeApplicationBundles AND BuildJK2SPEngine)
-		install(TARGETS ${JK2SPGame} LIBRARY DESTINATION "${JK2InstallDir}/OpenJK")
-	endif(MakeApplicationBundles AND BuildJK2SPEngine)
-endif(WIN32)
-
-set_target_properties(${JK2SPGame} PROPERTIES COMPILE_DEFINITIONS "${JK2SPGameDefines}")
-
-# Hide symbols not explicitly marked public.
-set_property(TARGET ${JK2SPGame} APPEND PROPERTY COMPILE_OPTIONS ${OPENJK_VISIBILITY_FLAGS})
-
-set_target_properties(${JK2SPGame} PROPERTIES INCLUDE_DIRECTORIES "${JK2SPGameIncludeDirectories}")
-set_target_properties(${JK2SPGame} PROPERTIES PROJECT_LABEL "JK2 SP Game Library")
-# no libraries used
-if(JK2SPGameLibraries)
-	target_link_libraries(${JK2SPGame} ${JK2SPGameLibraries})
-endif(JK2SPGameLibraries)
+		install(TARGETS ${JK2SPGame}
+			LIBRARY
+			DESTINATION "${JK2InstallDir}/${JK2SPEngine}.app/Contents/MacOS/OpenJK")
+	else()
+		install(TARGETS ${JK2SPGame}
+			LIBRARY
+			DESTINATION "${JK2InstallDir}/OpenJK")
+	endif()
+endif()
