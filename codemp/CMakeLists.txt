@@ -389,77 +389,16 @@ if(BuildMPEngine)
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineSysFiles})
 	source_group("sys" FILES ${MPEngineSysFiles})
 
-	if(MakeApplicationBundles)
-		set(MACOSX_BUNDLE_BUNDLE_NAME ${MPEngine})
-		set(MACOSX_BUNDLE_DISPLAY_NAME ${MPEngine})
-		set(MACOSX_BUNDLE_ICON_FILE OpenJK.icns)
-
-		set(MPEngineFiles
-			${MPEngineFiles}
-			${MPDir}/macosx/OpenJK.icns)
-		set_source_files_properties(
-			${MPDir}/macosx/OpenJK.icns
-			PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-
-		set(MPEngineFiles
-			${MPEngineFiles}
-			${MPDir}/macosx/English.lproj/InfoPlist.strings)
-		set_source_files_properties(
-			${MPDir}/macosx/English.lproj/InfoPlist.strings
-			PROPERTIES MACOSX_PACKAGE_LOCATION Resources/English.lproj)
-	endif()
-
-	if(WIN32)
-		add_executable(${MPEngine} WIN32 ${MPEngineFiles})
-		if(USE_INTERNAL_SDL2)
-			if(NOT BUILD_64BIT)
-				set(MPEngineExtraInstallFiles
-					${OpenJKLibDir}/SDL2/bin/x86/SDL2.dll)
-			else()
-				set(MPEngineExtraInstallFiles
-					${OpenJKLibDir}/SDL2/bin/x64/SDL2.dll)
-			endif()
-		endif()
-	else()
-		if(MakeApplicationBundles)
-			add_executable(${MPEngine} MACOSX_BUNDLE ${MPEngineFiles})
-			set_target_properties(
-				${MPEngine}
-				PROPERTIES
-					MACOSX_BUNDLE_INFO_PLIST "${MPDir}/macosx/OpenJKInfo.plist")
-		else()
-			add_executable(${MPEngine} ${MPEngineFiles})
-		endif()
-	endif()
-
-	target_link_libraries(${MPEngine} ${MPEngineLibraries})
-	set_target_properties(${MPEngine} PROPERTIES PROJECT_LABEL "MP Client")
-	target_compile_options(${MPEngine} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
-	target_compile_definitions(${MPEngine} PUBLIC ${MPEngineDefines})
-	target_include_directories(${MPEngine} PUBLIC ${MPEngineIncludeDirectories})
-
-	if(MakeApplicationBundles)
-		install(CODE "
-			include(BundleUtilities)
-			set(BU_CHMOD_BUNDLE_ITEMS ON)
-			fixup_bundle(\"${CMAKE_CURRENT_BINARY_DIR}/${MPEngine}.app\" \"\" \"\")
-			"
-			COMPONENT Runtime)
-		install(TARGETS ${MPEngine}
-			BUNDLE
-			DESTINATION ${JKAInstallDir}
-			COMPONENT ${JKAMPClientComponent})
-	else()
-		install(TARGETS ${MPEngine}
-			RUNTIME
-			DESTINATION ${JKAInstallDir}
-			COMPONENT ${JKAMPClientComponent})
-		if(MPEngineExtraInstallFiles)
-			install(FILES ${MPEngineExtraInstallFiles}
-				DESTINATION ${JKAInstallDir}
-				COMPONENT ${JKAMPClientComponent})
-		endif()
-	endif()
+	add_game_application(
+		PROJECT ${MPEngine}
+		LABEL "JAMP Client"
+		DIRNAME ${MPDir}
+		INSTALL_DIR ${JKAInstallDir}
+		COMPONENT ${JKAMPClientComponent}
+		FILES ${MPEngineFiles}
+		INCLUDES ${MPEngineIncludeDirectories}
+		LIBS ${MPEngineLibraries}
+		DEFINES ${MPEngineDefines})
 endif()
 
 # Dedicated Server (Engine) (jampded.exe)

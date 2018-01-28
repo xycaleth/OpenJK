@@ -80,13 +80,14 @@ set(SharedCommonSafeFiles
 	"${SharedDir}/qcommon/safe/limited_vector.h")
 
 
+include(CMakeParseArguments)
 function(find_package_and_import)
 	set(oneValueArgs PACKAGE TARGET)
 	set(multiValueArgs LIBS INCLUDES)
 
 	cmake_parse_arguments(LOCAL "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-	find_package(${LOCAL_PACKAGE} REQUIRED}
+	find_package(${LOCAL_PACKAGE} REQUIRED)
 	if(NOT TARGET ${LOCAL_TARGET})
 		add_library(${LOCAL_TARGET} STATIC IMPORTED)
 		set_property(TARGET ${LOCAL_TARGET}
@@ -121,14 +122,13 @@ if(USE_INTERNAL_PNG)
 else()
 	find_package_and_import(
 		PACKAGE PNG
-		TARGET PNG::PNG ${JPEG
+		TARGET PNG::PNG
 		LIBS ${PNG_LIBRARIES}
 		INCLUDES ${PNG_INCLUDE_DIR})
 endif()
 
 add_subdirectory(lib/minizip)
 
-include(CMakeParseArguments)
 function(add_mp_game_module)
 	set(oneValueArgs MODULE LABEL)
 	set(multiValueArgs FILES DEFINES INCLUDES)
@@ -183,6 +183,85 @@ function(add_mp_game_module)
 			LIBRARY
 			DESTINATION "${JKAInstallDir}/base"
 			COMPONENT ${JKAMPCoreComponent})
+	endif()
+endfunction()
+
+function(add_game_application)
+	set(oneValueArgs PROJECT LABEL DIRNAME INSTALL_DIR COMPONENT)
+	set(multiValueArgs FILES DEFINES INCLUDES LIBS)
+
+	cmake_parse_arguments(LOCAL "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+	if(MakeApplicationBundles)
+		set(MACOSX_BUNDLE_BUNDLE_NAME ${LOCAL_PROJECT})
+		set(MACOSX_BUNDLE_DISPLAY_NAME ${LOCAL_PROJECT})
+		set(MACOSX_BUNDLE_ICON_FILE OpenJK.icns)
+
+		set(LOCAL_FILES
+			${LOCAL_FILES}
+			${LOCAL_DIRNAME}/macosx/OpenJK.icns)
+		set_source_files_properties(
+			${LOCAL_DIRNAME}/macosx/OpenJK.icns
+			PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+
+		set(LOCAL_FILES
+			${LOCAL_FILES}
+			${LOCAL_DIRNAME}/macosx/English.lproj/InfoPlist.strings)
+		set_source_files_properties(
+			${LOCAL_DIRNAME}/macosx/English.lproj/InfoPlist.strings
+			PROPERTIES MACOSX_PACKAGE_LOCATION Resources/English.lproj)
+	endif()
+
+	if(WIN32)
+		add_executable(${LOCAL_PROJECT} WIN32 ${LOCAL_FILES})
+		if(USE_INTERNAL_SDL2)
+			if(BUILD_64BIT)
+				set(EngineExtraInstallFiles
+					${OpenJKLibDir}/SDL2/bin/x64/SDL2.dll)
+			else()
+				set(EngineExtraInstallFiles
+					${OpenJKLibDir}/SDL2/bin/x86/SDL2.dll)
+			endif()
+		endif()
+	else()
+		if(MakeApplicationBundles)
+			add_executable(${LOCAL_PROJECT} MACOSX_BUNDLE ${LOCAL_FILES})
+			set_target_properties(
+				${LOCAL_PROJECT}
+				PROPERTIES
+					MACOSX_BUNDLE_INFO_PLIST "${LOCAL_DIRNAME}/macosx/OpenJKInfo.plist")
+		else()
+			add_executable(${LOCAL_PROJECT} ${LOCAL_FILES})
+		endif()
+	endif()
+
+	set_target_properties(${LOCAL_PROJECT} PROPERTIES PROJECT_LABEL ${LOCAL_LABEL})
+	target_link_libraries(${LOCAL_PROJECT} PRIVATE ${LOCAL_LIBS})
+	target_compile_options(${LOCAL_PROJECT} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
+	target_compile_definitions(${LOCAL_PROJECT} PRIVATE ${LOCAL_DEFINES})
+	target_include_directories(${LOCAL_PROJECT} PRIVATE ${LOCAL_INCLUDES})
+
+	if(MakeApplicationBundles)
+		install(CODE "
+			include(BundleUtilities)
+			set(BU_CHMOD_BUNDLE_ITEMS ON)
+			fixup_bundle(\"${CMAKE_CURRENT_BINARY_DIR}/${LOCAL_PROJECT}.app\" \"\" \"\")
+			"
+			COMPONENT Runtime)
+		install(TARGETS ${LOCAL_PROJECT}
+			BUNDLE
+			DESTINATION ${LOCAL_INSTALL_DIR}
+			COMPONENT ${LOCAL_COMPONENT})
+	else()
+		install(TARGETS ${LOCAL_PROJECT}
+			RUNTIME
+			DESTINATION ${LOCAL_INSTALL_DIR}
+			COMPONENT ${LOCAL_COMPONENT})
+		if(SPEngineExtraInstallFiles)
+			install(FILES ${EngineExtraInstallFiles}
+				DESTINATION ${LOCAL_INSTALL_DIR}
+				COMPONENT ${LOCAL_COMPONENT})
+		endif()
 	endif()
 endfunction()
 
