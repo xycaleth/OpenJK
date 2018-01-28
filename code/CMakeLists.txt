@@ -346,7 +346,7 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 
 	if(BuildJK2SPEngine)
 		add_game_application(
-			PROJECT ${SPEngine}
+			PROJECT ${JK2SPEngine}
 			LABEL "JOSP Client"
 			DIRNAME ${JK2SPDir}
 			INSTALL_DIR ${JK2InstallDir}

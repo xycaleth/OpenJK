@@ -279,7 +279,7 @@ if(NOT MSVC)
 endif()
 
 if(APPLE)
-	set_target_properties(${MPVanillaRenderer} PROPERTIES SUFFIX ".dylib")
+	set_target_properties(${JK2SPGame} PROPERTIES SUFFIX ".dylib")
 endif()
 
 if(WIN32)
