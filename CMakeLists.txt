@@ -80,43 +80,50 @@ set(SharedCommonSafeFiles
 	"${SharedDir}/qcommon/safe/limited_vector.h")
 
 
-if(UseInternalJPEG)
+function(find_package_and_import)
+	set(oneValueArgs PACKAGE TARGET)
+	set(multiValueArgs LIBS INCLUDES)
+
+	cmake_parse_arguments(LOCAL "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+	find_package(${LOCAL_PACKAGE} REQUIRED}
+	if(NOT TARGET ${LOCAL_TARGET})
+		add_library(${LOCAL_TARGET} STATIC IMPORTED)
+		set_property(TARGET ${LOCAL_TARGET}
+			PROPERTY
+				INTERFACE_LINK_LIBRARIES ${LOCAL_LIBS}
+				INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INCLUDES})
+	endif()
+endfunction()
+
+if(USE_INTERNAL_JPEG)
 	add_subdirectory(lib/jpeg-9a)
 else()
-	find_package(JPEG REQUIRED)
-	if(NOT TARGET JPEG::JPEG)
-		add_library(JPEG::JPEG STATIC IMPORTED)
-		set_property(TARGET JPEG::JPEG
-			PROPERTY
-				INTERFACE_LINK_LIBRARIES ${JPEG_LIBRARIES}
-				INTERFACE_INCLUDE_DIRECTORIES ${JPEG_INCLUDE_DIR})
-	endif()
+	find_package_and_import(
+		PACKAGE JPEG
+		TARGET JPEG::JPEG
+		LIBS ${JPEG_LIBRARIES}
+		INCLUDES ${JPEG_INCLUDE_DIR})
 endif()
 
-if(UseInternalZlib)
+if(USE_INTERNAL_ZLIB)
 	add_subdirectory(lib/zlib)
 else()
-	find_package(ZLIB REQUIRED)
-	if(NOT TARGET ZLIB::ZLIB)
-		add_library(ZLIB::ZLIB STATIC IMPORTED)
-		set_property(TARGET ZLIB::ZLIB
-			PROPERTY
-				INTERFACE_LINK_LIBRARIES ${ZLIB_LIBRARIES}
-				INTERFACE_INCLUDE_DIRECTORIES ${ZLIB_INCLUDE_DIR})
-	endif()
+	find_package_and_import(
+		PACKAGE ZLIB
+		TARGET ZLIB::ZLIB
+		LIBS ${ZLIB_LIBRARIES}
+		INCLUDES ${ZLIB_INCLUDE_DIR})
 endif()
 
-if(UseInternalPNG)
+if(USE_INTERNAL_PNG)
 	add_subdirectory(lib/libpng)
 else()
-	find_package(PNG REQUIRED)
-	if(NOT TARGET PNG::PNG)
-		add_library(PNG::PNG STATIC IMPORTED)
-		set_property(TARGET PNG::PNG
-			PROPERTY
-				INTERFACE_LINK_LIBRARIES ${PNG_LIBRARIES}
-				INTERFACE_INCLUDE_DIRECTORIES ${PNG_INCLUDE_DIR})
-	endif()
+	find_package_and_import(
+		PACKAGE PNG
+		TARGET PNG::PNG ${JPEG
+		LIBS ${PNG_LIBRARIES}
+		INCLUDES ${PNG_INCLUDE_DIR})
 endif()
 
 add_subdirectory(lib/minizip)
@@ -180,7 +187,7 @@ function(add_mp_game_module)
 endfunction()
 
 # Add projects
-if(BUILD_JASP)
+if(BUILD_JASP OR BUILD_JOSP)
 	add_subdirectory(${SPDir})
 	if(BuildJK2SPGame)
 		add_subdirectory("${JK2SPDir}/game")
@@ -191,12 +198,11 @@ if(BUILD_JAMP)
 	add_subdirectory(${MPDir})
 endif()
 
-# Windows Symbol Server tools
-if(BuildSymbolServer)
-	add_subdirectory("tools/WinSymbol")
+if(BUILD_SYMBOL_SERVER)
+	add_subdirectory(tools/WinSymbol)
 endif()
 
-if(BuildTests)
+if(BUILD_TESTS)
 	enable_testing()
-	add_subdirectory("tests")
+	add_subdirectory(tests)
 endif()

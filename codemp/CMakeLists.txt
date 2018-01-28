@@ -214,13 +214,13 @@ if(BuildMPEngine)
 
 	# OpenAL (is optionally included for Windows)
 	if(MSVC AND NOT WIN64)
-		if(UseInternalOpenAL)
+		if(USE_INTERNAL_OPENAL)
 			# There's a libs/OpenAL32.lib
 			# (mrw) TODO Is this actually required on windows?
 			# It is loaded at runtime, should not be linked?
 			find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKLibDir})
 			if(NOT OpenALLibrary)
-				message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
+				message(FATAL_ERROR "USE_INTERNAL_OPENAL enabled, but lib/OpenAL32.lib not found!")
 			endif(NOT OpenALLibrary)
 			set(MPEngineLibraries ${MPEngineLibraries} ${OpenALLibrary})
 		else()
@@ -230,7 +230,7 @@ if(BuildMPEngine)
 		endif()
 	endif()
 
-	if(UseInternalSDL2)
+	if(USE_INTERNAL_SDL2)
 		if(NOT BUILD_64BIT)
 			set(MPEngineLibraries
 				${MPEngineLibraries}
@@ -411,7 +411,7 @@ if(BuildMPEngine)
 
 	if(WIN32)
 		add_executable(${MPEngine} WIN32 ${MPEngineFiles})
-		if(UseInternalSDL2)
+		if(USE_INTERNAL_SDL2)
 			if(NOT BUILD_64BIT)
 				set(MPEngineExtraInstallFiles
 					${OpenJKLibDir}/SDL2/bin/x86/SDL2.dll)

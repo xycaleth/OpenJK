@@ -16,11 +16,6 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Make sure the user is not executing this script directly
-if(NOT InOpenJK)
-	message(FATAL_ERROR "Use the top-level cmake script!")
-endif(NOT InOpenJK)
-
 #    Add Game Project
 if(BuildSPGame)
 	add_subdirectory("${SPDir}/game")

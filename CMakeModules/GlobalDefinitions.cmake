@@ -30,7 +30,7 @@ endif()
 
 
 # Settings
-if(BuildPortableVersion)
+if(BUILD_PORTABLE)
 	list(APPEND SharedDefines "_PORTABLE_VERSION")
 endif()
 
