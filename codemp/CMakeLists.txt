@@ -18,24 +18,24 @@
 
 set(MPSharedDefines ${SharedDefines})
 
-if(BuildMPGame)
+if(BUILD_JAMP_GAME)
 	add_subdirectory(game)
 endif()
 
-if(BuildMPCGame)
+if(BUILD_JAMP_CGAME)
 	add_subdirectory(cgame)
 endif()
 
-if(BuildMPUI)
+if(BUILD_JAMP_UI)
 	add_subdirectory(ui)
 endif()
 
-if(BuildMPRdVanilla)
+if(BUILD_JAMP_RENDERER)
 	add_subdirectory(rd-vanilla)
-endif(BuildMPRdVanilla)
+endif()
 
 # Common things between Engine and Dedicated Server
-if(BuildMPEngine OR BuildMPDed)
+if(BUILD_JAMP_CLIENT OR BUILD_JAMP_SERVER)
 	add_subdirectory(botlib)
 
 	# Common files/libraries/defines of both Engine and Dedicated Server
@@ -197,7 +197,7 @@ if(BuildMPEngine OR BuildMPDed)
 endif()
 
 # Engine/Executable (jamp.exe)
-if(BuildMPEngine)
+if(BUILD_JAMP_CLIENT)
 	set(MPEngineLibraries ${MPEngineAndDedLibraries})
 	set(MPEngineIncludeDirectories ${MPEngineAndDedIncludeDirectories})
 	set(MPEngineFiles ${MPEngineAndDedFiles})
@@ -214,13 +214,13 @@ if(BuildMPEngine)
 
 	# OpenAL (is optionally included for Windows)
 	if(MSVC AND NOT WIN64)
-		if(USE_INTERNAL_OPENAL)
+		if(USE_BUNDLED_OPENAL)
 			# There's a libs/OpenAL32.lib
 			# (mrw) TODO Is this actually required on windows?
 			# It is loaded at runtime, should not be linked?
 			find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKLibDir})
 			if(NOT OpenALLibrary)
-				message(FATAL_ERROR "USE_INTERNAL_OPENAL enabled, but lib/OpenAL32.lib not found!")
+				message(FATAL_ERROR "USE_BUNDLED_OPENAL enabled, but lib/OpenAL32.lib not found!")
 			endif(NOT OpenALLibrary)
 			set(MPEngineLibraries ${MPEngineLibraries} ${OpenALLibrary})
 		else()
@@ -230,7 +230,7 @@ if(BuildMPEngine)
 		endif()
 	endif()
 
-	if(USE_INTERNAL_SDL2)
+	if(USE_BUNDLED_SDL2)
 		if(NOT BUILD_64BIT)
 			set(MPEngineLibraries
 				${MPEngineLibraries}
@@ -403,7 +403,7 @@ endif()
 
 # Dedicated Server (Engine) (jampded.exe)
 
-if(BuildMPDed)
+if(BUILD_JAMP_SERVER)
 	set(MPDedLibraries ${MPEngineAndDedLibraries} ${CMAKE_DL_LIBS})
 	set(MPDedIncludeDirectories ${MPEngineAndDedIncludeDirectories})
 	set(MPDedFiles ${MPEngineAndDedFiles})
@@ -485,15 +485,15 @@ if(BuildMPDed)
 endif()
 
 set(GameLibsBuilt)
-if(BuildMPGame)
+if(BUILD_JAMP_GAME)
 	set(GameLibsBuilt ${GameLibsBuilt} ${MPGame})
 endif()
 
-if(BuildMPCGame)
+if(BUILD_JAMP_CGAME)
 	set(GameLibsBuilt ${GameLibsBuilt} ${MPCGame})
 endif()
 
-if(BuildMPUI)
+if(BUILD_JAMP_UI)
 	set(GameLibsBuilt ${GameLibsBuilt} ${MPUI})
 endif()
 

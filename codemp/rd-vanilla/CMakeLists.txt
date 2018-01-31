@@ -124,7 +124,7 @@ if(WIN32)
 		DESTINATION ${JKAInstallDir}
 		COMPONENT ${JKAMPClientComponent})
 else()
-	if(MakeApplicationBundles AND BuildMPEngine)
+	if(BUILD_APP_BUNDLES AND BUILD_JAMP_CLIENT)
 		install(TARGETS ${MPVanillaRenderer}
 			LIBRARY
 			DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/"

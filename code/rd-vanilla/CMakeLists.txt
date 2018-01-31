@@ -144,8 +144,8 @@ function(add_sp_renderer_project ProjectName Label EngineName InstallDir Compone
 			RUNTIME
 			DESTINATION ${InstallDir}
 			COMPONENT ${Component})
-	else(WIN32)
-		if(MakeApplicationBundles AND (BuildSPEngine OR BuildJK2SPEngine))
+	else()
+		if(BUILD_APP_BUNDLES AND (BUILD_JASP_CLIENT OR BUILD_JOSP_CLIENT))
 			install(TARGETS ${ProjectName}
 				LIBRARY
 				DESTINATION "${InstallDir}/${EngineName}.app/Contents/MacOS/"
@@ -160,7 +160,7 @@ function(add_sp_renderer_project ProjectName Label EngineName InstallDir Compone
 
 endfunction()
 
-if(BuildSPRdVanilla)
+if(BUILD_JASP_RENDERER)
 	add_sp_renderer_project(
 		${SPRDVanillaRenderer}
 		"SP Vanilla Renderer"
@@ -169,7 +169,7 @@ if(BuildSPRdVanilla)
 		${JKASPClientComponent})
 endif()
 
-if(BuildJK2SPRdVanilla)
+if(BUILD_JOSP_RENDERER)
 	set(SPRDVanillaDefines ${SPRDVanillaDefines} "JK2_MODE")
 	add_sp_renderer_project(
 		${JK2SPVanillaRenderer}

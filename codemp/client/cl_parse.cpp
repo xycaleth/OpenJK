@@ -28,11 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "cl_cgameapi.h"
 #include "qcommon/stringed_ingame.h"
 
-#ifdef USE_INTERNAL_ZLIB
-#include "zlib/zlib.h"
-#else
 #include <zlib.h>
-#endif
 
 static char hiddenCvarVal[128];
 

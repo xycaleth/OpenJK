@@ -49,4 +49,3 @@ include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 message("Git revision is ${GIT_SHA1}")
 list(APPEND SharedDefines "BUILD_COMMIT=\"${GIT_SHA1}\"")
-

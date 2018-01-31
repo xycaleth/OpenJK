@@ -16,15 +16,15 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-if(BuildSPGame)
+if(BUILD_JOSP_GAME)
 	add_subdirectory("${SPDir}/game")
 endif()
 
-if(BuildSPRdVanilla OR BuildKJ2SPRdVanilla)
+if(BUILD_JASP_RENDERER OR BUILD_JOSP_RENDERER)
 	add_subdirectory("${SPDir}/rd-vanilla")
 endif()
 
-if(BuildSPEngine OR BuildJK2SPEngine)
+if(BUILD_JASP_CLIENT OR BUILD_JOSP_CLIENT)
 	# it's called JK2EXE but it really just means Singleplayer Exe
 	set(SPEngineDefines ${SharedDefines} "_JK2EXE") 
 
@@ -37,7 +37,7 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 	#    Dependencies
 	# OpenAL (is optionally included for Windows)
 	if(MSVC AND NOT WIN64)
-		if(USE_INTERNAL_OPENAL)
+		if(USE_BUNDLED_OPENAL)
 			# There's a libs/OpenAL32.lib
 			# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
 			find_library(OpenALLibrary NAMES OpenAL32 PATHS "${OpenJKLibDir}")
@@ -45,11 +45,11 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 				message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
 			endif(NOT OpenALLibrary)
 			set(SPEngineLibraries ${SPEngineLibraries} ${OpenALLibrary})
-		else(UseInternalOpenAL)
+		else()
 			find_package(OpenAL REQUIRED)
 			set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OPENAL_INCLUDE_DIR})
 			set(SPEngineLibraries ${SPEngineLibraries} ${OPENAL_LIBRARY})
-		endif(UseInternalOpenAL)
+		endif()
 
 		set(SPEngineEAXFiles
 			"${SPDir}/client/eax/eax.h"
@@ -58,7 +58,7 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		set(SPEngineFiles ${SPEngineFiles} ${SPEngineEAXFiles})
 	endif()
 
-	if(USE_INTERNAL_SDL2)
+	if(USE_BUNDLED_SDL2)
 		if(BUILD_64BIT)
 			set(SPEngineLibraries
 				${SPEngineLibraries}
@@ -331,7 +331,7 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 
 	list(APPEND SPEngineLibraries MINIZIP::MINIZIP)
 
-	if(BuildSPEngine)
+	if(BUILD_JASP_CLIENT)
 		add_game_application(
 			PROJECT ${SPEngine}
 			LABEL "JASP Client"
@@ -344,7 +344,7 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 			DEFINES ${SPEngineDefines})
 	endif()
 
-	if(BuildJK2SPEngine)
+	if(BUILD_JOSP_CLIENT)
 		add_game_application(
 			PROJECT ${JK2SPEngine}
 			LABEL "JOSP Client"

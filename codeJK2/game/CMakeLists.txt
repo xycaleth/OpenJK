@@ -287,7 +287,7 @@ if(WIN32)
 		RUNTIME
 		DESTINATION "${JK2InstallDir}/OpenJK")
 else()
-	if(MakeApplicationBundles AND BuildJK2SPEngine)
+	if(BUILD_APP_BUNDLES AND BUILD_JOSP_CLIENT)
 		install(TARGETS ${JK2SPGame}
 			LIBRARY
 			DESTINATION "${JK2InstallDir}/${JK2SPEngine}.app/Contents/MacOS/OpenJK")

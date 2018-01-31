@@ -21,18 +21,11 @@ cmake_minimum_required(VERSION 3.1)
 set(ProjectName "OpenJK" CACHE STRING "Project Name")
 project(${ProjectName})
 
-# Custom CMake Modules needed
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/CMakeModules")
 
 include(BuildOptions)
 include(PlatformDefinitions)
 
-if (NOT CMAKE_BUILD_TYPE)
-	message("No build type selected, default to RELEASE")
-	set(CMAKE_BUILD_TYPE "RELEASE")
-endif()
-
-# Target names
 set(SPEngine "openjk_sp.${Architecture}")
 set(SPGame "jagame${Architecture}")
 set(SPRDVanillaRenderer "rdsp-vanilla_${Architecture}")
@@ -48,15 +41,17 @@ set(JK2SPVanillaRenderer "rdjosp-vanilla_${Architecture}")
 set(AssetsPk3 "openjk-${Architecture}.pk3")
 set(MPBotLib "botlib")
 
-
-
-# Paths
 set(SPDir "${CMAKE_SOURCE_DIR}/code")
 set(MPDir "${CMAKE_SOURCE_DIR}/codemp")
 set(JK2SPDir "${CMAKE_SOURCE_DIR}/codeJK2")
 set(SharedDir "${CMAKE_SOURCE_DIR}/shared")
 set(OpenJKLibDir "${CMAKE_SOURCE_DIR}/lib")
 set(GSLIncludeDirectory "${OpenJKLibDir}/gsl-lite/include")
+
+if (NOT CMAKE_BUILD_TYPE)
+	message("No build type selected, default to RELEASE")
+	set(CMAKE_BUILD_TYPE "RELEASE")
+endif()
 
 include(InstallConfig)
 include(CompilerFlags)
@@ -97,7 +92,7 @@ function(find_package_and_import)
 	endif()
 endfunction()
 
-if(USE_INTERNAL_JPEG)
+if(USE_BUNDLED_JPEG)
 	add_subdirectory(lib/jpeg-9a)
 else()
 	find_package_and_import(
@@ -107,7 +102,7 @@ else()
 		INCLUDES ${JPEG_INCLUDE_DIR})
 endif()
 
-if(USE_INTERNAL_ZLIB)
+if(USE_BUNDLED_ZLIB)
 	add_subdirectory(lib/zlib)
 else()
 	find_package_and_import(
@@ -117,7 +112,7 @@ else()
 		INCLUDES ${ZLIB_INCLUDE_DIR})
 endif()
 
-if(USE_INTERNAL_PNG)
+if(USE_BUNDLED_PNG)
 	add_subdirectory(lib/libpng)
 else()
 	find_package_and_import(
@@ -152,7 +147,7 @@ function(add_mp_game_module)
 	target_compile_definitions(${LOCAL_MODULE} PRIVATE ${LOCAL_DEFINES})
 	target_include_directories(${LOCAL_MODULE} PRIVATE ${LOCAL_INCLUDES})
 
-	if(MakeApplicationBundles AND BuildMPEngine)
+	if(BUILD_APP_BUNDLES AND BUILD_JAMP_CLIENT)
 		install(TARGETS ${LOCAL_MODULE}
 			LIBRARY
 			DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/OpenJK"
@@ -192,7 +187,7 @@ function(add_game_application)
 
 	cmake_parse_arguments(LOCAL "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-	if(MakeApplicationBundles)
+	if(BUILD_APP_BUNDLES)
 		set(MACOSX_BUNDLE_BUNDLE_NAME ${LOCAL_PROJECT})
 		set(MACOSX_BUNDLE_DISPLAY_NAME ${LOCAL_PROJECT})
 		set(MACOSX_BUNDLE_ICON_FILE OpenJK.icns)
@@ -214,7 +209,7 @@ function(add_game_application)
 
 	if(WIN32)
 		add_executable(${LOCAL_PROJECT} WIN32 ${LOCAL_FILES})
-		if(USE_INTERNAL_SDL2)
+		if(USE_BUNDLED_SDL2)
 			if(BUILD_64BIT)
 				set(EngineExtraInstallFiles
 					${OpenJKLibDir}/SDL2/bin/x64/SDL2.dll)
@@ -224,7 +219,7 @@ function(add_game_application)
 			endif()
 		endif()
 	else()
-		if(MakeApplicationBundles)
+		if(BUILD_APP_BUNDLES)
 			add_executable(${LOCAL_PROJECT} MACOSX_BUNDLE ${LOCAL_FILES})
 			set_target_properties(
 				${LOCAL_PROJECT}
@@ -241,7 +236,7 @@ function(add_game_application)
 	target_compile_definitions(${LOCAL_PROJECT} PRIVATE ${LOCAL_DEFINES})
 	target_include_directories(${LOCAL_PROJECT} PRIVATE ${LOCAL_INCLUDES})
 
-	if(MakeApplicationBundles)
+	if(BUILD_APP_BUNDLES)
 		install(CODE "
 			include(BundleUtilities)
 			set(BU_CHMOD_BUNDLE_ITEMS ON)
@@ -268,7 +263,7 @@ endfunction()
 # Add projects
 if(BUILD_JASP OR BUILD_JOSP)
 	add_subdirectory(${SPDir})
-	if(BuildJK2SPGame)
+	if(BUILD_JOSP_GAME)
 		add_subdirectory("${JK2SPDir}/game")
 	endif()
 endif()
