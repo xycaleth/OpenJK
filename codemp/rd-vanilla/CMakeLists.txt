@@ -98,7 +98,7 @@ source_group("common/safe" FILES ${MPVanillaRendererCommonSafeFiles})
 set(MPVanillaRendererFiles ${MPVanillaRendererFiles} ${MPVanillaRendererCommonSafeFiles})
 
 find_package(OpenGL REQUIRED)
-list(APPEND MPVanillaRendererLibraries JPEG::JPEG PNG::PNG OpenGL::GL)
+set(MPVanillaRendererLibraries JPEG::JPEG PNG::PNG OpenGL::GL)
 
 set(MPVanillaRendererIncludeDirectories ${MPVanillaRendererIncludeDirectories} ${OpenJKLibDir})
 

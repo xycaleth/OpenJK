@@ -21,7 +21,7 @@ set(MPCGameIncludeDirectories
 	${SharedDir}
 	${GSLIncludeDirectory})
 
-set(MPCGameDefines ${MPSharedDefines} "_CGAME")
+set(MPCGameDefines ${SharedDefines} "_CGAME")
 set(MPCGameGameFiles
 	"${MPDir}/game/AnimalNPC.c"
 	"${MPDir}/game/bg_g2_utils.c"

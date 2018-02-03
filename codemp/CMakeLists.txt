@@ -18,183 +18,160 @@
 
 set(MPSharedDefines ${SharedDefines})
 
-if(BUILD_JAMP_GAME)
-	add_subdirectory(game)
+add_subdirectory(botlib)
+
+# Common files/libraries/defines of both Engine and Dedicated Server
+set(MPEngineAndDedLibraries ${MPBotLib} MINIZIP::MINIZIP)
+if(WIN32)
+	set(MPEngineAndDedLibraries ${MPEngineAndDedLibraries} "winmm" "wsock32")
 endif()
 
-if(BUILD_JAMP_CGAME)
-	add_subdirectory(cgame)
-endif()
+# Include directories
+set(MPEngineAndDedIncludeDirectories
+	${MPDir}
+	${SharedDir}
+	${GSLIncludeDirectory})
 
-if(BUILD_JAMP_UI)
-	add_subdirectory(ui)
-endif()
+set(MPEngineAndDedCgameFiles
+	"${MPDir}/cgame/cg_public.h")
+source_group("cgame" FILES ${MPEngineAndDedCgameFiles})
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedCgameFiles})
 
-if(BUILD_JAMP_RENDERER)
-	add_subdirectory(rd-vanilla)
-endif()
+set(MPEngineAndDedClientFiles
+	"${MPDir}/client/client.h"
+	"${MPDir}/client/keys.h"
+	"${MPDir}/client/snd_public.h")
+source_group("client" FILES ${MPEngineAndDedClientFiles})
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedClientFiles})
 
-# Common things between Engine and Dedicated Server
-if(BUILD_JAMP_CLIENT OR BUILD_JAMP_SERVER)
-	add_subdirectory(botlib)
+set(MPEngineAndDedGameFiles
+	"${MPDir}/game/anims.h"
+	"${MPDir}/game/bg_public.h"
+	"${MPDir}/game/bg_weapons.h"
+	"${MPDir}/botlib/botlib.h"
+	"${MPDir}/game/g_public.h"
+	"${MPDir}/game/surfaceflags.h")
+source_group("game" FILES ${MPEngineAndDedGameFiles})
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedGameFiles})
 
-	# Common files/libraries/defines of both Engine and Dedicated Server
-	set(MPEngineAndDedLibraries ${MPBotLib})
-	# Platform-specific libraries
-	if(WIN32)
-		set(MPEngineAndDedLibraries ${MPEngineAndDedLibraries} "winmm" "wsock32")
-	endif()
+set(MPEngineAndDedCommonFiles
+	"${MPDir}/qcommon/q_shared.h"
+	"${MPDir}/qcommon/cm_load.cpp"
+	"${MPDir}/qcommon/cm_local.h"
+	"${MPDir}/qcommon/cm_patch.cpp"
+	"${MPDir}/qcommon/cm_patch.h"
+	"${MPDir}/qcommon/cm_polylib.cpp"
+	"${MPDir}/qcommon/cm_polylib.h"
+	"${MPDir}/qcommon/cm_public.h"
+	"${MPDir}/qcommon/cm_test.cpp"
+	"${MPDir}/qcommon/cm_trace.cpp"
+	"${MPDir}/qcommon/cmd.cpp"
+	"${MPDir}/qcommon/common.cpp"
+	"${MPDir}/qcommon/cvar.cpp"
+	"${MPDir}/qcommon/disablewarnings.h"
+	"${MPDir}/qcommon/files.cpp"
+	"${MPDir}/qcommon/game_version.h"
+	"${MPDir}/qcommon/GenericParser2.cpp"
+	"${MPDir}/qcommon/GenericParser2.h"
+	"${MPDir}/qcommon/huffman.cpp"
+	"${MPDir}/qcommon/md4.cpp"
+	"${MPDir}/qcommon/md5.cpp"
+	"${MPDir}/qcommon/md5.h"
+	"${MPDir}/qcommon/MiniHeap.h"
+	"${MPDir}/qcommon/msg.cpp"
+	"${MPDir}/qcommon/matcomp.h"
+	"${MPDir}/qcommon/matcomp.cpp"
+	"${MPDir}/qcommon/net_chan.cpp"
+	"${MPDir}/qcommon/net_ip.cpp"
+	"${MPDir}/qcommon/persistence.cpp"
+	"${MPDir}/qcommon/q_shared.cpp"
+	"${MPDir}/qcommon/qcommon.h"
+	"${MPDir}/qcommon/qfiles.h"
+	"${MPDir}/qcommon/RoffSystem.cpp"
+	"${MPDir}/qcommon/RoffSystem.h"
+	"${MPDir}/qcommon/sstring.h"
+	"${MPDir}/qcommon/stringed_ingame.cpp"
+	"${MPDir}/qcommon/stringed_ingame.h"
+	"${MPDir}/qcommon/stringed_interface.cpp"
+	"${MPDir}/qcommon/stringed_interface.h"
+	"${MPDir}/qcommon/tags.h"
+	"${MPDir}/qcommon/timing.h"
+	"${MPDir}/qcommon/vm.cpp"
+	"${MPDir}/qcommon/z_memman_pc.cpp"
+	${SharedCommonFiles})
+source_group("common" FILES ${MPEngineAndDedCommonFiles})
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedCommonFiles})
 
-	# Include directories
-	# codemp folder, since includes are not always relative in the files
-	set(MPEngineAndDedIncludeDirectories
-		${MPDir}
-		${SharedDir}
-		${GSLIncludeDirectory})
+set(MPEngineAndDedCommonSafeFiles
+	"${SharedDir}/qcommon/safe/files.cpp"
+	"${SharedDir}/qcommon/safe/files.h"
+	"${SharedDir}/qcommon/safe/gsl.h")
+source_group("common/safe" FILES ${MPEngineAndDedCommonSafeFiles})
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedCommonSafeFiles})
 
-	list(APPEND MPEngineAndDedLibraries MINIZIP::MINIZIP)
+set(MPEngineAndDedG2Files
+	"${MPDir}/ghoul2/G2.h"
+	"${MPDir}/ghoul2/G2_gore.h"
+	"${MPDir}/ghoul2/ghoul2_shared.h"
+	"${MPDir}/ghoul2/g2_local.h")
+source_group("ghoul2" FILES ${MPEngineAndDedG2Files})
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedG2Files})
 
-	set(MPEngineAndDedCgameFiles
-		"${MPDir}/cgame/cg_public.h")
-	source_group("cgame" FILES ${MPEngineAndDedCgameFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedCgameFiles})
+set(MPEngineAndDedIcarusFiles
+	"${MPDir}/icarus/BlockStream.cpp"
+	"${MPDir}/icarus/blockstream.h"
+	"${MPDir}/icarus/GameInterface.cpp"
+	"${MPDir}/icarus/GameInterface.h"
+	"${MPDir}/icarus/icarus.h"
+	"${MPDir}/icarus/Instance.cpp"
+	"${MPDir}/icarus/instance.h"
+	"${MPDir}/icarus/Interface.cpp"
+	"${MPDir}/icarus/interface.h"
+	"${MPDir}/icarus/interpreter.h"
+	"${MPDir}/icarus/Memory.cpp"
+	"${MPDir}/icarus/Q3_Interface.cpp"
+	"${MPDir}/icarus/Q3_Interface.h"
+	"${MPDir}/icarus/Q3_Registers.cpp"
+	"${MPDir}/icarus/Q3_Registers.h"
+	"${MPDir}/icarus/Sequence.cpp"
+	"${MPDir}/icarus/sequence.h"
+	"${MPDir}/icarus/Sequencer.cpp"
+	"${MPDir}/icarus/sequencer.h"
+	"${MPDir}/icarus/TaskManager.cpp"
+	"${MPDir}/icarus/taskmanager.h"
+	"${MPDir}/icarus/tokenizer.h")
+source_group("icarus" FILES ${MPEngineAndDedIcarusFiles})
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedIcarusFiles})
 
-	set(MPEngineAndDedClientFiles
-		"${MPDir}/client/client.h"
-		"${MPDir}/client/keys.h"
-		"${MPDir}/client/snd_public.h")
-	source_group("client" FILES ${MPEngineAndDedClientFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedClientFiles})
+set(MPEngineAndDedServerFiles
+	"${MPDir}/server/NPCNav/navigator.cpp"
+	"${MPDir}/server/NPCNav/navigator.h"
+	"${MPDir}/server/server.h"
+	"${MPDir}/server/sv_bot.cpp"
+	"${MPDir}/server/sv_ccmds.cpp"
+	"${MPDir}/server/sv_challenge.cpp"
+	"${MPDir}/server/sv_client.cpp"
+	"${MPDir}/server/sv_game.cpp"
+	"${MPDir}/server/sv_init.cpp"
+	"${MPDir}/server/sv_main.cpp"
+	"${MPDir}/server/sv_net_chan.cpp"
+	"${MPDir}/server/sv_snapshot.cpp"
+	"${MPDir}/server/sv_world.cpp"
+	"${MPDir}/server/sv_gameapi.cpp"
+	"${MPDir}/server/sv_gameapi.h")
+source_group("server" FILES ${MPEngineAndDedServerFiles})
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedServerFiles})
 
-	set(MPEngineAndDedGameFiles
-		"${MPDir}/game/anims.h"
-		"${MPDir}/game/bg_public.h"
-		"${MPDir}/game/bg_weapons.h"
-		"${MPDir}/botlib/botlib.h"
-		"${MPDir}/game/g_public.h"
-		"${MPDir}/game/surfaceflags.h")
-	source_group("game" FILES ${MPEngineAndDedGameFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedGameFiles})
+set(MPEngineAndDedUiFiles
+	"${MPDir}/ui/keycodes.h"
+	"${MPDir}/ui/ui_public.h")
+source_group("ui" FILES ${MPEngineAndDedUiFiles})
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedUiFiles})
 
-	set(MPEngineAndDedCommonFiles
-		"${MPDir}/qcommon/q_shared.h"
-		"${MPDir}/qcommon/cm_load.cpp"
-		"${MPDir}/qcommon/cm_local.h"
-		"${MPDir}/qcommon/cm_patch.cpp"
-		"${MPDir}/qcommon/cm_patch.h"
-		"${MPDir}/qcommon/cm_polylib.cpp"
-		"${MPDir}/qcommon/cm_polylib.h"
-		"${MPDir}/qcommon/cm_public.h"
-		"${MPDir}/qcommon/cm_test.cpp"
-		"${MPDir}/qcommon/cm_trace.cpp"
-		"${MPDir}/qcommon/cmd.cpp"
-		"${MPDir}/qcommon/common.cpp"
-		"${MPDir}/qcommon/cvar.cpp"
-		"${MPDir}/qcommon/disablewarnings.h"
-		"${MPDir}/qcommon/files.cpp"
-		"${MPDir}/qcommon/game_version.h"
-		"${MPDir}/qcommon/GenericParser2.cpp"
-		"${MPDir}/qcommon/GenericParser2.h"
-		"${MPDir}/qcommon/huffman.cpp"
-		"${MPDir}/qcommon/md4.cpp"
-		"${MPDir}/qcommon/md5.cpp"
-		"${MPDir}/qcommon/md5.h"
-		"${MPDir}/qcommon/MiniHeap.h"
-		"${MPDir}/qcommon/msg.cpp"
-		"${MPDir}/qcommon/matcomp.h"
-		"${MPDir}/qcommon/matcomp.cpp"
-		"${MPDir}/qcommon/net_chan.cpp"
-		"${MPDir}/qcommon/net_ip.cpp"
-		"${MPDir}/qcommon/persistence.cpp"
-		"${MPDir}/qcommon/q_shared.cpp"
-		"${MPDir}/qcommon/qcommon.h"
-		"${MPDir}/qcommon/qfiles.h"
-		"${MPDir}/qcommon/RoffSystem.cpp"
-		"${MPDir}/qcommon/RoffSystem.h"
-		"${MPDir}/qcommon/sstring.h"
-		"${MPDir}/qcommon/stringed_ingame.cpp"
-		"${MPDir}/qcommon/stringed_ingame.h"
-		"${MPDir}/qcommon/stringed_interface.cpp"
-		"${MPDir}/qcommon/stringed_interface.h"
-		"${MPDir}/qcommon/tags.h"
-		"${MPDir}/qcommon/timing.h"
-		"${MPDir}/qcommon/vm.cpp"
-		"${MPDir}/qcommon/z_memman_pc.cpp"
-		${SharedCommonFiles})
-	source_group("common" FILES ${MPEngineAndDedCommonFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedCommonFiles})
-	
-	set(MPEngineAndDedCommonSafeFiles
-		"${SharedDir}/qcommon/safe/files.cpp"
-		"${SharedDir}/qcommon/safe/files.h"
-		"${SharedDir}/qcommon/safe/gsl.h")
-	source_group("common/safe" FILES ${MPEngineAndDedCommonSafeFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedCommonSafeFiles})
-
-	set(MPEngineAndDedG2Files
-		"${MPDir}/ghoul2/G2.h"
-		"${MPDir}/ghoul2/G2_gore.h"
-		"${MPDir}/ghoul2/ghoul2_shared.h"
-		"${MPDir}/ghoul2/g2_local.h")
-	source_group("ghoul2" FILES ${MPEngineAndDedG2Files})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedG2Files})
-
-	set(MPEngineAndDedIcarusFiles
-		"${MPDir}/icarus/BlockStream.cpp"
-		"${MPDir}/icarus/blockstream.h"
-		"${MPDir}/icarus/GameInterface.cpp"
-		"${MPDir}/icarus/GameInterface.h"
-		"${MPDir}/icarus/icarus.h"
-		"${MPDir}/icarus/Instance.cpp"
-		"${MPDir}/icarus/instance.h"
-		"${MPDir}/icarus/Interface.cpp"
-		"${MPDir}/icarus/interface.h"
-		"${MPDir}/icarus/interpreter.h"
-		"${MPDir}/icarus/Memory.cpp"
-		"${MPDir}/icarus/Q3_Interface.cpp"
-		"${MPDir}/icarus/Q3_Interface.h"
-		"${MPDir}/icarus/Q3_Registers.cpp"
-		"${MPDir}/icarus/Q3_Registers.h"
-		"${MPDir}/icarus/Sequence.cpp"
-		"${MPDir}/icarus/sequence.h"
-		"${MPDir}/icarus/Sequencer.cpp"
-		"${MPDir}/icarus/sequencer.h"
-		"${MPDir}/icarus/TaskManager.cpp"
-		"${MPDir}/icarus/taskmanager.h"
-		"${MPDir}/icarus/tokenizer.h")
-	source_group("icarus" FILES ${MPEngineAndDedIcarusFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedIcarusFiles})
-
-	set(MPEngineAndDedServerFiles
-		"${MPDir}/server/NPCNav/navigator.cpp"
-		"${MPDir}/server/NPCNav/navigator.h"
-		"${MPDir}/server/server.h"
-		"${MPDir}/server/sv_bot.cpp"
-		"${MPDir}/server/sv_ccmds.cpp"
-		"${MPDir}/server/sv_challenge.cpp"
-		"${MPDir}/server/sv_client.cpp"
-		"${MPDir}/server/sv_game.cpp"
-		"${MPDir}/server/sv_init.cpp"
-		"${MPDir}/server/sv_main.cpp"
-		"${MPDir}/server/sv_net_chan.cpp"
-		"${MPDir}/server/sv_snapshot.cpp"
-		"${MPDir}/server/sv_world.cpp"
-		"${MPDir}/server/sv_gameapi.cpp"
-		"${MPDir}/server/sv_gameapi.h")
-	source_group("server" FILES ${MPEngineAndDedServerFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedServerFiles})
-
-	set(MPEngineAndDedUiFiles
-		"${MPDir}/ui/keycodes.h"
-		"${MPDir}/ui/ui_public.h")
-	source_group("ui" FILES ${MPEngineAndDedUiFiles})
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedUiFiles})
-
-	set(MPEngineAndDedSysFiles
-		"${SharedDir}/sys/snapvector.cpp")
-	set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedSysFiles})
-	source_group("sys" FILES ${MPEngineAndDedSysFiles})
-endif()
+set(MPEngineAndDedSysFiles
+	"${SharedDir}/sys/snapvector.cpp")
+set(MPEngineAndDedFiles ${MPEngineAndDedFiles} ${MPEngineAndDedSysFiles})
+source_group("sys" FILES ${MPEngineAndDedSysFiles})
 
 # Engine/Executable (jamp.exe)
 if(BUILD_JAMP_CLIENT)
@@ -206,7 +183,6 @@ if(BUILD_JAMP_CLIENT)
 	# Dependencies
 
 	if(NOT WIN32)
-		# OpenGL
 		find_package(OpenGL REQUIRED)
 		set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} ${OPENGL_INCLUDE_DIR})
 		set(MPEngineLibraries ${MPEngineLibraries} ${OPENGL_LIBRARIES})
@@ -505,13 +481,13 @@ if(WIN32)
 			set(GameLibFullPaths
 				${GameLibFullPaths}
 				${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${GameLib}${CMAKE_SHARED_LIBRARY_SUFFIX})
-		endforeach(GameLib)
+		endforeach()
 	else()
 		foreach(GameLib ${GameLibsBuilt})
 			set(GameLibFullPaths
 				${GameLibFullPaths}
 				${CMAKE_BINARY_DIR}/${GameLib}${CMAKE_SHARED_LIBRARY_SUFFIX})
-		endforeach(GameLib)
+		endforeach()
 	endif()
 
 	include(InstallZIP)

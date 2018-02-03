@@ -21,7 +21,7 @@ set(MPUIIncludeDirectories
 	${SharedDir}
 	${GSLIncludeDirectory})
 
-set(MPUIDefines ${MPSharedDefines} "UI_BUILD")
+set(MPUIDefines ${SharedDefines} "UI_BUILD")
 
 set(MPUIGameFiles
 	"${MPDir}/game/bg_misc.c"

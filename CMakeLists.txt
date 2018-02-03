@@ -262,18 +262,45 @@ endfunction()
 
 # Add projects
 if(BUILD_JASP OR BUILD_JOSP)
-	add_subdirectory(${SPDir})
+	add_subdirectory("${SPDir}")
+
+	if(BUILD_JASP_GAME)
+		add_subdirectory("${SPDir}/game")
+	endif()
+
+	if(BUILD_JASP_RENDERER OR BUILD_JOSP_RENDERER)
+		add_subdirectory("${SPDir}/rd-vanilla")
+	endif()
+
 	if(BUILD_JOSP_GAME)
 		add_subdirectory("${JK2SPDir}/game")
 	endif()
 endif()
 
 if(BUILD_JAMP)
-	add_subdirectory(${MPDir})
+	if(BUILD_JAMP_CLIENT OR BUILD_JAMP_SERVER)
+		add_subdirectory("${MPDir}")
+	endif()
+
+	if(BUILD_JAMP_GAME)
+		add_subdirectory("${MPDir}/game")
+	endif()
+
+	if(BUILD_JAMP_CGAME)
+		add_subdirectory("${MPDir}/cgame")
+	endif()
+
+	if(BUILD_JAMP_UI)
+		add_subdirectory("${MPDir}/ui")
+	endif()
+
+	if(BUILD_JAMP_RENDERER)
+		add_subdirectory("${MPDir}/rd-vanilla")
+	endif()
 endif()
 
 if(BUILD_SYMBOL_SERVER)
-	add_subdirectory(tools/WinSymbol)
+	add_subdirectory("tools/WinSymbol")
 endif()
 
 if(BUILD_TESTS)

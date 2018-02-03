@@ -118,7 +118,7 @@ source_group("rd-common" FILES ${SPRDVanillaRdCommonFiles})
 set(SPRDVanillaFiles ${SPRDVanillaFiles} ${SPRDVanillaRdCommonFiles})
 
 find_package(OpenGL REQUIRED)
-list(APPEND SPRDVanillaRendererLibraries JPEG::JPEG PNG::PNG OpenGL::GL)
+set(SPRDVanillaRendererLibraries JPEG::JPEG PNG::PNG OpenGL::GL)
 
 set(SPRDVanillaRendererIncludeDirectories ${SPRDVanillaRendererIncludeDirectories} ${OpenJKLibDir})
 

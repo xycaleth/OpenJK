@@ -21,7 +21,7 @@ set(MPGameIncludeDirectories
 	${SharedDir}
 	${GSLIncludeDirectory})
 
-set(MPGameDefines ${MPSharedDefines} "_GAME")
+set(MPGameDefines ${SharedDefines} "_GAME")
 set(MPGameGameFiles
 	"${MPDir}/game/ai_main.c"
 	"${MPDir}/game/ai_util.c"

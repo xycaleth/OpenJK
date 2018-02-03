@@ -16,344 +16,334 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-if(BUILD_JOSP_GAME)
-	add_subdirectory("${SPDir}/game")
+# it's called JK2EXE but it really just means Singleplayer Exe
+set(SPEngineDefines ${SharedDefines} "_JK2EXE") 
+
+set(SPEngineIncludeDirectories
+	${SPEngineIncludeDirectories}
+	${SharedDir}
+	${SPDir}
+	${GSLIncludeDirectory})
+
+#    Dependencies
+# OpenAL (is optionally included for Windows)
+if(MSVC AND NOT WIN64)
+	if(USE_BUNDLED_OPENAL)
+		# There's a libs/OpenAL32.lib
+		# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
+		find_library(OpenALLibrary NAMES OpenAL32 PATHS "${OpenJKLibDir}")
+		if(NOT OpenALLibrary)
+			message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
+		endif(NOT OpenALLibrary)
+		set(SPEngineLibraries ${SPEngineLibraries} ${OpenALLibrary})
+	else()
+		find_package(OpenAL REQUIRED)
+		set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OPENAL_INCLUDE_DIR})
+		set(SPEngineLibraries ${SPEngineLibraries} ${OPENAL_LIBRARY})
+	endif()
+
+	set(SPEngineEAXFiles
+		"${SPDir}/client/eax/eax.h"
+		"${SPDir}/client/eax/EaxMan.h")
+	source_group("eax" FILES ${SPEngineEAXFiles})
+	set(SPEngineFiles ${SPEngineFiles} ${SPEngineEAXFiles})
 endif()
 
-if(BUILD_JASP_RENDERER OR BUILD_JOSP_RENDERER)
-	add_subdirectory("${SPDir}/rd-vanilla")
-endif()
-
-if(BUILD_JASP_CLIENT OR BUILD_JOSP_CLIENT)
-	# it's called JK2EXE but it really just means Singleplayer Exe
-	set(SPEngineDefines ${SharedDefines} "_JK2EXE") 
+if(USE_BUNDLED_SDL2)
+	if(BUILD_64BIT)
+		set(SPEngineLibraries
+			${SPEngineLibraries}
+			${OpenJKLibDir}/SDL2/lib/x64/SDL2main.lib
+			${OpenJKLibDir}/SDL2/lib/x64/SDL2.lib)
+	else()
+		set(SPEngineLibraries
+			${SPEngineLibraries}
+			${OpenJKLibDir}/SDL2/lib/x86/SDL2main.lib
+			${OpenJKLibDir}/SDL2/lib/x86/SDL2.lib)
+	endif()
 
 	set(SPEngineIncludeDirectories
 		${SPEngineIncludeDirectories}
-		${SharedDir}
-		${SPDir}
-		${GSLIncludeDirectory})
-
-	#    Dependencies
-	# OpenAL (is optionally included for Windows)
-	if(MSVC AND NOT WIN64)
-		if(USE_BUNDLED_OPENAL)
-			# There's a libs/OpenAL32.lib
-			# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
-			find_library(OpenALLibrary NAMES OpenAL32 PATHS "${OpenJKLibDir}")
-			if(NOT OpenALLibrary)
-				message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
-			endif(NOT OpenALLibrary)
-			set(SPEngineLibraries ${SPEngineLibraries} ${OpenALLibrary})
-		else()
-			find_package(OpenAL REQUIRED)
-			set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OPENAL_INCLUDE_DIR})
-			set(SPEngineLibraries ${SPEngineLibraries} ${OPENAL_LIBRARY})
-		endif()
-
-		set(SPEngineEAXFiles
-			"${SPDir}/client/eax/eax.h"
-			"${SPDir}/client/eax/EaxMan.h")
-		source_group("eax" FILES ${SPEngineEAXFiles})
-		set(SPEngineFiles ${SPEngineFiles} ${SPEngineEAXFiles})
-	endif()
-
-	if(USE_BUNDLED_SDL2)
-		if(BUILD_64BIT)
-			set(SPEngineLibraries
-				${SPEngineLibraries}
-				${OpenJKLibDir}/SDL2/lib/x64/SDL2main.lib
-				${OpenJKLibDir}/SDL2/lib/x64/SDL2.lib)
-		else()
-			set(SPEngineLibraries
-				${SPEngineLibraries}
-				${OpenJKLibDir}/SDL2/lib/x86/SDL2main.lib
-				${OpenJKLibDir}/SDL2/lib/x86/SDL2.lib)
-		endif()
-
-		set(SPEngineIncludeDirectories
-			${SPEngineIncludeDirectories}
-			${OpenJKLibDir}/SDL2/include)
-	else()
-		find_package(SDL2 REQUIRED)
-		set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${SDL2_INCLUDE_DIR})
-		set(SPEngineLibraries ${SPEngineLibraries} ${SDL2_LIBRARY})
-	endif()
+		${OpenJKLibDir}/SDL2/include)
+else()
+	find_package(SDL2 REQUIRED)
+	set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${SDL2_INCLUDE_DIR})
+	set(SPEngineLibraries ${SPEngineLibraries} ${SDL2_LIBRARY})
+endif()
 
 
-	# Source Files
-	set(SPEngineClientFiles
-		"${SPDir}/client/keys.h"
-		"${SPDir}/client/keycodes.h"
+# Source Files
+set(SPEngineClientFiles
+	"${SPDir}/client/keys.h"
+	"${SPDir}/client/keycodes.h"
 
-		"${SPDir}/client/cl_cgame.cpp"
-		"${SPDir}/client/cl_cin.cpp"
-		"${SPDir}/client/cl_console.cpp"
-		"${SPDir}/client/cl_input.cpp"
-		"${SPDir}/client/cl_keys.cpp"
-		"${SPDir}/client/cl_main.cpp"
-		"${SPDir}/client/cl_mp3.cpp"
-		"${SPDir}/client/cl_parse.cpp"
-		"${SPDir}/client/cl_scrn.cpp"
-		"${SPDir}/client/cl_ui.cpp"
-		"${SPDir}/client/cl_mp3.h"
-		"${SPDir}/client/client.h"
-		"${SPDir}/client/client_ui.h"
+	"${SPDir}/client/cl_cgame.cpp"
+	"${SPDir}/client/cl_cin.cpp"
+	"${SPDir}/client/cl_console.cpp"
+	"${SPDir}/client/cl_input.cpp"
+	"${SPDir}/client/cl_keys.cpp"
+	"${SPDir}/client/cl_main.cpp"
+	"${SPDir}/client/cl_mp3.cpp"
+	"${SPDir}/client/cl_parse.cpp"
+	"${SPDir}/client/cl_scrn.cpp"
+	"${SPDir}/client/cl_ui.cpp"
+	"${SPDir}/client/cl_mp3.h"
+	"${SPDir}/client/client.h"
+	"${SPDir}/client/client_ui.h"
 
-		"${SPDir}/client/snd_ambient.cpp"
-		"${SPDir}/client/snd_dma.cpp"
-		"${SPDir}/client/snd_mem.cpp"
-		"${SPDir}/client/snd_mix.cpp"
-		"${SPDir}/client/snd_music.cpp"
-		"${SPDir}/client/snd_ambient.h"
-		"${SPDir}/client/snd_local.h"
-		"${SPDir}/client/snd_music.h"
-		"${SPDir}/client/snd_public.h"
+	"${SPDir}/client/snd_ambient.cpp"
+	"${SPDir}/client/snd_dma.cpp"
+	"${SPDir}/client/snd_mem.cpp"
+	"${SPDir}/client/snd_mix.cpp"
+	"${SPDir}/client/snd_music.cpp"
+	"${SPDir}/client/snd_ambient.h"
+	"${SPDir}/client/snd_local.h"
+	"${SPDir}/client/snd_music.h"
+	"${SPDir}/client/snd_public.h"
 
-		"${SPDir}/client/vmachine.cpp"
-		"${SPDir}/client/vmachine.h")
-	source_group("client" FILES ${SPEngineClientFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineClientFiles})
+	"${SPDir}/client/vmachine.cpp"
+	"${SPDir}/client/vmachine.h")
+source_group("client" FILES ${SPEngineClientFiles})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineClientFiles})
 
-	set(SPEngineCommonFiles
-		"${SPDir}/qcommon/cm_load.cpp"
-		"${SPDir}/qcommon/cm_patch.cpp"
-		"${SPDir}/qcommon/cm_polylib.cpp"
-		"${SPDir}/qcommon/cm_test.cpp"
-		"${SPDir}/qcommon/cm_trace.cpp"
-		"${SPDir}/qcommon/cm_local.h"
-		"${SPDir}/qcommon/cm_patch.h"
-		"${SPDir}/qcommon/cm_polylib.h"
-		"${SPDir}/qcommon/cm_public.h"
+set(SPEngineCommonFiles
+	"${SPDir}/qcommon/cm_load.cpp"
+	"${SPDir}/qcommon/cm_patch.cpp"
+	"${SPDir}/qcommon/cm_polylib.cpp"
+	"${SPDir}/qcommon/cm_test.cpp"
+	"${SPDir}/qcommon/cm_trace.cpp"
+	"${SPDir}/qcommon/cm_local.h"
+	"${SPDir}/qcommon/cm_patch.h"
+	"${SPDir}/qcommon/cm_polylib.h"
+	"${SPDir}/qcommon/cm_public.h"
 
-		"${SPDir}/qcommon/cmd.cpp"
-		"${SPDir}/qcommon/common.cpp"
-		"${SPDir}/qcommon/cvar.cpp"
+	"${SPDir}/qcommon/cmd.cpp"
+	"${SPDir}/qcommon/common.cpp"
+	"${SPDir}/qcommon/cvar.cpp"
 
-		"${SPDir}/qcommon/files.cpp"
+	"${SPDir}/qcommon/files.cpp"
 
-		"${SPDir}/qcommon/md4.cpp"
-		"${SPDir}/qcommon/msg.cpp"
-		"${SPDir}/qcommon/net_chan.cpp"
+	"${SPDir}/qcommon/md4.cpp"
+	"${SPDir}/qcommon/msg.cpp"
+	"${SPDir}/qcommon/net_chan.cpp"
 
-		"${SPDir}/qcommon/q_shared.cpp"
-		"${SPDir}/qcommon/q_shared.h"
+	"${SPDir}/qcommon/q_shared.cpp"
+	"${SPDir}/qcommon/q_shared.h"
 
-		"${SPDir}/qcommon/sstring.h"
-		"${SPDir}/qcommon/stringed_ingame.cpp"
-		"${SPDir}/qcommon/stringed_interface.cpp"
-		"${SPDir}/qcommon/stringed_ingame.h"
-		"${SPDir}/qcommon/stringed_interface.h"
+	"${SPDir}/qcommon/sstring.h"
+	"${SPDir}/qcommon/stringed_ingame.cpp"
+	"${SPDir}/qcommon/stringed_interface.cpp"
+	"${SPDir}/qcommon/stringed_ingame.h"
+	"${SPDir}/qcommon/stringed_interface.h"
 
-		"${SPDir}/qcommon/strip.cpp"
-		"${SPDir}/qcommon/persistence.cpp"
-		"${SPDir}/qcommon/tags.h"
-		"${SPDir}/qcommon/z_memman_pc.cpp"
-		"${SPDir}/qcommon/qfiles.h"
-		"${SPDir}/qcommon/qcommon.h"
-		"${SPDir}/qcommon/stv_version.h"
-		"${SPDir}/qcommon/timing.h"
-		"${SPDir}/qcommon/MiniHeap.h"
+	"${SPDir}/qcommon/strip.cpp"
+	"${SPDir}/qcommon/persistence.cpp"
+	"${SPDir}/qcommon/tags.h"
+	"${SPDir}/qcommon/z_memman_pc.cpp"
+	"${SPDir}/qcommon/qfiles.h"
+	"${SPDir}/qcommon/qcommon.h"
+	"${SPDir}/qcommon/stv_version.h"
+	"${SPDir}/qcommon/timing.h"
+	"${SPDir}/qcommon/MiniHeap.h"
 
-		"${SPDir}/qcommon/ojk_i_saved_game.h"
-		"${SPDir}/qcommon/ojk_saved_game.h"
-		"${SPDir}/qcommon/ojk_saved_game.cpp"
-		"${SPDir}/qcommon/ojk_saved_game_helper.h"
-		"${SPDir}/qcommon/ojk_saved_game_helper_fwd.h"
-		"${SPDir}/qcommon/ojk_scope_guard.h"
+	"${SPDir}/qcommon/ojk_i_saved_game.h"
+	"${SPDir}/qcommon/ojk_saved_game.h"
+	"${SPDir}/qcommon/ojk_saved_game.cpp"
+	"${SPDir}/qcommon/ojk_saved_game_helper.h"
+	"${SPDir}/qcommon/ojk_saved_game_helper_fwd.h"
+	"${SPDir}/qcommon/ojk_scope_guard.h"
 
-		${SharedCommonFiles})
-	source_group("common" FILES ${SPEngineCommonFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineCommonFiles})
-	
-	set(SPEngineCommonSafeFiles
-		"${SharedDir}/qcommon/safe/files.cpp"
-		"${SharedDir}/qcommon/safe/files.h"
-		${SharedCommonSafeFiles}
-		"${SPDir}/qcommon/safe/memory.h")
-	source_group("common/safe" FILES ${SPEngineCommonSafeFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineCommonSafeFiles})
+	${SharedCommonFiles})
+source_group("common" FILES ${SPEngineCommonFiles})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineCommonFiles})
 
-
-	# Server files
-	set(SPEngineServerFiles
-		"${SPDir}/server/exe_headers.cpp"
-		"${SPDir}/server/sv_ccmds.cpp"
-		"${SPDir}/server/sv_client.cpp"
-		"${SPDir}/server/sv_game.cpp"
-		"${SPDir}/server/sv_init.cpp"
-		"${SPDir}/server/sv_main.cpp"
-		"${SPDir}/server/sv_savegame.cpp"
-		"${SPDir}/server/sv_snapshot.cpp"
-		"${SPDir}/server/sv_world.cpp"
-		"${SPDir}/server/exe_headers.h"
-		"${SPDir}/server/server.h")
-	source_group("server" FILES ${SPEngineServerFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineServerFiles})
+set(SPEngineCommonSafeFiles
+	"${SharedDir}/qcommon/safe/files.cpp"
+	"${SharedDir}/qcommon/safe/files.h"
+	${SharedCommonSafeFiles}
+	"${SPDir}/qcommon/safe/memory.h")
+source_group("common/safe" FILES ${SPEngineCommonSafeFiles})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineCommonSafeFiles})
 
 
-	# Game files
-	set(SPEngineGameFiles
-		"${SPDir}/game/genericparser2.cpp"
-		"${SPDir}/game/channels.h"
-		"${SPDir}/game/anims.h"
-		"${SPDir}/game/b_public.h"
-		"${SPDir}/game/bg_public.h"
-		"${SPDir}/game/bset.h"
-		"${SPDir}/game/bstate.h"
-		"${SPDir}/game/common_headers.h"
-		"${SPDir}/game/g_functions.h"
-		"${SPDir}/game/g_items.h"
-		"${SPDir}/game/g_local.h"
-		"${SPDir}/game/g_nav.h"
-		"${SPDir}/game/g_public.h"
-		"${SPDir}/game/g_shared.h"
-		"${SPDir}/game/genericparser2.h"
-		"${SPDir}/game/statindex.h"
-		"${SPDir}/game/teams.h"
-		"${SPDir}/game/weapons.h"
-		"${SPDir}/game/surfaceflags.h"
-		"${SPDir}/game/ghoul2_shared.h")
-	source_group("game" FILES ${SPEngineGameFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineGameFiles})
+# Server files
+set(SPEngineServerFiles
+	"${SPDir}/server/exe_headers.cpp"
+	"${SPDir}/server/sv_ccmds.cpp"
+	"${SPDir}/server/sv_client.cpp"
+	"${SPDir}/server/sv_game.cpp"
+	"${SPDir}/server/sv_init.cpp"
+	"${SPDir}/server/sv_main.cpp"
+	"${SPDir}/server/sv_savegame.cpp"
+	"${SPDir}/server/sv_snapshot.cpp"
+	"${SPDir}/server/sv_world.cpp"
+	"${SPDir}/server/exe_headers.h"
+	"${SPDir}/server/server.h")
+source_group("server" FILES ${SPEngineServerFiles})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineServerFiles})
 
 
-	# MP3 files
-	set(SPEngineMP3Files
-		"${SPDir}/mp3code/cdct.c"
-		"${SPDir}/mp3code/csbt.c"
-		"${SPDir}/mp3code/csbtb.c"
-		"${SPDir}/mp3code/csbtl3.c"
-		"${SPDir}/mp3code/cup.c"
-		"${SPDir}/mp3code/cupini.c"
-		"${SPDir}/mp3code/cupl1.c"
-		"${SPDir}/mp3code/cupl3.c"
-		"${SPDir}/mp3code/cwin.c"
-		"${SPDir}/mp3code/cwinb.c"
-		"${SPDir}/mp3code/cwinm.c"
-		"${SPDir}/mp3code/hwin.c"
-		"${SPDir}/mp3code/l3dq.c"
-		"${SPDir}/mp3code/l3init.c"
-		"${SPDir}/mp3code/mdct.c"
-		"${SPDir}/mp3code/mhead.c"
-		"${SPDir}/mp3code/msis.c"
-		"${SPDir}/mp3code/towave.c"
-		"${SPDir}/mp3code/uph.c"
-		"${SPDir}/mp3code/upsf.c"
-		"${SPDir}/mp3code/wavep.c"
-		"${SPDir}/mp3code/config.h"
-		"${SPDir}/mp3code/htable.h"
-		"${SPDir}/mp3code/jdw.h"
-		"${SPDir}/mp3code/l3.h"
-		"${SPDir}/mp3code/mhead.h"
-		"${SPDir}/mp3code/mp3struct.h"
-		"${SPDir}/mp3code/port.h"
-		"${SPDir}/mp3code/small_header.h"
-		"${SPDir}/mp3code/tableawd.h")
-	source_group("mp3" FILES ${SPEngineMP3Files})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineMP3Files})
-
-	set(SPEngineRendererFiles
-		"${SPDir}/rd-common/mdx_format.h"
-		"${SPDir}/rd-common/tr_public.h"
-		"${SPDir}/rd-common/tr_types.h")
-	source_group("renderer" FILES ${SPEngineRendererFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineRendererFiles})
-
-	# UI files
-	set(SPEngineUIFiles
-		"${SPDir}/ui/ui_atoms.cpp"
-		"${SPDir}/ui/ui_connect.cpp"
-		"${SPDir}/ui/ui_main.cpp"
-		"${SPDir}/ui/ui_saber.cpp"
-		"${SPDir}/ui/ui_shared.cpp"
-		"${SPDir}/ui/ui_syscalls.cpp"
-		"${SPDir}/ui/gameinfo.h"
-		"${SPDir}/ui/menudef.h"
-		"${SPDir}/ui/ui_local.h"
-		"${SPDir}/ui/ui_public.h"
-		"${SPDir}/ui/ui_shared.h")
-	source_group("ui" FILES ${SPEngineUIFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineUIFiles})
+# Game files
+set(SPEngineGameFiles
+	"${SPDir}/game/genericparser2.cpp"
+	"${SPDir}/game/channels.h"
+	"${SPDir}/game/anims.h"
+	"${SPDir}/game/b_public.h"
+	"${SPDir}/game/bg_public.h"
+	"${SPDir}/game/bset.h"
+	"${SPDir}/game/bstate.h"
+	"${SPDir}/game/common_headers.h"
+	"${SPDir}/game/g_functions.h"
+	"${SPDir}/game/g_items.h"
+	"${SPDir}/game/g_local.h"
+	"${SPDir}/game/g_nav.h"
+	"${SPDir}/game/g_public.h"
+	"${SPDir}/game/g_shared.h"
+	"${SPDir}/game/genericparser2.h"
+	"${SPDir}/game/statindex.h"
+	"${SPDir}/game/teams.h"
+	"${SPDir}/game/weapons.h"
+	"${SPDir}/game/surfaceflags.h"
+	"${SPDir}/game/ghoul2_shared.h")
+source_group("game" FILES ${SPEngineGameFiles})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineGameFiles})
 
 
-	# Ghoul2 files
-	set(SPEngineGhoul2Files
-		"${SPDir}/ghoul2/G2.h"
-		"${SPDir}/ghoul2/ghoul2_gore.h")
-	source_group("ghoul2" FILES ${SPEngineGhoul2Files})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineGhoul2Files})
+# MP3 files
+set(SPEngineMP3Files
+	"${SPDir}/mp3code/cdct.c"
+	"${SPDir}/mp3code/csbt.c"
+	"${SPDir}/mp3code/csbtb.c"
+	"${SPDir}/mp3code/csbtl3.c"
+	"${SPDir}/mp3code/cup.c"
+	"${SPDir}/mp3code/cupini.c"
+	"${SPDir}/mp3code/cupl1.c"
+	"${SPDir}/mp3code/cupl3.c"
+	"${SPDir}/mp3code/cwin.c"
+	"${SPDir}/mp3code/cwinb.c"
+	"${SPDir}/mp3code/cwinm.c"
+	"${SPDir}/mp3code/hwin.c"
+	"${SPDir}/mp3code/l3dq.c"
+	"${SPDir}/mp3code/l3init.c"
+	"${SPDir}/mp3code/mdct.c"
+	"${SPDir}/mp3code/mhead.c"
+	"${SPDir}/mp3code/msis.c"
+	"${SPDir}/mp3code/towave.c"
+	"${SPDir}/mp3code/uph.c"
+	"${SPDir}/mp3code/upsf.c"
+	"${SPDir}/mp3code/wavep.c"
+	"${SPDir}/mp3code/config.h"
+	"${SPDir}/mp3code/htable.h"
+	"${SPDir}/mp3code/jdw.h"
+	"${SPDir}/mp3code/l3.h"
+	"${SPDir}/mp3code/mhead.h"
+	"${SPDir}/mp3code/mp3struct.h"
+	"${SPDir}/mp3code/port.h"
+	"${SPDir}/mp3code/small_header.h"
+	"${SPDir}/mp3code/tableawd.h")
+source_group("mp3" FILES ${SPEngineMP3Files})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineMP3Files})
+
+set(SPEngineRendererFiles
+	"${SPDir}/rd-common/mdx_format.h"
+	"${SPDir}/rd-common/tr_public.h"
+	"${SPDir}/rd-common/tr_types.h")
+source_group("renderer" FILES ${SPEngineRendererFiles})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineRendererFiles})
+
+# UI files
+set(SPEngineUIFiles
+	"${SPDir}/ui/ui_atoms.cpp"
+	"${SPDir}/ui/ui_connect.cpp"
+	"${SPDir}/ui/ui_main.cpp"
+	"${SPDir}/ui/ui_saber.cpp"
+	"${SPDir}/ui/ui_shared.cpp"
+	"${SPDir}/ui/ui_syscalls.cpp"
+	"${SPDir}/ui/gameinfo.h"
+	"${SPDir}/ui/menudef.h"
+	"${SPDir}/ui/ui_local.h"
+	"${SPDir}/ui/ui_public.h"
+	"${SPDir}/ui/ui_shared.h")
+source_group("ui" FILES ${SPEngineUIFiles})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineUIFiles})
 
 
-	# Server files
-	set(SPEngineCGameFiles
-		"${SPDir}/cgame/cg_public.h"
-		"${SPDir}/cgame/animtable.h")
-	source_group("cgame" FILES ${SPEngineCGameFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineCGameFiles})
+# Ghoul2 files
+set(SPEngineGhoul2Files
+	"${SPDir}/ghoul2/G2.h"
+	"${SPDir}/ghoul2/ghoul2_gore.h")
+source_group("ghoul2" FILES ${SPEngineGhoul2Files})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineGhoul2Files})
 
-	if(WIN32)
-		set(SPEngineWin32Files
-			"${SPDir}/win32/resource.h"
-			"${SPDir}/win32/winquake.rc")
-		source_group("win32" FILES ${SPEngineWin32Files})
-		set(SPEngineFiles ${SPEngineFiles} ${SPEngineWin32Files})
-	endif()
 
+# Server files
+set(SPEngineCGameFiles
+	"${SPDir}/cgame/cg_public.h"
+	"${SPDir}/cgame/animtable.h")
+source_group("cgame" FILES ${SPEngineCGameFiles})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineCGameFiles})
+
+if(WIN32)
+	set(SPEngineWin32Files
+		"${SPDir}/win32/resource.h"
+		"${SPDir}/win32/winquake.rc")
+	source_group("win32" FILES ${SPEngineWin32Files})
+	set(SPEngineFiles ${SPEngineFiles} ${SPEngineWin32Files})
+endif()
+
+set(SPEngineSysFiles
+	"${SharedDir}/sys/sys_main.cpp"
+	"${SharedDir}/sys/sys_event.cpp"
+	"${SharedDir}/sys/sys_local.h"
+	"${SharedDir}/sys/sys_public.h"
+	"${SharedDir}/sys/sys_loadlib.h"
+	"${SharedDir}/sys/con_local.h"
+	"${SharedDir}/sys/con_log.cpp"
+	"${SharedDir}/sdl/sdl_qgl.h"
+	"${SharedDir}/sdl/sdl_sound.cpp"
+	"${SharedDir}/sdl/sdl_input.cpp"
+	"${SharedDir}/sdl/sdl_window.cpp"
+	"${SharedDir}/sdl/sdl_icon.h")
+
+if(WIN32)
 	set(SPEngineSysFiles
-		"${SharedDir}/sys/sys_main.cpp"
-		"${SharedDir}/sys/sys_event.cpp"
-		"${SharedDir}/sys/sys_local.h"
-		"${SharedDir}/sys/sys_public.h"
-		"${SharedDir}/sys/sys_loadlib.h"
-		"${SharedDir}/sys/con_local.h"
-		"${SharedDir}/sys/con_log.cpp"
-		"${SharedDir}/sdl/sdl_qgl.h"
-		"${SharedDir}/sdl/sdl_sound.cpp"
-		"${SharedDir}/sdl/sdl_input.cpp"
-		"${SharedDir}/sdl/sdl_window.cpp"
-		"${SharedDir}/sdl/sdl_icon.h")
+		${SPEngineSysFiles}
+		"${SharedDir}/sys/sys_win32.cpp"
+		"${SharedDir}/sys/con_passive.cpp")
+else()
+	set(SPEngineSysFiles
+		${SPEngineSysFiles}
+		"${SharedDir}/sys/sys_unix.cpp"
+		"${SharedDir}/sys/con_tty.cpp")
+endif()
 
-	if(WIN32)
-		set(SPEngineSysFiles
-			${SPEngineSysFiles}
-			"${SharedDir}/sys/sys_win32.cpp"
-			"${SharedDir}/sys/con_passive.cpp")
-	else()
-		set(SPEngineSysFiles
-			${SPEngineSysFiles}
-			"${SharedDir}/sys/sys_unix.cpp"
-			"${SharedDir}/sys/con_tty.cpp")
-	endif()
+source_group("sys" FILES ${SPEngineSysFiles})
+set(SPEngineFiles ${SPEngineFiles} ${SPEngineSysFiles})
 
-	source_group("sys" FILES ${SPEngineSysFiles})
-	set(SPEngineFiles ${SPEngineFiles} ${SPEngineSysFiles})
+list(APPEND SPEngineLibraries MINIZIP::MINIZIP)
 
-	list(APPEND SPEngineLibraries MINIZIP::MINIZIP)
+if(BUILD_JASP_CLIENT)
+	add_game_application(
+		PROJECT ${SPEngine}
+		LABEL "JASP Client"
+		DIRNAME ${SPDir}
+		INSTALL_DIR ${JKAInstallDir}
+		COMPONENT ${JKASPClientComponent}
+		FILES ${SPEngineFiles}
+		INCLUDES ${SPEngineIncludeDirectories}
+		LIBS ${SPEngineLibraries}
+		DEFINES ${SPEngineDefines})
+endif()
 
-	if(BUILD_JASP_CLIENT)
-		add_game_application(
-			PROJECT ${SPEngine}
-			LABEL "JASP Client"
-			DIRNAME ${SPDir}
-			INSTALL_DIR ${JKAInstallDir}
-			COMPONENT ${JKASPClientComponent}
-			FILES ${SPEngineFiles}
-			INCLUDES ${SPEngineIncludeDirectories}
-			LIBS ${SPEngineLibraries}
-			DEFINES ${SPEngineDefines})
-	endif()
-
-	if(BUILD_JOSP_CLIENT)
-		add_game_application(
-			PROJECT ${JK2SPEngine}
-			LABEL "JOSP Client"
-			DIRNAME ${JK2SPDir}
-			INSTALL_DIR ${JK2InstallDir}
-			COMPONENT ${JK2SPClientComponent}
-			FILES ${SPEngineFiles}
-			INCLUDES ${SPEngineIncludeDirectories}
-			LIBS ${SPEngineLibraries}
-			DEFINES ${SPEngineDefines} "JK2_MODE")
-	endif()
+if(BUILD_JOSP_CLIENT)
+	add_game_application(
+		PROJECT ${JK2SPEngine}
+		LABEL "JOSP Client"
+		DIRNAME ${JK2SPDir}
+		INSTALL_DIR ${JK2InstallDir}
+		COMPONENT ${JK2SPClientComponent}
+		FILES ${SPEngineFiles}
+		INCLUDES ${SPEngineIncludeDirectories}
+		LIBS ${SPEngineLibraries}
+		DEFINES ${SPEngineDefines} "JK2_MODE")
 endif()
