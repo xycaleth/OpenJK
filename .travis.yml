@@ -13,6 +13,7 @@ matrix:
 
     # macOS
     - os: osx
+      osx_image: xcode6.4
       compiler: clang
 
     # Linux x64 Debug

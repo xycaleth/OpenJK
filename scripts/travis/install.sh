@@ -13,6 +13,7 @@ if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
 fi
 
 sudo apt-get update -yq
+sudo apt-get install cmake3
 
 # This is what Travis does using the apt-addon. Didn't want to duplicate a load
 # of packages in the .travis.yml file though so we have this script instead.
