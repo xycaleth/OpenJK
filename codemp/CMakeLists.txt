@@ -474,10 +474,10 @@ if(BUILD_JAMP_SERVER)
 	add_executable(${MPDed} ${MPDedFiles})
 
 	set_target_properties(${MPDed} PROPERTIES PROJECT_LABEL "MP Dedicated Server")
-	target_link_libraries(${MPDed} ${MPDedLibraries})
-	target_compile_options(${MPDed} PUBLIC ${OPENJK_VISIBILITY_FLAGS})
-	target_compile_definitions(${MPDed} PUBLIC ${MPDedDefines})
-	target_include_directories(${MPDed} PUBLIC ${MPDedIncludeDirectories})
+	target_link_libraries(${MPDed} PRIVATE ${MPDedLibraries})
+	target_compile_options(${MPDed} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
+	target_compile_definitions(${MPDed} PRIVATE ${MPDedDefines})
+	target_include_directories(${MPDed} PRIVATE ${MPDedIncludeDirectories})
 
 	install(TARGETS ${MPDed}
 		RUNTIME
