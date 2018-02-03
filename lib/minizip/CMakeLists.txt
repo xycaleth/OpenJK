@@ -16,7 +16,7 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Minizip  is built as a static relocatable library, and linked into any target
+# Minizip is built as a static relocatable library, and linked into any target
 # that requires it.  Other targets in OpenJK that consume need to depend on the
 # target MINIZIP::MINIZIP.
 

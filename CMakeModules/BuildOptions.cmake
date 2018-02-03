@@ -22,13 +22,11 @@ cmake_dependent_option(BUILD_JOSP_GAME		"Create Jedi Outcast SP game project"			
 cmake_dependent_option(BUILD_JOSP_RENDERER	"Create Jedi Outcast SP default renderer project"	OFF "BUILD_JOSP" OFF)
 
 if(WIN32)
-	set(USE_BUNDLED_OPENAL_DEFAULT ON)
 	set(USE_BUNDLED_ZLIB_DEFAULT ON)
 	set(USE_BUNDLED_LIBPNG_DEFAULT ON)
 	set(USE_BUNDLED_LIBJPEG_DEFAULT ON)
 	set(USE_BUNDLED_SDL2_DEFAULT ON)
 else()
-	set(USE_BUNDLED_OPENAL_DEFAULT OFF)
 	set(USE_BUNDLED_ZLIB OFF)
 	set(USE_BUNDLED_LIBPNG OFF)
 	if(APPLE)
@@ -38,11 +36,12 @@ else()
 	endif()
 	set(USE_BUNDLED_SDL2_DEFAULT OFF)
 endif()
-option(USE_BUNDLED_OPENAL	"Use bundled OpenAL"  ${USE_BUNDLED_OPENAL_DEFAULT})
 option(USE_BUNDLED_ZLIB		"Use bundled zlib"    ${USE_BUNDLED_ZLIB_DEFAULT})
 option(USE_BUNDLED_PNG		"Use bundled libpng"  ${USE_BUNDLED_LIBPNG_DEFAULT})
 option(USE_BUNDLED_JPEG		"Use bundled libjpeg" ${USE_BUNDLED_LIBJPEG_DEFAULT})
 option(USE_BUNDLED_SDL2		"Use bundled SDL2"    ${USE_BUNDLED_SDL2_DEFAULT})
+
+cmake_dependent_option(USE_BUNDLED_OPENAL	"Use bundled OpenAL" ON "WIN32" OFF)
 
 cmake_dependent_option(BUILD_APP_BUNDLES	"Build .app bundles for executables" ON "APPLE" OFF)
 

@@ -213,6 +213,7 @@ if(BUILD_JAMP_CLIENT)
 	endif()
 
 	# OpenAL (is optionally included for Windows)
+	# TODO: Move this into a proper cmake file
 	if(MSVC AND NOT WIN64)
 		if(USE_BUNDLED_OPENAL)
 			# There's a libs/OpenAL32.lib
@@ -221,7 +222,7 @@ if(BUILD_JAMP_CLIENT)
 			find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKLibDir})
 			if(NOT OpenALLibrary)
 				message(FATAL_ERROR "USE_BUNDLED_OPENAL enabled, but lib/OpenAL32.lib not found!")
-			endif(NOT OpenALLibrary)
+			endif()
 			set(MPEngineLibraries ${MPEngineLibraries} ${OpenALLibrary})
 		else()
 			find_package(OpenAL REQUIRED)

@@ -18,8 +18,8 @@
 
 cmake_minimum_required(VERSION 3.1)
 
-set(ProjectName "OpenJK" CACHE STRING "Project Name")
-project(${ProjectName})
+option(PROJECT_NAME "Project Name" "OpenJK")
+project(${PROJECT_NAME})
 
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_SOURCE_DIR}/CMakeModules")
 
