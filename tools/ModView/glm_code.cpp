@@ -5,7 +5,7 @@
 #include "includes.h"
 //
 #include "anims.h"
-#include "R_Model.h"
+#include "r_model.h"
 #include "mdx_format.h"
 #include "sequence.h"
 #include "parser.h"
@@ -1242,7 +1242,7 @@ void AddPointToBounds (const vec3_t v, vec3_t mins, vec3_t maxs)
 	}
 }
 
-#include "MatComp.h"
+#include "matcomp.h"
 
 extern void Multiply_4x4Matrix(mdxBone4_t *out, mdxBone4_t *in2, mdxBone4_t *in);
 extern void From3x4(mdxaBone_t *mat, mdxBone4_t *out);

@@ -8,7 +8,7 @@
 #include "r_common.h"
 #include "textures.h"
 //
-#include "R_Model.h"
+#include "r_model.h"
 #include "StringUtils.h"
 
 

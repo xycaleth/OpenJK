@@ -4,7 +4,7 @@
 //
 #include "stdafx.h"
 #include "includes.h"
-#include "R_Common.h"
+#include "r_common.h"
 //
 #include "r_mdr.h"
 

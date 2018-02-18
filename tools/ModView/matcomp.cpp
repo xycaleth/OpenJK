@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 //
-#include "MatComp.h"
+#include "matcomp.h"
 
 #define MC_MASK_X ((1<<(MC_BITS_X))-1)
 #define MC_MASK_Y ((1<<(MC_BITS_Y))-1)

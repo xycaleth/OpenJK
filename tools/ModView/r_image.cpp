@@ -4,11 +4,11 @@
 
 #include "stdafx.h"
 #include "includes.h"
-#include "R_Common.h"
+#include "r_common.h"
 #include "jpeg_interface.h"
 #include "png/png.h"
 //
-#include "R_Image.h"
+#include "r_image.h"
 #include "StringUtils.h"
 
 /*

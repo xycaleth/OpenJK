@@ -7,7 +7,7 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include "R_Common.h"
+#include "r_common.h"
 
 
 void ScanAndLoadShaderFiles( void );

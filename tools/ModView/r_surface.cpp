@@ -4,7 +4,7 @@
 //
 #include "stdafx.h"
 #include "includes.h"
-#include "R_Common.h"
+#include "r_common.h"
 #include "text.h"
 //
 #include "r_surface.h"

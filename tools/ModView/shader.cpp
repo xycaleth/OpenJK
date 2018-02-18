@@ -6,8 +6,8 @@
 #include "stdafx.h"
 
 #include "includes.h"
-#include "R_Common.h"
-#include "R_Image.h"
+#include "r_common.h"
+#include "r_image.h"
 #include "files.h"
 #include "shader.h"
 #include "StringUtils.h"

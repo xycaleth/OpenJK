@@ -7,7 +7,7 @@
 #include <QtCore/QDateTime>
 #include <QtCore/QFileInfo>
 #include "includes.h"
-#include "R_Image.h"
+#include "r_image.h"
 #include "stl.h"
 #include "shader.h"
 #include "skins.h"

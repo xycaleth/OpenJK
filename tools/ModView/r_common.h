@@ -327,11 +327,11 @@ extern trGlobals_t tr;
 extern refimport_t ri;
 
 
-#include "R_MD3.h"
-#include "R_MDR.h"
-#include "R_GLM.h"
+#include "r_md3.h"
+#include "r_mdr.h"
+#include "r_glm.h"
 #include "shader.h"
-#include "R_Surface.h"
+#include "r_surface.h"
 
 
 
