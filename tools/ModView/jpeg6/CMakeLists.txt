@@ -1,0 +1,34 @@
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+add_library(jpeg
+	STATIC
+	jconfig.h
+	jdct.h
+	jdhuff.h
+	jerror.h
+	jinclude.h
+	jmemsys.h
+	jmorecfg.h
+	jpegint.h
+	jpeglib.h
+	jversion.h
+	jcomapi.c
+	jdapimin.c
+	jdapistd.c
+	jdatasrc.c
+	jdcoefct.c
+	jdcolor.c
+	jddctmgr.c
+	jdhuff.c
+	jdinput.c
+	jdmainct.c
+	jdmarker.c
+	jdmaster.c
+	jdpostct.c
+	jdsample.c
+	jdtrans.c
+	jerror.c
+	jidctflt.c
+	jmemmgr.c
+	jmemnobs.c
+	jutils.c)
