@@ -11,10 +11,6 @@ int main ( int argc, char *argv[] )
 {
     QApplication app (argc, argv);
     QSettings settings ("OpenJK", "ModView");
-    
-#if defined(__APPLE__) && defined(__MACH__)
-    //app.setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
-#endif
 
     App_OnceOnly();
     FakeCvars_OnceOnlyInit();
@@ -22,7 +18,7 @@ int main ( int argc, char *argv[] )
     MainForm w (settings);
     w.show();
 
-    int errorCode = app.exec();
+    const int errorCode = app.exec();
 
     Media_Delete();
     FakeCvars_Shutdown();

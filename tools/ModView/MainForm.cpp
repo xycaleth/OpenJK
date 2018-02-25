@@ -269,8 +269,10 @@ void MainForm::OnNextFrame()
     ModelList_StepFrame (1);
 }
 
+bool InitFileSystem(const std::string& gameDataPath, const std::string& baseDir);
 void MainForm::OnPrevFrame()
 {
+	InitFileSystem("/Users/alex/Games/JKA", "base");
     ModelList_StepFrame (-1);
 }
 

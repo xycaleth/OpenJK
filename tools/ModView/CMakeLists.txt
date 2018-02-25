@@ -9,9 +9,8 @@ find_package(Qt5Widgets REQUIRED)
 find_package(Qt5Gui REQUIRED)
 find_package(Qt5OpenGL REQUIRED)
 find_package(OpenGL REQUIRED)
-
-add_subdirectory(zlib)
-add_subdirectory(jpeg6)
+find_package(zlib REQUIRED)
+find_package(jpeg REQUIRED)
 
 set(MODVIEW_GUI_FILES
 	GUIHelpers.h
@@ -130,11 +129,20 @@ if(MSVC)
 		WIN32_LEAN_AND_MEAN)
 endif()
 
+message(
+	${JPEG_LIBRARIES})
 target_link_libraries(ModView
 	PRIVATE
 	${OPENGL_LIBRARIES}
 	Qt5::OpenGL
 	Qt5::Widgets
 	Qt5::Gui
-	jpeg
-	zlib)
+	${ZLIB_LIBRARIES}
+	${JPEG_LIBRARIES})
+
+target_include_directories(ModView
+	PRIVATE
+	${JPEG_INCLUDE_DIR}
+	${ZLIB_INCLUDE_DIRS})
+
+

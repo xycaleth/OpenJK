@@ -6,7 +6,7 @@
 //#include "../renderer/tr_local.h"
 
 #include "png.h"
-#include "../zlib/zlib.h"
+#include <zlib.h>
 
 // Generic PNG file loading code
 

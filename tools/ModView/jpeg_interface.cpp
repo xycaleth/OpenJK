@@ -8,7 +8,7 @@
 //#include "tr_local.h"
 #include "jpeg_interface.h"
 
-#include "jpeg6/jpeglib.h"
+#include <jpeglib.h>
 
 void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height ) 
 {	
@@ -83,7 +83,7 @@ void LoadJPG( const char *filename, unsigned char **pic, int *width, int *height
 
 	  /* Step 2: specify data source (eg, a file) */
 
-	  jpeg_stdio_src(&cinfo, fbuffer);
+	  jpeg_mem_src(&cinfo, fbuffer, iBytesRead);
 
 	  /* Step 3: read file parameters with jpeg_read_header() */
 
