@@ -28,7 +28,7 @@ include(PlatformDefinitions)
 
 set(SPEngine "openjk_sp.${Architecture}")
 set(SPGame "jagame${Architecture}")
-set(SPRDVanillaRenderer "rdsp-vanilla_${Architecture}")
+set(SPVanillaRenderer "rdsp-vanilla_${Architecture}")
 set(MPEngine "openjk.${Architecture}")
 set(MPVanillaRenderer "rd-vanilla_${Architecture}")
 set(MPDed "openjkded.${Architecture}")
@@ -75,55 +75,27 @@ set(SharedCommonSafeFiles
 	"${SharedDir}/qcommon/safe/limited_vector.h")
 
 
-include(CMakeParseArguments)
-function(find_package_and_import)
-	set(oneValueArgs PACKAGE TARGET)
-	set(multiValueArgs LIBS INCLUDES)
-
-	cmake_parse_arguments(LOCAL "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-
-	find_package(${LOCAL_PACKAGE} REQUIRED)
-	if(NOT TARGET ${LOCAL_TARGET})
-		add_library(${LOCAL_TARGET} STATIC IMPORTED)
-		set_property(TARGET ${LOCAL_TARGET}
-			PROPERTY
-				INTERFACE_LINK_LIBRARIES ${LOCAL_LIBS}
-				INTERFACE_INCLUDE_DIRECTORIES ${LOCAL_INCLUDES})
-	endif()
-endfunction()
-
 if(USE_BUNDLED_JPEG)
 	add_subdirectory(lib/jpeg-9a)
 else()
-	find_package_and_import(
-		PACKAGE JPEG
-		TARGET JPEG::JPEG
-		LIBS ${JPEG_LIBRARIES}
-		INCLUDES ${JPEG_INCLUDE_DIR})
+	find_package(JPEG REQUIRED)
 endif()
 
 if(USE_BUNDLED_ZLIB)
 	add_subdirectory(lib/zlib)
 else()
-	find_package_and_import(
-		PACKAGE ZLIB
-		TARGET ZLIB::ZLIB
-		LIBS ${ZLIB_LIBRARIES}
-		INCLUDES ${ZLIB_INCLUDE_DIR})
+	find_package(ZLIB REQUIRED)
 endif()
 
 if(USE_BUNDLED_PNG)
 	add_subdirectory(lib/libpng)
 else()
-	find_package_and_import(
-		PACKAGE PNG
-		TARGET PNG::PNG
-		LIBS ${PNG_LIBRARIES}
-		INCLUDES ${PNG_INCLUDE_DIR})
+	find_package(PNG REQUIRED)
 endif()
 
 add_subdirectory(lib/minizip)
 
+include(CMakeParseArguments)
 function(add_mp_game_module)
 	set(oneValueArgs MODULE LABEL)
 	set(multiValueArgs FILES DEFINES INCLUDES)

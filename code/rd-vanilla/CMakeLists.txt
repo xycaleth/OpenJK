@@ -16,19 +16,19 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-set(SPRDVanillaRendererIncludeDirectories ${SPDir})
-set(SPRDVanillaRendererIncludeDirectories
+set(SPVanillaRendererIncludeDirectories ${SPDir})
+set(SPVanillaRendererIncludeDirectories
 	${SharedDir}
-	${SPRDVanillaRendererIncludeDirectories}
+	${SPVanillaRendererIncludeDirectories}
 	"${SPDir}/rd-common"
 	"${SPDir}/rd-vanilla"
 	"${GSLIncludeDirectory}")
 
 # Defines
-set(SPRDVanillaDefines ${SharedDefines} "RENDERER" "_JK2EXE")
+set(SPVanillaDefines ${SharedDefines} "RENDERER" "_JK2EXE")
 
 # GHOUL 2
-set(SPRDVanillaG2Files
+set(SPVanillaG2Files
 	"${SPDir}/ghoul2/G2.h"
 	"${SPDir}/ghoul2/ghoul2_gore.h"
 	"${SPDir}/rd-vanilla/G2_API.cpp"
@@ -36,12 +36,12 @@ set(SPRDVanillaG2Files
 	"${SPDir}/rd-vanilla/G2_bones.cpp"
 	"${SPDir}/rd-vanilla/G2_misc.cpp"
 	"${SPDir}/rd-vanilla/G2_surfaces.cpp")
-source_group("ghoul2" FILES ${SPRDVanillaG2Files})
-set(SPRDVanillaFiles ${SPRDVanillaFiles} ${SPRDVanillaG2Files})
+source_group("ghoul2" FILES ${SPVanillaG2Files})
+set(SPVanillaFiles ${SPVanillaFiles} ${SPVanillaG2Files})
 
 
 # Misc files
-set(SPRDVanillaCommonFiles
+set(SPVanillaCommonFiles
 	"${SPDir}/qcommon/matcomp.cpp"
 	"${SPDir}/qcommon/q_shared.cpp"
 	"${SPDir}/qcommon/q_shared.h"
@@ -52,18 +52,18 @@ set(SPRDVanillaCommonFiles
 	"${SPDir}/qcommon/ojk_scope_guard.h"
 	${SharedCommonFiles}
 	)
-source_group("common" FILES ${SPRDVanillaCommonFiles})
-set(SPRDVanillaFiles ${SPRDVanillaFiles} ${SPRDVanillaCommonFiles})
+source_group("common" FILES ${SPVanillaCommonFiles})
+set(SPVanillaFiles ${SPVanillaFiles} ${SPVanillaCommonFiles})
 
 # Misc files
-set(SPRDVanillaCommonSafeFiles
+set(SPVanillaCommonSafeFiles
 	${SharedCommonSafeFiles}
 	)
-source_group("common/safe" FILES ${SPRDVanillaCommonSafeFiles})
-set(SPRDVanillaFiles ${SPRDVanillaFiles} ${SPRDVanillaCommonSafeFiles})
+source_group("common/safe" FILES ${SPVanillaCommonSafeFiles})
+set(SPVanillaFiles ${SPVanillaFiles} ${SPVanillaCommonSafeFiles})
 
 # main files
-set(SPRDVanillaMainFiles
+set(SPVanillaMainFiles
 	"${SPDir}/rd-vanilla/glext.h"
 	"${SPDir}/rd-vanilla/qgl.h"
 	"${SPDir}/rd-vanilla/tr_arb.cpp"
@@ -99,10 +99,10 @@ set(SPRDVanillaMainFiles
 	"${SPDir}/rd-vanilla/tr_WorldEffects.cpp"
 	"${SPDir}/rd-vanilla/tr_WorldEffects.h"
 	)
-source_group("renderer" FILES ${SPRDVanillaMainFiles})
-set(SPRDVanillaFiles ${SPRDVanillaFiles} ${SPRDVanillaMainFiles})
+source_group("renderer" FILES ${SPVanillaMainFiles})
+set(SPVanillaFiles ${SPVanillaFiles} ${SPVanillaMainFiles})
 
-set(SPRDVanillaRdCommonFiles
+set(SPVanillaRdCommonFiles
 	"${SPDir}/rd-common/mdx_format.h"
 	"${SPDir}/rd-common/tr_common.h"
 	"${SPDir}/rd-common/tr_font.cpp"
@@ -114,22 +114,29 @@ set(SPRDVanillaRdCommonFiles
 	"${SPDir}/rd-common/tr_noise.cpp"
 	"${SPDir}/rd-common/tr_public.h"
 	"${SPDir}/rd-common/tr_types.h")
-source_group("rd-common" FILES ${SPRDVanillaRdCommonFiles})
-set(SPRDVanillaFiles ${SPRDVanillaFiles} ${SPRDVanillaRdCommonFiles})
+source_group("rd-common" FILES ${SPVanillaRdCommonFiles})
+set(SPVanillaFiles ${SPVanillaFiles} ${SPVanillaRdCommonFiles})
 
 find_package(OpenGL REQUIRED)
-set(SPRDVanillaRendererLibraries JPEG::JPEG PNG::PNG OpenGL::GL)
+list(APPEND SPVanillaRendererLibraries ${OPENGL_LIBRARIES})
+list(APPEND SPVanillaRendererIncludeDirectories ${OPENGL_INCLUDE_DIR})
 
-set(SPRDVanillaRendererIncludeDirectories ${SPRDVanillaRendererIncludeDirectories} ${OpenJKLibDir})
+list(APPEND SPVanillaRendererLibraries ${JPEG_LIBRARIES})
+list(APPEND SPVanillaRendererIncludeDirectories ${JPEGL_INCLUDE_DIR})
+
+list(APPEND SPVanillaRendererLibraries ${PNG_LIBRARIES})
+list(APPEND SPVanillaRendererIncludeDirectories ${PNG_INCLUDE_DIRS})
+
+list(APPEND SPVanillaRendererIncludeDirectories ${OpenJKLibDir})
 
 function(add_sp_renderer_project ProjectName Label EngineName InstallDir Component)
-	add_library(${ProjectName} MODULE ${SPRDVanillaFiles})
+	add_library(${ProjectName} MODULE ${SPVanillaFiles})
 
 	set_target_properties(${ProjectName} PROPERTIES PROJECT_LABEL ${Label})
-	target_link_libraries(${ProjectName} PRIVATE ${SPRDVanillaRendererLibraries})
+	target_link_libraries(${ProjectName} PRIVATE ${SPVanillaRendererLibraries})
 	target_compile_options(${ProjectName} PRIVATE ${OPENJK_VISIBILITY_FLAGS})
-	target_compile_definitions(${ProjectName} PRIVATE ${SPRDVanillaDefines})
-	target_include_directories(${ProjectName} PRIVATE ${SPRDVanillaRendererIncludeDirectories})
+	target_compile_definitions(${ProjectName} PRIVATE ${SPVanillaDefines})
+	target_include_directories(${ProjectName} PRIVATE ${SPVanillaRendererIncludeDirectories})
 
 	if(NOT MSVC)
 		set_target_properties(${ProjectName} PROPERTIES PREFIX "")
@@ -162,7 +169,7 @@ endfunction()
 
 if(BUILD_JASP_RENDERER)
 	add_sp_renderer_project(
-		${SPRDVanillaRenderer}
+		${SPVanillaRenderer}
 		"SP Vanilla Renderer"
 		${SPEngine}
 		${JKAInstallDir}
@@ -170,7 +177,7 @@ if(BUILD_JASP_RENDERER)
 endif()
 
 if(BUILD_JOSP_RENDERER)
-	set(SPRDVanillaDefines ${SPRDVanillaDefines} "JK2_MODE")
+	set(SPVanillaDefines ${SPVanillaDefines} "JK2_MODE")
 	add_sp_renderer_project(
 		${JK2SPVanillaRenderer}
 		"JK2 SP Vanilla Renderer"

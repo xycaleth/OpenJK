@@ -99,3 +99,11 @@ endif()
 set_property(TARGET bundled_libjpeg PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(JPEG::JPEG ALIAS bundled_libjpeg)
+
+get_property(JPEG_INCLUDE_DIR_ TARGET bundled_libjpeg PROPERTY INCLUDE_DIRECTORIES)
+set(JPEG_INCLUDE_DIR ${JPEG_INCLUDE_DIR_} CACHE INTERNAL "libjpeg include path")
+set(JPEG_LIBRARIES bundled_libjpeg CACHE INTERNAL "libjpeg library path")
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(JPEG DEFAULT_MSG JPEG_LIBRARIES JPEG_INCLUDE_DIR)
+mark_as_advanced(JPEG_LIBRARIES JPEG_INCLUDE_DIR)

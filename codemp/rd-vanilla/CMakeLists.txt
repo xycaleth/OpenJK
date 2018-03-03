@@ -98,9 +98,16 @@ source_group("common/safe" FILES ${MPVanillaRendererCommonSafeFiles})
 set(MPVanillaRendererFiles ${MPVanillaRendererFiles} ${MPVanillaRendererCommonSafeFiles})
 
 find_package(OpenGL REQUIRED)
-set(MPVanillaRendererLibraries JPEG::JPEG PNG::PNG OpenGL::GL)
+list(APPEND MPVanillaRendererLibraries ${OPENGL_LIBRARIES})
+list(APPEND MPVanillaRendererIncludeDirectories ${OPENGL_INCLUDE_DIR})
 
-set(MPVanillaRendererIncludeDirectories ${MPVanillaRendererIncludeDirectories} ${OpenJKLibDir})
+list(APPEND MPVanillaRendererLibraries ${JPEG_LIBRARIES})
+list(APPEND MPVanillaRendererIncludeDirectories ${JPEGL_INCLUDE_DIR})
+
+list(APPEND MPVanillaRendererLibraries ${PNG_LIBRARIES})
+list(APPEND MPVanillaRendererIncludeDirectories ${PNG_INCLUDE_DIRS})
+
+list(APPEND MPVanillaRendererIncludeDirectories ${MPVanillaRendererIncludeDirectories} ${OpenJKLibDir})
 
 add_library(${MPVanillaRenderer} MODULE ${MPVanillaRendererFiles})
 set_target_properties(${MPVanillaRenderer} PROPERTIES PROJECT_LABEL "MP Vanilla Renderer")

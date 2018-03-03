@@ -56,3 +56,11 @@ endif(MSVC)
 set_property(TARGET bundled_libpng PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(PNG::PNG ALIAS bundled_libpng)
+
+get_property(PNG_INCLUDE_DIRS_ TARGET bundled_libpng PROPERTY INCLUDE_DIRECTORIES)
+set(PNG_INCLUDE_DIRS ${PNG_INCLUDE_DIRS_} CACHE INTERNAL "libpng include path")
+set(PNG_LIBRARIES bundled_libpng CACHE INTERNAL "libpng library path")
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(PNG DEFAULT_MSG PNG_LIBRARIES PNG_INCLUDE_DIRS)
+mark_as_advanced(PNG_LIBRARIES PNG_INCLUDE_DIRS)
