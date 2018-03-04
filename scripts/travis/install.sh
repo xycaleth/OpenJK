@@ -8,18 +8,17 @@ shift 1
 
 # macOS is special
 if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-	brew install libpng sdl2 --universal
+	brew install libpng sdl2
 	exit 0
 fi
 
 sudo apt-get update -yq
-sudo apt-get install cmake3
 
 # This is what Travis does using the apt-addon. Didn't want to duplicate a load
 # of packages in the .travis.yml file though so we have this script instead.
 APT_INSTALL='sudo apt-get -yq --no-install-suggests --no-install-recommends --force-yes install'
 
-${APT_INSTALL} cmake
+cmake --version
 
 case "${host}" in
 	(native)
@@ -31,11 +30,21 @@ case "${host}" in
 		;;
 
 	(i686-w64-mingw32)
-		${APT_INSTALL} g++-mingw-w64-i686
+		${APT_INSTALL} \
+			g++-mingw-w64-i686 \
+			libsdl2-dev \
+			libjpeg-turbo8-dev \
+			zlib1g-dev \
+			libpng12-dev
 		;;
 
 	(x86_64-w64-mingw32)
-		${APT_INSTALL} g++-mingw-w64-x86-64
+		${APT_INSTALL} \
+			g++-mingw-w64-x86-64 \
+			libsdl2-dev \
+			libjpeg-turbo8-dev \
+			zlib1g-dev \
+			libpng12-dev
 		;;
 
 	(i?86-linux-gnu)
