@@ -148,7 +148,7 @@ function(add_sp_renderer_project ProjectName Label EngineName InstallDir Compone
 
 	if(WIN32)
 		install(TARGETS ${ProjectName}
-			RUNTIME
+			LIBRARY
 			DESTINATION ${InstallDir}
 			COMPONENT ${Component})
 	else()

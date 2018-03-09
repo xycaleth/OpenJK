@@ -284,7 +284,7 @@ endif()
 
 if(WIN32)
 	install(TARGETS ${JK2SPGame}
-		RUNTIME
+		LIBRARY
 		DESTINATION "${JK2InstallDir}/OpenJK")
 else()
 	if(BUILD_APP_BUNDLES AND BUILD_JOSP_CLIENT)

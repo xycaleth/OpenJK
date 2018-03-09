@@ -127,7 +127,7 @@ endif()
 
 if(WIN32)
 	install(TARGETS ${MPVanillaRenderer}
-		RUNTIME
+		LIBRARY
 		DESTINATION ${JKAInstallDir}
 		COMPONENT ${JKAMPClientComponent})
 else()
