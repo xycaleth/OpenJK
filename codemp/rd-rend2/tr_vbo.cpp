@@ -683,7 +683,7 @@ void RB_CommitInternalBufferData()
 	currentFrame->dynamicVboCommitOffset = currentFrame->dynamicVboWriteOffset;
 }
 
-void RB_BindUniformBlock(uniformBlock_t block, int offset)
+void RB_BindUniformBlock(GLuint ubo, uniformBlock_t block, int offset)
 {
 	const uniformBlockInfo_t *blockInfo = uniformBlocksInfo + block;
 	gpuFrame_t *thisFrame = backEndData->currentFrame;
@@ -691,7 +691,7 @@ void RB_BindUniformBlock(uniformBlock_t block, int offset)
 	assert(blockInfo->slot < MAX_UBO_BINDINGS);
 
 	bufferBinding_t *currentBinding = glState.currentUBOs + blockInfo->slot;
-	if (currentBinding->buffer != thisFrame->ubo ||
+	if (currentBinding->buffer != ubo ||
 		currentBinding->offset != offset ||
 		currentBinding->size != blockInfo->size)
 	{
@@ -702,22 +702,22 @@ void RB_BindUniformBlock(uniformBlock_t block, int offset)
 			offset,
 			blockInfo->size);
 
-		currentBinding->buffer = thisFrame->ubo;
+		currentBinding->buffer = ubo;
 		currentBinding->offset = offset;
 		currentBinding->size = blockInfo->size;
 	}
 }
 
-int RB_BindAndUpdateUniformBlock(uniformBlock_t block, void *data)
+int RB_BindAndUpdateFrameUniformBlock(uniformBlock_t block, void *data)
 {
 	const uniformBlockInfo_t *blockInfo = uniformBlocksInfo + block;
 	gpuFrame_t *thisFrame = backEndData->currentFrame;
 	const int offset = thisFrame->uboWriteOffset;
 
-	RB_BindUniformBlock(block, offset);
+	RB_BindUniformBlock(thisFrame->ubo, block, offset);
 
 	qglBufferSubData(GL_UNIFORM_BUFFER,
-			thisFrame->uboWriteOffset, blockInfo->size, data);
+		thisFrame->uboWriteOffset, blockInfo->size, data);
 
 	const int alignment = glRefConfig.uniformBufferOffsetAlignment - 1;
 	const size_t alignedBlockSize = (blockInfo->size + alignment) & ~alignment;

@@ -2096,7 +2096,7 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	surfaceSpriteBlock->widthVariance = ss->variance[0];
 	surfaceSpriteBlock->heightVariance = ss->variance[1];
 
-	const int uboDataOffset = RB_BindAndUpdateUniformBlock(
+	const int uboDataOffset = RB_BindAndUpdateFrameUniformBlock(
 		UNIFORM_BLOCK_SURFACESPRITE, &surfaceSpriteBlock);
 
 	UniformDataWriter uniformDataWriter;
@@ -2109,9 +2109,10 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	SamplerBindingsWriter samplerBindingsWriter;
 	samplerBindingsWriter.AddAnimatedImage(&firstStage->bundle[0], TB_COLORMAP);
 
+	const GLuint currentFrameUbo = backEndData->currentFrame->ubo;
 	const UniformBlockBinding uniformBlockBindings[] = {
-		{ uboDataOffset, UNIFORM_BLOCK_SURFACESPRITE },
-		{ tr.cameraUboOffset, UNIFORM_BLOCK_CAMERA }
+		{ currentFrameUbo, uboDataOffset, UNIFORM_BLOCK_SURFACESPRITE },
+		{ currentFrameUbo, tr.cameraUboOffset, UNIFORM_BLOCK_CAMERA }
 	};
 
 	DrawItem item = {};

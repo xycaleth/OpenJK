@@ -451,8 +451,9 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 
 	samplerBindingsWriter.AddStaticImage(image, TB_DIFFUSEMAP);
 
+	const GLuint currentFrameUbo = backEndData->currentFrame->ubo;
 	const UniformBlockBinding uniformBlockBindings[] = {
-		{ tr.skyEntityUboOffset, UNIFORM_BLOCK_ENTITY }
+		{ currentFrameUbo, tr.skyEntityUboOffset, UNIFORM_BLOCK_ENTITY }
 	};
 
 	DrawItem item = {};

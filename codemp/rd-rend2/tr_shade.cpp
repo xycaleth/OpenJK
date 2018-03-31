@@ -739,7 +739,9 @@ void RB_FillDrawCommand(
 static UniformBlockBinding GetEntityBlockUniformBinding(
 	const trRefEntity_t *refEntity)
 {
+	const GLuint currentFrameUbo = backEndData->currentFrame->ubo;
 	UniformBlockBinding binding = {};
+	binding.ubo = currentFrameUbo;
 	binding.block = UNIFORM_BLOCK_ENTITY;
 
 	if (refEntity == &tr.worldEntity)
@@ -758,7 +760,9 @@ static UniformBlockBinding GetEntityBlockUniformBinding(
 static UniformBlockBinding GetBonesBlockUniformBinding(
 	const trRefEntity_t *refEntity)
 {
+	const GLuint currentFrameUbo = backEndData->currentFrame->ubo;
 	UniformBlockBinding binding = {};
+	binding.ubo = currentFrameUbo;
 	binding.block = UNIFORM_BLOCK_BONES;
 
 	if (refEntity == &tr.worldEntity)
@@ -782,7 +786,9 @@ int RB_GetEntityShaderUboOffset(
 static UniformBlockBinding GetShaderInstanceBlockUniformBinding(
 	const trRefEntity_t *refEntity, const shader_t *shader)
 {
+	const GLuint currentFrameUbo = backEndData->currentFrame->ubo;
 	UniformBlockBinding binding = {};
+	binding.ubo = currentFrameUbo;
 	binding.block = UNIFORM_BLOCK_SHADER_INSTANCE;
 
 	if (refEntity == &tr.worldEntity)
@@ -957,8 +963,9 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 
 		CaptureDrawData(input, pStage, 0, 0);
 
+		const GLuint currentFrameUbo = backEndData->currentFrame->ubo;
 		const UniformBlockBinding uniformBlockBindings[] = {
-			{ tr.lightsUboOffset, UNIFORM_BLOCK_LIGHTS },
+			{ currentFrameUbo, tr.lightsUboOffset, UNIFORM_BLOCK_LIGHTS },
 			GetEntityBlockUniformBinding(backEnd.currentEntity),
 			GetShaderInstanceBlockUniformBinding(
 				backEnd.currentEntity, input->shader),
@@ -1109,9 +1116,10 @@ static void RB_FogPass(
 	if ( tess.shader->fogPass == FP_EQUAL )
 		stateBits |= GLS_DEPTHFUNC_EQUAL;
 
+	const GLuint currentFrameUbo = backEndData->currentFrame->ubo;
 	const UniformBlockBinding uniformBlockBindings[] = {
-		{ tr.cameraUboOffset, UNIFORM_BLOCK_CAMERA },
-		{ tr.fogsUboOffset, UNIFORM_BLOCK_FOGS },
+		{ currentFrameUbo, tr.cameraUboOffset, UNIFORM_BLOCK_CAMERA },
+		{ currentFrameUbo, tr.fogsUboOffset, UNIFORM_BLOCK_FOGS },
 		GetEntityBlockUniformBinding(backEnd.currentEntity),
 		GetShaderInstanceBlockUniformBinding(
 			backEnd.currentEntity, input->shader),
@@ -1562,10 +1570,11 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 
 		CaptureDrawData(input, pStage, index, stage);
 
+		const GLuint currentFrameUbo = backEndData->currentFrame->ubo;
 		const UniformBlockBinding uniformBlockBindings[] = {
-			{ tr.cameraUboOffset, UNIFORM_BLOCK_CAMERA },
-			{ tr.sceneUboOffset, UNIFORM_BLOCK_SCENE },
-			{ tr.fogsUboOffset, UNIFORM_BLOCK_FOGS },
+			{ currentFrameUbo, tr.cameraUboOffset, UNIFORM_BLOCK_CAMERA },
+			{ currentFrameUbo, tr.sceneUboOffset, UNIFORM_BLOCK_SCENE },
+			{ currentFrameUbo, tr.fogsUboOffset, UNIFORM_BLOCK_FOGS },
 			GetEntityBlockUniformBinding(backEnd.currentEntity),
 			GetShaderInstanceBlockUniformBinding(
 				backEnd.currentEntity, input->shader),

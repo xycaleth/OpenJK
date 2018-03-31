@@ -3019,31 +3019,33 @@ uint32_t R_VboPackNormal(vec3_t v);
 void R_VboUnpackTangent(vec4_t v, uint32_t b);
 void R_VboUnpackNormal(vec3_t v, uint32_t b);
 
-VBO_t          *R_CreateVBO(byte * vertexes, int vertexesSize, vboUsage_t usage);
-IBO_t          *R_CreateIBO(byte * indexes, int indexesSize, vboUsage_t usage);
+VBO_t *R_CreateVBO(byte * vertexes, int vertexesSize, vboUsage_t usage);
+IBO_t *R_CreateIBO(byte * indexes, int indexesSize, vboUsage_t usage);
 
-void            R_BindVBO(VBO_t * vbo);
-void            R_BindNullVBO(void);
+void R_BindVBO(VBO_t * vbo);
+void R_BindNullVBO(void);
 
-void            R_BindIBO(IBO_t * ibo);
-void            R_BindNullIBO(void);
+void R_BindIBO(IBO_t * ibo);
+void R_BindNullIBO(void);
 
-void            R_InitVBOs(void);
-void            R_ShutdownVBOs(void);
-void            R_VBOList_f(void);
+void R_InitVBOs(void);
+void R_ShutdownVBOs(void);
+void R_VBOList_f(void);
 
-void            RB_UpdateVBOs(unsigned int attribBits);
-void			RB_CommitInternalBufferData();
-void			RB_BindUniformBlock(uniformBlock_t block, int offset);
-int				RB_BindAndUpdateUniformBlock(uniformBlock_t block, void *data);
+void RB_UpdateVBOs(unsigned int attribBits);
+void RB_CommitInternalBufferData();
+void RB_BindUniformBlock(GLuint ubo, uniformBlock_t block, int offset);
+int RB_BindAndUpdateFrameUniformBlock(uniformBlock_t block, void *data);
 
-void			RB_BeginConstantsUpdate(struct gpuFrame_t *frame);
-void			RB_EndConstantsUpdate(const struct gpuFrame_t *frame);
-int				RB_AppendConstantsData(
+void RB_BeginConstantsUpdate(struct gpuFrame_t *frame);
+void RB_EndConstantsUpdate(const struct gpuFrame_t *frame);
+int RB_AppendConstantsData(
 	struct gpuFrame_t *frame, const void *data, size_t dataSize);
 
-void			CalculateVertexArraysProperties(uint32_t attributes, VertexArraysProperties *properties);
-void			CalculateVertexArraysFromVBO(uint32_t attributes, const VBO_t *vbo, VertexArraysProperties *properties);
+void CalculateVertexArraysProperties(
+	uint32_t attributes, VertexArraysProperties *properties);
+void CalculateVertexArraysFromVBO(
+	uint32_t attributes, const VBO_t *vbo, VertexArraysProperties *properties);
 
 
 /*
@@ -3557,6 +3559,7 @@ struct SamplerBinding
 
 struct UniformBlockBinding
 {
+	GLuint ubo;
 	int offset;
 	uniformBlock_t block;
 };

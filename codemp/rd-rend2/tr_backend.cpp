@@ -978,7 +978,7 @@ static void RB_BindUniformBlocks(
 	for (size_t i = 0; i < numBindings; ++i)
 	{
 		const UniformBlockBinding& binding = bindings[i];
-		RB_BindUniformBlock(binding.block, binding.offset);
+		RB_BindUniformBlock(binding.ubo, binding.block, binding.offset);
 	}
 }
 
