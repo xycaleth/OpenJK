@@ -302,14 +302,9 @@ void R_BindNullIBO(void)
 	}
 }
 
-/*
-============
-R_InitVBOs
-============
-*/
-void R_InitVBOs(void)
+void R_InitGPUBuffers(void)
 {
-	ri.Printf(PRINT_ALL, "------- R_InitVBOs -------\n");
+	ri.Printf(PRINT_ALL, "------- R_InitGPUBuffers -------\n");
 
 	// glGenBuffers only allocates the IDs for these buffers. The 'buffer object' is
 	// actually created on first bind.
@@ -331,9 +326,9 @@ void R_InitVBOs(void)
 R_ShutdownVBOs
 ============
 */
-void R_ShutdownVBOs(void)
+void R_DestroyGPUBuffers(void)
 {
-	ri.Printf(PRINT_ALL, "------- R_ShutdownVBOs -------\n");
+	ri.Printf(PRINT_ALL, "------- R_DestroyGPUBuffers -------\n");
 
 	R_BindNullVBO();
 	R_BindNullIBO();
@@ -686,7 +681,6 @@ void RB_CommitInternalBufferData()
 void RB_BindUniformBlock(GLuint ubo, uniformBlock_t block, int offset)
 {
 	const uniformBlockInfo_t *blockInfo = uniformBlocksInfo + block;
-	gpuFrame_t *thisFrame = backEndData->currentFrame;
 
 	assert(blockInfo->slot < MAX_UBO_BINDINGS);
 
@@ -696,11 +690,7 @@ void RB_BindUniformBlock(GLuint ubo, uniformBlock_t block, int offset)
 		currentBinding->size != blockInfo->size)
 	{
 		qglBindBufferRange(
-			GL_UNIFORM_BUFFER,
-			blockInfo->slot,
-			thisFrame->ubo,
-			offset,
-			blockInfo->size);
+			GL_UNIFORM_BUFFER, blockInfo->slot, ubo, offset, blockInfo->size);
 
 		currentBinding->buffer = ubo;
 		currentBinding->offset = offset;

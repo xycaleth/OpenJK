@@ -741,17 +741,25 @@ static UniformBlockBinding GetEntityBlockUniformBinding(
 {
 	const GLuint currentFrameUbo = backEndData->currentFrame->ubo;
 	UniformBlockBinding binding = {};
-	binding.ubo = currentFrameUbo;
 	binding.block = UNIFORM_BLOCK_ENTITY;
 
-	if (refEntity == &tr.worldEntity)
-		binding.offset = tr.entityUboOffsets[REFENTITYNUM_WORLD];
-	else if (refEntity == &backEnd.entity2D)
+	if (refEntity == &backEnd.entity2D)
+	{
+		binding.ubo = tr.staticUbo;
 		binding.offset = tr.entity2DUboOffset;
+	}
 	else
 	{
-		const int refEntityNum = refEntity - backEnd.refdef.entities;
-		binding.offset = tr.entityUboOffsets[refEntityNum];
+		binding.ubo = currentFrameUbo;
+		if (refEntity == &tr.worldEntity)
+		{
+			binding.offset = tr.entityUboOffsets[REFENTITYNUM_WORLD];
+		}
+		else
+		{
+			const int refEntityNum = refEntity - backEnd.refdef.entities;
+			binding.offset = tr.entityUboOffsets[refEntityNum];
+		}
 	}
 
 	return binding;

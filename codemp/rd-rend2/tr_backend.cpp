@@ -2333,25 +2333,6 @@ static void RB_UpdateEntityModelConstants(
 			entityBlock.vertexLerp = refEntity->e.backlerp;
 }
 
-static void RB_UpdateEntity2DConstants(gpuFrame_t *frame)
-{
-	EntityBlock entity2DBlock = {};
-	entity2DBlock.fxVolumetricBase = -1.0f;
-
-	Matrix16Identity(entity2DBlock.modelMatrix);
-	Matrix16Ortho(
-		0.0f,
-		640.0f,
-		480.0f,
-		0.0f,
-		0.0f,
-		1.0f,
-		entity2DBlock.modelViewProjectionMatrix);
-
-	tr.entity2DUboOffset = RB_AppendConstantsData(
-		frame, &entity2DBlock, sizeof(entity2DBlock));
-}
-
 static void RB_UpdateSkyEntityConstants(gpuFrame_t *frame)
 {
 	EntityBlock skyEntityBlock = {};
@@ -2588,7 +2569,6 @@ static void RB_UpdateShaderAndEntityConstants(
 		RB_UpdateShaderEntityConstants(frame, entityNum, refEntity, shader);
 	}
 
-	RB_UpdateEntity2DConstants(frame);
 	RB_UpdateSkyEntityConstants(frame);
 }
 

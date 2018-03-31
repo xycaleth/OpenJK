@@ -3028,8 +3028,8 @@ void R_BindNullVBO(void);
 void R_BindIBO(IBO_t * ibo);
 void R_BindNullIBO(void);
 
-void R_InitVBOs(void);
-void R_ShutdownVBOs(void);
+void R_InitGPUBuffers(void);
+void R_DestroyGPUBuffers(void);
 void R_VBOList_f(void);
 
 void RB_UpdateVBOs(unsigned int attribBits);
