@@ -2090,6 +2090,7 @@ typedef struct glstate_s {
 	FBO_t          *currentFBO;
 	VBO_t          *currentVBO;
 	IBO_t          *currentIBO;
+	GLuint			currentGlobalUBO;
 	bufferBinding_t currentUBOs[MAX_UBO_BINDINGS];
 	matrix_t        modelview;
 	matrix_t        projection;
@@ -3035,6 +3036,12 @@ void            RB_UpdateVBOs(unsigned int attribBits);
 void			RB_CommitInternalBufferData();
 void			RB_BindUniformBlock(uniformBlock_t block, int offset);
 int				RB_BindAndUpdateUniformBlock(uniformBlock_t block, void *data);
+
+void			RB_BeginConstantsUpdate(struct gpuFrame_t *frame);
+void			RB_EndConstantsUpdate(const struct gpuFrame_t *frame);
+int				RB_AppendConstantsData(
+	struct gpuFrame_t *frame, const void *data, size_t dataSize);
+
 void			CalculateVertexArraysProperties(uint32_t attributes, VertexArraysProperties *properties);
 void			CalculateVertexArraysFromVBO(uint32_t attributes, const VBO_t *vbo, VertexArraysProperties *properties);
 
@@ -3421,6 +3428,9 @@ struct gpuFrame_t
 	GLsync sync;
 	GLuint ubo;
 	size_t uboWriteOffset;
+	size_t uboSize;
+	size_t uboMapBase;
+	void *uboMemory;
 
 	screenshotReadback_t screenshotReadback;
 

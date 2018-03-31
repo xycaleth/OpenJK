@@ -1655,6 +1655,7 @@ static void R_InitBackEndFrameData()
 
 		frame->ubo = ubos[i];
 		frame->uboWriteOffset = 0;
+		frame->uboSize = FRAME_UNIFORM_BUFFER_SIZE;
 		qglBindBuffer(GL_UNIFORM_BUFFER, frame->ubo);
 
 		// TODO: persistently mapped UBOs

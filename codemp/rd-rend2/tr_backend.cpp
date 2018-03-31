@@ -2173,7 +2173,7 @@ static void RB_RenderAllDepthRelatedPasses( drawSurf_t *drawSurfs, int numDrawSu
 	}
 }
 
-static void RB_UpdateCameraConstants()
+static void RB_UpdateCameraConstants(gpuFrame_t *frame)
 {
 	const float zmax = backEnd.viewParms.zFar;
 	const float zmin = r_znear->value;
@@ -2184,22 +2184,22 @@ static void RB_UpdateCameraConstants()
 	VectorCopy(backEnd.refdef.viewaxis[1], cameraBlock.viewLeft);
 	VectorCopy(backEnd.refdef.viewaxis[2], cameraBlock.viewUp);
 	VectorCopy(backEnd.refdef.vieworg, cameraBlock.viewOrigin);
-	tr.cameraUboOffset =
-		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_CAMERA, &cameraBlock);
+	tr.cameraUboOffset = RB_AppendConstantsData(
+		frame, &cameraBlock, sizeof(cameraBlock));
 }
 
-static void RB_UpdateSceneConstants()
+static void RB_UpdateSceneConstants(gpuFrame_t *frame)
 {
 	SceneBlock sceneBlock = {};
 	VectorCopy4(backEnd.refdef.sunDir, sceneBlock.primaryLightOrigin);
 	VectorCopy(backEnd.refdef.sunAmbCol, sceneBlock.primaryLightAmbient);
 	VectorCopy(backEnd.refdef.sunCol, sceneBlock.primaryLightColor);
 
-	tr.sceneUboOffset =
-		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_SCENE, &sceneBlock);
+	tr.sceneUboOffset = RB_AppendConstantsData(
+		frame, &sceneBlock, sizeof(sceneBlock));
 }
 
-static void RB_UpdateLightsConstants()
+static void RB_UpdateLightsConstants(gpuFrame_t *frame)
 {
 	LightsBlock lightsBlock = {};
 	lightsBlock.numLights = backEnd.refdef.num_dlights;
@@ -2218,11 +2218,11 @@ static void RB_UpdateLightsConstants()
 		lightData->radius = dlight->radius;
 	}
 
-	tr.lightsUboOffset =
-		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_LIGHTS, &lightsBlock);
+	tr.lightsUboOffset = RB_AppendConstantsData(
+		frame, &lightsBlock, sizeof(lightsBlock));
 }
 
-static void RB_UpdateFogsConstants()
+static void RB_UpdateFogsConstants(gpuFrame_t *frame)
 {
 	FogsBlock fogsBlock = {};
 	fogsBlock.numFogs = tr.world->numfogs - 1; // Don't reserve fog 0 as 'null'
@@ -2238,8 +2238,8 @@ static void RB_UpdateFogsConstants()
 		fogData->hasPlane = fog->hasSurface ? 1 : 0;
 	}
 
-	tr.fogsUboOffset =
-		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_FOGS, &fogsBlock);
+	tr.fogsUboOffset = RB_AppendConstantsData(
+		frame, &fogsBlock, sizeof(fogsBlock));
 }
 
 static void RB_UpdateEntityLightConstants(
@@ -2295,7 +2295,7 @@ static void RB_UpdateEntityModelConstants(
 			entityBlock.vertexLerp = refEntity->e.backlerp;
 }
 
-static void RB_UpdateEntity2DConstants()
+static void RB_UpdateEntity2DConstants(gpuFrame_t *frame)
 {
 	EntityBlock entity2DBlock = {};
 	entity2DBlock.fxVolumetricBase = -1.0f;
@@ -2310,11 +2310,11 @@ static void RB_UpdateEntity2DConstants()
 		1.0f,
 		entity2DBlock.modelViewProjectionMatrix);
 
-	tr.entity2DUboOffset =
-		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &entity2DBlock);
+	tr.entity2DUboOffset = RB_AppendConstantsData(
+		frame, &entity2DBlock, sizeof(entity2DBlock));
 }
 
-static void RB_UpdateSkyEntityConstants()
+static void RB_UpdateSkyEntityConstants(gpuFrame_t *frame)
 {
 	EntityBlock skyEntityBlock = {};
 	skyEntityBlock.fxVolumetricBase = -1.0f;
@@ -2332,8 +2332,8 @@ static void RB_UpdateSkyEntityConstants()
 		modelViewMatrix,
 		skyEntityBlock.modelViewProjectionMatrix);
 
-	tr.skyEntityUboOffset =
-		RB_BindAndUpdateUniformBlock(UNIFORM_BLOCK_ENTITY, &skyEntityBlock);
+	tr.skyEntityUboOffset = RB_AppendConstantsData(
+		frame, &skyEntityBlock, sizeof(skyEntityBlock));
 }
 
 static uint32_t RB_HashEntityShaderKey(int entityNum, int shaderNum)
@@ -2472,6 +2472,7 @@ static void ComputeDeformValues(
 
 
 static void RB_UpdateShaderEntityConstants(
+	gpuFrame_t *frame,
 	const int entityNum,
 	const trRefEntity_t *refEntity,
 	const shader_t *shader)
@@ -2488,8 +2489,8 @@ static void RB_UpdateShaderEntityConstants(
 	if (entityNum == REFENTITYNUM_WORLD)
 		shaderInstanceBlock.time -= refEntity->e.shaderTime;
 
-	const int uboOffset = RB_BindAndUpdateUniformBlock(
-		UNIFORM_BLOCK_SHADER_INSTANCE, &shaderInstanceBlock);
+	const int uboOffset = RB_AppendConstantsData(
+		frame, &shaderInstanceBlock, sizeof(shaderInstanceBlock));
 
 	RB_InsertEntityShaderUboOffset(
 		tr.shaderInstanceUboOffsetsMap,
@@ -2500,7 +2501,7 @@ static void RB_UpdateShaderEntityConstants(
 }
 
 static void RB_UpdateShaderAndEntityConstants(
-	const drawSurf_t *drawSurfs, int numDrawSurfs)
+	gpuFrame_t *frame, const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
 	bool updatedEntities[MAX_REFENTITIES] = {};
 
@@ -2541,20 +2542,20 @@ static void RB_UpdateShaderAndEntityConstants(
 			else if (drawSurf->fogIndex > 0)
 				entityBlock.fogIndex = drawSurf->fogIndex - 1;
 
-			tr.entityUboOffsets[entityNum] = RB_BindAndUpdateUniformBlock(
-				UNIFORM_BLOCK_ENTITY, &entityBlock);
+			tr.entityUboOffsets[entityNum] = RB_AppendConstantsData(
+				frame, &entityBlock, sizeof(entityBlock));
 			updatedEntities[entityNum] = true;
 		}
 
-		RB_UpdateShaderEntityConstants(entityNum, refEntity, shader);
+		RB_UpdateShaderEntityConstants(frame, entityNum, refEntity, shader);
 	}
 
-	RB_UpdateEntity2DConstants();
-	RB_UpdateSkyEntityConstants();
+	RB_UpdateEntity2DConstants(frame);
+	RB_UpdateSkyEntityConstants(frame);
 }
 
 static void RB_UpdateAnimationConstants(
-	const drawSurf_t *drawSurfs, int numDrawSurfs)
+	gpuFrame_t *frame, const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
 	tr.animationBoneUboOffsets = ojkAllocArray<int>(
 		*backEndData->perFrameMemory, numDrawSurfs);
@@ -2571,20 +2572,25 @@ static void RB_UpdateAnimationConstants(
 			(CRenderableSurface *)drawSurf->surface,
 			bonesBlock.matrices);
 
-		tr.animationBoneUboOffsets[i] = RB_BindAndUpdateUniformBlock(
-			UNIFORM_BLOCK_BONES, &bonesBlock);
+		tr.animationBoneUboOffsets[i] = RB_AppendConstantsData(
+			frame, &bonesBlock, sizeof(bonesBlock));
 	}
 }
 
 static void RB_UpdateConstants(const drawSurf_t *drawSurfs, int numDrawSurfs)
 {
-	RB_UpdateCameraConstants();
-	RB_UpdateSceneConstants();
-	RB_UpdateLightsConstants();
-	RB_UpdateFogsConstants();
+	gpuFrame_t *frame = backEndData->currentFrame;
+	RB_BeginConstantsUpdate(frame);
 
-	RB_UpdateShaderAndEntityConstants(drawSurfs, numDrawSurfs);
-	RB_UpdateAnimationConstants(drawSurfs, numDrawSurfs);
+	RB_UpdateCameraConstants(frame);
+	RB_UpdateSceneConstants(frame);
+	RB_UpdateLightsConstants(frame);
+	RB_UpdateFogsConstants(frame);
+
+	RB_UpdateShaderAndEntityConstants(frame, drawSurfs, numDrawSurfs);
+	RB_UpdateAnimationConstants(frame, drawSurfs, numDrawSurfs);
+
+	RB_EndConstantsUpdate(frame);
 }
 
 /*
