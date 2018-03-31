@@ -2096,6 +2096,9 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	surfaceSpriteBlock->widthVariance = ss->variance[0];
 	surfaceSpriteBlock->heightVariance = ss->variance[1];
 
+	const int uboDataOffset = RB_BindAndUpdateUniformBlock(
+		UNIFORM_BLOCK_SURFACESPRITE, &surfaceSpriteBlock);
+
 	UniformDataWriter uniformDataWriter;
 	uniformDataWriter.Start(program);
 	uniformDataWriter.SetUniformMatrix4x4(
@@ -2123,9 +2126,8 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	item.numUniformBlockBindings = 2;
 	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 		*backEndData->perFrameMemory, item.numUniformBlockBindings);
-	item.uniformBlockBindings[0].data = surfaceSpriteBlock;
+	item.uniformBlockBindings[1].offset = uboDataOffset;
 	item.uniformBlockBindings[0].block = UNIFORM_BLOCK_SURFACESPRITE;
-	item.uniformBlockBindings[1].data = nullptr;
 	item.uniformBlockBindings[1].offset = tr.cameraUboOffset;
 	item.uniformBlockBindings[1].block = UNIFORM_BLOCK_CAMERA;
 

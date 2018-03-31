@@ -3557,7 +3557,6 @@ struct SamplerBinding
 
 struct UniformBlockBinding
 {
-	void *data;
 	int offset;
 	uniformBlock_t block;
 };

@@ -930,17 +930,14 @@ static void RB_BindTextures( size_t numBindings, const SamplerBinding *bindings 
 	}
 }
 
-static void RB_BindAndUpdateUniformBlocks(
+static void RB_BindUniformBlocks(
 	size_t numBindings,
 	const UniformBlockBinding *bindings)
 {
 	for (size_t i = 0; i < numBindings; ++i)
 	{
 		const UniformBlockBinding& binding = bindings[i];
-		if (binding.data)
-			RB_BindAndUpdateUniformBlock(binding.block, binding.data);
-		else
-			RB_BindUniformBlock(binding.block, binding.offset);
+		RB_BindUniformBlock(binding.block, binding.offset);
 	}
 }
 
@@ -963,7 +960,7 @@ static void RB_DrawItems(
 
 		GL_VertexAttribPointers(drawItem.numAttributes, drawItem.attributes);
 		RB_BindTextures(drawItem.numSamplerBindings, drawItem.samplerBindings);
-		RB_BindAndUpdateUniformBlocks(
+		RB_BindUniformBlocks(
 			drawItem.numUniformBlockBindings,
 			drawItem.uniformBlockBindings);
 

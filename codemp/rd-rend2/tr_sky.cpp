@@ -469,7 +469,6 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 		*backEndData->perFrameMemory, item.numUniformBlockBindings);
 	item.uniformBlockBindings[0].offset = tr.skyEntityUboOffset;
-	item.uniformBlockBindings[0].data = nullptr;
 	item.uniformBlockBindings[0].block = UNIFORM_BLOCK_ENTITY;
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, &tess);

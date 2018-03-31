@@ -987,7 +987,6 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		item.numUniformBlockBindings = 4;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
-		item.uniformBlockBindings[0].data = nullptr;
 		item.uniformBlockBindings[0].offset = tr.lightsUboOffset;
 		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_LIGHTS;
 		item.uniformBlockBindings[1] =
@@ -1139,10 +1138,8 @@ static void RB_FogPass(
 	item.numUniformBlockBindings = 5;
 	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 		*backEndData->perFrameMemory, item.numUniformBlockBindings);
-	item.uniformBlockBindings[0].data = nullptr;
 	item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
 	item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
-	item.uniformBlockBindings[1].data = nullptr;
 	item.uniformBlockBindings[1].offset = tr.fogsUboOffset;
 	item.uniformBlockBindings[1].block = UNIFORM_BLOCK_FOGS;
 	item.uniformBlockBindings[2] = 
@@ -1600,13 +1597,10 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		item.numUniformBlockBindings = 6;
 		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
 			*backEndData->perFrameMemory, item.numUniformBlockBindings);
-		item.uniformBlockBindings[0].data = nullptr;
 		item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
 		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
-		item.uniformBlockBindings[1].data = nullptr;
 		item.uniformBlockBindings[1].offset = tr.sceneUboOffset;
 		item.uniformBlockBindings[1].block = UNIFORM_BLOCK_SCENE;
-		item.uniformBlockBindings[2].data = nullptr;
 		item.uniformBlockBindings[2].offset = tr.fogsUboOffset;
 		item.uniformBlockBindings[2].block = UNIFORM_BLOCK_FOGS;
 		item.uniformBlockBindings[3] =
