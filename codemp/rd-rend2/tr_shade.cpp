@@ -816,6 +816,7 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		return;
 	}
 	
+	Allocator& frameAllocator = *backEndData->perFrameMemory;
 	cullType_t cullType = RB_GetCullType(
 		&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
 
@@ -956,6 +957,14 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 
 		CaptureDrawData(input, pStage, 0, 0);
 
+		const UniformBlockBinding uniformBlockBindings[] = {
+			{ tr.lightsUboOffset, UNIFORM_BLOCK_LIGHTS },
+			GetEntityBlockUniformBinding(backEnd.currentEntity),
+			GetShaderInstanceBlockUniformBinding(
+				backEnd.currentEntity, input->shader),
+			GetBonesBlockUniformBinding(backEnd.currentEntity)
+		};
+
 		DrawItem item = {};
 
 		// include GLS_DEPTHFUNC_EQUAL so alpha tested surfaces don't add light
@@ -968,34 +977,16 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		item.ibo = input->externalIBO
 			? input->externalIBO
 			: backEndData->currentFrame->dynamicIbo;
-
-		item.numAttributes = vertexArrays->numVertexArrays;
-		item.attributes = ojkAllocArray<vertexAttribute_t>(
-			*backEndData->perFrameMemory, vertexArrays->numVertexArrays);
-		memcpy(
-			item.attributes,
-			attribs,
-			sizeof(*item.attributes)*vertexArrays->numVertexArrays);
-
-		item.uniformData =
-			uniformDataWriter.Finish(*backEndData->perFrameMemory);
+		item.uniformData = uniformDataWriter.Finish(frameAllocator);
 
 		// FIXME: This is a bit ugly with the casting
 		item.samplerBindings = samplerBindingsWriter.Finish(
-			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
+			frameAllocator, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 4;
-		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
-			*backEndData->perFrameMemory, item.numUniformBlockBindings);
-		item.uniformBlockBindings[0].offset = tr.lightsUboOffset;
-		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_LIGHTS;
-		item.uniformBlockBindings[1] =
-			GetEntityBlockUniformBinding(backEnd.currentEntity);
-		item.uniformBlockBindings[2] = GetShaderInstanceBlockUniformBinding(
-			backEnd.currentEntity, input->shader);
-		item.uniformBlockBindings[3] = GetBonesBlockUniformBinding(
-			backEnd.currentEntity);
-
+		DrawItemSetVertexAttributes(
+			item, attribs, vertexArrays->numVertexArrays, frameAllocator);
+		DrawItemSetUniformBlockBindings(
+			item, uniformBlockBindings, frameAllocator);
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
 		uint32_t key = RB_CreateSortKey(item, 15, input->shader->sort);
@@ -1118,6 +1109,16 @@ static void RB_FogPass(
 	if ( tess.shader->fogPass == FP_EQUAL )
 		stateBits |= GLS_DEPTHFUNC_EQUAL;
 
+	const UniformBlockBinding uniformBlockBindings[] = {
+		{ tr.cameraUboOffset, UNIFORM_BLOCK_CAMERA },
+		{ tr.fogsUboOffset, UNIFORM_BLOCK_FOGS },
+		GetEntityBlockUniformBinding(backEnd.currentEntity),
+		GetShaderInstanceBlockUniformBinding(
+			backEnd.currentEntity, input->shader),
+		GetBonesBlockUniformBinding(backEnd.currentEntity)
+	};
+
+	Allocator& frameAllocator = *backEndData->perFrameMemory;
 	DrawItem item = {};
 	item.stateBits = stateBits;
 	item.cullType = cullType;
@@ -1127,27 +1128,10 @@ static void RB_FogPass(
 		? input->externalIBO
 		: backEndData->currentFrame->dynamicIbo;
 
-	item.numAttributes = vertexArrays->numVertexArrays;
-	item.attributes = ojkAllocArray<vertexAttribute_t>(
-		*backEndData->perFrameMemory, vertexArrays->numVertexArrays);
-	memcpy(
-		item.attributes,
-		attribs,
-		sizeof(*item.attributes)*vertexArrays->numVertexArrays);
-
-	item.numUniformBlockBindings = 5;
-	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
-		*backEndData->perFrameMemory, item.numUniformBlockBindings);
-	item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
-	item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
-	item.uniformBlockBindings[1].offset = tr.fogsUboOffset;
-	item.uniformBlockBindings[1].block = UNIFORM_BLOCK_FOGS;
-	item.uniformBlockBindings[2] = 
-		GetEntityBlockUniformBinding(backEnd.currentEntity);
-	item.uniformBlockBindings[3] = GetShaderInstanceBlockUniformBinding(
-		backEnd.currentEntity, input->shader);
-	item.uniformBlockBindings[4] = GetBonesBlockUniformBinding(
-		backEnd.currentEntity);
+	DrawItemSetVertexAttributes(
+		item, attribs, vertexArrays->numVertexArrays, frameAllocator);
+	DrawItemSetUniformBlockBindings(
+		item, uniformBlockBindings, frameAllocator);
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1306,6 +1290,7 @@ static shaderProgram_t *SelectShaderProgram(
 
 static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArraysProperties *vertexArrays )
 {
+	Allocator& frameAllocator = *backEndData->perFrameMemory;
 	cullType_t cullType = RB_GetCullType(&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
 
 	vertexAttribute_t attribs[ATTR_INDEX_MAX] = {};
@@ -1577,38 +1562,32 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 
 		CaptureDrawData(input, pStage, index, stage);
 
+		const UniformBlockBinding uniformBlockBindings[] = {
+			{ tr.cameraUboOffset, UNIFORM_BLOCK_CAMERA },
+			{ tr.sceneUboOffset, UNIFORM_BLOCK_SCENE },
+			{ tr.fogsUboOffset, UNIFORM_BLOCK_FOGS },
+			GetEntityBlockUniformBinding(backEnd.currentEntity),
+			GetShaderInstanceBlockUniformBinding(
+				backEnd.currentEntity, input->shader),
+			GetBonesBlockUniformBinding(backEnd.currentEntity)
+		};
+
 		DrawItem item = {};
 		item.stateBits = stateBits;
 		item.cullType = cullType;
 		item.program = sp;
 		item.depthRange = RB_GetDepthRange(backEnd.currentEntity, input->shader);
 		item.ibo = input->externalIBO ? input->externalIBO : backEndData->currentFrame->dynamicIbo;
+		item.uniformData = uniformDataWriter.Finish(frameAllocator);
 
-		item.numAttributes = vertexArrays->numVertexArrays;
-		item.attributes = ojkAllocArray<vertexAttribute_t>(
-			*backEndData->perFrameMemory, vertexArrays->numVertexArrays);
-		memcpy(item.attributes, attribs, sizeof(*item.attributes)*vertexArrays->numVertexArrays);
-
-		item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
 		// FIXME: This is a bit ugly with the casting
 		item.samplerBindings = samplerBindingsWriter.Finish(
-			*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
+			frameAllocator, (int *)&item.numSamplerBindings);
 
-		item.numUniformBlockBindings = 6;
-		item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
-			*backEndData->perFrameMemory, item.numUniformBlockBindings);
-		item.uniformBlockBindings[0].offset = tr.cameraUboOffset;
-		item.uniformBlockBindings[0].block = UNIFORM_BLOCK_CAMERA;
-		item.uniformBlockBindings[1].offset = tr.sceneUboOffset;
-		item.uniformBlockBindings[1].block = UNIFORM_BLOCK_SCENE;
-		item.uniformBlockBindings[2].offset = tr.fogsUboOffset;
-		item.uniformBlockBindings[2].block = UNIFORM_BLOCK_FOGS;
-		item.uniformBlockBindings[3] =
-			GetEntityBlockUniformBinding(backEnd.currentEntity);
-		item.uniformBlockBindings[4] = GetShaderInstanceBlockUniformBinding(
-			backEnd.currentEntity, input->shader);
-		item.uniformBlockBindings[5] = GetBonesBlockUniformBinding(
-			backEnd.currentEntity);
+		DrawItemSetVertexAttributes(
+			item, attribs, vertexArrays->numVertexArrays, frameAllocator);
+		DrawItemSetUniformBlockBindings(
+			item, uniformBlockBindings, frameAllocator);
 
 		RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 
@@ -1631,11 +1610,18 @@ static void RB_RenderShadowmap(
 	shaderCommands_t *input,
 	const VertexArraysProperties *vertexArrays)
 {
+	Allocator& frameAllocator = *backEndData->perFrameMemory;
 	cullType_t cullType = RB_GetCullType(
 		&backEnd.viewParms, backEnd.currentEntity, input->shader->cullType);
 
 	vertexAttribute_t attribs[ATTR_INDEX_MAX] = {};
 	GL_VertexArraysToAttribs(attribs, ARRAY_LEN(attribs), vertexArrays);
+
+	const UniformBlockBinding uniformBlockBindings[] = {
+		GetEntityBlockUniformBinding(backEnd.currentEntity),
+		GetShaderInstanceBlockUniformBinding(
+			backEnd.currentEntity, input->shader)
+	};
 
 	DrawItem item = {};
 	item.cullType = cullType;
@@ -1645,20 +1631,10 @@ static void RB_RenderShadowmap(
 		? input->externalIBO
 		: backEndData->currentFrame->dynamicIbo;
 
-	item.numAttributes = vertexArrays->numVertexArrays;
-	item.attributes = ojkAllocArray<vertexAttribute_t>(
-		*backEndData->perFrameMemory, vertexArrays->numVertexArrays);
-	memcpy(
-		item.attributes, attribs,
-		sizeof(*item.attributes)*vertexArrays->numVertexArrays);
-
-	item.numUniformBlockBindings = 2;
-	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
-		*backEndData->perFrameMemory, item.numUniformBlockBindings);
-	item.uniformBlockBindings[0] =
-		GetEntityBlockUniformBinding(backEnd.currentEntity);
-	item.uniformBlockBindings[1] = GetShaderInstanceBlockUniformBinding(
-			backEnd.currentEntity, input->shader);
+	DrawItemSetVertexAttributes(
+		item, attribs, vertexArrays->numVertexArrays, frameAllocator);
+	DrawItemSetUniformBlockBindings(
+		item, uniformBlockBindings, frameAllocator);
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, input);
 

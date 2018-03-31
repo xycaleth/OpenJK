@@ -607,6 +607,47 @@ void RB_BeginDrawingView (void) {
 
 #define	MAC_EVENT_PUMP_MSEC		5
 
+void DrawItemSetVertexAttributes(
+	DrawItem& drawItem,
+	const vertexAttribute_t *attributes,
+	uint32_t count,
+	Allocator& allocator)
+{
+	drawItem.numAttributes = count;
+	drawItem.attributes = ojkAllocArray<vertexAttribute_t>(allocator, count);
+	memcpy(
+		drawItem.attributes, attributes, sizeof(*drawItem.attributes) * count);
+}
+
+void DrawItemSetSamplerBindings(
+	DrawItem& drawItem,
+	const SamplerBinding *bindings,
+	uint32_t count,
+	Allocator& allocator)
+{
+	drawItem.numSamplerBindings = count;
+	drawItem.samplerBindings = ojkAllocArray<SamplerBinding>(allocator, count);
+	memcpy(
+		drawItem.samplerBindings,
+		bindings,
+		sizeof(*drawItem.samplerBindings) * count);
+}
+
+void DrawItemSetUniformBlockBindings(
+	DrawItem& drawItem,
+	const UniformBlockBinding *bindings,
+	uint32_t count,
+	Allocator& allocator)
+{
+	drawItem.numUniformBlockBindings = count;
+	drawItem.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
+		allocator, count);
+	memcpy(
+		drawItem.uniformBlockBindings,
+		bindings,
+		sizeof(*drawItem.uniformBlockBindings) * count);
+}
+
 UniformDataWriter::UniformDataWriter()
 	: failed(false)
 	, shaderProgram(nullptr)

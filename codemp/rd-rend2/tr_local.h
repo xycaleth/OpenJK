@@ -3621,6 +3621,31 @@ struct DrawItem
 	DrawCommand draw;
 };
 
+void DrawItemSetSamplerBindings(
+	DrawItem& drawItem,
+	const SamplerBinding *bindings,
+	uint32_t count,
+	Allocator& allocator);
+void DrawItemSetUniformBlockBindings(
+	DrawItem& drawItem,
+	const UniformBlockBinding *bindings,
+	uint32_t count,
+	Allocator& allocator);
+void DrawItemSetVertexAttributes(
+	DrawItem& drawItem,
+	const vertexAttribute_t *attributes,
+	uint32_t count,
+	Allocator& allocator);
+
+template<int N>
+void DrawItemSetUniformBlockBindings(
+	DrawItem& drawItem,
+	const UniformBlockBinding (&bindings)[N],
+	Allocator& allocator)
+{
+	DrawItemSetUniformBlockBindings(drawItem, &bindings[0], N, allocator);
+}
+
 class UniformDataWriter
 {
 public:

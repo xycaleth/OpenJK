@@ -435,6 +435,7 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 
 	UniformDataWriter uniformDataWriter;
 	SamplerBindingsWriter samplerBindingsWriter;
+	Allocator& frameAllocator = *backEndData->perFrameMemory;
 
 	shaderProgram_t *sp = &tr.lightallShader[0];
 	float colorScale = backEnd.refdef.colorScale;
@@ -450,26 +451,23 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 
 	samplerBindingsWriter.AddStaticImage(image, TB_DIFFUSEMAP);
 
+	const UniformBlockBinding uniformBlockBindings[] = {
+		{ tr.skyEntityUboOffset, UNIFORM_BLOCK_ENTITY }
+	};
+
 	DrawItem item = {};
 	item.cullType = CT_TWO_SIDED;
 	item.program = sp;
 	item.depthRange = RB_GetDepthRange(backEnd.currentEntity, tess.shader);
 	item.ibo = backEndData->currentFrame->dynamicIbo;
-	item.numAttributes = vertexArrays.numVertexArrays;
-	item.attributes = ojkAllocArray<vertexAttribute_t>(
-		*backEndData->perFrameMemory, vertexArrays.numVertexArrays);
-	memcpy(item.attributes, attribs,
-		sizeof(*item.attributes) * item.numAttributes);
-
-	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
+	item.uniformData = uniformDataWriter.Finish(frameAllocator);
 	item.samplerBindings = samplerBindingsWriter.Finish(
-		*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
+		frameAllocator, (int *)&item.numSamplerBindings);
 
-	item.numUniformBlockBindings = 1;
-	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
-		*backEndData->perFrameMemory, item.numUniformBlockBindings);
-	item.uniformBlockBindings[0].offset = tr.skyEntityUboOffset;
-	item.uniformBlockBindings[0].block = UNIFORM_BLOCK_ENTITY;
+	DrawItemSetVertexAttributes(
+		item, attribs, vertexArrays.numVertexArrays, frameAllocator);
+	DrawItemSetUniformBlockBindings(
+		item, uniformBlockBindings, frameAllocator);
 
 	RB_FillDrawCommand(item.draw, GL_TRIANGLES, 1, &tess);
 	item.draw.params.indexed.numIndices -= tess.firstIndex;

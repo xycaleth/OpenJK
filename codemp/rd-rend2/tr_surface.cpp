@@ -2104,8 +2104,15 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	uniformDataWriter.SetUniformMatrix4x4(
 		UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
 
+	Allocator& frameAllocator = *backEndData->perFrameMemory;
+
 	SamplerBindingsWriter samplerBindingsWriter;
 	samplerBindingsWriter.AddAnimatedImage(&firstStage->bundle[0], TB_COLORMAP);
+
+	const UniformBlockBinding uniformBlockBindings[] = {
+		{ uboDataOffset, UNIFORM_BLOCK_SURFACESPRITE },
+		{ tr.cameraUboOffset, UNIFORM_BLOCK_CAMERA }
+	};
 
 	DrawItem item = {};
 	item.stateBits = firstStage->stateBits;
@@ -2113,27 +2120,14 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	item.program = program;
 	item.depthRange = DepthRange{0.0f, 1.0f};
 	item.ibo = surf->ibo;
-	tess.externalIBO = surf->ibo;
-
-	item.numAttributes = surf->numAttributes;
-	item.attributes = ojkAllocArray<vertexAttribute_t>(
-		*backEndData->perFrameMemory, surf->numAttributes);
-	memcpy(
-		item.attributes,
-		surf->attributes,
-		sizeof(*item.attributes)*surf->numAttributes);
-
-	item.numUniformBlockBindings = 2;
-	item.uniformBlockBindings = ojkAllocArray<UniformBlockBinding>(
-		*backEndData->perFrameMemory, item.numUniformBlockBindings);
-	item.uniformBlockBindings[1].offset = uboDataOffset;
-	item.uniformBlockBindings[0].block = UNIFORM_BLOCK_SURFACESPRITE;
-	item.uniformBlockBindings[1].offset = tr.cameraUboOffset;
-	item.uniformBlockBindings[1].block = UNIFORM_BLOCK_CAMERA;
-
-	item.uniformData = uniformDataWriter.Finish(*backEndData->perFrameMemory);
+	item.uniformData = uniformDataWriter.Finish(frameAllocator);
 	item.samplerBindings = samplerBindingsWriter.Finish(
-		*backEndData->perFrameMemory, (int *)&item.numSamplerBindings);
+		frameAllocator, (int *)&item.numSamplerBindings);
+
+	DrawItemSetVertexAttributes(
+		item, surf->attributes, surf->numAttributes, frameAllocator);
+	DrawItemSetUniformBlockBindings(
+		item, uniformBlockBindings, frameAllocator);
 
 	item.draw.type = DRAW_COMMAND_INDEXED;
 	item.draw.primitiveType = GL_TRIANGLES;
@@ -2141,6 +2135,8 @@ static void RB_SurfaceSprites( srfSprites_t *surf )
 	item.draw.params.indexed.indexType = GL_UNSIGNED_SHORT;
 	item.draw.params.indexed.firstIndex = 0;
 	item.draw.params.indexed.numIndices = 6;
+
+	tess.externalIBO = surf->ibo;
 
 uint32_t RB_CreateSortKey( const DrawItem& item, int stage, int layer );
 	uint32_t key = RB_CreateSortKey(item, 0, surf->shader->sort);
