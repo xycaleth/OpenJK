@@ -41,7 +41,7 @@ Block *FindBlock( const char *name, Block *blocks, size_t numBlocks )
 	return nullptr;
 }
 
-#if defined(__clang__)
+#if defined(__clang__) || defined(__GNUC__) || defined(__GNUG__)
 void strncpy_s( char *dest, size_t destSize, const char *src, size_t srcSize )
 {
 	// This isn't really a safe version, but I know the inputs to expect.
