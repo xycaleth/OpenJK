@@ -2001,7 +2001,7 @@ static void RB_RenderSSAO()
 {
 	const float zmax = backEnd.viewParms.zFar;
 	const float zmin = r_znear->value;
-	const vec4_t viewInfo = { zmax / zmin, zmax, 0.0f, 0.0f };
+	const vec4_t viewInfo = { zmin, zmax, 0.0f, 0.0f };
 
 
 	FBO_Bind(tr.quarterFbo[0]);

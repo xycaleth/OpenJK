@@ -13,7 +13,7 @@ void main()
 /*[Fragment]*/
 uniform sampler2D u_ScreenDepthMap;
 uniform sampler2D u_ScreenImageMap;
-uniform vec4 u_ViewInfo; // zfar / znear, zfar, 0, 0
+uniform vec4 u_ViewInfo; // znear, zfar, 0, 0
 uniform vec2 u_ScreenInfo; // width, height
 
 in vec2 var_ScreenTex;
@@ -24,25 +24,19 @@ out vec4 out_Color;
 // AO Shader by Monsterovich :D
 //
 
-float zNear = 1.0 / (u_ViewInfo.x / u_ViewInfo.y);
-float zFar = u_ViewInfo.y;
+vec2 camerarange = vec2(u_ViewInfo.x, u_ViewInfo.y);
 
-vec2 camerarange = vec2(zNear, zFar);
-vec2 screensize = u_ScreenInfo;
-vec2 texCoord = var_ScreenTex;
- 
- 
 float readDepth( in vec2 coord ) {
 	return (2.0 * camerarange.x) / (camerarange.y + camerarange.x - texture2D( u_ScreenDepthMap, coord ).x * (camerarange.y - camerarange.x));	
 }
 
 void main(void)
 {	
-	float depth = readDepth( texCoord );
+	float depth = readDepth( var_ScreenTex );
 	float d;
  
-	float pw = 1.0 / screensize.x;
-	float ph = 1.0 / screensize.y;
+	float pw = 1.0 / u_ScreenInfo.x;
+	float ph = 1.0 / u_ScreenInfo.y;
  
 	float aoCap = 1.0;
 	float ao = 0.0;
@@ -52,16 +46,16 @@ void main(void)
 	int i;
 	for (i = 0; i < 4; i++)
 	{
-		d = readDepth( vec2(texCoord.x+pw,texCoord.y+ph));
+		d = readDepth( vec2(var_ScreenTex.x+pw,var_ScreenTex.y+ph));
 		ao += min(aoCap,max(0.0,depth-d-depthTolerance) * aoMultiplier);
 
-		d = readDepth( vec2(texCoord.x-pw,texCoord.y+ph));
+		d = readDepth( vec2(var_ScreenTex.x-pw,var_ScreenTex.y+ph));
 		ao += min(aoCap,max(0.0,depth-d-depthTolerance) * aoMultiplier);
 
-		d = readDepth( vec2(texCoord.x+pw,texCoord.y-ph));
+		d = readDepth( vec2(var_ScreenTex.x+pw,var_ScreenTex.y-ph));
 		ao += min(aoCap,max(0.0,depth-d-depthTolerance) * aoMultiplier);
 
-		d = readDepth( vec2(texCoord.x-pw,texCoord.y-ph));
+		d = readDepth( vec2(var_ScreenTex.x-pw,var_ScreenTex.y-ph));
 		ao += min(aoCap,max(0.0,depth-d-depthTolerance) * aoMultiplier);
 
 		pw *= 2.0;
@@ -71,7 +65,7 @@ void main(void)
 
 	ao /= 16.0;
  
-	float orig = texture2D(u_ScreenImageMap,texCoord).x;
+	float orig = texture2D(u_ScreenImageMap,var_ScreenTex).x;
 	float done = (1.0 - ao) * orig;
 	out_Color = vec4(done, done, done, 0.0); 
 }
