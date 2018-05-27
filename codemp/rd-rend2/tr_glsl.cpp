@@ -111,6 +111,7 @@ static uniformInfo_t uniformsInfo[] =
 	{ "u_SpecularScale", GLSL_VEC4, 1 },
 
 	{ "u_ViewInfo",				GLSL_VEC4, 1 },
+	{ "u_ScreenInfo",			GLSL_VEC2, 1 },
 	{ "u_ViewOrigin",			GLSL_VEC3, 1 },
 	{ "u_LocalViewOrigin",		GLSL_VEC3, 1 },
 	{ "u_ViewForward",			GLSL_VEC3, 1 },

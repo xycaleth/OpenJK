@@ -8,95 +8,70 @@ void main()
 {
 	gl_Position = attr_Position;
 	var_ScreenTex = attr_TexCoord0.xy;
-	//vec2 screenCoords = gl_Position.xy / gl_Position.w;
-	//var_ScreenTex = screenCoords * 0.5 + 0.5;
 }
 
 /*[Fragment]*/
 uniform sampler2D u_ScreenDepthMap;
-uniform vec4 u_ViewInfo; // zfar / znear, zfar
+uniform sampler2D u_ScreenImageMap;
+uniform vec4 u_ViewInfo; // zfar / znear, zfar, 0, 0
+uniform vec2 u_ScreenInfo; // width, height
 
 in vec2 var_ScreenTex;
 
 out vec4 out_Color;
 
-vec2 poissonDisc[9] = vec2[9](
-vec2(-0.7055767, 0.196515),    vec2(0.3524343, -0.7791386),
-vec2(0.2391056, 0.9189604),    vec2(-0.07580382, -0.09224417),
-vec2(0.5784913, -0.002528916), vec2(0.192888, 0.4064181),
-vec2(-0.6335801, -0.5247476),  vec2(-0.5579782, 0.7491854),
-vec2(0.7320465, 0.6317794)
-);
+//
+// AO Shader by Monsterovich :D
+//
 
-// Input: It uses texture coords as the random number seed.
-// Output: Random number: [0,1), that is between 0.0 and 0.999999... inclusive.
-// Author: Michael Pohoreski
-// Copyright: Copyleft 2012 :-)
-// Source: http://stackoverflow.com/questions/5149544/can-i-generate-a-random-number-inside-a-pixel-shader
+float zNear = 1.0 / (u_ViewInfo.x / u_ViewInfo.y);
+float zFar = u_ViewInfo.y;
 
-float random( const vec2 p )
-{
-  // We need irrationals for pseudo randomness.
-  // Most (all?) known transcendental numbers will (generally) work.
-  const vec2 r = vec2(
-    23.1406926327792690,  // e^pi (Gelfond's constant)
-     2.6651441426902251); // 2^sqrt(2) (Gelfond-Schneider constant)
-  //return fract( cos( mod( 123456789., 1e-7 + 256. * dot(p,r) ) ) );
-  return mod( 123456789., 1e-7 + 256. * dot(p,r) );  
+vec2 camerarange = vec2(zNear, zFar);
+vec2 screensize = u_ScreenInfo;
+vec2 texCoord = var_ScreenTex;
+ 
+ 
+float readDepth( in vec2 coord ) {
+	return (2.0 * camerarange.x) / (camerarange.y + camerarange.x - texture2D( u_ScreenDepthMap, coord ).x * (camerarange.y - camerarange.x));	
 }
 
-mat2 randomRotation( const vec2 p )
-{
-	float r = random(p);
-	float sinr = sin(r);
-	float cosr = cos(r);
-	return mat2(cosr, sinr, -sinr, cosr);
-}
+void main(void)
+{	
+	float depth = readDepth( texCoord );
+	float d;
+ 
+	float pw = 1.0 / screensize.x;
+	float ph = 1.0 / screensize.y;
+ 
+	float aoCap = 1.0;
+	float ao = 0.0;
+	float aoMultiplier=1000.0;
+	float depthTolerance = 0.0001;
 
-float getLinearDepth(sampler2D depthMap, const vec2 tex, const float zFarDivZNear)
-{
-		float sampleZDivW = texture(depthMap, tex).r;
-		return 1.0 / mix(zFarDivZNear, 1.0, sampleZDivW);
-}
-
-float ambientOcclusion(sampler2D depthMap, const vec2 tex, const float zFarDivZNear, const float zFar)
-{
-	float result = 0;
-
-	float sampleZ = zFar * getLinearDepth(depthMap, tex, zFarDivZNear);
-
-	vec2 expectedSlope = vec2(dFdx(sampleZ), dFdy(sampleZ)) / vec2(dFdx(tex.x), dFdy(tex.y));
-	
-	if (length(expectedSlope) > 5000.0)
-		return 1.0;
-	
-	vec2 offsetScale = vec2(3.0 / sampleZ);
-	
-	mat2 rmat = randomRotation(tex);
-		
 	int i;
-	for (i = 0; i < 3; i++)
+	for (i = 0; i < 4; i++)
 	{
-		vec2 offset = rmat * poissonDisc[i] * offsetScale;
-		float sampleZ2 = zFar * getLinearDepth(depthMap, tex + offset, zFarDivZNear);
+		d = readDepth( vec2(texCoord.x+pw,texCoord.y+ph));
+		ao += min(aoCap,max(0.0,depth-d-depthTolerance) * aoMultiplier);
 
-		if (abs(sampleZ - sampleZ2) > 20.0)
-			result += 1.0;
-		else
-		{
-			float expectedZ = sampleZ + dot(expectedSlope, offset);
-			result += step(expectedZ - 1.0, sampleZ2);
-		}
+		d = readDepth( vec2(texCoord.x-pw,texCoord.y+ph));
+		ao += min(aoCap,max(0.0,depth-d-depthTolerance) * aoMultiplier);
+
+		d = readDepth( vec2(texCoord.x+pw,texCoord.y-ph));
+		ao += min(aoCap,max(0.0,depth-d-depthTolerance) * aoMultiplier);
+
+		d = readDepth( vec2(texCoord.x-pw,texCoord.y-ph));
+		ao += min(aoCap,max(0.0,depth-d-depthTolerance) * aoMultiplier);
+
+		pw *= 2.0;
+		ph *= 2.0;
+		aoMultiplier /= 2.0;
 	}
-	
-	result *= 0.33333;
-	
-	return result;
-}
 
-void main()
-{
-	float result = ambientOcclusion(u_ScreenDepthMap, var_ScreenTex, u_ViewInfo.x, u_ViewInfo.y);
-			
-	out_Color = vec4(vec3(result), 1.0);
+	ao /= 16.0;
+ 
+	float orig = texture2D(u_ScreenImageMap,texCoord).x;
+	float done = (1.0 - ao) * orig;
+	out_Color = vec4(done, done, done, 0.0); 
 }

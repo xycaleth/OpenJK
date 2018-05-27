@@ -2038,6 +2038,9 @@ static void RB_RenderSSAO()
 	GL_BindToTMU(tr.hdrDepthImage, TB_COLORMAP);
 	GLSL_SetUniformVec4(&tr.ssaoShader, UNIFORM_VIEWINFO, viewInfo);
 
+	const vec2_t screenInfo = { (float)glConfig.vidWidth, (float)glConfig.vidHeight };
+	GLSL_SetUniformVec2(&tr.ssaoShader, UNIFORM_SCREENINFO, screenInfo);
+
 	RB_InstantQuad2(quadVerts, texCoords);
 
 	FBO_Bind(tr.quarterFbo[1]);
