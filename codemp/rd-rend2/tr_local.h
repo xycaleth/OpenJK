@@ -1245,6 +1245,7 @@ typedef enum
 	UNIFORM_VIEWINFO,
 	UNIFORM_SCREENINFO,
 	UNIFORM_SSAOSETTINGS,
+	UNIFORM_SSAOSETTINGS2,
 	UNIFORM_VIEWORIGIN,
 	UNIFORM_LOCALVIEWORIGIN,
 	UNIFORM_VIEWFORWARD,
@@ -2512,6 +2513,9 @@ extern  cvar_t  *r_ssao_aocap;
 extern  cvar_t  *r_ssao_strength;
 extern  cvar_t  *r_ssao_aoMultiplier;
 extern  cvar_t  *r_ssao_lightmap;
+extern  cvar_t  *r_ssao_noise;
+extern  cvar_t  *r_ssao_aorange;
+extern  cvar_t  *r_ssao_depthTolerance;
 
 extern  cvar_t  *r_normalMapping;
 extern  cvar_t  *r_specularMapping;
