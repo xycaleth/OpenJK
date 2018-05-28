@@ -1886,6 +1886,7 @@ static int GLSL_LoadGPUProgramSSAO(
 
 	qglUseProgram(tr.ssaoShader.program);
 	GLSL_SetUniformInt(&tr.ssaoShader, UNIFORM_SCREENDEPTHMAP, TB_COLORMAP);
+	GLSL_SetUniformInt(&tr.ssaoShader, UNIFORM_SCREENIMAGEMAP, TB_LIGHTMAP);
 	qglUseProgram(0);
 
 	GLSL_FinishGPUShader(&tr.ssaoShader);

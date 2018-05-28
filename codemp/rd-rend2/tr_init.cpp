@@ -136,6 +136,7 @@ cvar_t  *r_ssao;
 cvar_t  *r_ssao_aocap;
 cvar_t  *r_ssao_strength;
 cvar_t  *r_ssao_aoMultiplier;
+cvar_t  *r_ssao_lightmap;
 
 cvar_t  *r_normalMapping;
 cvar_t  *r_specularMapping;
@@ -1486,6 +1487,7 @@ void R_Register( void )
 	r_ssao_aocap = ri.Cvar_Get( "r_ssao_aocap", "0.8", CVAR_ARCHIVE, "" );
 	r_ssao_strength = ri.Cvar_Get( "r_ssao_strength", "1.0", CVAR_ARCHIVE, "" );
 	r_ssao_aoMultiplier = ri.Cvar_Get( "r_ssao_aoMultiplier", "2.0", CVAR_ARCHIVE, "" );
+	r_ssao_lightmap = ri.Cvar_Get( "r_ssao_lightmap", "2.2360679" /* sqrt(5.0) */ , CVAR_ARCHIVE, "" );
 
 	r_normalMapping = ri.Cvar_Get( "r_normalMapping", "1", CVAR_ARCHIVE | CVAR_LATCH, "" );
 	r_specularMapping = ri.Cvar_Get( "r_specularMapping", "1", CVAR_ARCHIVE | CVAR_LATCH, "" );

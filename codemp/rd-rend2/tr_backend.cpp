@@ -2032,7 +2032,7 @@ static void RB_RenderSSAO()
 	const vec2_t screenInfo = { (float)glConfig.vidWidth, (float)glConfig.vidHeight };
 	GLSL_SetUniformVec2(&tr.ssaoShader, UNIFORM_SCREENINFO, screenInfo);
 
-	const vec4_t ssaoSettings = { std::fabs(r_ssao_aocap->value), std::fabs(r_ssao_strength->value), std::fabs(r_ssao_aoMultiplier->value), 0.0 };
+	const vec4_t ssaoSettings = { std::fabs(r_ssao_aocap->value), std::fabs(r_ssao_strength->value), std::fabs(r_ssao_aoMultiplier->value), std::fabs(r_ssao_lightmap->value) };
 	GLSL_SetUniformVec4(&tr.ssaoShader, UNIFORM_SSAOSETTINGS, ssaoSettings);
 
 	RB_InstantQuad2(quadVerts, texCoords);

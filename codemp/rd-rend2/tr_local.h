@@ -2511,6 +2511,7 @@ extern  cvar_t  *r_ssao;
 extern  cvar_t  *r_ssao_aocap;
 extern  cvar_t  *r_ssao_strength;
 extern  cvar_t  *r_ssao_aoMultiplier;
+extern  cvar_t  *r_ssao_lightmap;
 
 extern  cvar_t  *r_normalMapping;
 extern  cvar_t  *r_specularMapping;

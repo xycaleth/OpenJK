@@ -11,8 +11,8 @@ void main()
 }
 
 /*[Fragment]*/
-uniform sampler2D u_ScreenDepthMap;
-uniform sampler2D u_ScreenImageMap;
+uniform sampler2D u_ScreenDepthMap; // colormap
+uniform sampler2D u_ScreenImageMap; // lightmap
 uniform vec4 u_ViewInfo; // znear, zfar, 0, 0
 uniform vec2 u_ScreenInfo; // width, height
 
@@ -71,7 +71,12 @@ void main(void)
 	ao /= 16.0;
 	ao *= u_SSAOSettings.y;
  
-	float orig = texture2D(u_ScreenImageMap,var_ScreenTex).x;
-	float done = (1.0 - ao) * orig;
+	float done = (1.0 - ao);
+	if (u_SSAOSettings.w > 1)
+	{
+		float orig = texture2D(u_ScreenImageMap,var_ScreenTex).x;
+		done *= (1.0 - orig) * u_SSAOSettings.w;
+	}
+
 	out_Color = vec4(done, done, done, 0.0); 
 }
