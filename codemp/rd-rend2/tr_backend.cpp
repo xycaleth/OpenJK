@@ -2032,6 +2032,9 @@ static void RB_RenderSSAO()
 	const vec2_t screenInfo = { (float)glConfig.vidWidth, (float)glConfig.vidHeight };
 	GLSL_SetUniformVec2(&tr.ssaoShader, UNIFORM_SCREENINFO, screenInfo);
 
+	const vec4_t ssaoSettings = { r_ssao_aocap->value, r_ssao_strength->value, r_ssao_aoMultiplier->value, 0.0 };
+	GLSL_SetUniformVec4(&tr.ssaoShader, UNIFORM_SSAOSETTINGS, ssaoSettings);
+
 	RB_InstantQuad2(quadVerts, texCoords);
 
 	FBO_Bind(tr.quarterFbo[1]);

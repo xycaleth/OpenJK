@@ -16,6 +16,8 @@ uniform sampler2D u_ScreenImageMap;
 uniform vec4 u_ViewInfo; // znear, zfar, 0, 0
 uniform vec2 u_ScreenInfo; // width, height
 
+uniform vec4 u_SSAOSettings; // aocap, strength, aoMultiplier, 0
+
 in vec2 var_ScreenTex;
 
 out vec4 out_Color;
@@ -31,14 +33,14 @@ float readDepth( in vec2 coord ) {
 }
 
 void main(void)
-{	
+{
 	float depth = readDepth( var_ScreenTex );
 	float d;
  
 	float pw = 1.0 / u_ScreenInfo.x;
 	float ph = 1.0 / u_ScreenInfo.y;
  
-	float aoCap = 1.0;
+	float aoCap = u_SSAOSettings.x;
 	float ao = 0.0;
 	float aoMultiplier=1000.0;
 	float depthTolerance = 0.0001;
@@ -60,10 +62,11 @@ void main(void)
 
 		pw *= 2.0;
 		ph *= 2.0;
-		aoMultiplier /= 2.0;
+		aoMultiplier /= u_SSAOSettings.z;
 	}
 
 	ao /= 16.0;
+	ao *= u_SSAOSettings.y;
  
 	float orig = texture2D(u_ScreenImageMap,var_ScreenTex).x;
 	float done = (1.0 - ao) * orig;
