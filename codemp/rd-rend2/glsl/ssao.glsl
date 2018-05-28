@@ -62,7 +62,10 @@ void main(void)
 
 		pw *= 2.0;
 		ph *= 2.0;
-		aoMultiplier /= u_SSAOSettings.z;
+		if (u_SSAOSettings.z <= 0)
+			aoMultiplier /= 2.0;
+		else
+			aoMultiplier /= u_SSAOSettings.z;
 	}
 
 	ao /= 16.0;
