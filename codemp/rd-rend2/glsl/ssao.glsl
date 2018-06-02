@@ -53,16 +53,29 @@ void main(void)
 	int i;
 	for (i = 0; i < 4; i++)
 	{
-		d = readDepth( vec2(var_ScreenTex.x+pw,var_ScreenTex.y+ph), u_ViewInfo.x, u_ViewInfo.y);
+		// this should create pseudo-circle but I don't want to use sin, cos
+		d = readDepth( vec2(var_ScreenTex.x+pw/2.0,var_ScreenTex.y+ph/2.0), u_ViewInfo.x, u_ViewInfo.y);
 		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
 
-		d = readDepth( vec2(var_ScreenTex.x-pw,var_ScreenTex.y+ph), u_ViewInfo.x, u_ViewInfo.y);
+		d = readDepth( vec2(var_ScreenTex.x-pw/2.0,var_ScreenTex.y+ph/2.0), u_ViewInfo.x, u_ViewInfo.y);
 		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
 
-		d = readDepth( vec2(var_ScreenTex.x+pw,var_ScreenTex.y-ph), u_ViewInfo.x, u_ViewInfo.y);
+		d = readDepth( vec2(var_ScreenTex.x+pw/2.0,var_ScreenTex.y-ph/2.0), u_ViewInfo.x, u_ViewInfo.y);
 		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
 
-		d = readDepth( vec2(var_ScreenTex.x-pw,var_ScreenTex.y-ph), u_ViewInfo.x, u_ViewInfo.y);
+		d = readDepth( vec2(var_ScreenTex.x-pw/2.0,var_ScreenTex.y-ph/2.0), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x+pw,var_ScreenTex.y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x-pw,var_ScreenTex.y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x,var_ScreenTex.y-ph), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x,var_ScreenTex.y+ph), u_ViewInfo.x, u_ViewInfo.y);
 		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
 
 		pw *= 2.0;

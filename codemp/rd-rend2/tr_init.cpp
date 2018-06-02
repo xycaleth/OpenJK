@@ -1485,7 +1485,7 @@ void R_Register( void )
 	r_depthPrepass = ri.Cvar_Get( "r_depthPrepass", "1", CVAR_ARCHIVE, "" );
 	r_ssao = ri.Cvar_Get( "r_ssao", "0", CVAR_LATCH | CVAR_ARCHIVE, "" );
 
-	r_ssao_aocap = ri.Cvar_Get( "r_ssao_aocap", "1.5", CVAR_ARCHIVE, "" );
+	r_ssao_aocap = ri.Cvar_Get( "r_ssao_aocap", "1.0", CVAR_ARCHIVE, "" );
 	r_ssao_aoMultiplier = ri.Cvar_Get( "r_ssao_aoMultiplier", "20000.0", CVAR_ARCHIVE, "" );
 	char val[32]; sprintf(val, "%f", std::sqrt(10));
 	r_ssao_lightmap = ri.Cvar_Get( "r_ssao_lightmap", val, CVAR_ARCHIVE, "" );
