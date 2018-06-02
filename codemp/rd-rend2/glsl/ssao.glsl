@@ -53,7 +53,6 @@ void main(void)
 	float pw = 1.0 / u_ScreenInfo.x;
 	float ph = 1.0 / u_ScreenInfo.y;
  
-	float aoCap = u_SSAOSettings.x;
 	float ao = 0.0;
 	float aoScale = 1.0;
 
