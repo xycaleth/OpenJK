@@ -28,7 +28,7 @@ out vec4 out_Color;
 //
 
 float readDepth( in vec2 coord, in float znear, in float zfar ) {
-	return (2.0 * znear) / (zfar + znear - texture2D( u_ScreenDepthMap, coord ).x * (zfar - znear));	
+	return (2.0 * znear) / (zfar + znear - texture( u_ScreenDepthMap, coord ).x * (zfar - znear));	
 }
 
 float compareDepths( in float depth1, in float depth2, in float znear, in float zfar  ) {
@@ -75,7 +75,7 @@ void main(void)
 	float done = (1.0 - ao);
 	if (u_SSAOSettings.w > 1)
 	{
-		float orig = texture2D(u_ScreenImageMap,var_ScreenTex).x;
+		float orig = texture(u_ScreenImageMap,var_ScreenTex).x;
 		done *= u_SSAOSettings.w;
 	}
 
