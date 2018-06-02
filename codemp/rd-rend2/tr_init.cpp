@@ -134,10 +134,8 @@ cvar_t  *r_depthPrepass;
 cvar_t  *r_ssao;
 
 cvar_t  *r_ssao_aocap;
-cvar_t  *r_ssao_strength;
 cvar_t  *r_ssao_aoMultiplier;
 cvar_t  *r_ssao_lightmap;
-cvar_t  *r_ssao_noise;
 cvar_t  *r_ssao_aorange;
 cvar_t  *r_ssao_depthTolerance;
 
@@ -1488,11 +1486,9 @@ void R_Register( void )
 	r_ssao = ri.Cvar_Get( "r_ssao", "0", CVAR_LATCH | CVAR_ARCHIVE, "" );
 
 	r_ssao_aocap = ri.Cvar_Get( "r_ssao_aocap", "1.5", CVAR_ARCHIVE, "" );
-	r_ssao_strength = ri.Cvar_Get( "r_ssao_strength", "1.0", CVAR_ARCHIVE, "" );
 	r_ssao_aoMultiplier = ri.Cvar_Get( "r_ssao_aoMultiplier", "20000.0", CVAR_ARCHIVE, "" );
 	char val[32]; sprintf(val, "%f", std::sqrt(10));
 	r_ssao_lightmap = ri.Cvar_Get( "r_ssao_lightmap", val, CVAR_ARCHIVE, "" );
-	r_ssao_noise = ri.Cvar_Get( "r_ssao_noise", "0", CVAR_ARCHIVE, "" ); 
 	r_ssao_aorange = ri.Cvar_Get( "r_ssao_aorange", "128.0", CVAR_ARCHIVE, "" ); 
 	r_ssao_depthTolerance = ri.Cvar_Get( "r_ssao_depthTolerance", "0.0", CVAR_ARCHIVE, "" ); 
 
