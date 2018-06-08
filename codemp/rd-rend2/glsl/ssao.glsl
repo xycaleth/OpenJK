@@ -86,16 +86,16 @@ void main(void)
 		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
 
 		// pi / 4 (4 points)
-		d = readDepth( vec2(var_ScreenTex.x+pw/P1,var_ScreenTex.y+ph/P1), u_ViewInfo.x, u_ViewInfo.y);
+		d = readDepth( vec2(var_ScreenTex.x+pw*P1,var_ScreenTex.y+ph*P1), u_ViewInfo.x, u_ViewInfo.y);
 		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
 
-		d = readDepth( vec2(var_ScreenTex.x-pw/P1,var_ScreenTex.y+ph/P1), u_ViewInfo.x, u_ViewInfo.y);
+		d = readDepth( vec2(var_ScreenTex.x-pw*P1,var_ScreenTex.y+ph*P1), u_ViewInfo.x, u_ViewInfo.y);
 		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
 
-		d = readDepth( vec2(var_ScreenTex.x+pw/P1,var_ScreenTex.y-ph/P1), u_ViewInfo.x, u_ViewInfo.y);
+		d = readDepth( vec2(var_ScreenTex.x+pw*P1,var_ScreenTex.y-ph*P1), u_ViewInfo.x, u_ViewInfo.y);
 		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
 
-		d = readDepth( vec2(var_ScreenTex.x-pw/P1,var_ScreenTex.y-ph/P1), u_ViewInfo.x, u_ViewInfo.y);
+		d = readDepth( vec2(var_ScreenTex.x-pw*P1,var_ScreenTex.y-ph*P1), u_ViewInfo.x, u_ViewInfo.y);
 		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) / aoScale;
 
 		// up/down/left/right
