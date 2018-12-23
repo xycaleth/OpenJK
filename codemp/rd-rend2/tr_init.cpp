@@ -28,6 +28,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_weather.h"
 #include <algorithm>
 
+#include "tr_steroids_cmd.h"
+
 static size_t FRAME_UNIFORM_BUFFER_SIZE = 8*1024*1024;
 static size_t FRAME_VERTEX_BUFFER_SIZE = 12*1024*1024;
 static size_t FRAME_INDEX_BUFFER_SIZE = 4*1024*1024;
@@ -273,24 +275,36 @@ cvar_t	*r_aspectCorrectFonts;
 extern void	RB_SetGL2D (void);
 static void R_Splash()
 {
-	const GLfloat black[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-	qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
-	qglClearBufferfv(GL_COLOR, 0, black);
+	image_t *splashImage = R_FindImageFile(
+		"menu/splash",
+		IMGTYPE_COLORALPHA,
+		IMGFLAG_NONE);
 
 	GLSL_InitSplashScreenShader();
 
-	GL_Cull(CT_TWO_SIDED);
+	r2::render_pass_t renderPass = {};
+	renderPass.viewport = {0, 0, glConfig.vidWidth, glConfig.vidHeight};
+	renderPass.clearColorAction[0] = r2::CLEAR_ACTION_FILL;
+	VectorSet4(renderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
 
-	image_t *pImage = R_FindImageFile( "menu/splash", IMGTYPE_COLORALPHA, IMGFLAG_NONE);
-	if (pImage )
-		GL_Bind( pImage );
+	r2::render_state_t renderState = {};
+	renderState.stateBits = GLS_DEPTHTEST_DISABLE;
+	renderState.cullType = CT_TWO_SIDED;
 
-	GL_State(GLS_DEPTHTEST_DISABLE);
-	GLSL_BindProgram(&tr.splashScreenShader);
-	qglDrawArrays(GL_TRIANGLES, 0, 3);
+	auto *cmdBuffer = tr.frame.cmdBuffer;
+	r2::CmdBeginRenderPass(cmdBuffer, &renderPass);
+	r2::CmdSetRenderState(cmdBuffer, &renderState);
 
-	ri.WIN_Present(&window);
+	if (splashImage != nullptr)
+	{
+		r2::CmdSetTexture(cmdBuffer, 0, splashImage);
+	}
+
+	r2::CmdSetShaderProgram(cmdBuffer, &tr.splashScreenShader);
+	r2::CmdDraw(cmdBuffer, r2::PRIMITIVE_TYPE_TRIANGLES, 3, 0, 1);
+	r2::CmdEndRenderPass(cmdBuffer);
+
+	r2::SubmitFrame(&tr.frame);
 }
 
 /*
@@ -480,7 +494,7 @@ static const char *GetGLExtensionsString()
 ** setting variables, checking GL constants, and reporting the gfx system config
 ** to the user.
 */
-static void InitOpenGL( void )
+static bool InitOpenGL( void )
 {
 	//
 	// initialize OS specific portions of the renderer
@@ -556,12 +570,14 @@ static void InitOpenGL( void )
 		// set default state
 		GL_SetDefaultState();
 
-		R_Splash();	//get something on screen asap
+		return true;
 	}
 	else
 	{
 		// set default state
 		GL_SetDefaultState();
+
+		return false;
 	}
 }
 
@@ -1815,9 +1831,15 @@ void R_Init( void ) {
 
 	R_InitImagesPool();
 
-	InitOpenGL();
+	const bool firstInit = InitOpenGL();
 
 	R_InitVBOs();
+	r2::InitFrame(&tr.frame);
+
+	if (firstInit)
+	{
+		R_Splash();
+	}
 
 	R_InitBackEndFrameData();
 	R_InitImages();
@@ -2060,6 +2082,7 @@ Q_EXPORT refexport_t* QDECL GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 	re.Font_StrLenChars = RE_Font_StrLenChars;
 	re.Font_HeightPixels = RE_Font_HeightPixels;
 	re.Font_DrawString = RE_Font_DrawString;
+
 	re.Language_IsAsian = Language_IsAsian;
 	re.Language_UsesSpaces = Language_UsesSpaces;
 	re.AnyLanguage_ReadCharFromString = AnyLanguage_ReadCharFromString;

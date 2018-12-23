@@ -41,6 +41,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <unordered_map>
 #include <string>
 
+#include "tr_steroids_frame.h"
+
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
 
@@ -1996,7 +1998,7 @@ typedef struct {
 
 struct vertexAttribute_t
 {
-	VBO_t *vbo;
+	const VBO_t *vbo;
 	int index;
 	int numComponents;
 	GLboolean integerAttribute;
@@ -2033,10 +2035,10 @@ typedef struct glstate_s {
 	qboolean		skeletalAnimation;
 	mat4x3_t       *boneMatrices;
 	int				numBones;
-	shaderProgram_t *currentProgram;
+	const shaderProgram_t *currentProgram;
 	FBO_t          *currentFBO;
-	VBO_t          *currentVBO;
-	IBO_t          *currentIBO;
+	const VBO_t    *currentVBO;
+	const IBO_t    *currentIBO;
 	bufferBinding_t currentXFBBO;
 	matrix_t        modelview;
 	matrix_t        projection;
@@ -2166,6 +2168,7 @@ typedef struct {
 ** but may read fields that aren't dynamically modified
 ** by the frontend.
 */
+const int MAX_FRAMES_IN_FLIGHT = 2;
 struct weatherSystem_t;
 typedef struct trGlobals_s {
 	qboolean				registered;		// cleared at shutdown, set at beginRegistration
@@ -2187,6 +2190,10 @@ typedef struct trGlobals_s {
 	int						frameSceneNum;	// zeroed at RE_BeginFrame
 
 	GLuint					globalVao;
+
+	// Steroids
+	r2::frame_t				frame;
+
 
 	qboolean				worldMapLoaded;
 	qboolean				worldDeluxeMapping;
@@ -2639,7 +2646,7 @@ void	GL_Cull( int cullType );
 void	GL_DepthRange( float min, float max );
 void	GL_PolygonOffset( qboolean enabled );
 void	GL_VertexAttribPointers(size_t numAttributes,
-								vertexAttribute_t *attributes);
+								const vertexAttribute_t *attributes);
 void	GL_DrawIndexed(GLenum primitiveType, int numIndices, GLenum indexType,
 						int offset, int numInstances, int baseVertex);
 void	GL_MultiDrawIndexed(GLenum primitiveType, int *numIndices,
@@ -2957,10 +2964,10 @@ void R_VboUnpackNormal(vec3_t v, uint32_t b);
 VBO_t          *R_CreateVBO(byte * vertexes, int vertexesSize, vboUsage_t usage);
 IBO_t          *R_CreateIBO(byte * indexes, int indexesSize, vboUsage_t usage);
 
-void            R_BindVBO(VBO_t * vbo);
+void            R_BindVBO(const VBO_t * vbo);
 void            R_BindNullVBO(void);
 
-void            R_BindIBO(IBO_t * ibo);
+void            R_BindIBO(const IBO_t * ibo);
 void            R_BindNullIBO(void);
 
 void            R_InitVBOs(void);
@@ -2990,7 +2997,7 @@ void GLSL_VertexAttribsState(uint32_t stateBits, VertexArraysProperties *vertexA
 void GLSL_VertexAttribPointers(const VertexArraysProperties *vertexArrays);
 void GL_VertexArraysToAttribs( vertexAttribute_t *attribs,
 	size_t attribsCount, const VertexArraysProperties *vertexArrays );
-void GLSL_BindProgram(shaderProgram_t * program);
+void GLSL_BindProgram(const shaderProgram_t * program);
 void GLSL_BindNullProgram(void);
 
 void GLSL_SetUniformInt(shaderProgram_t *program, int uniformNum, GLint value);
@@ -3001,7 +3008,7 @@ void GLSL_SetUniformVec3(shaderProgram_t *program, int uniformNum, const vec3_t 
 void GLSL_SetUniformVec4(shaderProgram_t *program, int uniformNum, const vec4_t v);
 void GLSL_SetUniformMatrix4x3(shaderProgram_t *program, int uniformNum, const float *matrix, int numElements = 1);
 void GLSL_SetUniformMatrix4x4(shaderProgram_t *program, int uniformNum, const float *matrix, int numElements = 1);
-void GLSL_SetUniforms( shaderProgram_t *program, UniformData *uniformData );
+void GLSL_SetUniforms( shaderProgram_t *program, const UniformData *uniformData );
 
 shaderProgram_t *GLSL_GetGenericShaderProgram(int stage);
 

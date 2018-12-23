@@ -332,15 +332,15 @@ void GL_State( uint32_t stateBits )
 }
 
 void GL_VertexAttribPointers(
-		size_t numAttributes,
-		vertexAttribute_t *attributes )
+    size_t numAttributes,
+    const vertexAttribute_t *attributes)
 {
 	assert(attributes != nullptr || numAttributes == 0);
 
 	uint32_t newAttribs = 0;
 	for ( int i = 0; i < numAttributes; i++ )
 	{
-		vertexAttribute_t& attrib = attributes[i];
+		const vertexAttribute_t& attrib = attributes[i];
 		vertexAttribute_t& currentAttrib = glState.currentVaoAttribs[attrib.index];
 
 		newAttribs |= (1 << attrib.index);

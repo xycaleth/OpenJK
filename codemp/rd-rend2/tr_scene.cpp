@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_local.h"
 
+#include "tr_steroids_cmd.h"
+
 int			r_firstSceneDrawSurf;
 
 int			r_numdlights;
@@ -472,6 +474,7 @@ void RE_RenderScene( const refdef_t *fd ) {
 	if ( !tr.registered ) {
 		return;
 	}
+
 	GLimp_LogComment( "====== RE_RenderScene =====\n" );
 
 	if ( r_norefresh->integer ) {

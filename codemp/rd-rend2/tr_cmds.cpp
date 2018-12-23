@@ -22,6 +22,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 #include "tr_allocator.h"
 
+#include "tr_steroids_cmd.h"
+#include "tr_steroids_frame.h"
+
+
 /*
 =====================
 R_PerformanceCounters
@@ -149,13 +153,13 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 	cmdList->used = 0;
 
 	if ( runPerformanceCounters ) {
-		R_PerformanceCounters();
+		//R_PerformanceCounters();
 	}
 
 	// actually start the commands going
 	if ( !r_skipBackEnd->integer ) {
 		// let it start on the new batch
-		RB_ExecuteRenderCommands( cmdList->cmds );
+		//RB_ExecuteRenderCommands( cmdList->cmds );
 	}
 }
 
@@ -310,19 +314,34 @@ RE_SetColor
 Passing NULL will set the color to white
 =============
 */
-void	RE_SetColor( const float *rgba ) {
-	setColorCommand_t	*cmd;
+void RE_SetColor(const float *rgba)
+{
+#if 1
+	if (rgba == nullptr)
+	{
+		VectorSet4(tr.frame.color, 1.0f, 1.0f, 1.0f, 1.0f);
+	}
+	else
+	{
+		VectorCopy4(rgba, tr.frame.color);
+	}
+#else
+	setColorCommand_t *cmd;
 
-  if ( !tr.registered ) {
-    return;
-  }
-	cmd = (setColorCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
-	if ( !cmd ) {
+	if (!tr.registered)
+	{
+		return;
+	}
+
+	cmd = (setColorCommand_t *) R_GetCommandBuffer(sizeof(*cmd));
+	if (!cmd)
+	{
 		return;
 	}
 	cmd->commandId = RC_SET_COLOR;
-	if ( !rgba ) {
-		static float colorWhite[4] = { 1, 1, 1, 1 };
+	if (!rgba)
+	{
+		static float colorWhite[4] = {1, 1, 1, 1};
 
 		rgba = colorWhite;
 	}
@@ -331,6 +350,7 @@ void	RE_SetColor( const float *rgba ) {
 	cmd->color[1] = rgba[1];
 	cmd->color[2] = rgba[2];
 	cmd->color[3] = rgba[3];
+#endif
 }
 
 /*
@@ -390,8 +410,128 @@ void RE_RotatePic2 ( float x, float y, float w, float h,
 RE_StretchPic
 =============
 */
-void RE_StretchPic ( float x, float y, float w, float h, 
-					  float s1, float t1, float s2, float t2, qhandle_t hShader ) {
+void RE_StretchPic(
+	float x, float y, float w, float h,
+	float s1, float t1, float s2, float t2, qhandle_t hShader)
+{
+#if 1
+	const shader_t *shader = R_GetShaderByHandle(hShader);
+
+	assert(shader->numUnfoggedPasses > 0);
+
+	const float x0 = x;
+	const float y0 = y;
+	const float x1 = x + w;
+	const float y1 = y + h;
+
+	vec4_t color;
+	VectorCopy4(tr.frame.color, color);
+
+	const struct V
+	{
+		vec2_t position;
+		vec2_t texcoord;
+		vec4_t color;
+	} vertices[] = {
+		{{x0, y0}, {s1, t1}, {color[0], color[1], color[2], color[3]}},
+		{{x1, y0}, {s2, t1}, {color[0], color[1], color[2], color[3]}},
+		{{x1, y1}, {s2, t2}, {color[0], color[1], color[2], color[3]}},
+		{{x0, y1}, {s1, t2}, {color[0], color[1], color[2], color[3]}},
+	};
+
+	const uint16_t indices[] = {3, 0, 2, 2, 0, 1};
+
+	const auto vertexBufferSlice =
+		r2::AppendBuffer(tr.frame.vertexBuffer, vertices, sizeof(vertices));
+	const auto indexBufferSlice =
+		r2::AppendBuffer(tr.frame.indexBuffer, indices, sizeof(indices));
+
+	r2::render_state_t renderState = {};
+	renderState.stateBits =
+		GLS_DEPTHTEST_DISABLE |
+			GLS_SRCBLEND_SRC_ALPHA |
+			GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+	renderState.cullType = CT_TWO_SIDED;
+
+	vertexAttribute_t vertexAttributes[3] = {};
+	vertexAttributes[0].vbo = tr.frame.vertexBuffer->vbo;
+	vertexAttributes[0].index = ATTR_INDEX_POSITION;
+	vertexAttributes[0].numComponents = 2;
+	vertexAttributes[0].integerAttribute = GL_FALSE;
+	vertexAttributes[0].type = GL_FLOAT;
+	vertexAttributes[0].normalize = GL_FALSE;
+	vertexAttributes[0].stride = sizeof(V);
+	vertexAttributes[0].offset = static_cast<int>(
+		vertexBufferSlice.offset + offsetof(V, position));
+	vertexAttributes[0].stepRate = 0;
+
+	vertexAttributes[1].vbo = tr.frame.vertexBuffer->vbo;
+	vertexAttributes[1].index = ATTR_INDEX_TEXCOORD0;
+	vertexAttributes[1].numComponents = 2;
+	vertexAttributes[1].integerAttribute = GL_FALSE;
+	vertexAttributes[1].type = GL_FLOAT;
+	vertexAttributes[1].normalize = GL_FALSE;
+	vertexAttributes[1].stride = sizeof(V);
+	vertexAttributes[1].offset = static_cast<int>(
+		vertexBufferSlice.offset + offsetof(V, texcoord));
+	vertexAttributes[1].stepRate = 0;
+
+	vertexAttributes[2].vbo = tr.frame.vertexBuffer->vbo;
+	vertexAttributes[2].index = ATTR_INDEX_COLOR;
+	vertexAttributes[2].numComponents = 4;
+	vertexAttributes[2].integerAttribute = GL_FALSE;
+	vertexAttributes[2].type = GL_FLOAT;
+	vertexAttributes[2].normalize = GL_FALSE;
+	vertexAttributes[2].stride = sizeof(V);
+	vertexAttributes[2].offset = static_cast<int>(
+		vertexBufferSlice.offset + offsetof(V, color));
+	vertexAttributes[2].stepRate = 0;
+
+	r2::command_buffer_t *cmdBuffer = tr.frame.cmdBuffer;
+
+	if (!tr.frame.startedRenderPass)
+	{
+		r2::render_pass_t renderPass = {};
+		renderPass.viewport = {0, 0, glConfig.vidWidth, glConfig.vidHeight};
+		renderPass.clearColorAction[0] = r2::CLEAR_ACTION_FILL;
+		VectorSet4(renderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
+		renderPass.clearDepthAction = r2::CLEAR_ACTION_FILL;
+		renderPass.clearDepth = 1.0f;
+
+		r2::CmdBeginRenderPass(cmdBuffer, &renderPass);
+
+		tr.frame.startedRenderPass = true;
+	}
+
+	matrix_t projectionMatrix;
+	Matrix16Ortho(0.0f, 640.0f, 480.0f, 0.0f, 0.0f, 1.0f, projectionMatrix);
+
+	UniformDataWriter uniformDataWriter;
+	uniformDataWriter.Start(&tr.genericShader[0]);
+	uniformDataWriter.SetUniformMatrix4x4(
+		UNIFORM_MODELVIEWPROJECTIONMATRIX,
+		projectionMatrix);
+	uniformDataWriter.SetUniformFloat(UNIFORM_FX_VOLUMETRIC_BASE, -1.0f);
+	uniformDataWriter.SetUniformVec4(UNIFORM_VERTCOLOR, 1.0f, 1.0f, 1.0f, 1.0f);
+	const UniformData *uniformData = uniformDataWriter.Finish(*tr.frame.memory);
+
+	r2::CmdSetShaderProgram(cmdBuffer, &tr.genericShader[0], uniformData);
+	r2::CmdSetVertexAttributes(cmdBuffer, 3, vertexAttributes);
+	r2::CmdSetTexture(
+		cmdBuffer,
+		TB_DIFFUSEMAP,
+		shader->stages[0]->bundle[0].image[0]);
+	r2::CmdSetRenderState(cmdBuffer, &renderState);
+	r2::CmdSetIndexBuffer(cmdBuffer, tr.frame.indexBuffer->ibo);
+	r2::CmdDrawIndexed(
+		cmdBuffer,
+		r2::PRIMITIVE_TYPE_TRIANGLES,
+		6,
+		r2::INDEX_TYPE_UINT16,
+		indexBufferSlice.offset,
+		1,
+		0);
+#else
 	stretchPicCommand_t	*cmd;
 
 	if ( !tr.registered ) {
@@ -411,6 +551,7 @@ void RE_StretchPic ( float x, float y, float w, float h,
 	cmd->t1 = t1;
 	cmd->s2 = s2;
 	cmd->t2 = t2;
+#endif
 }
 
 #define MODE_RED_CYAN	1
@@ -466,6 +607,9 @@ for each RE_EndFrame
 ====================
 */
 void RE_BeginFrame( stereoFrame_t stereoFrame ) {
+#if 1
+	// Nothing to do?
+#else
 	drawBufferCommand_t	*cmd = NULL;
 	colorMaskCommand_t *colcmd = NULL;
 
@@ -700,6 +844,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	}
 	
 	tr.refdef.stereoFrame = stereoFrame;
+#endif
 }
 
 
@@ -716,6 +861,10 @@ void RE_EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	if ( !tr.registered ) {
 		return;
 	}
+
+#if 1
+	r2::SubmitFrame(&tr.frame);
+#else
 	cmd = (swapBuffersCommand_t *)R_GetCommandBuffer( sizeof( *cmd ) );
 	if ( !cmd ) {
 		return;
@@ -725,6 +874,7 @@ void RE_EndFrame( int *frontEndMsec, int *backEndMsec ) {
 	R_IssueRenderCommands( qtrue );
 
 	R_InitNextFrame();
+#endif
 
 	if ( frontEndMsec ) {
 		*frontEndMsec = tr.frontEndMsec;

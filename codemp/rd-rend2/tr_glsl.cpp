@@ -865,9 +865,9 @@ void GLSL_FinishGPUShader(shaderProgram_t *program)
 #endif
 }
 
-void GLSL_SetUniforms( shaderProgram_t *program, UniformData *uniformData )
+void GLSL_SetUniforms( shaderProgram_t *program, const UniformData *uniformData )
 {
-	UniformData *data = uniformData;
+	const UniformData *data = uniformData;
 	if (data == nullptr)
 		return;
 
@@ -2254,7 +2254,7 @@ void GLSL_ShutdownGPUShaders(void)
 	qglUseProgram(0);
 }
 
-void GLSL_BindProgram(shaderProgram_t * program)
+void GLSL_BindProgram(const shaderProgram_t * program)
 {
 	if(!program)
 	{

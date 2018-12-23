@@ -175,7 +175,7 @@ IBO_t *R_CreateIBO(byte * indexes, int indexesSize, vboUsage_t usage)
 R_BindVBO
 ============
 */
-void R_BindVBO(VBO_t * vbo)
+void R_BindVBO(const VBO_t * vbo)
 {
 	if(!vbo)
 	{
@@ -230,7 +230,7 @@ void R_BindNullVBO(void)
 R_BindIBO
 ============
 */
-void R_BindIBO(IBO_t * ibo)
+void R_BindIBO(const IBO_t * ibo)
 {
 	if(!ibo)
 	{
