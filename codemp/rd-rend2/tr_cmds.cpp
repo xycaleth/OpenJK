@@ -435,12 +435,22 @@ void RE_StretchPic(
 	const auto baseVertex = tr.frame.quadsBatch.vertexCount;
 	assert(baseVertex < UINT16_MAX);
 
-	const r2::quad_vertex_t vertices[] = {
-        {{x0, y0}, {s1, t1}, {color[0], color[1], color[2], color[3]}},
-        {{x1, y0}, {s2, t1}, {color[0], color[1], color[2], color[3]}},
-        {{x1, y1}, {s2, t2}, {color[0], color[1], color[2], color[3]}},
-        {{x0, y1}, {s1, t2}, {color[0], color[1], color[2], color[3]}},
-    };
+	r2::quad_vertex_t vertices[4];
+	VectorSet2(vertices[0].position, x0, y0);
+	VectorSet2(vertices[0].texcoord, s1, t1);
+	VectorCopy4(color, vertices[0].color);
+
+	VectorSet2(vertices[1].position, x1, y0);
+	VectorSet2(vertices[1].texcoord, s2, t1);
+	VectorCopy4(color, vertices[1].color);
+
+	VectorSet2(vertices[2].position, x1, y1);
+	VectorSet2(vertices[2].texcoord, s2, t2);
+	VectorCopy4(color, vertices[2].color);
+
+	VectorSet2(vertices[3].position, x0, y1);
+	VectorSet2(vertices[3].texcoord, s1, t2);
+	VectorCopy4(color, vertices[3].color);
 
     const uint16_t indices[] = {
     	static_cast<uint16_t>(baseVertex + 3),

@@ -227,11 +227,11 @@ extern float EvalWaveForm( const waveForm_t *wf );
 extern float EvalWaveFormClamped( const waveForm_t *wf );
 
 
-static void ComputeTexMods( shaderStage_t *pStage, int bundleNum, float *outMatrix, float *outOffTurb)
+void ComputeTexMods( const shaderStage_t *pStage, int bundleNum, float time, float *outMatrix, float *outOffTurb)
 {
 	int tm;
 	float matrix[6], currentmatrix[6];
-	textureBundle_t *bundle = &pStage->bundle[bundleNum];
+	const textureBundle_t *bundle = &pStage->bundle[bundleNum];
 
 	matrix[0] = 1.0f; matrix[2] = 0.0f; matrix[4] = 0.0f;
 	matrix[1] = 0.0f; matrix[3] = 1.0f; matrix[5] = 0.0f;
@@ -253,36 +253,31 @@ static void ComputeTexMods( shaderStage_t *pStage, int bundleNum, float *outMatr
 			break;
 
 		case TMOD_TURBULENT:
-			RB_CalcTurbulentFactors(&bundle->texMods[tm].wave, &outOffTurb[2], &outOffTurb[3]);
+			RB_CalcTurbulentFactors(&bundle->texMods[tm].wave, time, &outOffTurb[2], &outOffTurb[3]);
 			break;
 
 		case TMOD_ENTITY_TRANSLATE:
-			RB_CalcScrollTexMatrix( backEnd.currentEntity->e.shaderTexCoord, matrix );
+			RB_CalcScrollTexMatrix( backEnd.currentEntity->e.shaderTexCoord, time, matrix );
 			break;
 
 		case TMOD_SCROLL:
-			RB_CalcScrollTexMatrix( bundle->texMods[tm].scroll,
-									 matrix );
+			RB_CalcScrollTexMatrix( bundle->texMods[tm].scroll, time, matrix );
 			break;
 
 		case TMOD_SCALE:
-			RB_CalcScaleTexMatrix( bundle->texMods[tm].scale,
-								  matrix );
+			RB_CalcScaleTexMatrix( bundle->texMods[tm].scale, matrix );
 			break;
 		
 		case TMOD_STRETCH:
-			RB_CalcStretchTexMatrix( &bundle->texMods[tm].wave, 
-								   matrix );
+			RB_CalcStretchTexMatrix( &bundle->texMods[tm].wave, time, matrix );
 			break;
 
 		case TMOD_TRANSFORM:
-			RB_CalcTransformTexMatrix( &bundle->texMods[tm],
-									 matrix );
+			RB_CalcTransformTexMatrix( &bundle->texMods[tm], matrix );
 			break;
 
 		case TMOD_ROTATE:
-			RB_CalcRotateTexMatrix( bundle->texMods[tm].rotateSpeed,
-									matrix );
+			RB_CalcRotateTexMatrix( bundle->texMods[tm].rotateSpeed, time, matrix );
 			break;
 
 		default:
@@ -408,7 +403,7 @@ static void ComputeDeformValues(deform_t *type, genFunc_t *waveFunc, float defor
 	}
 }
 
-static void ComputeShaderColors( shaderStage_t *pStage, vec4_t baseColor, vec4_t vertColor, int blend, colorGen_t *forceRGBGen, alphaGen_t *forceAlphaGen )
+void ComputeShaderColors( const shaderStage_t *pStage, vec4_t baseColor, vec4_t vertColor, int blend, colorGen_t *forceRGBGen, alphaGen_t *forceAlphaGen )
 {
 	colorGen_t rgbGen = pStage->rgbGen;
 	alphaGen_t alphaGen = pStage->alphaGen;
@@ -1007,7 +1002,7 @@ static void ForwardDlight( const shaderCommands_t *input,  VertexArraysPropertie
 		if (r_dlightMode->integer >= 2)
 			samplerBindingsWriter.AddStaticImage(tr.shadowCubemaps[l].image, TB_SHADOWMAP2);
 
-		ComputeTexMods( pStage, TB_DIFFUSEMAP, texMatrix, texOffTurb );
+		ComputeTexMods( pStage, TB_DIFFUSEMAP, tess.shaderTime, texMatrix, texOffTurb );
 		uniformDataWriter.SetUniformVec4(UNIFORM_DIFFUSETEXMATRIX, texMatrix);
 		uniformDataWriter.SetUniformVec4(UNIFORM_DIFFUSETEXOFFTURB, texOffTurb);
 
@@ -1520,7 +1515,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input, const VertexArrays
 		uniformDataWriter.SetUniformInt(UNIFORM_COLORGEN, forceRGBGen);
 		uniformDataWriter.SetUniformInt(UNIFORM_ALPHAGEN, forceAlphaGen);
 
-		ComputeTexMods( pStage, TB_DIFFUSEMAP, texMatrix, texOffTurb );
+		ComputeTexMods( pStage, TB_DIFFUSEMAP, tess.shaderTime, texMatrix, texOffTurb );
 		uniformDataWriter.SetUniformVec4(UNIFORM_DIFFUSETEXMATRIX, texMatrix);
 		uniformDataWriter.SetUniformVec4(UNIFORM_DIFFUSETEXOFFTURB, texOffTurb);
 

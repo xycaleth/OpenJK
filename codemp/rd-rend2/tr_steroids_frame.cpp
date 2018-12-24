@@ -7,6 +7,21 @@
 #include "qgl.h"
 #include "tr_local.h"
 
+void ComputeTexMods(
+    const shaderStage_t *pStage,
+    int bundleNum,
+    float time,
+    float *outMatrix,
+    float *outOffTurb);
+
+void ComputeShaderColors(
+    const shaderStage_t *pStage,
+    vec4_t baseColor,
+    vec4_t vertColor,
+    int blend,
+    colorGen_t *forceRGBGen,
+    alphaGen_t *forceAlphaGen);
+
 namespace r2
 {
 
@@ -121,6 +136,8 @@ namespace r2
             tr.frame.startedRenderPass = true;
         }
 
+        const float timeInSeconds = 0.001f * ri.Milliseconds();
+
         matrix_t projectionMatrix;
         Matrix16Ortho(0.0f, 640.0f, 480.0f, 0.0f, 0.0f, 1.0f, projectionMatrix);
 
@@ -154,12 +171,46 @@ namespace r2
             uniformDataWriter.SetUniformFloat(
                 UNIFORM_FX_VOLUMETRIC_BASE,
                 -1.0f);
-            uniformDataWriter.SetUniformVec4(
-                UNIFORM_VERTCOLOR,
-                1.0f,
-                1.0f,
-                1.0f,
-                1.0f);
+
+            vec4_t vertColor;
+            vec4_t baseColor;
+            colorGen_t rgbGen = CGEN_BAD;
+            alphaGen_t alphaGen = AGEN_IDENTITY;
+
+            ComputeShaderColors(
+                stage,
+                baseColor,
+                vertColor,
+                stage->stateBits,
+                &rgbGen,
+                &alphaGen);
+
+            uniformDataWriter.SetUniformVec4(UNIFORM_VERTCOLOR, vertColor);
+            uniformDataWriter.SetUniformVec4(UNIFORM_BASECOLOR, baseColor);
+            uniformDataWriter.SetUniformInt(UNIFORM_COLORGEN, rgbGen);
+            uniformDataWriter.SetUniformInt(UNIFORM_ALPHAGEN, alphaGen);
+
+            if ((shaderVariant & GENERICDEF_USE_TCGEN_AND_TCMOD) != 0)
+            {
+                float matrix[4];
+                float turbulence[4];
+                ComputeTexMods(stage, 0, timeInSeconds, matrix, turbulence);
+
+                uniformDataWriter.SetUniformVec4(
+                    UNIFORM_DIFFUSETEXMATRIX,
+                    matrix);
+                uniformDataWriter.SetUniformVec4(
+                    UNIFORM_DIFFUSETEXOFFTURB,
+                    turbulence);
+
+                uniformDataWriter.SetUniformInt(
+                    UNIFORM_TCGEN0,
+                    stage->bundle[0].tcGen);
+                uniformDataWriter.SetUniformInt(
+                    UNIFORM_TCGEN1,
+                    stage->bundle[1].tcGen);
+            }
+
             const UniformData *uniformData = uniformDataWriter.Finish(
                 *tr.frame.memory);
 

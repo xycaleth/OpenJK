@@ -3161,11 +3161,11 @@ void	RB_DeformTessGeometry( void );
 void	RB_CalcFogTexCoords( float *dstTexCoords );
 
 void	RB_CalcScaleTexMatrix( const float scale[2], float *matrix );
-void	RB_CalcScrollTexMatrix( const float scrollSpeed[2], float *matrix );
-void	RB_CalcRotateTexMatrix( float degsPerSecond, float *matrix );
-void	RB_CalcTurbulentFactors( const waveForm_t *wf, float *amplitude, float *now );
+void	RB_CalcScrollTexMatrix( const float scrollSpeed[2], float time, float *matrix );
+void	RB_CalcRotateTexMatrix( float degsPerSecond, float time, float *matrix );
+void	RB_CalcTurbulentFactors( const waveForm_t *wf, float time, float *amplitude, float *now );
 void	RB_CalcTransformTexMatrix( const texModInfo_t *tmi, float *matrix  );
-void	RB_CalcStretchTexMatrix( const waveForm_t *wf, float *matrix );
+void	RB_CalcStretchTexMatrix( const waveForm_t *wf, float time, float *matrix );
 
 void	RB_CalcModulateColorsByFog( unsigned char *dstColors );
 float	RB_CalcWaveAlphaSingle( const waveForm_t *wf );

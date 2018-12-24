@@ -54,14 +54,14 @@ static float *TableForFunc( genFunc_t func )
 **
 ** Evaluates a given waveForm_t, referencing backEnd.refdef.time directly
 */
-static float EvalWaveForm( const waveForm_t *wf ) 
+static float EvalWaveForm( const waveForm_t *wf, float time )
 {
 	float	*table;
 
 	if ( wf->func == GF_NOISE ) {
 		return  ( wf->base + R_NoiseGet4f( 0, 0, 0, ( backEnd.refdef.floatTime + wf->phase ) * wf->frequency ) * wf->amplitude );
 	} else if (wf->func == GF_RAND) {
-		if( GetNoiseTime( backEnd.refdef.time + wf->phase ) <= wf->frequency ) {
+		if( GetNoiseTime( time * 1000.0f + wf->phase ) <= wf->frequency ) {
 			return (wf->base + wf->amplitude);
 		} else {
 			return wf->base;
@@ -73,9 +73,9 @@ static float EvalWaveForm( const waveForm_t *wf )
 	return WAVEVALUE( table, wf->base, wf->amplitude, wf->phase, wf->frequency );
 }
 
-static float EvalWaveFormClamped( const waveForm_t *wf )
+static float EvalWaveFormClamped( const waveForm_t *wf, float time )
 {
-	float glow  = EvalWaveForm( wf );
+	float glow  = EvalWaveForm( wf, time );
 
 	if ( glow < 0 )
 	{
@@ -93,11 +93,11 @@ static float EvalWaveFormClamped( const waveForm_t *wf )
 /*
 ** RB_CalcStretchTexMatrix
 */
-void RB_CalcStretchTexMatrix( const waveForm_t *wf, float *matrix )
+void RB_CalcStretchTexMatrix( const waveForm_t *wf, float time, float *matrix )
 {
 	float p;
 
-	p = 1.0f / EvalWaveForm( wf );
+	p = 1.0f / EvalWaveForm( wf, time );
 
 	matrix[0] = p; matrix[2] = 0; matrix[4] = 0.5f - 0.5f * p;
 	matrix[1] = 0; matrix[3] = p; matrix[5] = 0.5f - 0.5f * p;
@@ -128,7 +128,7 @@ void RB_CalcDeformVertexes( deformStage_t *ds )
 
 	if ( ds->deformationWave.frequency == 0 )
 	{
-		scale = EvalWaveForm( &ds->deformationWave );
+		scale = EvalWaveForm( &ds->deformationWave, tess.shaderTime );
 
 		for ( i = 0; i < tess.numVertexes; i++, xyz += 4, normal++ )
 		{
@@ -621,7 +621,7 @@ float RB_CalcWaveColorSingle( const waveForm_t *wf )
 	if ( wf->func == GF_NOISE ) {
 		glow = wf->base + R_NoiseGet4f( 0, 0, 0, ( tess.shaderTime + wf->phase ) * wf->frequency ) * wf->amplitude;
 	} else {
-		glow = EvalWaveForm( wf ) * tr.identityLight;
+		glow = EvalWaveForm( wf, tess.shaderTime ) * tr.identityLight;
 	}
 	
 	if ( glow < 0 ) {
@@ -639,7 +639,7 @@ float RB_CalcWaveColorSingle( const waveForm_t *wf )
 */
 float RB_CalcWaveAlphaSingle( const waveForm_t *wf )
 {
-	return EvalWaveFormClamped( wf );
+	return EvalWaveFormClamped( wf, tess.shaderTime );
 }
 
 /*
@@ -760,9 +760,9 @@ void RB_CalcFogTexCoords( float *st ) {
 /*
 ** RB_CalcTurbulentFactors
 */
-void RB_CalcTurbulentFactors( const waveForm_t *wf, float *amplitude, float *now )
+void RB_CalcTurbulentFactors( const waveForm_t *wf, float time, float *amplitude, float *now )
 {
-	*now = wf->phase + tess.shaderTime * wf->frequency;
+	*now = wf->phase + time * wf->frequency;
 	*amplitude = wf->amplitude;
 }
 
@@ -778,13 +778,12 @@ void RB_CalcScaleTexMatrix( const float scale[2], float *matrix )
 /*
 ** RB_CalcScrollTexMatrix
 */
-void RB_CalcScrollTexMatrix( const float scrollSpeed[2], float *matrix )
+void RB_CalcScrollTexMatrix( const float scrollSpeed[2], float time, float *matrix )
 {
-	float timeScale = tess.shaderTime;
 	float adjustedScrollS, adjustedScrollT;
 
-	adjustedScrollS = scrollSpeed[0] * timeScale;
-	adjustedScrollT = scrollSpeed[1] * timeScale;
+	adjustedScrollS = scrollSpeed[0] * time;
+	adjustedScrollT = scrollSpeed[1] * time;
 
 	// clamp so coordinates don't continuously get larger, causing problems
 	// with hardware limits
@@ -807,14 +806,13 @@ void RB_CalcTransformTexMatrix( const texModInfo_t *tmi, float *matrix  )
 /*
 ** RB_CalcRotateTexMatrix
 */
-void RB_CalcRotateTexMatrix( float degsPerSecond, float *matrix )
+void RB_CalcRotateTexMatrix( float degsPerSecond, float time, float *matrix )
 {
-	float timeScale = tess.shaderTime;
 	float degs;
 	int index;
 	float sinValue, cosValue;
 
-	degs = -degsPerSecond * timeScale;
+	degs = -degsPerSecond * time;
 	index = degs * ( FUNCTABLE_SIZE / 360.0f );
 
 	sinValue = tr.sinTable[ index & FUNCTABLE_MASK ];
