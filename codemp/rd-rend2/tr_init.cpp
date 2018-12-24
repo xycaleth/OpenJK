@@ -273,38 +273,39 @@ cvar_t *r_debugWeather;
 cvar_t	*r_aspectCorrectFonts;
 
 extern void	RB_SetGL2D (void);
+
 static void R_Splash()
 {
-	image_t *splashImage = R_FindImageFile(
-		"menu/splash",
-		IMGTYPE_COLORALPHA,
-		IMGFLAG_NONE);
+    image_t *splashImage = R_FindImageFile(
+        "menu/splash",
+        IMGTYPE_COLORALPHA,
+        IMGFLAG_NONE);
 
-	GLSL_InitSplashScreenShader();
+    GLSL_InitSplashScreenShader();
 
-	r2::render_pass_t renderPass = {};
-	renderPass.viewport = {0, 0, glConfig.vidWidth, glConfig.vidHeight};
-	renderPass.clearColorAction[0] = r2::CLEAR_ACTION_FILL;
-	VectorSet4(renderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
+    r2::render_pass_t renderPass = {};
+    renderPass.viewport = {0, 0, glConfig.vidWidth, glConfig.vidHeight};
+    renderPass.clearColorAction[0] = r2::CLEAR_ACTION_FILL;
+    VectorSet4(renderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
 
-	r2::render_state_t renderState = {};
-	renderState.stateBits = GLS_DEPTHTEST_DISABLE;
-	renderState.cullType = CT_TWO_SIDED;
+    r2::render_state_t renderState = {};
+    renderState.stateBits = GLS_DEPTHTEST_DISABLE;
+    renderState.cullType = CT_TWO_SIDED;
 
-	auto *cmdBuffer = tr.frame.cmdBuffer;
-	r2::CmdBeginRenderPass(cmdBuffer, &renderPass);
-	r2::CmdSetRenderState(cmdBuffer, &renderState);
+    auto *cmdBuffer = tr.frame.cmdBuffer;
+    r2::CmdBeginRenderPass(cmdBuffer, &renderPass);
+    r2::CmdSetRenderState(cmdBuffer, &renderState);
 
-	if (splashImage != nullptr)
-	{
-		r2::CmdSetTexture(cmdBuffer, 0, splashImage);
-	}
+    if (splashImage != nullptr)
+    {
+        r2::CmdSetTexture(cmdBuffer, 0, splashImage);
+    }
 
-	r2::CmdSetShaderProgram(cmdBuffer, &tr.splashScreenShader);
-	r2::CmdDraw(cmdBuffer, r2::PRIMITIVE_TYPE_TRIANGLES, 3, 0, 1);
-	r2::CmdEndRenderPass(cmdBuffer);
+    r2::CmdSetShaderProgram(cmdBuffer, &tr.splashScreenShader);
+    r2::CmdDraw(cmdBuffer, r2::PRIMITIVE_TYPE_TRIANGLES, 3, 0, 1);
+    r2::CmdEndRenderPass(cmdBuffer);
 
-	r2::SubmitFrame(&tr.frame);
+    r2::SubmitFrame(&tr.frame);
 }
 
 /*
@@ -1909,6 +1910,8 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 			SaveGhoul2InfoArray();
 		}
 	}
+
+	r2::FreeFrame(&tr.frame);
 
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {

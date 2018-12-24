@@ -48,6 +48,9 @@ namespace r2
 
         command_type_t cmdType;
 
+        const int submitStartTime = ri.Milliseconds();
+        int drawCount = 0;
+
         do
         {
             cmdType = *reinterpret_cast<const command_type_t *>(cursor);
@@ -73,6 +76,8 @@ namespace r2
                         cmd->firstVertex,
                         cmd->vertexCount,
                         cmd->instanceCount);
+
+                    ++drawCount;
                     break;
                 }
 
@@ -88,6 +93,8 @@ namespace r2
                         reinterpret_cast<const void *>(cmd->offset),
                         cmd->instanceCount,
                         cmd->baseVertex);
+
+                    ++drawCount;
                     break;
                 }
 
@@ -196,5 +203,17 @@ namespace r2
             }
         }
         while (cmdType != CMD_TYPE_END);
+
+        const int submitEndTime = ri.Milliseconds();
+        const int submitTimeInterval = submitEndTime - submitStartTime;
+
+        if (r_speeds->integer == 20)
+        {
+            ri.Printf(
+                PRINT_ALL,
+                "CPU Draw Submit Time: %dms for %d draw calls\n",
+                submitTimeInterval,
+                drawCount);
+        }
     }
 }
