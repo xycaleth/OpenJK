@@ -67,6 +67,74 @@ namespace r2
         return slice;
     }
 
+    const UniformData *GetUniformDataForStage(
+        const shaderStage_t *stage,
+        const shaderProgram_t *shaderProgram,
+        int shaderVariant,
+        const float timeInSeconds,
+        const float *projectionMatrix)
+    {
+        UniformDataWriter uniformDataWriter;
+        uniformDataWriter.Start(shaderProgram);
+        uniformDataWriter.SetUniformMatrix4x4(
+            UNIFORM_MODELVIEWPROJECTIONMATRIX,
+            projectionMatrix);
+        uniformDataWriter.SetUniformFloat(
+            UNIFORM_FX_VOLUMETRIC_BASE,
+            -1.0f);
+
+        vec4_t vertColor;
+        vec4_t baseColor;
+        colorGen_t rgbGen = CGEN_BAD;
+        alphaGen_t alphaGen = AGEN_IDENTITY;
+
+        ComputeShaderColors(
+            stage,
+            baseColor,
+            vertColor,
+            stage->stateBits,
+            &rgbGen,
+            &alphaGen);
+
+        uniformDataWriter.SetUniformVec4(UNIFORM_VERTCOLOR, vertColor);
+        uniformDataWriter.SetUniformVec4(UNIFORM_BASECOLOR, baseColor);
+        uniformDataWriter.SetUniformInt(UNIFORM_COLORGEN, rgbGen);
+        uniformDataWriter.SetUniformInt(UNIFORM_ALPHAGEN, alphaGen);
+
+        if ((shaderVariant & GENERICDEF_USE_TCGEN_AND_TCMOD) != 0)
+        {
+            float matrix[4];
+            float turbulence[4];
+            ComputeTexMods(stage, 0, timeInSeconds, matrix, turbulence);
+
+            uniformDataWriter.SetUniformVec4(
+                UNIFORM_DIFFUSETEXMATRIX,
+                matrix);
+            uniformDataWriter.SetUniformVec4(
+                UNIFORM_DIFFUSETEXOFFTURB,
+                turbulence);
+
+            uniformDataWriter.SetUniformInt(
+                UNIFORM_TCGEN0,
+                stage->bundle[0].tcGen);
+            uniformDataWriter.SetUniformInt(
+                UNIFORM_TCGEN1,
+                stage->bundle[1].tcGen);
+
+            if (stage->bundle[0].tcGen == TCGEN_VECTOR)
+            {
+                uniformDataWriter.SetUniformVec3(
+                    UNIFORM_TCGEN0VECTOR0,
+                    stage->bundle[0].tcGenVectors[0]);
+                uniformDataWriter.SetUniformVec3(
+                    UNIFORM_TCGEN0VECTOR1,
+                    stage->bundle[0].tcGenVectors[1]);
+            }
+        }
+
+        return uniformDataWriter.Finish(*tr.frame.memory);
+    }
+
     void FlushQuadsBatch(draw_batch_t *drawBatch)
     {
         if (drawBatch->indexData.empty())
@@ -144,7 +212,7 @@ namespace r2
         for (int i = 0; i < shader->numUnfoggedPasses; ++i)
         {
             const shaderStage_t *stage = shader->stages[i];
-            if (stage == nullptr || !stage->active)
+            if (stage == nullptr)
             {
                 continue;
             }
@@ -161,62 +229,35 @@ namespace r2
                 shaderVariant |= GENERICDEF_USE_TCGEN_AND_TCMOD;
             }
 
-            shaderProgram_t *shaderProgram = tr.genericShader + shaderVariant;
-
-            UniformDataWriter uniformDataWriter;
-            uniformDataWriter.Start(shaderProgram);
-            uniformDataWriter.SetUniformMatrix4x4(
-                UNIFORM_MODELVIEWPROJECTIONMATRIX,
-                projectionMatrix);
-            uniformDataWriter.SetUniformFloat(
-                UNIFORM_FX_VOLUMETRIC_BASE,
-                -1.0f);
-
-            vec4_t vertColor;
-            vec4_t baseColor;
-            colorGen_t rgbGen = CGEN_BAD;
-            alphaGen_t alphaGen = AGEN_IDENTITY;
-
-            ComputeShaderColors(
+            const shaderProgram_t *shaderProgram =
+                tr.genericShader + shaderVariant;
+            const UniformData *uniformData = GetUniformDataForStage(
                 stage,
-                baseColor,
-                vertColor,
-                stage->stateBits,
-                &rgbGen,
-                &alphaGen);
-
-            uniformDataWriter.SetUniformVec4(UNIFORM_VERTCOLOR, vertColor);
-            uniformDataWriter.SetUniformVec4(UNIFORM_BASECOLOR, baseColor);
-            uniformDataWriter.SetUniformInt(UNIFORM_COLORGEN, rgbGen);
-            uniformDataWriter.SetUniformInt(UNIFORM_ALPHAGEN, alphaGen);
-
-            if ((shaderVariant & GENERICDEF_USE_TCGEN_AND_TCMOD) != 0)
-            {
-                float matrix[4];
-                float turbulence[4];
-                ComputeTexMods(stage, 0, timeInSeconds, matrix, turbulence);
-
-                uniformDataWriter.SetUniformVec4(
-                    UNIFORM_DIFFUSETEXMATRIX,
-                    matrix);
-                uniformDataWriter.SetUniformVec4(
-                    UNIFORM_DIFFUSETEXOFFTURB,
-                    turbulence);
-
-                uniformDataWriter.SetUniformInt(
-                    UNIFORM_TCGEN0,
-                    stage->bundle[0].tcGen);
-                uniformDataWriter.SetUniformInt(
-                    UNIFORM_TCGEN1,
-                    stage->bundle[1].tcGen);
-            }
-
-            const UniformData *uniformData = uniformDataWriter.Finish(
-                *tr.frame.memory);
+                shaderProgram,
+                shaderVariant,
+                timeInSeconds,
+                projectionMatrix);
 
             CmdSetShaderProgram(cmdBuffer, shaderProgram, uniformData);
             CmdSetVertexAttributes(cmdBuffer, 3, vertexAttributes);
-            CmdSetTexture(cmdBuffer, TB_DIFFUSEMAP, textureBundle->image[0]);
+            if (textureBundle->isVideoMap)
+            {
+                ri.CIN_RunCinematic(textureBundle->videoMapHandle);
+                ri.CIN_UploadCinematic(textureBundle->videoMapHandle);
+
+                CmdSetTexture(
+                    cmdBuffer,
+                    0,
+                    tr.scratchImage[textureBundle->videoMapHandle]);
+            }
+            else
+            {
+                CmdSetTexture(
+                    cmdBuffer,
+                    0,
+                    textureBundle->image[0]);
+            }
+
             CmdSetRenderState(cmdBuffer, &renderState);
             CmdSetIndexBuffer(cmdBuffer, tr.frame.indexBuffer->ibo);
             CmdDrawIndexed(

@@ -3568,7 +3568,7 @@ class UniformDataWriter
 public:
 	UniformDataWriter();
 
-	void Start( shaderProgram_t *sp );
+	void Start( const shaderProgram_t *sp );
 
 	UniformDataWriter& SetUniformInt( uniform_t uniform, int value );
 	UniformDataWriter& SetUniformFloat( uniform_t uniform, float value );
@@ -3590,7 +3590,7 @@ public:
 
 private:
 	bool failed;
-	shaderProgram_t *shaderProgram;
+	const shaderProgram_t *shaderProgram;
 	char scratchBuffer[2048];
 	Allocator scratch;
 };
