@@ -316,41 +316,14 @@ Passing NULL will set the color to white
 */
 void RE_SetColor(const float *rgba)
 {
-#if 1
-	if (rgba == nullptr)
-	{
-		VectorSet4(tr.frame.color, 1.0f, 1.0f, 1.0f, 1.0f);
-	}
-	else
-	{
-		VectorCopy4(rgba, tr.frame.color);
-	}
-#else
-	setColorCommand_t *cmd;
-
-	if (!tr.registered)
-	{
-		return;
-	}
-
-	cmd = (setColorCommand_t *) R_GetCommandBuffer(sizeof(*cmd));
-	if (!cmd)
-	{
-		return;
-	}
-	cmd->commandId = RC_SET_COLOR;
-	if (!rgba)
-	{
-		static float colorWhite[4] = {1, 1, 1, 1};
-
-		rgba = colorWhite;
-	}
-
-	cmd->color[0] = rgba[0];
-	cmd->color[1] = rgba[1];
-	cmd->color[2] = rgba[2];
-	cmd->color[3] = rgba[3];
-#endif
+    if (rgba == nullptr)
+    {
+        VectorSet4(tr.frame.color, 1.0f, 1.0f, 1.0f, 1.0f);
+    }
+    else
+    {
+        VectorCopy4(rgba, tr.frame.color);
+    }
 }
 
 /*
