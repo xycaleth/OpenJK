@@ -42,6 +42,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string>
 
 #include "tr_steroids_frame.h"
+#include "tr_steroids_scene.h"
 
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
@@ -2192,6 +2193,7 @@ typedef struct trGlobals_s {
 	GLuint					globalVao;
 
 	// Steroids
+	r2::scene_t				scene;
 	r2::frame_t				frame;
 
 
@@ -2626,6 +2628,7 @@ int R_CullLocalPointAndRadius( const vec3_t origin, float radius );
 
 void R_SetupProjection(viewParms_t *dest, float zProj, float zFar, qboolean computeFrustum);
 void R_RotateForEntity( const trRefEntity_t *ent, const viewParms_t *viewParms, orientationr_t *ori );
+void R_GetModelMatrix(const refEntity_t *e, matrix4x4_t *matrix);
 void R_BindAnimatedImageToTMU( textureBundle_t *bundle, int tmu );
 
 /*
@@ -3074,9 +3077,8 @@ Ghoul2 Insert Start
 #ifdef _MSC_VER
 #pragma warning (disable: 4512)	//default assignment operator could not be gened
 #endif
-class CRenderableSurface
+struct CRenderableSurface
 {
-public:
 	// ident of this surface - required so the materials renderer knows what
 	// sort of surface this refers to
 	int ident;
@@ -3089,7 +3091,6 @@ public:
 	// wack on the game
 	mdxmSurface_t *surfaceData;
 
-#ifdef _G2_GORE
 	// alternate texture coordinates
 	float *alternateTex;
 	void *goreChain;
@@ -3100,16 +3101,15 @@ public:
 	// this is a number between 0 and 1 that dictates the progression of the
 	// bullet impact
 	float impactTime;
-#endif
 
 	CRenderableSurface& operator =( const CRenderableSurface& src )
 	{
 		ident = src.ident;
 		boneCache = src.boneCache;
+		vboMesh = src.vboMesh;
 		surfaceData = src.surfaceData;
 		alternateTex = src.alternateTex;
 		goreChain = src.goreChain;
-		vboMesh = src.vboMesh;
 
 		return *this;
 	}
@@ -3119,17 +3119,14 @@ public:
 		, boneCache(nullptr)
 		, vboMesh(nullptr)
 		, surfaceData(nullptr)
-#ifdef _G2_GORE
 		, alternateTex(nullptr)
 		, goreChain(nullptr)
 		, scale(1.0f)
 		, fade(0.0f)
 		, impactTime(0.0f)
-#endif
 	{
 	}
 
-#ifdef _G2_GORE
 	void Init()
 	{
 		ident = SF_MDX;
@@ -3139,10 +3136,17 @@ public:
 		goreChain = nullptr;
 		vboMesh = nullptr;
 	}
-#endif
 };
 
-void R_AddGhoulSurfaces( trRefEntity_t *ent, int entityNum );
+namespace r2
+{
+	struct culled_surface_t;
+}
+
+void R_AddGhoulSurfaces(
+	trRefEntity_t *ent,
+	int entityNum,
+	std::vector<r2::culled_surface_t> &culledSurfaces);
 void RB_SurfaceGhoul( CRenderableSurface *surface );
 /*
 Ghoul2 Insert End
@@ -3568,25 +3572,58 @@ class UniformDataWriter
 public:
 	UniformDataWriter();
 
-	void Start( const shaderProgram_t *sp );
+	void Start(const shaderProgram_t *sp = nullptr);
 
-	UniformDataWriter& SetUniformInt( uniform_t uniform, int value );
-	UniformDataWriter& SetUniformFloat( uniform_t uniform, float value );
-	UniformDataWriter& SetUniformFloat( uniform_t uniform, float *values, size_t count );
+	UniformDataWriter &SetUniformInt(uniform_t uniform, int value);
 
-	UniformDataWriter& SetUniformVec2( uniform_t uniform, float x, float y );
-	UniformDataWriter& SetUniformVec2( uniform_t uniform, const float *values, size_t count = 1 );
+	UniformDataWriter &SetUniformFloat(uniform_t uniform, float value);
 
-	UniformDataWriter& SetUniformVec3( uniform_t uniform, float x, float y, float z );
-	UniformDataWriter& SetUniformVec3( uniform_t uniform, const float *values, size_t count = 1 );
+	UniformDataWriter &SetUniformFloat(
+		uniform_t uniform,
+		float *values,
+		size_t count);
 
-	UniformDataWriter& SetUniformVec4( uniform_t uniform, float x, float y, float z, float w );
-	UniformDataWriter& SetUniformVec4( uniform_t uniform, const float *values, size_t count = 1 );
+	UniformDataWriter &SetUniformVec2(uniform_t uniform, float x, float y);
 
-	UniformDataWriter& SetUniformMatrix4x3( uniform_t uniform, const float *matrix, size_t count = 1 );
-	UniformDataWriter& SetUniformMatrix4x4( uniform_t uniform, const float *matrix, size_t count = 1 );
+	UniformDataWriter &SetUniformVec2(
+		uniform_t uniform,
+		const float *values,
+		size_t count = 1);
 
-	UniformData *Finish( Allocator& destHeap );
+	UniformDataWriter &SetUniformVec3(
+		uniform_t uniform,
+		float x,
+		float y,
+		float z);
+
+	UniformDataWriter &SetUniformVec3(
+		uniform_t uniform,
+		const float *values,
+		size_t count = 1);
+
+	UniformDataWriter &SetUniformVec4(
+		uniform_t uniform,
+		float x,
+		float y,
+		float z,
+		float w);
+
+	UniformDataWriter &SetUniformVec4(
+		uniform_t uniform,
+		const float *values,
+		size_t count = 1);
+
+	UniformDataWriter &SetUniformMatrix4x3(
+		uniform_t uniform,
+		const float *matrix,
+		size_t count = 1);
+
+	UniformDataWriter &SetUniformMatrix4x4(
+		uniform_t uniform,
+		const float *matrix,
+		size_t count = 1);
+
+	UniformData *Finish(Allocator &destHeap);
 
 private:
 	bool failed;

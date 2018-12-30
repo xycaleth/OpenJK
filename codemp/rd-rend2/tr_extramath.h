@@ -24,6 +24,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef __TR_EXTRAMATH_H__
 #define __TR_EXTRAMATH_H__
 
+struct matrix4x4_t
+{
+	float e[16];
+};
+
 typedef float matrix_t[16];
 typedef float mat4x3_t[12];
 typedef int vec2i_t[2];

@@ -97,15 +97,27 @@ namespace r2
 
     void CmdSetShaderProgram(
         command_buffer_t *cmdBuffer,
-        const shaderProgram_t *shaderProgram,
-        const UniformData *uniformData)
+        const shaderProgram_t *shaderProgram)
     {
         command_set_shader_program_t cmd = {CMD_TYPE_SET_SHADER_PROGRAM};
         cmd.shaderProgram = shaderProgram;
-        cmd.uniformData = uniformData;
+        cmd.uniformDataCount = 0;
 
         AddCommand(cmdBuffer, &cmd);
-    };
+    }
+
+    void CmdSetShaderProgram(
+        command_buffer_t *cmdBuffer,
+        const shaderProgram_t *shaderProgram,
+        int uniformDataCount,
+        const UniformData **uniformData)
+    {
+        command_set_shader_program_t cmd = {CMD_TYPE_SET_SHADER_PROGRAM};
+        cmd.shaderProgram = shaderProgram;
+        cmd.uniformDataCount = uniformDataCount;
+
+        AddCommandWithData(cmdBuffer, &cmd, uniformData, uniformDataCount);
+    }
 
     void CmdSetIndexBuffer(
         command_buffer_t *cmdBuffer,

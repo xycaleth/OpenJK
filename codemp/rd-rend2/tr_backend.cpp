@@ -625,7 +625,7 @@ void UniformDataWriter::Start( const shaderProgram_t *sp )
 
 UniformDataWriter& UniformDataWriter::SetUniformInt( uniform_t uniform, int value )
 {
-	if ( shaderProgram->uniforms[uniform] == -1 )
+	if ( shaderProgram != nullptr && shaderProgram->uniforms[uniform] == -1 )
 		return *this;
 
 	void *memory = scratch.Alloc(sizeof(UniformData) + sizeof(int));
@@ -652,7 +652,7 @@ UniformDataWriter& UniformDataWriter::SetUniformFloat( uniform_t uniform, float 
 
 UniformDataWriter& UniformDataWriter::SetUniformFloat( uniform_t uniform, float *values, size_t count )
 {
-	if ( shaderProgram->uniforms[uniform] == -1 )
+	if ( shaderProgram != nullptr && shaderProgram->uniforms[uniform] == -1 )
 		return *this;
 
 	void *memory = scratch.Alloc(sizeof(UniformData) + sizeof(float)*count);
@@ -678,7 +678,7 @@ UniformDataWriter& UniformDataWriter::SetUniformVec2( uniform_t uniform, float x
 
 UniformDataWriter& UniformDataWriter::SetUniformVec2( uniform_t uniform, const float *values, size_t count )
 {
-	if ( shaderProgram->uniforms[uniform] == -1 )
+	if ( shaderProgram != nullptr && shaderProgram->uniforms[uniform] == -1 )
 		return *this;
 
 	void *memory = scratch.Alloc(sizeof(UniformData) + sizeof(vec2_t)*count);
@@ -704,7 +704,7 @@ UniformDataWriter& UniformDataWriter::SetUniformVec3( uniform_t uniform, float x
 
 UniformDataWriter& UniformDataWriter::SetUniformVec3( uniform_t uniform, const float *values, size_t count )
 {
-	if ( shaderProgram->uniforms[uniform] == -1 )
+	if ( shaderProgram != nullptr && shaderProgram->uniforms[uniform] == -1 )
 		return *this;
 
 	void *memory = scratch.Alloc(sizeof(UniformData) + sizeof(vec3_t)*count);
@@ -730,7 +730,7 @@ UniformDataWriter& UniformDataWriter::SetUniformVec4( uniform_t uniform, float x
 
 UniformDataWriter& UniformDataWriter::SetUniformVec4( uniform_t uniform, const float *values, size_t count )
 {
-	if ( shaderProgram->uniforms[uniform] == -1 )
+	if ( shaderProgram != nullptr && shaderProgram->uniforms[uniform] == -1 )
 		return *this;
 
 	void *memory = scratch.Alloc(sizeof(UniformData) + sizeof(vec4_t)*count);
@@ -750,7 +750,7 @@ UniformDataWriter& UniformDataWriter::SetUniformVec4( uniform_t uniform, const f
 
 UniformDataWriter& UniformDataWriter::SetUniformMatrix4x3( uniform_t uniform, const float *matrix, size_t count )
 {
-	if ( shaderProgram->uniforms[uniform] == -1 )
+	if ( shaderProgram != nullptr && shaderProgram->uniforms[uniform] == -1 )
 		return *this;
 
 	void *memory = scratch.Alloc(sizeof(UniformData) + sizeof(float)*12*count);
@@ -770,7 +770,7 @@ UniformDataWriter& UniformDataWriter::SetUniformMatrix4x3( uniform_t uniform, co
 
 UniformDataWriter& UniformDataWriter::SetUniformMatrix4x4( uniform_t uniform, const float *matrix, size_t count )
 {
-	if ( shaderProgram->uniforms[uniform] == -1 )
+	if ( shaderProgram != nullptr && shaderProgram->uniforms[uniform] == -1 )
 		return *this;
 
 	void *memory = scratch.Alloc(sizeof(UniformData) + sizeof(float)*16*count);

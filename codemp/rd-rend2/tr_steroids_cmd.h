@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "tr_steroids_math.h"
+
 #include "qcommon/q_math.h"
 
 struct vertexAttribute_t;
@@ -38,14 +40,6 @@ namespace r2
     {
         CLEAR_ACTION_NONE,
         CLEAR_ACTION_FILL
-    };
-
-    struct rect_t
-    {
-        int x;
-        int y;
-        int width;
-        int height;
     };
 
     struct render_pass_t
@@ -122,7 +116,8 @@ namespace r2
         command_type_t cmdType;
 
         const shaderProgram_t *shaderProgram;
-        const UniformData *uniformData;
+        int uniformDataCount;
+        // array of const UniformData * follow this struct;
     };
 
     struct command_set_index_buffer_t
@@ -179,8 +174,13 @@ namespace r2
 
     void CmdSetShaderProgram(
         command_buffer_t *cmdBuffer,
+        const shaderProgram_t *shaderProgram);
+
+    void CmdSetShaderProgram(
+        command_buffer_t *cmdBuffer,
         const shaderProgram_t *shaderProgram,
-        const UniformData *uniformData = nullptr);
+        int uniformDataCount,
+        const UniformData **uniformData);
 
     void CmdSetTexture(
         command_buffer_t *cmdBuffer,

@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "tr_local.h"
 
 #include "tr_steroids_cmd.h"
+#include "tr_steroids_scene.h"
 
 int			r_firstSceneDrawSurf;
 
@@ -71,9 +72,7 @@ RE_ClearScene
 ====================
 */
 void RE_ClearScene( void ) {
-	r_firstSceneDlight = r_numdlights;
-	r_firstSceneEntity = r_numentities;
-	r_firstScenePoly = r_numpolys;
+	r2::SceneClear(&tr.scene);
 }
 
 /*
@@ -190,6 +189,9 @@ RE_AddRefEntityToScene
 =====================
 */
 void RE_AddRefEntityToScene( const refEntity_t *ent ) {
+#if 1
+    r2::SceneAddEntity(&tr.scene, ent);
+#else
 	vec3_t cross;
 
 	if ( !tr.registered ) {
@@ -218,6 +220,7 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 	backEndData->entities[r_numentities].mirrored = (qboolean)(DotProduct(ent->axis[2], cross) < 0.f);
 
 	r_numentities++;
+#endif
 }
 
 /*
@@ -449,11 +452,13 @@ void RE_BeginScene(const refdef_t *fd)
 
 void RE_EndScene()
 {
+#if 0
 	// the next scene rendered in this frame will tack on after this one
 	r_firstSceneDrawSurf = tr.refdef.numDrawSurfs;
 	r_firstSceneEntity = r_numentities;
 	r_firstSceneDlight = r_numdlights;
 	r_firstScenePoly = r_numpolys;
+#endif
 }
 
 /*
@@ -468,6 +473,9 @@ to handle mirrors,
 @@@@@@@@@@@@@@@@@@@@@
 */
 void RE_RenderScene( const refdef_t *fd ) {
+#if 1
+    r2::SceneRender(&tr.scene, fd);
+#else
 	viewParms_t		parms;
 	int				startTime;
 
@@ -575,4 +583,5 @@ void RE_RenderScene( const refdef_t *fd ) {
 	RE_EndScene();
 
 	tr.frontEndMsec += ri.Milliseconds() - startTime;
+#endif
 }

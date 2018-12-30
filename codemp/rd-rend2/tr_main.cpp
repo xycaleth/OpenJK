@@ -693,6 +693,29 @@ void myGlMultMatrix( const float *a, const float *b, float *out ) {
 	}
 }
 
+void R_GetModelMatrix(const refEntity_t *e, matrix4x4_t *matrix)
+{
+	matrix->e[0] = e->axis[0][0];
+	matrix->e[1] = e->axis[0][1];
+	matrix->e[2] = e->axis[0][2];
+	matrix->e[3] = 0.0f;
+
+	matrix->e[4] = e->axis[1][0];
+	matrix->e[5] = e->axis[1][1];
+	matrix->e[6] = e->axis[1][2];
+	matrix->e[7] = 0.0f;
+
+	matrix->e[8] = e->axis[2][0];
+	matrix->e[9] = e->axis[2][1];
+	matrix->e[10] = e->axis[2][2];
+	matrix->e[11] = 0.0f;
+
+	matrix->e[12] = e->origin[0];
+	matrix->e[13] = e->origin[1];
+	matrix->e[14] = e->origin[2];
+	matrix->e[15] = 1.0f;
+}
+
 /*
 =================
 R_RotateForEntity
@@ -1936,7 +1959,7 @@ static void R_AddEntitySurface(const trRefdef_t *refdef, trRefEntity_t *ent, int
 				break;
 			case MOD_MDXM:
 				if (ent->e.ghoul2)
-					R_AddGhoulSurfaces(ent, entityNum);
+					//R_AddGhoulSurfaces(ent, entityNum);
 				break;
 			case MOD_BAD:		// null model axis
 				if ( (ent->e.renderfx & RF_THIRD_PERSON) && !tr.viewParms.isPortal ) {
@@ -1946,7 +1969,7 @@ static void R_AddEntitySurface(const trRefdef_t *refdef, trRefEntity_t *ent, int
 				if ( ent->e.ghoul2 &&
 					G2API_HaveWeGhoul2Models(*((CGhoul2Info_v *)ent->e.ghoul2)) )
 				{
-					R_AddGhoulSurfaces(ent, entityNum);
+					//R_AddGhoulSurfaces(ent, entityNum);
 					break;
 				}
 

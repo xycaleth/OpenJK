@@ -106,13 +106,16 @@ namespace r2
                     const auto *renderPass = &cmd->renderPass;
                     FBO_Bind(renderPass->framebuffer);
 
-                    // TODO: Support MRTs
-                    if (renderPass->clearColorAction[0] == CLEAR_ACTION_FILL)
+                    for (int i = 0; i < MAX_COLOR_ATTACHMENT_COUNT; ++i)
                     {
-                        qglClearBufferfv(
-                            GL_COLOR,
-                            0,
-                            renderPass->clearColor[0]);
+                        if (renderPass->clearColorAction[i] ==
+                            CLEAR_ACTION_FILL)
+                        {
+                            qglClearBufferfv(
+                                GL_COLOR,
+                                i,
+                                renderPass->clearColor[i]);
+                        }
                     }
 
                     if (renderPass->clearDepth == CLEAR_ACTION_FILL)
@@ -176,11 +179,19 @@ namespace r2
 
                     GLSL_BindProgram(cmd->shaderProgram);
 
-                    if (cmd->uniformData != nullptr)
+                    if (cmd->uniformDataCount > 0)
                     {
-                        GLSL_SetUniforms(
-                            const_cast<shaderProgram_t *>(cmd->shaderProgram),
-                            cmd->uniformData);
+                        const auto *uniformData =
+                            GetCommandData<UniformData *>(
+                                &cursor,
+                                cmd->uniformDataCount);
+
+                        for (int i = 0; i < cmd->uniformDataCount; ++i)
+                        {
+                            GLSL_SetUniforms(
+                                const_cast<shaderProgram_t *>(cmd->shaderProgram),
+                                uniformData[i]);
+                        }
                     }
                     break;
                 }

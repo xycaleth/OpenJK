@@ -69,19 +69,11 @@ namespace r2
 
     const UniformData *GetUniformDataForStage(
         const shaderStage_t *stage,
-        const shaderProgram_t *shaderProgram,
         int shaderVariant,
-        const float timeInSeconds,
-        const float *projectionMatrix)
+        const float timeInSeconds)
     {
         UniformDataWriter uniformDataWriter;
-        uniformDataWriter.Start(shaderProgram);
-        uniformDataWriter.SetUniformMatrix4x4(
-            UNIFORM_MODELVIEWPROJECTIONMATRIX,
-            projectionMatrix);
-        uniformDataWriter.SetUniformFloat(
-            UNIFORM_FX_VOLUMETRIC_BASE,
-            -1.0f);
+        uniformDataWriter.Start();
 
         vec4_t vertColor;
         vec4_t baseColor;
@@ -132,6 +124,22 @@ namespace r2
             }
         }
 
+        return uniformDataWriter.Finish(*tr.frame.memory);
+    }
+
+    const UniformData *GetFrameUniformData()
+    {
+        matrix_t projectionMatrix;
+        Matrix16Ortho(0.0f, 640.0f, 480.0f, 0.0f, 0.0f, 1.0f, projectionMatrix);
+
+        UniformDataWriter uniformDataWriter;
+        uniformDataWriter.Start();
+        uniformDataWriter.SetUniformMatrix4x4(
+            UNIFORM_MODELVIEWPROJECTIONMATRIX,
+            projectionMatrix);
+        uniformDataWriter.SetUniformFloat(
+            UNIFORM_FX_VOLUMETRIC_BASE,
+            -1.0f);
         return uniformDataWriter.Finish(*tr.frame.memory);
     }
 
@@ -205,9 +213,7 @@ namespace r2
         }
 
         const float timeInSeconds = 0.001f * ri.Milliseconds();
-
-        matrix_t projectionMatrix;
-        Matrix16Ortho(0.0f, 640.0f, 480.0f, 0.0f, 0.0f, 1.0f, projectionMatrix);
+        const UniformData *frameUniformData = GetFrameUniformData();
 
         for (int i = 0; i < shader->numUnfoggedPasses; ++i)
         {
@@ -233,12 +239,11 @@ namespace r2
                 tr.genericShader + shaderVariant;
             const UniformData *uniformData = GetUniformDataForStage(
                 stage,
-                shaderProgram,
                 shaderVariant,
-                timeInSeconds,
-                projectionMatrix);
+                timeInSeconds);
 
-            CmdSetShaderProgram(cmdBuffer, shaderProgram, uniformData);
+            const UniformData *uniforms[] = {frameUniformData, uniformData};
+            CmdSetShaderProgram(cmdBuffer, shaderProgram, 2, uniforms);
             CmdSetVertexAttributes(cmdBuffer, 3, vertexAttributes);
             if (textureBundle->isVideoMap)
             {
