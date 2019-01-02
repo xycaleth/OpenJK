@@ -202,7 +202,9 @@ namespace r2
         {
             render_pass_t renderPass = {};
             renderPass.viewport = {0, 0, glConfig.vidWidth, glConfig.vidHeight};
-            renderPass.clearColorAction[0] = CLEAR_ACTION_FILL;
+            renderPass.clearColorAction[0] = tr.frame.sceneRendered
+                                             ? CLEAR_ACTION_NONE
+                                             : CLEAR_ACTION_FILL;
             VectorSet4(renderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
             renderPass.clearDepthAction = CLEAR_ACTION_FILL;
             renderPass.clearDepth = 1.0f;
@@ -371,16 +373,38 @@ namespace r2
         CmdPresent(frame->cmdBuffer);
         SubmitCommands(frame->cmdBuffer);
 
+        if (r_speeds->integer == 20)
+        {
+            const char *base = static_cast<const char *>(frame->memory->Base());
+            const char *watermark = static_cast<const char *>(
+                frame->memory->Mark());
+
+            const float memoryUsed = (watermark - base) / (1024.0f * 1024.0f);
+            const float memoryAvailable =
+                frame->memory->GetSize() / (1024.0f * 1024.0f);
+
+            ri.Printf(
+                PRINT_ALL,
+                "Frame memory watermark: %.2f/%.2f MB\n",
+                memoryUsed,
+                memoryAvailable);
+        }
+
         ++frame->number;
         ResetCmdBuffer(frame->cmdBuffer);
         frame->vertexBuffer->cursor = 0;
         frame->indexBuffer->cursor = 0;
+        frame->sceneRendered = false;
         frame->startedRenderPass = false;
         frame->memory->Reset();
     }
 
     void FreeFrame(frame_t *frame)
     {
-        frame->memory->~Allocator();
+        if (frame->memory != nullptr)
+        {
+            frame->memory->~Allocator();
+            frame->memory = nullptr;
+        }
     }
 }

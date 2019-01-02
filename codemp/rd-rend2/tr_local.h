@@ -3140,12 +3140,14 @@ struct CRenderableSurface
 
 namespace r2
 {
-	struct culled_surface_t;
+    struct camera_t;
+    struct culled_surface_t;
 }
 
 void R_AddGhoulSurfaces(
 	trRefEntity_t *ent,
 	int entityNum,
+	const r2::camera_t *camera,
 	std::vector<r2::culled_surface_t> &culledSurfaces);
 void RB_SurfaceGhoul( CRenderableSurface *surface );
 /*

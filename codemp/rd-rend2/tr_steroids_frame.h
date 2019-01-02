@@ -48,6 +48,7 @@ namespace r2
 
         vec4_t color;
         bool startedRenderPass;
+        bool sceneRendered;
         Allocator *memory;
     };
 

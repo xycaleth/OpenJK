@@ -4,19 +4,26 @@
 #include "tr_steroids_render.h"
 
 #include "tr_local.h"
+
+void ComputeTexMods(
+    const shaderStage_t *pStage,
+    int bundleNum,
+    float time,
+    float *outMatrix,
+    float *outOffTurb);
+
+void ComputeShaderColors(
+    const shaderStage_t *pStage,
+    vec4_t baseColor,
+    vec4_t vertColor,
+    int blend,
+    colorGen_t *forceRGBGen,
+    alphaGen_t *forceAlphaGen);
+
 namespace r2
 {
-
     namespace
     {
-        void GetCulledMapSurfaces(
-            const scene_t *scene,
-            const camera_t *camera,
-            std::vector<culled_surface_t> &culledSurfaces)
-        {
-
-        }
-
         void GetCulledEntitySurfaces(
             const scene_t *scene,
             const camera_t *camera,
@@ -38,14 +45,36 @@ namespace r2
                                 break;
 
                             case MOD_MDXM:
-                                R_AddGhoulSurfaces(nullptr, i, culledSurfaces);
+                            {
+                                trRefEntity_t trRefEntity = {};
+                                trRefEntity.e = *refEntity;
+
+                                R_AddGhoulSurfaces(
+                                    &trRefEntity,
+                                    i,
+                                    camera,
+                                    culledSurfaces);
                                 break;
+                            }
 
                             case MOD_MESH:
                                 //model->data.mdv;
                                 break;
 
                             default:
+                                if (refEntity->ghoul2 != nullptr)
+                                {
+                                    // UI is dumb and doesn't set the model type
+                                    trRefEntity_t trRefEntity = {};
+                                    trRefEntity.e = *refEntity;
+
+                                    R_AddGhoulSurfaces(
+                                        &trRefEntity,
+                                        i,
+                                        camera,
+                                        culledSurfaces);
+                                }
+
                                 ri.Printf(
                                     PRINT_ERROR,
                                     "Invalid model type '%d'",
@@ -159,6 +188,13 @@ namespace r2
             const camera_t *camera,
             matrix_t viewProjectionMatrix)
         {
+            static const matrix_t Q3ToGLMatrix = {
+                0.0f,  0.0f, -1.0f,  0.0f,
+                -1.0f,  0.0f,  0.0f,  0.0f,
+                0.0f,  1.0f,  0.0f,  0.0f,
+                0.0f,  0.0f,  0.0f,  1.0f
+            };
+
             matrix_t viewMatrix = {};
             viewMatrix[0] = camera->viewAxis[0][0];
             viewMatrix[1] = camera->viewAxis[1][0];
@@ -180,18 +216,20 @@ namespace r2
             viewMatrix[14] = -DotProduct(camera->origin, camera->viewAxis[2]);
             viewMatrix[15] = 1.0f;
 
-            matrix_t projectionMatrix = {};
-            const float ymax = camera->znear *
-                tanf(camera->fovy * static_cast<float>(M_PI) / 360.0f);
+            const float znear = camera->znear;
+            const float zfar = 6000.0f;
+
+            const float ymax = camera->znear * tanf(DEG2RAD(0.5f * camera->fovy));
             const float ymin = -ymax;
 
-            const float xmax = camera->znear *
-                tanf(camera->fovx * static_cast<float>(M_PI) / 360.0f);
+            const float xmax = camera->znear * tanf(DEG2RAD(0.5f * camera->fovx));
             const float xmin = -xmax;
 
             const float width = xmax - xmin;
             const float height = ymax - ymin;
+            const float depth = zfar - znear;
 
+            matrix_t projectionMatrix = {};
             projectionMatrix[0] = 2.0f * camera->znear / width;
             projectionMatrix[1] = 0.0f;
             projectionMatrix[2] = 0.0f;
@@ -204,15 +242,20 @@ namespace r2
 
             projectionMatrix[8] = 0.0f;
             projectionMatrix[9] = 0.0f;
-            projectionMatrix[10] = 0.0f;
+            projectionMatrix[10] = -(zfar + znear) / depth;
             projectionMatrix[11] = -1.0f;
 
             projectionMatrix[12] = 0.0f;
             projectionMatrix[13] = 0.0f;
-            projectionMatrix[14] = 0.0f;
+            projectionMatrix[14] = (-2.0f * zfar * znear) / depth;
             projectionMatrix[15] = 0.0f;
 
-            Matrix16Multiply(projectionMatrix, viewMatrix, viewProjectionMatrix);
+            matrix_t viewMatrixGLSpace;
+            Matrix16Multiply(viewMatrix, Q3ToGLMatrix, viewMatrixGLSpace);
+            Matrix16Multiply(
+                projectionMatrix,
+                viewMatrixGLSpace,
+                viewProjectionMatrix);
         }
 
         const UniformData *MakeSceneCameraUniformData(
@@ -273,22 +316,18 @@ namespace r2
         return true;
     }
 
-    void SceneRender(const scene_t *scene, const refdef_t *refdef)
+    void SceneRender(
+        frame_t *frame,
+        const scene_t *scene,
+        const refdef_t *refdef)
     {
         camera_t camera = {};
         CameraFromRefDef(&camera, refdef);
 
+        tr.refdef.rdflags = camera.renderFlags;
+
         std::vector<culled_surface_t> culledSurfaces;
-
-        if ((camera.renderFlags & RDF_NOWORLDMODEL) != 0)
-        {
-            GetCulledMapSurfaces(scene, &camera, culledSurfaces);
-        }
-
         GetCulledEntitySurfaces(scene, &camera, culledSurfaces);
-
-        const std::vector<const UniformData *> entityUniformData =
-            MakeEntityUniformData(scene, *tr.frame.memory);
 
         command_buffer_t *cmdBuffer = tr.frame.cmdBuffer;
 
@@ -318,8 +357,13 @@ namespace r2
         mainRenderPass.viewport.height = camera.viewport.height;
         mainRenderPass.clearDepthAction = CLEAR_ACTION_FILL;
         mainRenderPass.clearDepth = 1.0f;
-        mainRenderPass.clearColorAction[0] = CLEAR_ACTION_NONE;
+        mainRenderPass.clearColorAction[0] = frame->startedRenderPass
+                                             ? CLEAR_ACTION_NONE
+                                             : CLEAR_ACTION_FILL;
         VectorSet4(mainRenderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
+
+        const std::vector<const UniformData *> entityUniformData =
+            MakeEntityUniformData(scene, *tr.frame.memory);
 
         const UniformData *cameraUniformData = MakeSceneCameraUniformData(
             &camera, *tr.frame.memory);
@@ -340,10 +384,75 @@ namespace r2
             renderState.cullType = CT_TWO_SIDED;
 
             const shaderProgram_t *shaderProgram = stage->glslShaderGroup;
+            if (shaderProgram == nullptr)
+            {
+                shaderProgram = tr.genericShader;
+            }
+
+            UniformDataWriter uniformDataWriter;
+            uniformDataWriter.Start();
+            uniformDataWriter.SetUniformFloat(
+                UNIFORM_FX_VOLUMETRIC_BASE,
+                -1.0f);
+
+            vec4_t vertColor;
+            vec4_t baseColor;
+            colorGen_t rgbGen = CGEN_BAD;
+            alphaGen_t alphaGen = AGEN_IDENTITY;
+
+            ComputeShaderColors(
+                stage,
+                baseColor,
+                vertColor,
+                stage->stateBits,
+                &rgbGen,
+                &alphaGen);
+
+            uniformDataWriter.SetUniformVec4(UNIFORM_VERTCOLOR, vertColor);
+            uniformDataWriter.SetUniformVec4(UNIFORM_BASECOLOR, baseColor);
+            uniformDataWriter.SetUniformInt(UNIFORM_COLORGEN, rgbGen);
+            uniformDataWriter.SetUniformInt(UNIFORM_ALPHAGEN, alphaGen);
+
+#if 0
+            if ((shaderVariant & GENERICDEF_USE_TCGEN_AND_TCMOD) != 0)
+            {
+                float matrix[4];
+                float turbulence[4];
+                ComputeTexMods(stage, 0, timeInSeconds, matrix, turbulence);
+
+                uniformDataWriter.SetUniformVec4(
+                    UNIFORM_DIFFUSETEXMATRIX,
+                    matrix);
+                uniformDataWriter.SetUniformVec4(
+                    UNIFORM_DIFFUSETEXOFFTURB,
+                    turbulence);
+
+                uniformDataWriter.SetUniformInt(
+                    UNIFORM_TCGEN0,
+                    stage->bundle[0].tcGen);
+                uniformDataWriter.SetUniformInt(
+                    UNIFORM_TCGEN1,
+                    stage->bundle[1].tcGen);
+
+                if (stage->bundle[0].tcGen == TCGEN_VECTOR)
+                {
+                    uniformDataWriter.SetUniformVec3(
+                        UNIFORM_TCGEN0VECTOR0,
+                        stage->bundle[0].tcGenVectors[0]);
+                    uniformDataWriter.SetUniformVec3(
+                        UNIFORM_TCGEN0VECTOR1,
+                        stage->bundle[0].tcGenVectors[1]);
+                }
+            }
+#endif
+
+            const UniformData *stageUniformData =
+                uniformDataWriter.Finish(*tr.frame.memory);
 
             // draw them
             const UniformData *uniforms[] = {
-                surface.uniformData,
+                stageUniformData,
+                drawItem->uniformData,
                 entityUniformData[surface.entityNum],
                 cameraUniformData};
             CmdSetShaderProgram(
@@ -379,11 +488,14 @@ namespace r2
                 cmdBuffer,
                 PRIMITIVE_TYPE_TRIANGLES,
                 drawItem->draw.params.indexed.numIndices,
-                INDEX_TYPE_UINT16,
+                INDEX_TYPE_UINT32,
                 drawItem->draw.params.indexed.firstIndex,
                 1,
                 0);
         }
         CmdEndRenderPass(cmdBuffer);
+
+        frame->sceneRendered = true;
+        frame->startedRenderPass = false;
     }
 }

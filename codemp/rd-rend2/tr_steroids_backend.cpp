@@ -106,6 +106,17 @@ namespace r2
                     const auto *renderPass = &cmd->renderPass;
                     FBO_Bind(renderPass->framebuffer);
 
+                    qglViewport(
+                        renderPass->viewport.x,
+                        renderPass->viewport.y,
+                        renderPass->viewport.width,
+                        renderPass->viewport.height);
+                    qglScissor(
+                        renderPass->viewport.x,
+                        renderPass->viewport.y,
+                        renderPass->viewport.width,
+                        renderPass->viewport.height);
+
                     for (int i = 0; i < MAX_COLOR_ATTACHMENT_COUNT; ++i)
                     {
                         if (renderPass->clearColorAction[i] ==
@@ -123,11 +134,6 @@ namespace r2
                         qglClearBufferfv(GL_DEPTH, 0, &renderPass->clearDepth);
                     }
 
-                    qglViewport(
-                        renderPass->viewport.x,
-                        renderPass->viewport.y,
-                        renderPass->viewport.width,
-                        renderPass->viewport.height);
                     break;
                 }
 

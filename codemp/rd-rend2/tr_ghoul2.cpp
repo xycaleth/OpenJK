@@ -86,8 +86,8 @@ struct ghoul2_vertex_t
 	vec3_t position;
 	uint32_t normal;
 	vec2_t texcoord;
-	byte boneReferences;
-	byte weights;
+	byte boneReferences[4];
+	byte weights[4];
 	uint32_t tangent;
 
 	static std::pair<const vertexAttribute_t *, int> GetVertexAttributes()
@@ -97,19 +97,19 @@ struct ghoul2_vertex_t
 			{nullptr, ATTR_INDEX_POSITION,     3, GL_FALSE, GL_FLOAT,                       GL_FALSE, stride, (int) offsetof(
 				ghoul2_vertex_t,
 				position),       0},
-			{nullptr, ATTR_INDEX_NORMAL,       3, GL_FALSE, GL_UNSIGNED_INT_2_10_10_10_REV, GL_TRUE,  stride, (int) offsetof(
+			{nullptr, ATTR_INDEX_NORMAL,       4, GL_FALSE, GL_UNSIGNED_INT_2_10_10_10_REV, GL_TRUE,  stride, (int) offsetof(
 				ghoul2_vertex_t,
 				normal),         0},
 			{nullptr, ATTR_INDEX_TEXCOORD0,    2, GL_FALSE, GL_FLOAT,                       GL_FALSE, stride, (int) offsetof(
 				ghoul2_vertex_t,
 				texcoord),       0},
-			{nullptr, ATTR_INDEX_BONE_INDEXES, 4, GL_TRUE,  GL_UNSIGNED_BYTE,               GL_TRUE,  stride, (int) offsetof(
+			{nullptr, ATTR_INDEX_BONE_INDEXES, 4, GL_TRUE,  GL_UNSIGNED_BYTE,               GL_FALSE, stride, (int) offsetof(
 				ghoul2_vertex_t,
 				boneReferences), 0},
-			{nullptr, ATTR_INDEX_BONE_WEIGHTS, 4, GL_TRUE,  GL_UNSIGNED_BYTE,               GL_TRUE,  stride, (int) offsetof(
+			{nullptr, ATTR_INDEX_BONE_WEIGHTS, 4, GL_FALSE, GL_UNSIGNED_BYTE,               GL_TRUE,  stride, (int) offsetof(
 				ghoul2_vertex_t,
 				weights),        0},
-			{nullptr, ATTR_INDEX_TANGENT,      3, GL_FALSE, GL_UNSIGNED_INT_2_10_10_10_REV, GL_TRUE,  stride, (int) offsetof(
+			{nullptr, ATTR_INDEX_TANGENT,      4, GL_FALSE, GL_UNSIGNED_INT_2_10_10_10_REV, GL_TRUE,  stride, (int) offsetof(
 				ghoul2_vertex_t,
 				tangent),        0},
 		};
@@ -884,8 +884,10 @@ frame.
 R_ACullModel
 =============
 */
-static int R_GCullModel(refEntity_t *ent)
+static int R_GCullModel(refEntity_t *ent, const r2::camera_t *camera)
 {
+    return CULL_CLIP;
+
 	// scale the radius if need be
 	float largestScale = Q_max(
 		ent->modelScale[0], Q_max(ent->modelScale[1], ent->modelScale[2]));
@@ -2563,7 +2565,7 @@ void RenderSurfaces(
         drawItem.draw.type = DRAW_COMMAND_INDEXED;
         drawItem.draw.primitiveType = GL_TRIANGLES;
         drawItem.draw.numInstances = 1;
-        drawItem.draw.params.indexed.indexType = GL_UNSIGNED_SHORT;
+        drawItem.draw.params.indexed.indexType = GL_UNSIGNED_INT;
         drawItem.draw.params.indexed.firstIndex =
             static_cast<glIndex_t>(vboMesh->indexOffset);
         drawItem.draw.params.indexed.numIndices = vboMesh->numIndexes;
@@ -3198,6 +3200,7 @@ R_AddGHOULSurfaces
 void R_AddGhoulSurfaces(
     trRefEntity_t *ent,
     int entityNum,
+    const r2::camera_t *camera,
     std::vector<r2::culled_surface_t> &culledSurfaces)
 {
 #ifdef G2_PERFORMANCE_ANALYSIS
@@ -3225,7 +3228,7 @@ void R_AddGhoulSurfaces(
 
 	// cull the entire model if merged bounding box of both frames is outside
 	// the view frustum.
-	const int cull = R_GCullModel(&ent->e);
+	const int cull = R_GCullModel(&ent->e, camera);
 	if (cull == CULL_OUT)
 	{
 		return;

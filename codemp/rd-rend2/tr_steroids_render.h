@@ -13,10 +13,10 @@ struct UniformData;
 
 namespace r2
 {
+
     struct culled_surface_t
     {
         int entityNum;
-        const UniformData *uniformData;
         const shader_t *shader;
         DrawItem drawItem;
     };

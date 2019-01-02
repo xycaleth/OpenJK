@@ -474,7 +474,7 @@ to handle mirrors,
 */
 void RE_RenderScene( const refdef_t *fd ) {
 #if 1
-    r2::SceneRender(&tr.scene, fd);
+    r2::SceneRender(&tr.frame, &tr.scene, fd);
 #else
 	viewParms_t		parms;
 	int				startTime;

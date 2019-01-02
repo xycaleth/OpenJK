@@ -32,6 +32,8 @@ namespace r2
 
     void ResetCmdBuffer(command_buffer_t *cmdBuffer)
     {
+        assert(cmdBuffer != nullptr);
+
         cmdBuffer->cursor = cmdBuffer->buffer;
     }
 
@@ -39,6 +41,8 @@ namespace r2
         command_buffer_t *cmdBuffer,
         const render_pass_t *renderPass)
     {
+        assert(cmdBuffer != nullptr);
+
         command_begin_render_pass_t cmd = {CMD_TYPE_BEGIN_RENDER_PASS};
         cmd.renderPass = *renderPass;
 
@@ -47,6 +51,7 @@ namespace r2
 
     void CmdEndRenderPass(command_buffer_t *cmdBuffer)
     {
+        assert(cmdBuffer != nullptr);
     }
 
     void CmdDrawIndexed(
@@ -58,6 +63,8 @@ namespace r2
         int instanceCount,
         int baseVertex)
     {
+        assert(cmdBuffer != nullptr);
+
         command_draw_indexed_t cmd = {CMD_TYPE_DRAW_INDEXED};
         cmd.primitiveType = primitiveType;
         cmd.indexCount = indexCount;
@@ -76,6 +83,8 @@ namespace r2
         int firstVertex,
         int instanceCount)
     {
+        assert(cmdBuffer != nullptr);
+
         command_draw_t cmd = {CMD_TYPE_DRAW};
         cmd.primitiveType = primitiveType;
         cmd.vertexCount = vertexCount;
@@ -89,6 +98,9 @@ namespace r2
         command_buffer_t *cmdBuffer,
         const render_state_t *renderState)
     {
+        assert(cmdBuffer != nullptr);
+        assert(renderState != nullptr);
+
         command_set_render_state_t cmd = {CMD_TYPE_SET_RENDER_STATE};
         cmd.renderState = *renderState;
 
@@ -99,6 +111,9 @@ namespace r2
         command_buffer_t *cmdBuffer,
         const shaderProgram_t *shaderProgram)
     {
+        assert(cmdBuffer != nullptr);
+        assert(shaderProgram != nullptr);
+
         command_set_shader_program_t cmd = {CMD_TYPE_SET_SHADER_PROGRAM};
         cmd.shaderProgram = shaderProgram;
         cmd.uniformDataCount = 0;
@@ -112,6 +127,10 @@ namespace r2
         int uniformDataCount,
         const UniformData **uniformData)
     {
+        assert(cmdBuffer != nullptr);
+        assert(shaderProgram != nullptr);
+        assert(uniformDataCount == 0 || uniformData != nullptr);
+
         command_set_shader_program_t cmd = {CMD_TYPE_SET_SHADER_PROGRAM};
         cmd.shaderProgram = shaderProgram;
         cmd.uniformDataCount = uniformDataCount;
@@ -123,6 +142,9 @@ namespace r2
         command_buffer_t *cmdBuffer,
         const IBO_t *indexBuffer)
     {
+        assert(cmdBuffer != nullptr);
+        assert(indexBuffer != nullptr);
+
         command_set_index_buffer_t cmd = {CMD_TYPE_SET_INDEX_BUFFER};
         cmd.indexBuffer = indexBuffer;
 
@@ -134,6 +156,9 @@ namespace r2
         int attributeCount,
         const vertexAttribute_t *vertexAttributes)
     {
+        assert(cmdBuffer != nullptr);
+        assert(attributeCount == 0 || vertexAttributes != nullptr);
+
         command_set_vertex_attributes_t cmd = {CMD_TYPE_SET_VERTEX_ATTRIBUTES};
         cmd.attributeCount = attributeCount;
 
@@ -145,6 +170,9 @@ namespace r2
         int index,
         const image_t *image)
     {
+        assert(cmdBuffer != nullptr);
+        assert(image != nullptr);
+
         command_set_texture_t cmd = {CMD_TYPE_SET_TEXTURE};
         cmd.index = index;
         cmd.image = image;
@@ -154,6 +182,8 @@ namespace r2
 
     void CmdPresent(command_buffer_t *cmdBuffer)
     {
+        assert(cmdBuffer != nullptr);
+
         command_type_t cmd = CMD_TYPE_END;
         AddCommand(cmdBuffer, &cmd);
     }

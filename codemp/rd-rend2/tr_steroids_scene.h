@@ -8,6 +8,8 @@ typedef struct refEntity_s refEntity_t;
 namespace r2
 {
 
+    struct frame_t;
+
     struct light_t
     {
         vec3_t origin;
@@ -44,6 +46,7 @@ namespace r2
         const refEntity_t *refEntity);
 
     void SceneRender(
+        frame_t *frame,
         const scene_t *scene,
         const refdef_t *refdef);
 

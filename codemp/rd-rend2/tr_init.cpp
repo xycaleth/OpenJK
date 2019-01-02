@@ -1909,9 +1909,9 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 			qglDeleteVertexArrays(1, &tr.globalVao);
 			SaveGhoul2InfoArray();
 		}
-	}
 
-	r2::FreeFrame(&tr.frame);
+		r2::FreeFrame(&tr.frame);
+	}
 
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {
