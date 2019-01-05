@@ -4,6 +4,20 @@
 #include "qgl.h"
 #include "tr_local.h"
 
+#define GL(expr) \
+    do { \
+        expr; \
+        const GLint err = glGetError(); \
+        if (err != GL_NO_ERROR) { \
+            ri.Printf( \
+                PRINT_DEVELOPER, \
+                "%s:%d: GL error 0x%04x\n", \
+                __FILE__, \
+                __LINE__, \
+                err); \
+        } \
+    } while(0)
+
 namespace r2
 {
     namespace
@@ -71,11 +85,11 @@ namespace r2
                 {
                     const auto *cmd = GetCommand<command_draw_t>(&cursor);
 
-                    qglDrawArraysInstanced(
+                    GL(qglDrawArraysInstanced(
                         GLPrimitiveType(cmd->primitiveType),
                         cmd->firstVertex,
                         cmd->vertexCount,
-                        cmd->instanceCount);
+                        cmd->instanceCount));
 
                     ++drawCount;
                     break;
@@ -86,13 +100,13 @@ namespace r2
                     const auto *cmd =
                         GetCommand<command_draw_indexed_t>(&cursor);
 
-                    qglDrawElementsInstancedBaseVertex(
+                    GL(qglDrawElementsInstancedBaseVertex(
                         GLPrimitiveType(cmd->primitiveType),
                         cmd->indexCount,
                         GLIndexType(cmd->indexType),
                         reinterpret_cast<const void *>(cmd->offset),
                         cmd->instanceCount,
-                        cmd->baseVertex);
+                        cmd->baseVertex));
 
                     ++drawCount;
                     break;
@@ -106,32 +120,35 @@ namespace r2
                     const auto *renderPass = &cmd->renderPass;
                     FBO_Bind(renderPass->framebuffer);
 
-                    qglViewport(
+                    GL(qglViewport(
                         renderPass->viewport.x,
                         renderPass->viewport.y,
                         renderPass->viewport.width,
-                        renderPass->viewport.height);
-                    qglScissor(
+                        renderPass->viewport.height));
+                    GL(qglScissor(
                         renderPass->viewport.x,
                         renderPass->viewport.y,
                         renderPass->viewport.width,
-                        renderPass->viewport.height);
+                        renderPass->viewport.height));
 
                     for (int i = 0; i < MAX_COLOR_ATTACHMENT_COUNT; ++i)
                     {
                         if (renderPass->clearColorAction[i] ==
                             CLEAR_ACTION_FILL)
                         {
-                            qglClearBufferfv(
+                            GL(qglClearBufferfv(
                                 GL_COLOR,
                                 i,
-                                renderPass->clearColor[i]);
+                                renderPass->clearColor[i]));
                         }
                     }
 
                     if (renderPass->clearDepth == CLEAR_ACTION_FILL)
                     {
-                        qglClearBufferfv(GL_DEPTH, 0, &renderPass->clearDepth);
+                        GL(qglClearBufferfv(
+                            GL_DEPTH,
+                            0,
+                            &renderPass->clearDepth));
                     }
 
                     break;
@@ -153,9 +170,9 @@ namespace r2
                             &cursor,
                             cmd->attributeCount);
 
-                    GL_VertexAttribPointers(
+                    GL(GL_VertexAttribPointers(
                         static_cast<size_t>(cmd->attributeCount),
-                        vertexAttributes);
+                        vertexAttributes));
                     break;
                 }
 
@@ -164,7 +181,7 @@ namespace r2
                     const auto *cmd =
                         GetCommand<command_set_index_buffer_t>(&cursor);
 
-                    R_BindIBO(cmd->indexBuffer);
+                    GL(R_BindIBO(cmd->indexBuffer));
                     break;
                 }
 
@@ -174,7 +191,9 @@ namespace r2
                         GetCommand<command_set_texture_t>(&cursor);
 
                     // Unfortunate const_cast...
-                    GL_BindToTMU(const_cast<image_t *>(cmd->image), cmd->index);
+                    GL(GL_BindToTMU(
+                        const_cast<image_t *>(cmd->image),
+                        cmd->index));
                     break;
                 }
 
@@ -183,7 +202,7 @@ namespace r2
                     const auto *cmd =
                         GetCommand<command_set_shader_program_t>(&cursor);
 
-                    GLSL_BindProgram(cmd->shaderProgram);
+                    GL(GLSL_BindProgram(cmd->shaderProgram));
 
                     if (cmd->uniformDataCount > 0)
                     {
@@ -194,9 +213,9 @@ namespace r2
 
                         for (int i = 0; i < cmd->uniformDataCount; ++i)
                         {
-                            GLSL_SetUniforms(
+                            GL(GLSL_SetUniforms(
                                 const_cast<shaderProgram_t *>(cmd->shaderProgram),
-                                uniformData[i]);
+                                uniformData[i]));
                         }
                     }
                     break;
@@ -207,8 +226,8 @@ namespace r2
                     const auto *cmd =
                         GetCommand<command_set_render_state_t>(&cursor);
 
-                    GL_State(cmd->renderState.stateBits);
-                    GL_Cull(cmd->renderState.cullType);
+                    GL(GL_State(cmd->renderState.stateBits));
+                    GL(GL_Cull(cmd->renderState.cullType));
                     break;
                 }
 

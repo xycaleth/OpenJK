@@ -954,6 +954,8 @@ static int R_GComputeFogNum( trRefEntity_t *ent ) {
 // work out lod for this entity.
 static int G2_ComputeLOD( refEntity_t *ent, const model_t *currentModel, int lodBias )
 {
+	return 0;
+
 	float flod, lodscale;
 	float projectedRadius;
 	int lod;
@@ -2567,7 +2569,7 @@ void RenderSurfaces(
         drawItem.draw.numInstances = 1;
         drawItem.draw.params.indexed.indexType = GL_UNSIGNED_INT;
         drawItem.draw.params.indexed.firstIndex =
-            static_cast<glIndex_t>(vboMesh->indexOffset);
+            static_cast<glIndex_t>(vboMesh->indexOffset) * sizeof(glIndex_t);
         drawItem.draw.params.indexed.numIndices = vboMesh->numIndexes;
 
         culledSurfaces.push_back(culledSurface);

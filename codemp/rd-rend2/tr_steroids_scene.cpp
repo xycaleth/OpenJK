@@ -188,13 +188,6 @@ namespace r2
             const camera_t *camera,
             matrix_t viewProjectionMatrix)
         {
-            static const matrix_t Q3ToGLMatrix = {
-                0.0f,  0.0f, -1.0f,  0.0f,
-                -1.0f,  0.0f,  0.0f,  0.0f,
-                0.0f,  1.0f,  0.0f,  0.0f,
-                0.0f,  0.0f,  0.0f,  1.0f
-            };
-
             matrix_t viewMatrix = {};
             viewMatrix[0] = camera->viewAxis[0][0];
             viewMatrix[1] = camera->viewAxis[1][0];
@@ -230,31 +223,29 @@ namespace r2
             const float depth = zfar - znear;
 
             matrix_t projectionMatrix = {};
-            projectionMatrix[0] = 2.0f * camera->znear / width;
+            projectionMatrix[0] = 0.0f;
             projectionMatrix[1] = 0.0f;
-            projectionMatrix[2] = 0.0f;
-            projectionMatrix[3] = 0.0f;
+            projectionMatrix[2] = (zfar + znear) / depth;
+            projectionMatrix[3] = 1.0f;
 
-            projectionMatrix[4] = 0.0f;
-            projectionMatrix[5] = 2.0f * camera->znear / height;
+            projectionMatrix[4] = 2.0f * znear / width;
+            projectionMatrix[5] = 0.0f;
             projectionMatrix[6] = 0.0f;
             projectionMatrix[7] = 0.0f;
 
             projectionMatrix[8] = 0.0f;
-            projectionMatrix[9] = 0.0f;
-            projectionMatrix[10] = -(zfar + znear) / depth;
-            projectionMatrix[11] = -1.0f;
+            projectionMatrix[9] = 2.0f * znear / height;
+            projectionMatrix[10] = 0.0f;
+            projectionMatrix[11] = 0.0f;
 
             projectionMatrix[12] = 0.0f;
             projectionMatrix[13] = 0.0f;
             projectionMatrix[14] = (-2.0f * zfar * znear) / depth;
             projectionMatrix[15] = 0.0f;
 
-            matrix_t viewMatrixGLSpace;
-            Matrix16Multiply(viewMatrix, Q3ToGLMatrix, viewMatrixGLSpace);
             Matrix16Multiply(
                 projectionMatrix,
-                viewMatrixGLSpace,
+                viewMatrix,
                 viewProjectionMatrix);
         }
 
@@ -369,6 +360,8 @@ namespace r2
             &camera, *tr.frame.memory);
 
         // Do main render pass
+        UniformDataWriter uniformDataWriter;
+
         CmdBeginRenderPass(cmdBuffer, &mainRenderPass);
         for (const auto &surface : culledSurfaces)
         {
@@ -389,7 +382,6 @@ namespace r2
                 shaderProgram = tr.genericShader;
             }
 
-            UniformDataWriter uniformDataWriter;
             uniformDataWriter.Start();
             uniformDataWriter.SetUniformFloat(
                 UNIFORM_FX_VOLUMETRIC_BASE,
