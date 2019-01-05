@@ -20,8 +20,8 @@ namespace r2
             cplane_t bottom;
             cplane_t left;
             cplane_t right;
-            cplane_t front;
-            cplane_t back;
+            cplane_t near;
+            cplane_t far;
         } sides;
 
         cplane_t planes[6];

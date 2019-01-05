@@ -149,12 +149,11 @@ namespace r2
 
         std::vector<const UniformData *> MakeEntityUniformData(
             const scene_t *scene,
+            UniformDataWriter &uniformDataWriter,
             Allocator &allocator)
         {
             std::vector<const UniformData *> uniformData(
                 static_cast<unsigned>(scene->entityCount));
-
-            UniformDataWriter uniformDataWriter;
 
             for (int i = 0; i < scene->entityCount; ++i)
             {
@@ -184,60 +183,82 @@ namespace r2
             return uniformData;
         }
 
-        void GetViewProjectionMatrix(
-            const camera_t *camera,
-            matrix_t viewProjectionMatrix)
-        {
-            matrix_t viewMatrix = {};
-            viewMatrix[0] = camera->viewAxis[0][0];
-            viewMatrix[1] = camera->viewAxis[1][0];
-            viewMatrix[2] = camera->viewAxis[2][0];
-            viewMatrix[3] = 0.0f;
-
-            viewMatrix[4] = camera->viewAxis[0][1];
-            viewMatrix[5] = camera->viewAxis[1][1];
-            viewMatrix[6] = camera->viewAxis[2][1];
-            viewMatrix[7] = 0.0f;
-
-            viewMatrix[8] = camera->viewAxis[0][2];
-            viewMatrix[9] = camera->viewAxis[1][2];
-            viewMatrix[10] = camera->viewAxis[2][2];
-            viewMatrix[11] = 0.0f;
-
-            viewMatrix[12] = -DotProduct(camera->origin, camera->viewAxis[0]);
-            viewMatrix[13] = -DotProduct(camera->origin, camera->viewAxis[1]);
-            viewMatrix[14] = -DotProduct(camera->origin, camera->viewAxis[2]);
-            viewMatrix[15] = 1.0f;
-
-            matrix_t projectionMatrix = {};
-            Matrix16Perspective(
-                camera->fovx,
-                camera->fovy,
-                camera->znear,
-                6000.0f,
-                projectionMatrix);
-
-            Matrix16Multiply(
-                projectionMatrix,
-                viewMatrix,
-                viewProjectionMatrix);
-        }
-
         const UniformData *MakeSceneCameraUniformData(
             const camera_t *camera,
+            UniformDataWriter &uniformDataWriter,
             Allocator &allocator)
         {
-            matrix_t viewProjectionMatrix = {};
-            GetViewProjectionMatrix(camera, viewProjectionMatrix);
-
-            UniformDataWriter uniformDataWriter;
-
             uniformDataWriter.Start();
             uniformDataWriter.SetUniformMatrix4x4(
                 UNIFORM_MODELVIEWPROJECTIONMATRIX,
-                viewProjectionMatrix);
+                camera->viewProjectionMatrix);
 
             return uniformDataWriter.Finish(allocator);
+        }
+
+        const UniformData *MakeStageUniformData(
+            UniformDataWriter &uniformDataWriter,
+            const shaderStage_t *stage)
+        {
+            uniformDataWriter.Start();
+            uniformDataWriter.SetUniformFloat(
+                UNIFORM_FX_VOLUMETRIC_BASE,
+                -1.0f);
+
+            vec4_t vertColor;
+            vec4_t baseColor;
+            colorGen_t rgbGen = CGEN_BAD;
+            alphaGen_t alphaGen = AGEN_IDENTITY;
+
+            ComputeShaderColors(
+                stage,
+                baseColor,
+                vertColor,
+                stage->stateBits,
+                &rgbGen,
+                &alphaGen);
+
+            uniformDataWriter.SetUniformVec4(UNIFORM_VERTCOLOR, vertColor);
+            uniformDataWriter.SetUniformVec4(UNIFORM_BASECOLOR, baseColor);
+            uniformDataWriter.SetUniformInt(UNIFORM_COLORGEN, rgbGen);
+            uniformDataWriter.SetUniformInt(UNIFORM_ALPHAGEN, alphaGen);
+
+#if 0
+            if ((shaderVariant & GENERICDEF_USE_TCGEN_AND_TCMOD) != 0)
+        {
+            float matrix[4];
+            float turbulence[4];
+            ComputeTexMods(stage, 0, timeInSeconds, matrix, turbulence);
+
+            uniformDataWriter.SetUniformVec4(
+                UNIFORM_DIFFUSETEXMATRIX,
+                matrix);
+            uniformDataWriter.SetUniformVec4(
+                UNIFORM_DIFFUSETEXOFFTURB,
+                turbulence);
+
+            uniformDataWriter.SetUniformInt(
+                UNIFORM_TCGEN0,
+                stage->bundle[0].tcGen);
+            uniformDataWriter.SetUniformInt(
+                UNIFORM_TCGEN1,
+                stage->bundle[1].tcGen);
+
+            if (stage->bundle[0].tcGen == TCGEN_VECTOR)
+            {
+                uniformDataWriter.SetUniformVec3(
+                    UNIFORM_TCGEN0VECTOR0,
+                    stage->bundle[0].tcGenVectors[0]);
+                uniformDataWriter.SetUniformVec3(
+                    UNIFORM_TCGEN0VECTOR1,
+                    stage->bundle[0].tcGenVectors[1]);
+            }
+        }
+#endif
+
+            const UniformData *stageUniformData =
+                uniformDataWriter.Finish(*tr.frame.memory);
+            return stageUniformData;
         }
     }
 
@@ -327,14 +348,13 @@ namespace r2
                                              : CLEAR_ACTION_FILL;
         VectorSet4(mainRenderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
 
+        UniformDataWriter uniformDataWriter;
+
         const std::vector<const UniformData *> entityUniformData =
-            MakeEntityUniformData(scene, *tr.frame.memory);
+            MakeEntityUniformData(scene, uniformDataWriter, *tr.frame.memory);
 
         const UniformData *cameraUniformData = MakeSceneCameraUniformData(
-            &camera, *tr.frame.memory);
-
-        // Do main render pass
-        UniformDataWriter uniformDataWriter;
+            &camera, uniformDataWriter, *tr.frame.memory);
 
         CmdBeginRenderPass(cmdBuffer, &mainRenderPass);
         for (const auto &surface : culledSurfaces)
@@ -360,64 +380,9 @@ namespace r2
                 shaderProgram = shaderProgram + surface.shaderFlags;
             }
 
-            uniformDataWriter.Start();
-            uniformDataWriter.SetUniformFloat(
-                UNIFORM_FX_VOLUMETRIC_BASE,
-                -1.0f);
-
-            vec4_t vertColor;
-            vec4_t baseColor;
-            colorGen_t rgbGen = CGEN_BAD;
-            alphaGen_t alphaGen = AGEN_IDENTITY;
-
-            ComputeShaderColors(
-                stage,
-                baseColor,
-                vertColor,
-                stage->stateBits,
-                &rgbGen,
-                &alphaGen);
-
-            uniformDataWriter.SetUniformVec4(UNIFORM_VERTCOLOR, vertColor);
-            uniformDataWriter.SetUniformVec4(UNIFORM_BASECOLOR, baseColor);
-            uniformDataWriter.SetUniformInt(UNIFORM_COLORGEN, rgbGen);
-            uniformDataWriter.SetUniformInt(UNIFORM_ALPHAGEN, alphaGen);
-
-#if 0
-            if ((shaderVariant & GENERICDEF_USE_TCGEN_AND_TCMOD) != 0)
-            {
-                float matrix[4];
-                float turbulence[4];
-                ComputeTexMods(stage, 0, timeInSeconds, matrix, turbulence);
-
-                uniformDataWriter.SetUniformVec4(
-                    UNIFORM_DIFFUSETEXMATRIX,
-                    matrix);
-                uniformDataWriter.SetUniformVec4(
-                    UNIFORM_DIFFUSETEXOFFTURB,
-                    turbulence);
-
-                uniformDataWriter.SetUniformInt(
-                    UNIFORM_TCGEN0,
-                    stage->bundle[0].tcGen);
-                uniformDataWriter.SetUniformInt(
-                    UNIFORM_TCGEN1,
-                    stage->bundle[1].tcGen);
-
-                if (stage->bundle[0].tcGen == TCGEN_VECTOR)
-                {
-                    uniformDataWriter.SetUniformVec3(
-                        UNIFORM_TCGEN0VECTOR0,
-                        stage->bundle[0].tcGenVectors[0]);
-                    uniformDataWriter.SetUniformVec3(
-                        UNIFORM_TCGEN0VECTOR1,
-                        stage->bundle[0].tcGenVectors[1]);
-                }
-            }
-#endif
-
-            const UniformData *stageUniformData =
-                uniformDataWriter.Finish(*tr.frame.memory);
+            const UniformData *stageUniformData = MakeStageUniformData(
+                uniformDataWriter,
+                stage);
 
             // draw them
             const UniformData *uniforms[] = {

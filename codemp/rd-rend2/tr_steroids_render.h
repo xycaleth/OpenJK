@@ -26,9 +26,12 @@ namespace r2
     {
         rect_t viewport;
         vec3_t origin;
-        vec3_t viewAxis[3];
 
-        frustum_t frustum;
+        matrix_t viewMatrix;
+        matrix_t projectionMatrix;
+        matrix_t viewProjectionMatrix;
+        frustum_t frustumVS; // view space frustum
+        frustum_t frustumWS;  // world space frustum
 
         float znear;
         float fovx;
