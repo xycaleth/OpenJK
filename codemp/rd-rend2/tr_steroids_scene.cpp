@@ -197,8 +197,9 @@ namespace r2
         }
 
         const UniformData *MakeStageUniformData(
+            const shaderStage_t *stage,
             UniformDataWriter &uniformDataWriter,
-            const shaderStage_t *stage)
+            Allocator &allocator)
         {
             uniformDataWriter.Start();
             uniformDataWriter.SetUniformFloat(
@@ -256,9 +257,7 @@ namespace r2
         }
 #endif
 
-            const UniformData *stageUniformData =
-                uniformDataWriter.Finish(*tr.frame.memory);
-            return stageUniformData;
+            return uniformDataWriter.Finish(allocator);
         }
     }
 
@@ -310,12 +309,14 @@ namespace r2
         camera_t camera = {};
         CameraFromRefDef(&camera, refdef);
 
+        // FIXME: SetupEntityLighting checks refdef.rdflags. Need to fix that
+        // at some point
         tr.refdef.rdflags = camera.renderFlags;
 
         std::vector<culled_surface_t> culledSurfaces;
         GetCulledEntitySurfaces(scene, &camera, culledSurfaces);
 
-        command_buffer_t *cmdBuffer = tr.frame.cmdBuffer;
+        command_buffer_t *cmdBuffer = frame->cmdBuffer;
 
         // render sun shadow maps
         for (const auto &surface : culledSurfaces)
@@ -351,10 +352,10 @@ namespace r2
         UniformDataWriter uniformDataWriter;
 
         const std::vector<const UniformData *> entityUniformData =
-            MakeEntityUniformData(scene, uniformDataWriter, *tr.frame.memory);
+            MakeEntityUniformData(scene, uniformDataWriter, *frame->memory);
 
         const UniformData *cameraUniformData = MakeSceneCameraUniformData(
-            &camera, uniformDataWriter, *tr.frame.memory);
+            &camera, uniformDataWriter, *frame->memory);
 
         CmdBeginRenderPass(cmdBuffer, &mainRenderPass);
         for (const auto &surface : culledSurfaces)
@@ -381,8 +382,7 @@ namespace r2
             }
 
             const UniformData *stageUniformData = MakeStageUniformData(
-                uniformDataWriter,
-                stage);
+                stage, uniformDataWriter, *frame->memory);
 
             // draw them
             const UniformData *uniforms[] = {
