@@ -18,6 +18,7 @@ namespace r2
     {
         int entityNum;
         const shader_t *shader;
+        uint32_t shaderFlags;
         DrawItem drawItem;
     };
 

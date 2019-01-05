@@ -222,6 +222,11 @@ namespace r2
             const float height = ymax - ymin;
             const float depth = zfar - znear;
 
+            // Perspective projection matrix for transforming the Q3 coordinate
+            // system directly (+x forward, +y right, +z up) to NDC coordinate
+            // system (+x right, +y up, +z forward) without an intermediate step.
+            //
+            // Derived from https://www.songho.ca/opengl/gl_projectionmatrix.html
             matrix_t projectionMatrix = {};
             projectionMatrix[0] = 0.0f;
             projectionMatrix[1] = 0.0f;
@@ -374,12 +379,16 @@ namespace r2
 
             render_state_t renderState = {};
             renderState.stateBits = stage->stateBits;
-            renderState.cullType = CT_TWO_SIDED;
+            renderState.cullType = shader->cullType;
 
             const shaderProgram_t *shaderProgram = stage->glslShaderGroup;
             if (shaderProgram == nullptr)
             {
                 shaderProgram = tr.genericShader;
+            }
+            else
+            {
+                shaderProgram = shaderProgram + surface.shaderFlags;
             }
 
             uniformDataWriter.Start();

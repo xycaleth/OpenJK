@@ -2550,6 +2550,7 @@ void RenderSurfaces(
 		r2::culled_surface_t culledSurface = {};
 		culledSurface.entityNum = entityNum;
 		culledSurface.shader = shader;
+		culledSurface.shaderFlags |= LIGHTDEF_USE_SKELETAL_ANIMATION;
 
 		UniformDataWriter uniformDataWriter;
 		uniformDataWriter.Start();

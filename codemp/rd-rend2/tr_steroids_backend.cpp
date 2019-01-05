@@ -145,6 +145,12 @@ namespace r2
 
                     if (renderPass->clearDepth == CLEAR_ACTION_FILL)
                     {
+                        if ((glState.glStateBits & GLS_DEPTHMASK_TRUE) == 0)
+                        {
+                            glState.glStateBits |= GLS_DEPTHMASK_TRUE;
+                            qglDepthMask(GL_TRUE);
+                        }
+
                         GL(qglClearBufferfv(
                             GL_DEPTH,
                             0,
