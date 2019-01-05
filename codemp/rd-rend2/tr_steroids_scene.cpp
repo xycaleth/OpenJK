@@ -209,44 +209,13 @@ namespace r2
             viewMatrix[14] = -DotProduct(camera->origin, camera->viewAxis[2]);
             viewMatrix[15] = 1.0f;
 
-            const float znear = camera->znear;
-            const float zfar = 6000.0f;
-
-            const float ymax = camera->znear * tanf(DEG2RAD(0.5f * camera->fovy));
-            const float ymin = -ymax;
-
-            const float xmax = camera->znear * tanf(DEG2RAD(0.5f * camera->fovx));
-            const float xmin = -xmax;
-
-            const float width = xmax - xmin;
-            const float height = ymax - ymin;
-            const float depth = zfar - znear;
-
-            // Perspective projection matrix for transforming the Q3 coordinate
-            // system directly (+x forward, +y right, +z up) to NDC coordinate
-            // system (+x right, +y up, +z forward) without an intermediate step.
-            //
-            // Derived from https://www.songho.ca/opengl/gl_projectionmatrix.html
             matrix_t projectionMatrix = {};
-            projectionMatrix[0] = 0.0f;
-            projectionMatrix[1] = 0.0f;
-            projectionMatrix[2] = (zfar + znear) / depth;
-            projectionMatrix[3] = 1.0f;
-
-            projectionMatrix[4] = 2.0f * znear / width;
-            projectionMatrix[5] = 0.0f;
-            projectionMatrix[6] = 0.0f;
-            projectionMatrix[7] = 0.0f;
-
-            projectionMatrix[8] = 0.0f;
-            projectionMatrix[9] = 2.0f * znear / height;
-            projectionMatrix[10] = 0.0f;
-            projectionMatrix[11] = 0.0f;
-
-            projectionMatrix[12] = 0.0f;
-            projectionMatrix[13] = 0.0f;
-            projectionMatrix[14] = (-2.0f * zfar * znear) / depth;
-            projectionMatrix[15] = 0.0f;
+            Matrix16Perspective(
+                camera->fovx,
+                camera->fovy,
+                camera->znear,
+                6000.0f,
+                projectionMatrix);
 
             Matrix16Multiply(
                 projectionMatrix,

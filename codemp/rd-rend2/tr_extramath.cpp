@@ -113,6 +113,44 @@ void Matrix16Ortho( float left, float right, float bottom, float top, float znea
 	out[ 3] = 0.0f;                  out[ 7] = 0.0f;                  out[11] = 0.0f;                  out[15] = 1.0f;
 }
 
+void Matrix16Perspective(float fovx, float fovy, float znear, float zfar, matrix_t out)
+{
+	// Perspective projection matrix for transforming the Q3 coordinate
+	// system directly (+x forward, +y right, +z up) to NDC coordinate
+	// system (+x right, +y up, +z forward) without an intermediate step.
+	//
+	// Derived from https://www.songho.ca/opengl/gl_projectionmatrix.html
+	const float ymax = znear * tanf(DEG2RAD(0.5f * fovy));
+	const float ymin = -ymax;
+
+	const float xmax = znear * tanf(DEG2RAD(0.5f * fovx));
+	const float xmin = -xmax;
+
+	const float depth = zfar - znear;
+	const float width = xmax - xmin;
+	const float height = ymax - ymin;
+
+	out[0] = 0.0f;
+	out[1] = 0.0f;
+	out[2] = (zfar + znear) / depth;
+	out[3] = 1.0f;
+
+	out[4] = 2.0f * znear / width;
+	out[5] = 0.0f;
+	out[6] = 0.0f;
+	out[7] = 0.0f;
+
+	out[8] = 0.0f;
+	out[9] = 2.0f * znear / height;
+	out[10] = 0.0f;
+	out[11] = 0.0f;
+
+	out[12] = 0.0f;
+	out[13] = 0.0f;
+	out[14] = (-2.0f * zfar * znear) / depth;
+	out[15] = 0.0f;
+}
+
 void Matrix16View(vec3_t axes[3], vec3_t origin, matrix_t out)
 {
 	out[0]  = axes[0][0];
