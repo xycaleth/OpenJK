@@ -1855,6 +1855,8 @@ void R_Init( void ) {
 
 	R_InitFonts();
 
+	DebugInit(&tr.debug, &tr.frame);
+
 	R_ModelInit();
 
 	R_InitDecals();

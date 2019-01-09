@@ -3,6 +3,7 @@
 #include "tr_allocator.h"
 #include "tr_steroids_backend.h"
 #include "tr_steroids_cmd.h"
+#include "tr_steroids_debug.h"
 
 #include "qgl.h"
 #include "tr_local.h"
@@ -367,28 +368,16 @@ namespace r2
 
     void SubmitFrame(frame_t *frame)
     {
+        if (r_speeds->integer > 9000)
+        {
+            DebugRender(&tr.debug);
+        }
+
         FlushQuadsBatch(&frame->quadsBatch);
         frame->batchShader = nullptr;
         
         CmdPresent(frame->cmdBuffer);
         SubmitCommands(frame->cmdBuffer);
-
-        if (r_speeds->integer == 20)
-        {
-            const char *base = static_cast<const char *>(frame->memory->Base());
-            const char *watermark = static_cast<const char *>(
-                frame->memory->Mark());
-
-            const float memoryUsed = (watermark - base) / (1024.0f * 1024.0f);
-            const float memoryAvailable =
-                frame->memory->GetSize() / (1024.0f * 1024.0f);
-
-            ri.Printf(
-                PRINT_ALL,
-                "Frame memory watermark: %.2f/%.2f MB\n",
-                memoryUsed,
-                memoryAvailable);
-        }
 
         ++frame->number;
         ResetCmdBuffer(frame->cmdBuffer);

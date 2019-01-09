@@ -41,6 +41,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <unordered_map>
 #include <string>
 
+#include "tr_steroids_debug.h"
 #include "tr_steroids_frame.h"
 #include "tr_steroids_scene.h"
 
@@ -2195,6 +2196,7 @@ typedef struct trGlobals_s {
 	// Steroids
 	r2::scene_t				scene;
 	r2::frame_t				frame;
+	r2::debug_t				debug;
 
 
 	qboolean				worldMapLoaded;

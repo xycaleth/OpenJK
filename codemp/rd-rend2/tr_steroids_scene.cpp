@@ -306,6 +306,8 @@ namespace r2
         const scene_t *scene,
         const refdef_t *refdef)
     {
+        const int startTime = ri.Milliseconds();
+
         camera_t camera = {};
         CameraFromRefDef(&camera, refdef);
 
@@ -432,5 +434,8 @@ namespace r2
 
         frame->sceneRendered = true;
         frame->startedRenderPass = false;
+
+        const int endTime = ri.Milliseconds();
+        tr.debug.sceneSubmitMsec = endTime - startTime;
     }
 }

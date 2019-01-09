@@ -249,13 +249,7 @@ namespace r2
         const int submitEndTime = ri.Milliseconds();
         const int submitTimeInterval = submitEndTime - submitStartTime;
 
-        if (r_speeds->integer == 20)
-        {
-            ri.Printf(
-                PRINT_ALL,
-                "CPU Draw Submit Time: %dms for %d draw calls\n",
-                submitTimeInterval,
-                drawCount);
-        }
+        tr.debug.backendMsec = submitTimeInterval;
+        tr.debug.drawCount = drawCount;
     }
 }

@@ -120,9 +120,6 @@ void GL_Cull( int cullType ) {
 		return;
 	}
 
-	if ( backEnd.projection2D )
-		cullType = CT_TWO_SIDED;
-
 	if ( cullType == CT_TWO_SIDED ) 
 	{
 		if ( glState.faceCulling != CT_TWO_SIDED )
