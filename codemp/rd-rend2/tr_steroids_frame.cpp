@@ -35,8 +35,8 @@ namespace r2
         assert((vertexBuffer->cursor + sizeInBytes) <=
                    vertexBuffer->vbo->vertexesSize);
 
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer->vbo->vertexesVBO);
-        glBufferSubData(
+        qglBindBuffer(GL_ARRAY_BUFFER, vertexBuffer->vbo->vertexesVBO);
+        qglBufferSubData(
             GL_ARRAY_BUFFER,
             vertexBuffer->cursor,
             sizeInBytes,
@@ -56,8 +56,8 @@ namespace r2
         assert((indexBuffer->cursor + sizeInBytes) <=
                    indexBuffer->ibo->indexesSize);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->ibo->indexesVBO);
-        glBufferSubData(
+        qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->ibo->indexesVBO);
+        qglBufferSubData(
             GL_ELEMENT_ARRAY_BUFFER,
             indexBuffer->cursor,
             sizeInBytes,
