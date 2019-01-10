@@ -17,41 +17,20 @@ uniform mat4 u_ModelMatrix;
 uniform mat4x3 u_BoneMatrices[20];
 #endif
 
-void SkinVertex(
-    in vec3 basePosition,
-    in vec3 baseNormal,
-    in uvec4 boneIndexes,
-    in vec4 boneWeights,
-    in mat4x3 boneMatrices[20],
-    out vec3 skinnedPosition,
-    out vec3 skinnedNormal)
-{
-    mat4x3 influence = mat4x3(0.0);
-
-	for (int i = 0; i < 4; i++)
-	{
-		uint boneIndex = boneIndexes[i];
-		influence += boneMatrices[boneIndex] * boneWeights[i];
-	}
-
-	skinnedPosition = influence * vec4(basePosition, 1.0);
-    skinnedNormal = normalize(influence * vec4(baseNormal, 0.0));
-}
-
 void main()
 {
     vec3 position = attr_Position;
     vec3 normal = attr_Normal;
 
 #if defined(USE_SKELETAL_ANIMATION)
-	SkinVertex(
-	    position,
-	    normal - vec3(0.5),
-	    attr_BoneIndexes,
-	    attr_BoneWeights,
-	    u_BoneMatrices,
-	    position,
-	    normal);
+    mat4x3 influence =
+        u_BoneMatrices[attr_BoneIndexes[0]] * attr_BoneWeights[0] +
+        u_BoneMatrices[attr_BoneIndexes[1]] * attr_BoneWeights[1] +
+        u_BoneMatrices[attr_BoneIndexes[2]] * attr_BoneWeights[2] +
+        u_BoneMatrices[attr_BoneIndexes[3]] * attr_BoneWeights[3];
+
+    position = influence * vec4(position, 1.0);
+    normal = normalize(influence * vec4(normal - vec3(0.5), 0.0));
 #endif
 
     var_PositionWS = (u_ModelMatrix * vec4(position, 1.0)).xyz;
