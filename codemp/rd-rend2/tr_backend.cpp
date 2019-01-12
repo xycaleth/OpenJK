@@ -24,6 +24,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "glext.h"
 #include <algorithm>
 
+#include "tr_steroids_cmd.h"
+
 backEndData_t	*backEndData;
 backEndState_t	backEnd;
 
@@ -1480,73 +1482,117 @@ Stretches a raw 32 bit power of 2 bitmap image over the given screen rectangle.
 Used for cinematics.
 =============
 */
-void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty) {
-	int			i, j;
-	int			start, end;
-	vec4_t quadVerts[4];
-	vec2_t texCoords[4];
+void RE_StretchRaw(
+    int x,
+    int y,
+    int w,
+    int h,
+    int cols,
+    int rows,
+    const byte *data,
+    int client,
+    qboolean dirty)
+{
+    r2::FlushQuadsBatch(&tr.frame.quadsBatch);
+    tr.frame.batchShader = nullptr;
 
-	if ( !tr.registered ) {
-		return;
-	}
-	R_IssuePendingRenderCommands();
+    RE_UploadCinematic(cols, rows, data, client, dirty);
 
-	if ( tess.numIndexes ) {
-		RB_EndSurface();
-	}
+    const shaderProgram_t *shaderProgram = &tr.textureColorShader;
+    r2::command_buffer_t *cmdBuffer = tr.frame.cmdBuffer;
 
-	// we definately want to sync every frame for the cinematics
-	qglFinish();
+    if (!tr.frame.startedRenderPass)
+    {
+        r2::render_pass_t renderPass = {};
+        renderPass.viewport = {0, 0, glConfig.vidWidth, glConfig.vidHeight};
+        renderPass.clearColorAction[0] = tr.frame.sceneRendered
+                                         ? r2::CLEAR_ACTION_NONE
+                                         : r2::CLEAR_ACTION_FILL;
+        VectorSet4(renderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
+        renderPass.clearDepthAction = r2::CLEAR_ACTION_FILL;
+        renderPass.clearDepth = 1.0f;
 
-	start = 0;
-	if ( r_speeds->integer ) {
-		start = ri.Milliseconds();
-	}
+        CmdBeginRenderPass(cmdBuffer, &renderPass);
 
-	// make sure rows and cols are powers of 2
-	for ( i = 0 ; ( 1 << i ) < cols ; i++ ) {
-	}
-	for ( j = 0 ; ( 1 << j ) < rows ; j++ ) {
-	}
-	if ( ( 1 << i ) != cols || ( 1 << j ) != rows) {
-		ri.Error (ERR_DROP, "Draw_StretchRaw: size not a power of 2: %i by %i", cols, rows);
-	}
+        tr.frame.startedRenderPass = true;
+    }
 
-	RE_UploadCinematic (cols, rows, data, client, dirty);
+    const float x0 = x;
+    const float y0 = y;
+    const float x1 = x + w;
+    const float y1 = y + h;
 
-	if ( r_speeds->integer ) {
-		end = ri.Milliseconds();
-		ri.Printf( PRINT_ALL, "qglTexSubImage2D %i, %i: %i msec\n", cols, rows, end - start );
-	}
+    const struct basic_vertex_t
+    {
+        vec2_t position;
+        vec2_t texcoord;
+    } vertices[] = {
+        {{x0, y0}, {0.0f, 0.0f}},
+        {{x1, y0}, {1.0f, 0.0f}},
+        {{x1, y1}, {1.0f, 1.0f}},
+        {{x0, y1}, {0.0f, 1.0f}}
+    };
+    const uint16_t indices[] = {3, 0, 2, 2, 0, 1};
 
-	// FIXME: HUGE hack
-	if (!tr.renderFbo || backEnd.framePostProcessed)
-	{
-		FBO_Bind(NULL);
-	}
-	else
-	{
-		FBO_Bind(tr.renderFbo);
-	}
+    const auto vertexBufferSlice =
+        AppendBuffer(tr.frame.vertexBuffer, vertices, sizeof(vertices));
+    const auto indexBufferSlice =
+        AppendBuffer(tr.frame.indexBuffer, indices, sizeof(indices));
 
-	RB_SetGL2D();
+    vertexAttribute_t vertexAttributes[2] = {};
+    vertexAttributes[0].vbo = tr.frame.vertexBuffer->vbo;
+    vertexAttributes[0].index = ATTR_INDEX_POSITION;
+    vertexAttributes[0].numComponents = 2;
+    vertexAttributes[0].integerAttribute = GL_FALSE;
+    vertexAttributes[0].type = GL_FLOAT;
+    vertexAttributes[0].normalize = GL_FALSE;
+    vertexAttributes[0].stride = sizeof(basic_vertex_t);
+    vertexAttributes[0].offset = static_cast<int>(
+        vertexBufferSlice.offset + offsetof(basic_vertex_t, position));
+    vertexAttributes[0].stepRate = 0;
 
-	VectorSet4(quadVerts[0], x,     y,     0.0f, 1.0f);
-	VectorSet4(quadVerts[1], x + w, y,     0.0f, 1.0f);
-	VectorSet4(quadVerts[2], x + w, y + h, 0.0f, 1.0f);
-	VectorSet4(quadVerts[3], x,     y + h, 0.0f, 1.0f);
+    vertexAttributes[1].vbo = tr.frame.vertexBuffer->vbo;
+    vertexAttributes[1].index = ATTR_INDEX_TEXCOORD0;
+    vertexAttributes[1].numComponents = 2;
+    vertexAttributes[1].integerAttribute = GL_FALSE;
+    vertexAttributes[1].type = GL_FLOAT;
+    vertexAttributes[1].normalize = GL_FALSE;
+    vertexAttributes[1].stride = sizeof(basic_vertex_t);
+    vertexAttributes[1].offset = static_cast<int>(
+        vertexBufferSlice.offset + offsetof(basic_vertex_t, texcoord));
+    vertexAttributes[1].stepRate = 0;
 
-	VectorSet2(texCoords[0], 0.5f / cols,          0.5f / rows);
-	VectorSet2(texCoords[1], (cols - 0.5f) / cols, 0.5f / rows);
-	VectorSet2(texCoords[2], (cols - 0.5f) / cols, (rows - 0.5f) / rows);
-	VectorSet2(texCoords[3], 0.5f / cols,          (rows - 0.5f) / rows);
+    matrix_t projectionMatrix;
+    Matrix16Ortho(0.0f, 640.0f, 480.0f, 0.0f, 0.0f, 1.0f, projectionMatrix);
 
-	GLSL_BindProgram(&tr.textureColorShader);
-	
-	GLSL_SetUniformMatrix4x4(&tr.textureColorShader, UNIFORM_MODELVIEWPROJECTIONMATRIX, glState.modelviewProjection);
-	GLSL_SetUniformVec4(&tr.textureColorShader, UNIFORM_COLOR, colorWhite);
+    UniformDataWriter uniformDataWriter;
+    uniformDataWriter.Start();
+    uniformDataWriter.SetUniformMatrix4x4(
+        UNIFORM_MODELVIEWPROJECTIONMATRIX,
+        projectionMatrix);
+    uniformDataWriter.SetUniformVec4(UNIFORM_COLOR, tr.frame.color);
+    const UniformData *uniformData = uniformDataWriter.Finish(*tr.frame.memory);
 
-	RB_InstantQuad2(quadVerts, texCoords);
+    r2::render_state_t renderState = {};
+    renderState.stateBits = GLS_DEFAULT;
+    renderState.cullType = CT_TWO_SIDED;
+
+    r2::CmdSetShaderProgram(cmdBuffer, shaderProgram, 1, &uniformData);
+    r2::CmdSetVertexAttributes(
+        cmdBuffer,
+        ARRAY_LEN(vertexAttributes),
+        vertexAttributes);
+    r2::CmdSetTexture(cmdBuffer, 0, tr.scratchImage[client]);
+    r2::CmdSetRenderState(cmdBuffer, &renderState);
+    r2::CmdSetIndexBuffer(cmdBuffer, tr.frame.indexBuffer->ibo);
+    r2::CmdDrawIndexed(
+        cmdBuffer,
+        r2::PRIMITIVE_TYPE_TRIANGLES,
+        6,
+        r2::INDEX_TYPE_UINT16,
+        indexBufferSlice.offset,
+        1,
+        0);
 }
 
 void RE_UploadCinematic(

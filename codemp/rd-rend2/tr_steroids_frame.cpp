@@ -247,7 +247,10 @@ namespace r2
 
             const UniformData *uniforms[] = {frameUniformData, uniformData};
             CmdSetShaderProgram(cmdBuffer, shaderProgram, 2, uniforms);
-            CmdSetVertexAttributes(cmdBuffer, 3, vertexAttributes);
+            CmdSetVertexAttributes(
+                cmdBuffer,
+                ARRAY_LEN(vertexAttributes),
+                vertexAttributes);
             if (textureBundle->isVideoMap)
             {
                 ri.CIN_RunCinematic(textureBundle->videoMapHandle);
