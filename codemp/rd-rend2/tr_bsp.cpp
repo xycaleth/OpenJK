@@ -1881,16 +1881,6 @@ static int BSPSurfaceCompare(const void *a, const void *b)
 	return 0;
 }
 
-struct packedVertex_t
-{
-	vec3_t position;
-	uint32_t normal;
-	uint32_t tangent;
-	vec2_t texcoords[1 + MAXLIGHTMAPS];
-	vec4_t colors[MAXLIGHTMAPS];
-	uint32_t lightDirection;
-};
-
 /*
 ===============
 R_CreateWorldVBOs
@@ -1901,7 +1891,7 @@ static void R_CreateWorldVBOs( world_t *worldData )
 	int             i, j, k;
 
 	int             numVerts;
-	packedVertex_t  *verts;
+	bsp_vertex_t  *verts;
 
 	int             numIndexes;
 	glIndex_t      *indexes;
@@ -2030,7 +2020,7 @@ static void R_CreateWorldVBOs( world_t *worldData )
 		ri.Printf(PRINT_ALL, "...calculating world VBO %d ( %i verts %i tris )\n", k, numVerts, numIndexes / 3);
 
 		// create arrays
-		verts = (packedVertex_t *)ri.Hunk_AllocateTempMemory(numVerts * sizeof(packedVertex_t)); 
+		verts = (bsp_vertex_t *)ri.Hunk_AllocateTempMemory(numVerts * sizeof(bsp_vertex_t)); 
 		indexes = (glIndex_t *)ri.Hunk_AllocateTempMemory(numIndexes * sizeof(glIndex_t)); 
 
 		// set up indices and copy vertices
@@ -2056,7 +2046,7 @@ static void R_CreateWorldVBOs( world_t *worldData )
 
 			for(i = 0; i < bspSurf->numVerts; i++)
 			{
-				packedVertex_t& vert = verts[numVerts++];
+				bsp_vertex_t& vert = verts[numVerts++];
 
 				VectorCopy (bspSurf->verts[i].xyz, vert.position);
 				vert.normal = R_VboPackNormal (bspSurf->verts[i].normal);
@@ -2077,22 +2067,22 @@ static void R_CreateWorldVBOs( world_t *worldData )
 			}
 		}
 
-		vbo = R_CreateVBO((byte *)verts, sizeof (packedVertex_t) * numVerts, VBO_USAGE_STATIC);
+		vbo = R_CreateVBO((byte *)verts, sizeof (bsp_vertex_t) * numVerts, VBO_USAGE_STATIC);
 		ibo = R_CreateIBO((byte *)indexes, numIndexes * sizeof (glIndex_t), VBO_USAGE_STATIC);
 
 		// Setup the offsets and strides
-		vbo->offsets[ATTR_INDEX_POSITION] = offsetof(packedVertex_t, position);
-		vbo->offsets[ATTR_INDEX_NORMAL] = offsetof(packedVertex_t, normal);
-		vbo->offsets[ATTR_INDEX_TANGENT] = offsetof(packedVertex_t, tangent);
-		vbo->offsets[ATTR_INDEX_TEXCOORD0] = offsetof(packedVertex_t, texcoords[0]);
-		vbo->offsets[ATTR_INDEX_TEXCOORD1] = offsetof(packedVertex_t, texcoords[1]);
-		vbo->offsets[ATTR_INDEX_TEXCOORD2] = offsetof(packedVertex_t, texcoords[2]);
-		vbo->offsets[ATTR_INDEX_TEXCOORD3] = offsetof(packedVertex_t, texcoords[3]);
-		vbo->offsets[ATTR_INDEX_TEXCOORD4] = offsetof(packedVertex_t, texcoords[4]);
-		vbo->offsets[ATTR_INDEX_COLOR] = offsetof(packedVertex_t, colors);
-		vbo->offsets[ATTR_INDEX_LIGHTDIRECTION] = offsetof(packedVertex_t, lightDirection);
+		vbo->offsets[ATTR_INDEX_POSITION] = offsetof(bsp_vertex_t, position);
+		vbo->offsets[ATTR_INDEX_NORMAL] = offsetof(bsp_vertex_t, normal);
+		vbo->offsets[ATTR_INDEX_TANGENT] = offsetof(bsp_vertex_t, tangent);
+		vbo->offsets[ATTR_INDEX_TEXCOORD0] = offsetof(bsp_vertex_t, texcoords[0]);
+		vbo->offsets[ATTR_INDEX_TEXCOORD1] = offsetof(bsp_vertex_t, texcoords[1]);
+		vbo->offsets[ATTR_INDEX_TEXCOORD2] = offsetof(bsp_vertex_t, texcoords[2]);
+		vbo->offsets[ATTR_INDEX_TEXCOORD3] = offsetof(bsp_vertex_t, texcoords[3]);
+		vbo->offsets[ATTR_INDEX_TEXCOORD4] = offsetof(bsp_vertex_t, texcoords[4]);
+		vbo->offsets[ATTR_INDEX_COLOR] = offsetof(bsp_vertex_t, colors);
+		vbo->offsets[ATTR_INDEX_LIGHTDIRECTION] = offsetof(bsp_vertex_t, lightDirection);
 
-		const size_t packedVertexSize = sizeof(packedVertex_t);
+		const size_t packedVertexSize = sizeof(bsp_vertex_t);
 		vbo->strides[ATTR_INDEX_POSITION] = packedVertexSize;
 		vbo->strides[ATTR_INDEX_NORMAL] = packedVertexSize;
 		vbo->strides[ATTR_INDEX_TANGENT] = packedVertexSize;

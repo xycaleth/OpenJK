@@ -183,6 +183,29 @@ namespace r2
             return uniformData;
         }
 
+        const UniformData *MakeWorldEntityUniformData(
+            const scene_t *scene,
+            UniformDataWriter &uniformDataWriter,
+            Allocator &allocator)
+        {
+            matrix4x4_t modelMatrix = {};
+            modelMatrix.e[0] = 1.0f;
+            modelMatrix.e[5] = 1.0f;
+            modelMatrix.e[10] = 1.0f;
+            modelMatrix.e[15] = 1.0f;
+
+            uniformDataWriter.Start();
+            uniformDataWriter.SetUniformMatrix4x4(
+                UNIFORM_MODELMATRIX,
+                modelMatrix.e);
+
+            uniformDataWriter.SetUniformFloat(
+                UNIFORM_FX_VOLUMETRIC_BASE,
+                -1.0f);
+
+            return uniformDataWriter.Finish(allocator);
+        }
+
         const UniformData *MakeSceneCameraUniformData(
             const camera_t *camera,
             UniformDataWriter &uniformDataWriter,
@@ -314,10 +337,42 @@ namespace r2
         // FIXME: SetupEntityLighting checks refdef.rdflags. Need to fix that
         // at some point
         tr.refdef.rdflags = camera.renderFlags;
+        tr.refdef.areamaskModified = qtrue;
+        Com_Memcpy(
+            tr.refdef.areamask,
+            refdef->areamask,
+            sizeof(refdef->areamask));
 
         std::vector<culled_surface_t> culledSurfaces;
         GetCulledEntitySurfaces(scene, &camera, culledSurfaces);
+        R_AddWorldSurfaces(&camera, culledSurfaces);
+#if 1
+        std::sort(
+            std::begin(culledSurfaces),
+            std::end(culledSurfaces),
+            [](const culled_surface_t &a, const culled_surface_t &b)
+            {
+                if (a.shader->sort < b.shader->sort)
+                {
+                    return true;
+                }
+                else if (a.shader->sort > b.shader->sort)
+                {
+                    return false;
+                }
 
+                if (a.shader->index < b.shader->index)
+                {
+                    return true;
+                }
+                else if (a.shader->index > b.shader->index)
+                {
+                    return false;
+                }
+
+                return false;
+            });
+#endif
         command_buffer_t *cmdBuffer = frame->cmdBuffer;
 
         // render sun shadow maps
@@ -353,6 +408,12 @@ namespace r2
 
         UniformDataWriter uniformDataWriter;
 
+        const UniformData *worldEntityUniformData =
+            MakeWorldEntityUniformData(
+                scene,
+                uniformDataWriter,
+                *frame->memory);
+
         const std::vector<const UniformData *> entityUniformData =
             MakeEntityUniformData(scene, uniformDataWriter, *frame->memory);
 
@@ -367,6 +428,12 @@ namespace r2
             const shader_t *shader = surface.shader;
 
             const shaderStage_t *stage = shader->stages[0];
+            if (stage == nullptr)
+            {
+                // FIX ME: Probably sky. Deal with this
+                continue;
+            }
+
             const textureBundle_t *textureBundle = &stage->bundle[0];
 
             render_state_t renderState = {};
@@ -390,7 +457,9 @@ namespace r2
             const UniformData *uniforms[] = {
                 stageUniformData,
                 drawItem->uniformData,
-                entityUniformData[surface.entityNum],
+                surface.entityNum == REFENTITYNUM_WORLD
+                    ? worldEntityUniformData
+                    : entityUniformData[surface.entityNum],
                 cameraUniformData};
             CmdSetShaderProgram(
                 cmdBuffer,

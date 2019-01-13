@@ -53,6 +53,6 @@ void main()
     vec3 N = normalize(var_Normal);
     vec4 diffuse = texture(u_DiffuseMap, var_TexCoord);
 
-    out_Color.rgb = diffuse.rgb * (N * 0.5 + vec3(0.5));
+    out_Color.rgb = diffuse.rgb;
 	out_Color.a = diffuse.a;
 }

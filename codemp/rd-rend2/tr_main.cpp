@@ -2030,7 +2030,7 @@ R_GenerateDrawSurfs
 ====================
 */
 void R_GenerateDrawSurfs( viewParms_t *viewParms, trRefdef_t *refdef ) {
-	R_AddWorldSurfaces(viewParms, refdef);
+//	R_AddWorldSurfaces(viewParms, refdef);
 
 	R_AddPolygonSurfaces(refdef);
 

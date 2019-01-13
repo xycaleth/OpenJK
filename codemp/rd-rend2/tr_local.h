@@ -2851,8 +2851,16 @@ WORLD MAP
 ============================================================
 */
 
+namespace r2
+{
+	struct camera_t;
+	struct culled_surface_t;
+}
+
 void R_AddBrushModelSurfaces( trRefEntity_t *e, int entityNum );
-void R_AddWorldSurfaces( viewParms_t *viewParms, trRefdef_t *refdef );
+void R_AddWorldSurfaces(
+	const r2::camera_t *camera,
+	std::vector<r2::culled_surface_t> &culledSurfaces);
 qboolean R_inPVS( const vec3_t p1, const vec3_t p2, byte *mask );
 
 
@@ -3340,6 +3348,16 @@ typedef enum {
 	RC_BEGIN_TIMED_BLOCK,
 	RC_END_TIMED_BLOCK
 } renderCommand_t;
+
+struct bsp_vertex_t
+{
+	vec3_t position;
+	uint32_t normal;
+	uint32_t tangent;
+	vec2_t texcoords[1 + MAXLIGHTMAPS];
+	vec4_t colors[MAXLIGHTMAPS];
+	uint32_t lightDirection;
+};
 
 struct gpuTimer_t
 {

@@ -8,6 +8,7 @@ namespace r2
     {
         int fontHandle;
 
+        int shaderChanges;
         int sceneSubmitMsec;
         int backendMsec;
         int drawCount;
