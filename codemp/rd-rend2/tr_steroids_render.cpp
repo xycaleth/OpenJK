@@ -19,10 +19,10 @@ namespace r2
             // -w <= y, y <= w
             // -w <= z, z <= w
 
-            // x = T(p1) * v
-            // y = T(p2) * v
-            // z = T(p3) * v
-            // w = T(p4) * v
+            // x = p1T * v
+            // y = p2T * v
+            // z = p3T * v
+            // w = p4T * v
 
             // left -   0 <= x + w = T(p1) * v + T(p4) * v = (T(p1) + T(p4)) * v
             frustum->sides.left.normal[0] = M[ 3] + M[ 0];
@@ -30,7 +30,6 @@ namespace r2
             frustum->sides.left.normal[2] = M[11] + M[ 8];
             frustum->sides.left.dist      = M[15] + M[12];
             frustum->sides.left.type = PLANE_NON_AXIAL;
-            VectorNormalize(frustum->sides.left.normal);
             SetPlaneSignbits(&frustum->sides.left);
 
             // right -  0 <= w - x = T(p4) * v - T(p1) * v = (T(p4) - T(p1)) * v
@@ -39,7 +38,6 @@ namespace r2
             frustum->sides.right.normal[2] = M[11] - M[ 8];
             frustum->sides.right.dist      = M[15] - M[12];
             frustum->sides.right.type = PLANE_NON_AXIAL;
-            VectorNormalize(frustum->sides.right.normal);
             SetPlaneSignbits(&frustum->sides.right);
 
             // bottom - 0 <= y + w = T(p2) * v + T(p4) * v = (T(p2) + T(p4)) * v
@@ -48,7 +46,6 @@ namespace r2
             frustum->sides.bottom.normal[2] = M[11] + M[ 9];
             frustum->sides.bottom.dist      = M[15] + M[13];
             frustum->sides.bottom.type = PLANE_NON_AXIAL;
-            VectorNormalize(frustum->sides.bottom.normal);
             SetPlaneSignbits(&frustum->sides.bottom);
 
             // top -    0 <= w - y = T(p4) * v - T(p2) * v = (T(p4) - T(p2)) * v
@@ -57,7 +54,6 @@ namespace r2
             frustum->sides.top.normal[2] = M[11] - M[ 9];
             frustum->sides.top.dist      = M[15] - M[13];
             frustum->sides.top.type = PLANE_NON_AXIAL;
-            VectorNormalize(frustum->sides.top.normal);
             SetPlaneSignbits(&frustum->sides.top);
 
             // near -   0 <= z + w = T(p3) * v + T(p4) * v = (T(p3) + T(p4)) * v
@@ -66,7 +62,6 @@ namespace r2
             frustum->sides.near.normal[2] = M[11] + M[10];
             frustum->sides.near.dist      = M[15] + M[14];
             frustum->sides.near.type = PLANE_NON_AXIAL;
-            VectorNormalize(frustum->sides.near.normal);
             SetPlaneSignbits(&frustum->sides.near);
 
             // far -    0 <= w - z = T(p4) * v - T(p3) * v = (T(p4) - T(p3)) * v
@@ -75,8 +70,9 @@ namespace r2
             frustum->sides.far.normal[2] = M[11] - M[10];
             frustum->sides.far.dist      = M[15] - M[14];
             frustum->sides.far.type = PLANE_NON_AXIAL;
-            VectorNormalize(frustum->sides.far.normal);
             SetPlaneSignbits(&frustum->sides.far);
+
+            NormalizeFrustum(frustum);
         }
     }
 

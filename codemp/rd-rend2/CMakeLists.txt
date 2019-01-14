@@ -66,7 +66,7 @@ set(MPRend2Files
 		tr_steroids_scene.cpp
 		tr_steroids_scene.h
 	tr_steroids_render.cpp
-	tr_steroids_render.h tr_steroids_cmd.h tr_steroids_cmd.cpp tr_steroids_frame.h tr_steroids_frame.cpp tr_steroids_backend.cpp tr_steroids_backend.h tr_steroids_math.h tr_steroids_debug.cpp tr_steroids_debug.h)
+	tr_steroids_render.h tr_steroids_cmd.h tr_steroids_cmd.cpp tr_steroids_frame.h tr_steroids_frame.cpp tr_steroids_backend.cpp tr_steroids_backend.h tr_steroids_math.h tr_steroids_debug.cpp tr_steroids_debug.h tr_steroids_math.cpp)
 source_group("renderer" FILES ${MPRend2Files})
 
 file(GLOB MPRend2GLSLFiles "${MPDir}/rd-rend2/glsl/*.glsl")

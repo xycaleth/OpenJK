@@ -26,4 +26,6 @@ namespace r2
 
         cplane_t planes[6];
     };
+
+    void NormalizeFrustum(frustum_t *frustum);
 }
