@@ -28,7 +28,7 @@ namespace r2
             frustum->sides.left.normal[0] = M[ 3] + M[ 0];
             frustum->sides.left.normal[1] = M[ 7] + M[ 4];
             frustum->sides.left.normal[2] = M[11] + M[ 8];
-            frustum->sides.left.dist      = M[15] + M[12];
+            frustum->sides.left.dist      = -(M[15] + M[12]);
             frustum->sides.left.type = PLANE_NON_AXIAL;
             SetPlaneSignbits(&frustum->sides.left);
 
@@ -36,7 +36,7 @@ namespace r2
             frustum->sides.right.normal[0] = M[ 3] - M[ 0];
             frustum->sides.right.normal[1] = M[ 7] - M[ 4];
             frustum->sides.right.normal[2] = M[11] - M[ 8];
-            frustum->sides.right.dist      = M[15] - M[12];
+            frustum->sides.right.dist      = -(M[15] - M[12]);
             frustum->sides.right.type = PLANE_NON_AXIAL;
             SetPlaneSignbits(&frustum->sides.right);
 
@@ -44,7 +44,7 @@ namespace r2
             frustum->sides.bottom.normal[0] = M[ 3] + M[ 1];
             frustum->sides.bottom.normal[1] = M[ 7] + M[ 5];
             frustum->sides.bottom.normal[2] = M[11] + M[ 9];
-            frustum->sides.bottom.dist      = M[15] + M[13];
+            frustum->sides.bottom.dist      = -(M[15] + M[13]);
             frustum->sides.bottom.type = PLANE_NON_AXIAL;
             SetPlaneSignbits(&frustum->sides.bottom);
 
@@ -52,7 +52,7 @@ namespace r2
             frustum->sides.top.normal[0] = M[ 3] - M[ 1];
             frustum->sides.top.normal[1] = M[ 7] - M[ 5];
             frustum->sides.top.normal[2] = M[11] - M[ 9];
-            frustum->sides.top.dist      = M[15] - M[13];
+            frustum->sides.top.dist      = -(M[15] - M[13]);
             frustum->sides.top.type = PLANE_NON_AXIAL;
             SetPlaneSignbits(&frustum->sides.top);
 
@@ -60,7 +60,7 @@ namespace r2
             frustum->sides.near.normal[0] = M[ 3] + M[ 2];
             frustum->sides.near.normal[1] = M[ 7] + M[ 6];
             frustum->sides.near.normal[2] = M[11] + M[10];
-            frustum->sides.near.dist      = M[15] + M[14];
+            frustum->sides.near.dist      = -(M[15] + M[14]);
             frustum->sides.near.type = PLANE_NON_AXIAL;
             SetPlaneSignbits(&frustum->sides.near);
 
@@ -68,7 +68,7 @@ namespace r2
             frustum->sides.far.normal[0] = M[ 3] - M[ 2];
             frustum->sides.far.normal[1] = M[ 7] - M[ 6];
             frustum->sides.far.normal[2] = M[11] - M[10];
-            frustum->sides.far.dist      = M[15] - M[14];
+            frustum->sides.far.dist      = -(M[15] - M[14]);
             frustum->sides.far.type = PLANE_NON_AXIAL;
             SetPlaneSignbits(&frustum->sides.far);
 
