@@ -992,21 +992,6 @@ enum
 	GLS_DEFAULT							= GLS_DEPTHMASK_TRUE
 };
 
-struct Attribute
-{
-	int numComponents;
-	bool integerAttribute;
-	GLenum type;
-	bool normalize;
-	int offset;
-};
-
-const int MAX_ATTRIBUTES = 8;
-struct VertexFormat
-{
-	Attribute attributes[MAX_ATTRIBUTES];
-};
-
 enum
 {
 	ATTR_POSITION		= 0x0001,

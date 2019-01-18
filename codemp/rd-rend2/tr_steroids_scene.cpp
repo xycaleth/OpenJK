@@ -282,6 +282,30 @@ namespace r2
 
             return uniformDataWriter.Finish(allocator);
         }
+
+        void SceneCmdSetTextureFromBundle(
+            command_buffer_t *cmdBuffer,
+            const textureBundle_t *textureBundle,
+            int index)
+        {
+            if (textureBundle->isVideoMap)
+            {
+                ri.CIN_RunCinematic(textureBundle->videoMapHandle);
+                ri.CIN_UploadCinematic(textureBundle->videoMapHandle);
+
+                CmdSetTexture(
+                    cmdBuffer,
+                    index,
+                    tr.scratchImage[textureBundle->videoMapHandle]);
+            }
+            else
+            {
+                CmdSetTexture(
+                    cmdBuffer,
+                    index,
+                    textureBundle->image[0]);
+            }
+        }
     }
 
     void SceneClear(scene_t *scene)
@@ -434,21 +458,9 @@ namespace r2
                 continue;
             }
 
-            const textureBundle_t *textureBundle = &stage->bundle[0];
-
             render_state_t renderState = {};
             renderState.stateBits = stage->stateBits;
             renderState.cullType = shader->cullType;
-
-            const shaderProgram_t *shaderProgram = stage->glslShaderGroup;
-            if (shaderProgram == nullptr)
-            {
-                shaderProgram = tr.genericShader;
-            }
-            else
-            {
-                shaderProgram = shaderProgram + surface.shaderFlags;
-            }
 
             const UniformData *stageUniformData = MakeStageUniformData(
                 stage, uniformDataWriter, *frame->memory);
@@ -461,6 +473,36 @@ namespace r2
                     ? worldEntityUniformData
                     : entityUniformData[surface.entityNum],
                 cameraUniformData};
+
+            uint32_t shaderVariant = surface.shaderFlags;
+
+            if (stage->bundle[TB_DIFFUSEMAP].image[0] != nullptr)
+            {
+                SceneCmdSetTextureFromBundle(
+                    cmdBuffer,
+                    &stage->bundle[TB_DIFFUSEMAP],
+                    TB_DIFFUSEMAP);
+            }
+
+            if (stage->bundle[TB_LIGHTMAP].image[0] != nullptr)
+            {
+                SceneCmdSetTextureFromBundle(
+                    cmdBuffer,
+                    &stage->bundle[TB_LIGHTMAP],
+                    TB_LIGHTMAP);
+                shaderVariant |= LIGHTDEF_USE_LIGHTMAP;
+            }
+
+            const shaderProgram_t *shaderProgram = stage->glslShaderGroup;
+            if (shaderProgram == nullptr)
+            {
+                shaderProgram = tr.genericShader;
+            }
+            else
+            {
+                shaderProgram = shaderProgram + shaderVariant;
+            }
+
             CmdSetShaderProgram(
                 cmdBuffer,
                 shaderProgram,
@@ -470,24 +512,6 @@ namespace r2
                 cmdBuffer,
                 surface.drawItem.numAttributes,
                 surface.drawItem.attributes);
-            if (textureBundle->isVideoMap)
-            {
-                ri.CIN_RunCinematic(textureBundle->videoMapHandle);
-                ri.CIN_UploadCinematic(textureBundle->videoMapHandle);
-
-                CmdSetTexture(
-                    cmdBuffer,
-                    0,
-                    tr.scratchImage[textureBundle->videoMapHandle]);
-            }
-            else
-            {
-                CmdSetTexture(
-                    cmdBuffer,
-                    0,
-                    textureBundle->image[0]);
-            }
-
             CmdSetRenderState(cmdBuffer, &renderState);
             CmdSetIndexBuffer(cmdBuffer, drawItem->ibo);
             CmdDrawIndexed(

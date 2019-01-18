@@ -2102,58 +2102,6 @@ static int GLSL_LoadGPUProgramWeather(
 
 void GLSL_LoadGPUShaders()
 {
-#if 0
-	// vertex size = 48 bytes
-	VertexFormat bspVertexFormat = {
-		{
-			{ 3, false, GL_FLOAT, false, 0 }, // position
-			{ 2, false, GL_HALF_FLOAT, false, 12 }, // tc0
-			{ 2, false, GL_HALF_FLOAT, false, 16 }, // tc1
-			{ 2, false, GL_HALF_FLOAT, false, 20 }, // tc2
-			{ 2, false, GL_HALF_FLOAT, false, 24 }, // tc3
-			{ 2, false, GL_HALF_FLOAT, false, 28 }, // tc4
-			{ 4, false, GL_UNSIGNED_INT_2_10_10_10_REV, true, 32 }, // tangent
-			{ 4, false, GL_UNSIGNED_INT_2_10_10_10_REV, true, 36 }, // normal
-			{ 4, false, GL_FLOAT, false, 40 }, // color
-			{ 4, false, GL_UNSIGNED_INT_2_10_10_10_REV, true, 44 }, // light dir
-		}
-	};
-
-	// vertex size = 32 bytes
-	VertexFormat rectVertexFormat = {
-		{
-			{ 3, false, GL_FLOAT, false, 0 }, // position
-			{ 2, false, GL_HALF_FLOAT, false, 12 }, // tc0
-			{ 4, false, GL_FLOAT, false, 16 } // color
-		}
-	};
-
-	// vertex size = 32 bytes
-	VertexFormat g2VertexFormat = {
-		{
-			{ 3, false, GL_FLOAT, false, 0 }, // position
-			{ 2, false, GL_HALF_FLOAT, false, 12 }, // tc0
-			{ 4, false, GL_UNSIGNED_INT_2_10_10_10_REV, true, 16 }, // tangent
-			{ 4, false, GL_UNSIGNED_INT_2_10_10_10_REV, true, 20 }, // normal
-			{ 4, true,  GL_UNSIGNED_BYTE, false, 24 }, // bone indices
-			{ 4, false, GL_UNSIGNED_BYTE, true, 28 }, // bone weights
-		}
-	};
-
-	// vertex size = 44 bytes
-	VertexFormat md3VertexFormat = {
-		{
-			{ 3, false, GL_FLOAT, false, 0 }, // position
-			{ 2, false, GL_HALF_FLOAT, false, 12 }, // tc0
-			{ 4, false, GL_UNSIGNED_INT_2_10_10_10_REV, true, 16 }, // tangent
-			{ 4, false, GL_UNSIGNED_INT_2_10_10_10_REV, true, 20 }, // normal
-			{ 3, false,p GL_FLOAT, false, 24 }, // pos2
-			{ 4, false, GL_UNSIGNED_INT_2_10_10_10_REV, true, 36 }, // tangent
-			{ 4, false, GL_UNSIGNED_INT_2_10_10_10_REV, true, 40 }, // normal
-		}
-	};
-#endif
-
 	ri.Printf(PRINT_ALL, "------- GLSL_InitGPUShaders -------\n");
 
 	R_IssuePendingRenderCommands();
