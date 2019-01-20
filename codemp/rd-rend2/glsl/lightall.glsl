@@ -58,23 +58,44 @@ in vec2 var_TexCoord1;
 
 out vec4 out_Color;
 
+uniform vec4 u_PrimaryLightOrigin;
+uniform vec3 u_PrimaryLightColor;
+
 uniform sampler2D u_DiffuseMap;
 #if defined(USE_LIGHTMAP)
 uniform sampler2D u_LightMap;
 #endif
 
+vec3 sRGBDecode(in vec3 srgb)
+{
+    vec3 lo = srgb / 12.92;
+    vec3 hi = pow(((srgb + vec3(0.055)) / 1.055), vec3(2.4));
+    return mix(lo, hi, greaterThan(srgb, vec3(0.04045)));
+}
+
 void main()
 {
     vec3 N = normalize(var_Normal);
     vec4 diffuse = texture(u_DiffuseMap, var_TexCoord0);
+    diffuse.rgb = sRGBDecode(diffuse.rgb);
 
     vec4 radiance = diffuse;
+
+    vec3 incomingLight = vec3(0.0);
 #if defined(USE_LIGHTMAP)
     {
-        vec3 lightmap = texture(u_LightMap, var_TexCoord1).rgb;
-        radiance.rgb *= lightmap;
+        vec3 lightmap = sRGBDecode(texture(u_LightMap, var_TexCoord1).rgb);
+        incomingLight += lightmap;
     }
 #endif
+
+    float NL = dot(N, u_PrimaryLightOrigin.xyz);
+    if (NL > 0.0)
+    {
+        incomingLight += NL * u_PrimaryLightColor;
+    }
+
+    radiance.rgb *= incomingLight;
 
     out_Color.rgb = radiance.rgb;
 	out_Color.a = diffuse.a;

@@ -1,26 +1,45 @@
 /*[Vertex]*/
-in vec3 attr_Position;
-in vec4 attr_TexCoord0;
-
-uniform mat4 u_ModelViewProjectionMatrix;
-
-out vec2 var_TexCoords;
-
+out vec2 var_TexCoord;
 
 void main()
 {
-	gl_Position = u_ModelViewProjectionMatrix * vec4(attr_Position, 1.0);
-	var_TexCoords = attr_TexCoord0.st;
+    vec2 position = vec2(
+        2.0 * float(gl_VertexID & 2) - 1.0,
+        4.0 * float(gl_VertexID & 1) - 1.0);
+	gl_Position = vec4(position, 0.0, 1.0);
+	var_TexCoord = position * 0.5 + vec2(0.5);
 }
 
 /*[Fragment]*/
+#if 1
+uniform sampler2D u_TextureMap;
+
+in vec2 var_TexCoord;
+
+out vec4 out_Color;
+
+vec3 sRGBEncode(in vec3 linear)
+{
+    vec3 lo = linear * 12.92;
+    vec3 hi = 1.055 * pow(linear, vec3(1.0 / 2.4)) - vec3(0.055);
+    return mix(lo, hi, greaterThan(linear, vec3(0.0031308)));
+}
+
+void main()
+{
+    // Stupid simple tonemapping operator for now
+    vec3 color = texture(u_TextureMap, var_TexCoord).rgb;
+    out_Color.rgb = sRGBEncode(color);
+    out_Color.a = 1.0;
+}
+#else
 uniform sampler2D u_TextureMap;
 uniform sampler2D u_LevelsMap;
 uniform vec4 u_Color;
 uniform vec2  u_AutoExposureMinMax;
 uniform vec3   u_ToneMinAvgMaxLinear;
 
-in vec2 var_TexCoords;
+in vec2 var_TexCoord;
 
 out vec4 out_Color;
 
@@ -56,8 +75,8 @@ vec3 FilmicTonemap(vec3 x)
 
 void main()
 {
-	vec4 color = texture(u_TextureMap, var_TexCoords) * u_Color;
-	vec3 minAvgMax = texture(u_LevelsMap, var_TexCoords).rgb;
+	vec4 color = texture(u_TextureMap, var_TexCoord) * u_Color;
+	vec3 minAvgMax = texture(u_LevelsMap, var_TexCoord).rgb;
 	vec3 logMinAvgMaxLum = clamp(minAvgMax * 20.0 - 10.0, -u_AutoExposureMinMax.y, -u_AutoExposureMinMax.x);
 		
 	float avgLum = exp2(logMinAvgMaxLum.y);
@@ -72,3 +91,4 @@ void main()
 	
 	out_Color = clamp(color, 0.0, 1.0);
 }
+#endif

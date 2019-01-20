@@ -417,19 +417,6 @@ namespace r2
             // draw them using depth prepass shaders
         }
 
-        render_pass_t mainRenderPass = {};
-        mainRenderPass.framebuffer = nullptr;
-        mainRenderPass.viewport.x = camera.viewport.x;
-        mainRenderPass.viewport.y = camera.viewport.y;
-        mainRenderPass.viewport.width = camera.viewport.width;
-        mainRenderPass.viewport.height = camera.viewport.height;
-        mainRenderPass.clearDepthAction = CLEAR_ACTION_FILL;
-        mainRenderPass.clearDepth = 1.0f;
-        mainRenderPass.clearColorAction[0] = frame->startedRenderPass
-                                             ? CLEAR_ACTION_NONE
-                                             : CLEAR_ACTION_FILL;
-        VectorSet4(mainRenderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
-
         UniformDataWriter uniformDataWriter;
 
         const UniformData *worldEntityUniformData =
@@ -444,86 +431,133 @@ namespace r2
         const UniformData *cameraUniformData = MakeSceneCameraUniformData(
             &camera, uniformDataWriter, *frame->memory);
 
-        CmdBeginRenderPass(cmdBuffer, &mainRenderPass);
-        for (const auto &surface : culledSurfaces)
-        {
-            // Generate draw items based on q3 shader
-            const DrawItem *drawItem = &surface.drawItem;
-            const shader_t *shader = surface.shader;
+        vec4_t sunDirection = {0.0f, 0.0f, 0.0f, 0.0f};
+        VectorNormalize2(tr.sunDirection, sunDirection);
 
-            const shaderStage_t *stage = shader->stages[0];
-            if (stage == nullptr)
+        vec3_t sunColor;
+        VectorCopy(tr.sunLight, sunColor);
+
+        uniformDataWriter.Start();
+        uniformDataWriter.SetUniformVec4(
+            UNIFORM_PRIMARYLIGHTORIGIN,
+            sunDirection);
+        uniformDataWriter.SetUniformVec3(UNIFORM_PRIMARYLIGHTCOLOR, sunColor);
+        const UniformData *sceneUniformData =
+            uniformDataWriter.Finish(*frame->memory);
+
+        {
+            render_pass_t mainRenderPass = {};
+            mainRenderPass.framebuffer = tr.renderFbo;
+            mainRenderPass.viewport = camera.viewport;
+            mainRenderPass.clearDepthAction = CLEAR_ACTION_FILL;
+            mainRenderPass.clearDepth = 1.0f;
+            mainRenderPass.clearColorAction[0] = CLEAR_ACTION_FILL;
+            VectorSet4(mainRenderPass.clearColor[0], 0.0f, 0.0f, 0.0f, 0.0f);
+
+            CmdBeginRenderPass(cmdBuffer, &mainRenderPass);
+            for (const auto &surface : culledSurfaces)
             {
-                // FIX ME: Probably sky. Deal with this
-                continue;
+                // Generate draw items based on q3 shader
+                const DrawItem *drawItem = &surface.drawItem;
+                const shader_t *shader = surface.shader;
+
+                const shaderStage_t *stage = shader->stages[0];
+                if (stage == nullptr)
+                {
+                    // FIX ME: Probably sky. Deal with this
+                    continue;
+                }
+
+                render_state_t renderState = {};
+                renderState.stateBits = stage->stateBits;
+                renderState.cullType = shader->cullType;
+
+                const UniformData *stageUniformData = MakeStageUniformData(
+                    stage, uniformDataWriter, *frame->memory);
+
+                // draw them
+                const UniformData *uniforms[] = {
+                    stageUniformData,
+                    drawItem->uniformData,
+                    surface.entityNum == REFENTITYNUM_WORLD
+                        ? worldEntityUniformData
+                        : entityUniformData[surface.entityNum],
+                    cameraUniformData,
+                    sceneUniformData};
+
+                uint32_t shaderVariant = surface.shaderFlags;
+
+                if (stage->bundle[TB_DIFFUSEMAP].image[0] != nullptr)
+                {
+                    SceneCmdSetTextureFromBundle(
+                        cmdBuffer,
+                        &stage->bundle[TB_DIFFUSEMAP],
+                        TB_DIFFUSEMAP);
+                }
+
+                if (stage->bundle[TB_LIGHTMAP].image[0] != nullptr)
+                {
+                    SceneCmdSetTextureFromBundle(
+                        cmdBuffer,
+                        &stage->bundle[TB_LIGHTMAP],
+                        TB_LIGHTMAP);
+                    shaderVariant |= LIGHTDEF_USE_LIGHTMAP;
+                }
+
+                const shaderProgram_t *shaderProgram = stage->glslShaderGroup;
+                if (shaderProgram == nullptr)
+                {
+                    shaderProgram = tr.genericShader;
+                }
+                else
+                {
+                    shaderProgram = shaderProgram + shaderVariant;
+                }
+
+                CmdSetShaderProgram(
+                    cmdBuffer,
+                    shaderProgram,
+                    ARRAY_LEN(uniforms),
+                    uniforms);
+                CmdSetVertexAttributes(
+                    cmdBuffer,
+                    surface.drawItem.numAttributes,
+                    surface.drawItem.attributes);
+                CmdSetRenderState(cmdBuffer, &renderState);
+                CmdSetIndexBuffer(cmdBuffer, drawItem->ibo);
+                CmdDrawIndexed(
+                    cmdBuffer,
+                    PRIMITIVE_TYPE_TRIANGLES,
+                    drawItem->draw.params.indexed.numIndices,
+                    INDEX_TYPE_UINT32,
+                    drawItem->draw.params.indexed.firstIndex,
+                    1,
+                    0);
             }
+            CmdEndRenderPass(cmdBuffer);
+        }
+
+        {
+            render_pass_t toneMapPass = {};
+            toneMapPass.framebuffer = nullptr;
+            toneMapPass.viewport = camera.viewport;
+            toneMapPass.clearDepthAction = CLEAR_ACTION_NONE;
+            VectorSet4(toneMapPass.clearColor[0], 0.0f, 0.0f, 0.0f, 1.0f);
+            toneMapPass.clearColorAction[0] = frame->startedRenderPass
+                                              ? CLEAR_ACTION_NONE
+                                              : CLEAR_ACTION_FILL;
 
             render_state_t renderState = {};
-            renderState.stateBits = stage->stateBits;
-            renderState.cullType = shader->cullType;
+            renderState.stateBits = GLS_DEPTHTEST_DISABLE;
+            renderState.cullType = CT_TWO_SIDED;
 
-            const UniformData *stageUniformData = MakeStageUniformData(
-                stage, uniformDataWriter, *frame->memory);
-
-            // draw them
-            const UniformData *uniforms[] = {
-                stageUniformData,
-                drawItem->uniformData,
-                surface.entityNum == REFENTITYNUM_WORLD
-                    ? worldEntityUniformData
-                    : entityUniformData[surface.entityNum],
-                cameraUniformData};
-
-            uint32_t shaderVariant = surface.shaderFlags;
-
-            if (stage->bundle[TB_DIFFUSEMAP].image[0] != nullptr)
-            {
-                SceneCmdSetTextureFromBundle(
-                    cmdBuffer,
-                    &stage->bundle[TB_DIFFUSEMAP],
-                    TB_DIFFUSEMAP);
-            }
-
-            if (stage->bundle[TB_LIGHTMAP].image[0] != nullptr)
-            {
-                SceneCmdSetTextureFromBundle(
-                    cmdBuffer,
-                    &stage->bundle[TB_LIGHTMAP],
-                    TB_LIGHTMAP);
-                shaderVariant |= LIGHTDEF_USE_LIGHTMAP;
-            }
-
-            const shaderProgram_t *shaderProgram = stage->glslShaderGroup;
-            if (shaderProgram == nullptr)
-            {
-                shaderProgram = tr.genericShader;
-            }
-            else
-            {
-                shaderProgram = shaderProgram + shaderVariant;
-            }
-
-            CmdSetShaderProgram(
-                cmdBuffer,
-                shaderProgram,
-                ARRAY_LEN(uniforms),
-                uniforms);
-            CmdSetVertexAttributes(
-                cmdBuffer,
-                surface.drawItem.numAttributes,
-                surface.drawItem.attributes);
+            CmdBeginRenderPass(cmdBuffer, &toneMapPass);
+            CmdSetShaderProgram(cmdBuffer, &tr.tonemapShader);
             CmdSetRenderState(cmdBuffer, &renderState);
-            CmdSetIndexBuffer(cmdBuffer, drawItem->ibo);
-            CmdDrawIndexed(
-                cmdBuffer,
-                PRIMITIVE_TYPE_TRIANGLES,
-                drawItem->draw.params.indexed.numIndices,
-                INDEX_TYPE_UINT32,
-                drawItem->draw.params.indexed.firstIndex,
-                1,
-                0);
+            CmdSetTexture(cmdBuffer, 0, tr.renderImage);
+            CmdDraw(cmdBuffer, PRIMITIVE_TYPE_TRIANGLES, 3, 0, 1);
+            CmdEndRenderPass(cmdBuffer);
         }
-        CmdEndRenderPass(cmdBuffer);
 
         frame->sceneRendered = true;
         frame->startedRenderPass = false;

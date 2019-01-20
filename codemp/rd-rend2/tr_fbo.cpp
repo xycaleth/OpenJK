@@ -371,7 +371,7 @@ void FBO_Bind(FBO_t * fbo)
 FBO_Init
 ============
 */
-void FBO_Init(void)
+void FBO_Init()
 {
 	int             i;
 	int             hdrFormat, multisample;
