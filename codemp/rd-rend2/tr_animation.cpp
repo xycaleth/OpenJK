@@ -231,7 +231,7 @@ void R_MDRAddAnimSurfaces( trRefEntity_t *ent, int entityNum ) {
 	}	
 
 	// figure out the current LOD of the model we're rendering, and set the lod pointer respectively.
-	lodnum = R_ComputeLOD(ent);
+	lodnum = 0;//R_ComputeLOD(ent);
 	// check whether this model has as that many LODs at all. If not, try the closest thing we got.
 	if(header->numLODs <= 0)
 		return;

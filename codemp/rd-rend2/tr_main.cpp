@@ -1946,7 +1946,7 @@ static void R_AddEntitySurface(const trRefdef_t *refdef, trRefEntity_t *ent, int
 		} else {
 			switch ( tr.currentModel->type ) {
 			case MOD_MESH:
-				R_AddMD3Surfaces( ent, entityNum );
+				//R_AddMD3Surfaces( ent, entityNum );
 				break;
 			case MOD_MDR:
 				R_MDRAddAnimSurfaces( ent, entityNum );

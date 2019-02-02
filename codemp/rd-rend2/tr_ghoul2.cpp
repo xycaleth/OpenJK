@@ -886,6 +886,8 @@ R_ACullModel
 */
 static int R_GCullModel(refEntity_t *ent, const r2::camera_t *camera)
 {
+	return CULL_IN;
+
 	// scale the radius if need be
 	float largestScale = Q_max(
 		ent->modelScale[0], Q_max(ent->modelScale[1], ent->modelScale[2]));

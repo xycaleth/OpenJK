@@ -23,6 +23,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "tr_local.h"
 
+#include "tr_steroids_render.h"
+
 float ProjectRadius( float r, vec3_t location )
 {
 	float pr;
@@ -79,6 +81,8 @@ static int R_CullModel( mdvModel_t *model, trRefEntity_t *ent ) {
 	vec3_t		bounds[2];
 	mdvFrame_t	*oldFrame, *newFrame;
 	int			i;
+
+	return CULL_IN;
 
 	// compute frame pointers
 	newFrame = model->frames + ent->e.frame;
@@ -163,7 +167,7 @@ R_ComputeLOD
 
 =================
 */
-int R_ComputeLOD( trRefEntity_t *ent ) {
+int R_ComputeLOD( trRefEntity_t *ent, const model_t *model ) {
 	float radius;
 	float flod, lodscale;
 	float projectedRadius;
@@ -172,7 +176,7 @@ int R_ComputeLOD( trRefEntity_t *ent ) {
 	mdrFrame_t *mdrframe;
 	int lod;
 
-	if ( tr.currentModel->numLods < 2 )
+	if ( model->numLods < 2 )
 	{
 		// model has only 1 LOD level, skip computations and bias
 		lod = 0;
@@ -182,10 +186,10 @@ int R_ComputeLOD( trRefEntity_t *ent ) {
 		// multiple LODs exist, so compute projected bounding sphere
 		// and use that as a criteria for selecting LOD
 
-		if(tr.currentModel->type == MOD_MDR)
+		if(model->type == MOD_MDR)
 		{
 			int frameSize;
-			mdr = tr.currentModel->data.mdr;
+			mdr = model->data.mdr;
 			frameSize = (size_t) (&((mdrFrame_t *)0)->bones[mdr->numBones]);
 			
 			mdrframe = (mdrFrame_t *) ((byte *) mdr + mdr->ofsFrames + frameSize * ent->e.frame);
@@ -195,7 +199,7 @@ int R_ComputeLOD( trRefEntity_t *ent ) {
 		else
 		{
 			//frame = ( md3Frame_t * ) ( ( ( unsigned char * ) tr.currentModel->md3[0] ) + tr.currentModel->md3[0]->ofsFrames );
-			frame = tr.currentModel->data.mdv[0]->frames;
+			frame = model->data.mdv[0]->frames;
 
 			frame += ent->e.frame;
 
@@ -214,23 +218,23 @@ int R_ComputeLOD( trRefEntity_t *ent ) {
 			flod = 0;
 		}
 
-		flod *= tr.currentModel->numLods;
+		flod *= model->numLods;
 		lod = Q_ftol(flod);
 
 		if ( lod < 0 )
 		{
 			lod = 0;
 		}
-		else if ( lod >= tr.currentModel->numLods )
+		else if ( lod >= model->numLods )
 		{
-			lod = tr.currentModel->numLods - 1;
+			lod = model->numLods - 1;
 		}
 	}
 
 	lod += r_lodbias->integer;
 	
-	if ( lod >= tr.currentModel->numLods )
-		lod = tr.currentModel->numLods - 1;
+	if ( lod >= model->numLods )
+		lod = model->numLods - 1;
 	if ( lod < 0 )
 		lod = 0;
 
@@ -280,11 +284,16 @@ R_AddMD3Surfaces
 
 =================
 */
-void R_AddMD3Surfaces( trRefEntity_t *ent, int entityNum ) {
+void R_AddMD3Surfaces(
+	trRefEntity_t *ent,
+	int entityNum,
+	const r2::camera_t *camera,
+	std::vector<r2::culled_surface_t> &culledSurfaces)
+{
 	int				i;
-	mdvModel_t		*model = NULL;
-	mdvSurface_t	*surface = NULL;
-	shader_t		*shader = NULL;
+	mdvModel_t		*model = nullptr;
+	mdvSurface_t	*surface = nullptr;
+	shader_t		*shader = nullptr;
 	int				cull;
 	int				lod;
 	int				fogNum;
@@ -295,9 +304,11 @@ void R_AddMD3Surfaces( trRefEntity_t *ent, int entityNum ) {
 	personalModel = (qboolean)((ent->e.renderfx & RF_THIRD_PERSON) && !(tr.viewParms.isPortal 
 	                 || (tr.viewParms.flags & (VPF_SHADOWMAP | VPF_DEPTHSHADOW))));
 
+	const model_t *currentModel = R_GetModelByHandle(ent->e.hModel);
+
 	if ( ent->e.renderfx & RF_WRAP_FRAMES ) {
-		ent->e.frame %= tr.currentModel->data.mdv[0]->numFrames;
-		ent->e.oldframe %= tr.currentModel->data.mdv[0]->numFrames;
+		ent->e.frame %= currentModel->data.mdv[0]->numFrames;
+		ent->e.oldframe %= currentModel->data.mdv[0]->numFrames;
 	}
 
 	//
@@ -306,13 +317,13 @@ void R_AddMD3Surfaces( trRefEntity_t *ent, int entityNum ) {
 	// when the surfaces are rendered, they don't need to be
 	// range checked again.
 	//
-	if ( (ent->e.frame >= tr.currentModel->data.mdv[0]->numFrames) 
+	if ( (ent->e.frame >= currentModel->data.mdv[0]->numFrames)
 		|| (ent->e.frame < 0)
-		|| (ent->e.oldframe >= tr.currentModel->data.mdv[0]->numFrames)
+		|| (ent->e.oldframe >= currentModel->data.mdv[0]->numFrames)
 		|| (ent->e.oldframe < 0) ) {
 			ri.Printf( PRINT_DEVELOPER, "R_AddMD3Surfaces: no such frame %d to %d for '%s'\n",
 				ent->e.oldframe, ent->e.frame,
-				tr.currentModel->name );
+				currentModel->name );
 			ent->e.frame = 0;
 			ent->e.oldframe = 0;
 	}
@@ -320,9 +331,9 @@ void R_AddMD3Surfaces( trRefEntity_t *ent, int entityNum ) {
 	//
 	// compute LOD
 	//
-	lod = R_ComputeLOD( ent );
+	lod = R_ComputeLOD( ent, currentModel );
 
-	model = tr.currentModel->data.mdv[lod];
+	model = currentModel->data.mdv[lod];
 
 	//
 	// cull the entire model if merged bounding box of both frames
@@ -376,13 +387,9 @@ void R_AddMD3Surfaces( trRefEntity_t *ent, int entityNum ) {
 			else if (shader->defaultShader) {
 				ri.Printf( PRINT_DEVELOPER, "WARNING: shader %s in skin %s not found\n", shader->name, skin->name);
 			}
-		//} else if ( surface->numShaders <= 0 ) {
-			//shader = tr.defaultShader;
 		} else {
-			//md3Shader = (md3Shader_t *) ( (byte *)surface + surface->ofsShaders );
-			//md3Shader += ent->e.skinNum % surface->numShaders;
-			//shader = tr.shaders[ md3Shader->shaderIndex ];
-			shader = tr.shaders[ surface->shaderIndexes[ ent->e.skinNum % surface->numShaderIndexes ] ];
+		    const int skinNum = ent->e.skinNum % surface->numShaderIndexes;
+            shader = tr.shaders[surface->shaderIndexes[skinNum]];
 		}
 
 		// don't add third_person objects if not viewing through a portal
@@ -390,7 +397,75 @@ void R_AddMD3Surfaces( trRefEntity_t *ent, int entityNum ) {
 		{
 			srfVBOMDVMesh_t *vboSurface = &model->vboSurfaces[i];
 
-			R_AddDrawSurf((surfaceType_t *)vboSurface, entityNum, shader, fogNum, qfalse, R_IsPostRenderEntity(ent), cubemapIndex );
+            auto *vertexAttributes = ojkAllocArray<vertexAttribute_t>(
+                *tr.frame.memory, 4);
+
+            const int positionsOffset = 0;
+            const int normalsOffset = positionsOffset +
+                vboSurface->numVerts * model->numFrames * sizeof(vec3_t);
+            const int tangentsOffset = normalsOffset +
+                vboSurface->numVerts * model->numFrames * sizeof(uint32_t);
+            const int texCoordsOffset = tangentsOffset +
+                vboSurface->numVerts * model->numFrames * sizeof(uint32_t);
+
+            vertexAttributes[0].vbo = vboSurface->vbo;
+            vertexAttributes[0].index = ATTR_INDEX_POSITION;
+            vertexAttributes[0].numComponents = 3;
+            vertexAttributes[0].integerAttribute = GL_FALSE;
+            vertexAttributes[0].type = GL_FLOAT;
+            vertexAttributes[0].normalize = GL_FALSE;
+            vertexAttributes[0].stride = 0;
+            vertexAttributes[0].offset = positionsOffset;
+            vertexAttributes[0].stepRate = 0;
+
+            vertexAttributes[1].vbo = vboSurface->vbo;
+            vertexAttributes[1].index = ATTR_INDEX_NORMAL;
+            vertexAttributes[1].numComponents = 4;
+            vertexAttributes[1].integerAttribute = GL_FALSE;
+            vertexAttributes[1].type = GL_UNSIGNED_INT_2_10_10_10_REV;
+            vertexAttributes[1].normalize = GL_TRUE;
+            vertexAttributes[1].stride = 0;
+            vertexAttributes[1].offset = normalsOffset;
+            vertexAttributes[1].stepRate = 0;
+
+            vertexAttributes[2].vbo = vboSurface->vbo;
+            vertexAttributes[2].index = ATTR_INDEX_TEXCOORD0;
+            vertexAttributes[2].numComponents = 2;
+            vertexAttributes[2].integerAttribute = GL_FALSE;
+            vertexAttributes[2].type = GL_FLOAT;
+            vertexAttributes[2].normalize = GL_FALSE;
+            vertexAttributes[2].stride = 0;
+            vertexAttributes[2].offset = texCoordsOffset;
+            vertexAttributes[2].stepRate = 0;
+
+            vertexAttributes[3].vbo = vboSurface->vbo;
+            vertexAttributes[3].index = ATTR_INDEX_TANGENT;
+            vertexAttributes[3].numComponents = 4;
+            vertexAttributes[3].integerAttribute = GL_FALSE;
+            vertexAttributes[3].type = GL_UNSIGNED_INT_2_10_10_10_REV;
+            vertexAttributes[3].normalize = GL_TRUE;
+            vertexAttributes[3].stride = 0;
+            vertexAttributes[3].offset = tangentsOffset;
+            vertexAttributes[3].stepRate = 0;
+
+            r2::culled_surface_t culledSurface = {};
+            culledSurface.entityNum = entityNum;
+            culledSurface.shader = shader;
+
+            DrawItem &drawItem = culledSurface.drawItem;
+            drawItem = {};
+            drawItem.ibo = vboSurface->ibo;
+            drawItem.uniformData = nullptr;
+            drawItem.attributes = vertexAttributes;
+            drawItem.numAttributes = 4;
+            drawItem.draw.type = DRAW_COMMAND_INDEXED;
+            drawItem.draw.primitiveType = GL_TRIANGLES;
+            drawItem.draw.numInstances = 1;
+            drawItem.draw.params.indexed.indexType = GL_UNSIGNED_INT;
+            drawItem.draw.params.indexed.firstIndex = 0;
+            drawItem.draw.params.indexed.numIndices = vboSurface->numIndexes;
+
+            culledSurfaces.push_back(culledSurface);
 		}
 
 		surface++;

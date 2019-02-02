@@ -64,8 +64,14 @@ namespace r2
                             }
 
                             case MOD_MESH:
-                                //model->data.mdv;
+                            {
+                                R_AddMD3Surfaces(
+                                    &trRefEntity,
+                                    i,
+                                    camera,
+                                    culledSurfaces);
                                 break;
+                            }
 
                             default:
                             {

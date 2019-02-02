@@ -2565,6 +2565,12 @@ extern cvar_t	*r_debugWeather;
 
 //====================================================================
 
+namespace r2
+{
+	struct camera_t;
+	struct culled_surface_t;
+}
+
 void R_GenerateDrawSurfs( viewParms_t *viewParms, trRefdef_t *refdef );
 void R_SetupViewParmsForOrthoRendering(
 	int viewportWidth,
@@ -2583,7 +2589,11 @@ void R_RenderPshadowMaps(const refdef_t *fd);
 void R_RenderSunShadowMaps(const refdef_t *fd, int level);
 void R_RenderCubemapSide( int cubemapIndex, int cubemapSide, qboolean subscene, bool bounce);
 
-void R_AddMD3Surfaces( trRefEntity_t *e, int entityNum );
+void R_AddMD3Surfaces(
+	trRefEntity_t *ent,
+	int entityNum,
+	const r2::camera_t *camera,
+	std::vector<r2::culled_surface_t> &culledSurfaces);
 void R_AddNullModelSurfaces( trRefEntity_t *e, int entityNum );
 void R_AddBeamSurfaces( trRefEntity_t *e, int entityNum );
 void R_AddRailSurfaces( trRefEntity_t *e, qboolean isUnderwater );
@@ -2835,12 +2845,6 @@ WORLD MAP
 
 ============================================================
 */
-
-namespace r2
-{
-	struct camera_t;
-	struct culled_surface_t;
-}
 
 void R_AddBrushModelSurfaces(
 	const trRefEntity_t *ent,
