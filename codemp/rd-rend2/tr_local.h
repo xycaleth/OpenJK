@@ -2842,7 +2842,11 @@ namespace r2
 	struct culled_surface_t;
 }
 
-void R_AddBrushModelSurfaces( trRefEntity_t *e, int entityNum );
+void R_AddBrushModelSurfaces(
+	const trRefEntity_t *ent,
+	int entityNum,
+	const r2::camera_t *camera,
+	std::vector<r2::culled_surface_t> &culledSurfaces);
 void R_AddWorldSurfaces(
 	const r2::camera_t *camera,
 	std::vector<r2::culled_surface_t> &culledSurfaces);

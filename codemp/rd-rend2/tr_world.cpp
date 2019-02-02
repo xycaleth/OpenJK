@@ -522,11 +522,13 @@ static void R_AddWorldSurface(
         }
 
         default:
-            ri.Printf(
-                PRINT_ERROR,
-                "Unsupported surface type %d for world surface\n",
-                *surf->data);
-            break;
+		{
+			ri.Printf(
+				PRINT_ERROR,
+				"Unsupported surface type %d for world surface\n",
+				*surf->data);
+			break;
+		}
     }
 
 
@@ -554,16 +556,21 @@ static void R_AddWorldSurface(
 R_AddBrushModelSurfaces
 =================
 */
-void R_AddBrushModelSurfaces ( trRefEntity_t *ent, int entityNum ) {
+void R_AddBrushModelSurfaces(
+	const trRefEntity_t *ent,
+	int entityNum,
+	const r2::camera_t *camera,
+	std::vector<r2::culled_surface_t> &culledSurfaces)
+{
 	model_t *pModel = R_GetModelByHandle( ent->e.hModel );
 	bmodel_t *bmodel = pModel->data.bmodel;
-	int clip = R_CullLocalBox( bmodel->bounds );
+	/*int clip = R_CullLocalBox( bmodel->bounds );
 	if ( clip == CULL_OUT ) {
 		return;
-	}
-	
-	R_SetupEntityLighting( &tr.refdef, ent );
-	R_DlightBmodel( bmodel, ent );
+	}*/
+
+	//R_SetupEntityLighting( &tr.refdef, ent );
+	//R_DlightBmodel( bmodel, ent );
 
 	for ( int i = 0 ; i < bmodel->numSurfaces ; i++ ) {
 		int surf = bmodel->firstSurface + i;
@@ -572,7 +579,13 @@ void R_AddBrushModelSurfaces ( trRefEntity_t *ent, int entityNum ) {
 		if (world->surfacesViewCount[surf] != tr.viewCount)
 		{
 			world->surfacesViewCount[surf] = tr.viewCount;
-			//R_AddWorldSurface(world->surfaces + surf, ent, entityNum, ent->needDlights, 0);
+			R_AddWorldSurface(
+				world->surfaces + surf,
+				ent,
+				entityNum,
+				ent->needDlights,
+				0,
+				culledSurfaces);
 		}
 	}
 }

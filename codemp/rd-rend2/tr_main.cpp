@@ -1955,7 +1955,7 @@ static void R_AddEntitySurface(const trRefdef_t *refdef, trRefEntity_t *ent, int
 				R_AddIQMSurfaces( ent, entityNum );
 				break;
 			case MOD_BRUSH:
-				R_AddBrushModelSurfaces( ent, entityNum );
+				//R_AddBrushModelSurfaces( ent, entityNum );
 				break;
 			case MOD_MDXM:
 				if (ent->e.ghoul2)

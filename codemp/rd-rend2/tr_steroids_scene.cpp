@@ -38,17 +38,23 @@ namespace r2
                     case RT_MODEL:
                     {
                         const model_t *model = R_GetModelByHandle(refEntity->hModel);
+                        trRefEntity_t trRefEntity = {};
+                        trRefEntity.e = *refEntity;
+
                         switch (model->type)
                         {
                             case MOD_BRUSH:
-                                model->data.bmodel;
+                            {
+                                R_AddBrushModelSurfaces(
+                                    &trRefEntity,
+                                    i,
+                                    camera,
+                                    culledSurfaces);
                                 break;
+                            }
 
                             case MOD_MDXM:
                             {
-                                trRefEntity_t trRefEntity = {};
-                                trRefEntity.e = *refEntity;
-
                                 R_AddGhoulSurfaces(
                                     &trRefEntity,
                                     i,
@@ -62,24 +68,25 @@ namespace r2
                                 break;
 
                             default:
+                            {
                                 if (refEntity->ghoul2 != nullptr)
                                 {
                                     // UI is dumb and doesn't set the model type
-                                    trRefEntity_t trRefEntity = {};
-                                    trRefEntity.e = *refEntity;
-
                                     R_AddGhoulSurfaces(
                                         &trRefEntity,
                                         i,
                                         camera,
                                         culledSurfaces);
                                 }
-
-                                ri.Printf(
-                                    PRINT_ERROR,
-                                    "Invalid model type '%d'",
-                                    model->type);
+                                else
+                                {
+                                    ri.Printf(
+                                        PRINT_ERROR,
+                                        "Invalid model type '%d'",
+                                        model->type);
+                                }
                                 break;
+                            }
                         }
                         break;
                     }
