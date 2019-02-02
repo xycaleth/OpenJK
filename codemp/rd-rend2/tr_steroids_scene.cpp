@@ -158,6 +158,12 @@ namespace r2
             for (int i = 0; i < scene->entityCount; ++i)
             {
                 const refEntity_t *ent = &scene->entities[i].refEntity;
+                vec3_t entOrigin;
+                vec3_t lightDir;
+                vec3_t directionalLight;
+                vec3_t ambientLight;
+
+                VectorCopy(ent->origin, entOrigin);
 
                 matrix4x4_t modelMatrix = {};
                 R_GetModelMatrix(ent, &modelMatrix);
@@ -166,6 +172,22 @@ namespace r2
                 uniformDataWriter.SetUniformMatrix4x4(
                     UNIFORM_MODELMATRIX,
                     modelMatrix.e);
+
+                if (R_LightForPoint(
+                        entOrigin,
+                        ambientLight,
+                        directionalLight,
+                        lightDir))
+                {
+                    VectorScale(ambientLight, 1.0f / 255.0f, ambientLight);
+                    VectorScale(directionalLight, 1.0f / 255.0f, directionalLight);
+                    uniformDataWriter.SetUniformVec3(
+                        UNIFORM_AMBIENTLIGHT, ambientLight);
+                    uniformDataWriter.SetUniformVec3(
+                        UNIFORM_DIRECTEDLIGHT, directionalLight);
+                    uniformDataWriter.SetUniformVec3(
+                        UNIFORM_MODELLIGHTDIR, lightDir);
+                }
 
                 float volumetricBaseValue = -1.0f;
                 if ((ent->renderfx & RF_VOLUMETRIC) != 0)

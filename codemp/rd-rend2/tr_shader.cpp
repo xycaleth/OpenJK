@@ -2529,13 +2529,13 @@ static qboolean ParseShader( const char **text )
 			}
 
 			token = COM_ParseExt( text, qfalse );
-			tr.sunLight[0] = atof( token );
+			tr.sunLight[0] = static_cast<float>(atof(token));
 			token = COM_ParseExt( text, qfalse );
-			tr.sunLight[1] = atof( token );
+			tr.sunLight[1] = static_cast<float>(atof(token));
 			token = COM_ParseExt( text, qfalse );
-			tr.sunLight[2] = atof( token );
+			tr.sunLight[2] = static_cast<float>(atof(token));
 			
-			VectorNormalize( tr.sunLight );
+			//VectorNormalize( tr.sunLight );
 
 			token = COM_ParseExt( text, qfalse );
 			a = atof( token );

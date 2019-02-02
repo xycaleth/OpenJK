@@ -25,9 +25,24 @@ vec3 sRGBEncode(in vec3 linear)
     return mix(lo, hi, greaterThan(linear, vec3(0.0031308)));
 }
 
+vec3 FilmicTonemap(in vec3 x)
+{
+	const float SS  = 0.22; // Shoulder Strength
+	const float LS  = 0.30; // Linear Strength
+	const float LA  = 0.10; // Linear Angle
+	const float TS  = 0.20; // Toe Strength
+	const float TAN = 0.01; // Toe Angle Numerator
+	const float TAD = 0.30; // Toe Angle Denominator
+
+	vec3 SSxx = SS * x * x;
+	vec3 LSx = LS * x;
+	vec3 LALSx = LSx * LA;
+
+	return ((SSxx + LALSx + TS * TAN) / (SSxx + LSx + TS * TAD)) - TAN / TAD;
+}
+
 void main()
 {
-    // Stupid simple tonemapping operator for now
     vec3 color = texture(u_TextureMap, var_TexCoord).rgb;
     out_Color.rgb = sRGBEncode(color);
     out_Color.a = 1.0;

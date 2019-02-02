@@ -26,7 +26,7 @@ uniform mat4x3 u_BoneMatrices[20];
 void main()
 {
     vec3 position = attr_Position;
-    vec3 normal = attr_Normal;
+    vec3 normal = attr_Normal - vec3(0.5);
 
 #if defined(USE_SKELETAL_ANIMATION)
     mat4x3 influence =
@@ -36,7 +36,7 @@ void main()
         u_BoneMatrices[attr_BoneIndexes[3]] * attr_BoneWeights[3];
 
     position = influence * vec4(position, 1.0);
-    normal = normalize(influence * vec4(normal - vec3(0.5), 0.0));
+    normal = normalize(influence * vec4(normal, 0.0));
 #endif
 
     var_PositionWS = (u_ModelMatrix * vec4(position, 1.0)).xyz;
@@ -58,8 +58,9 @@ in vec2 var_TexCoord1;
 
 out vec4 out_Color;
 
-uniform vec4 u_PrimaryLightOrigin;
-uniform vec3 u_PrimaryLightColor;
+uniform vec3 u_DirectedLight;
+uniform vec3 u_AmbientLight;
+uniform vec3 u_ModelLightDir;
 
 uniform sampler2D u_DiffuseMap;
 #if defined(USE_LIGHTMAP)
@@ -81,21 +82,12 @@ void main()
 
     vec4 radiance = diffuse;
 
-    vec3 incomingLight = vec3(0.0);
 #if defined(USE_LIGHTMAP)
     {
         vec3 lightmap = sRGBDecode(texture(u_LightMap, var_TexCoord1).rgb);
-        incomingLight += lightmap;
+        radiance.rgb *= lightmap;
     }
 #endif
-
-    float NL = dot(N, u_PrimaryLightOrigin.xyz);
-    if (NL > 0.0)
-    {
-        incomingLight += NL * u_PrimaryLightColor;
-    }
-
-    radiance.rgb *= incomingLight;
 
     out_Color.rgb = radiance.rgb;
 	out_Color.a = diffuse.a;

@@ -454,9 +454,9 @@ R_LightForPoint
 int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir )
 {
 	trRefEntity_t ent;
-	
-	if ( tr.world->lightGridData == NULL )
-	  return qfalse;
+
+	if (tr.world == nullptr || tr.world->lightGridData == nullptr)
+		return qfalse;
 
 	Com_Memset(&ent, 0, sizeof(ent));
 	VectorCopy( point, ent.e.origin );
