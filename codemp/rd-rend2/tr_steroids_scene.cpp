@@ -1,5 +1,7 @@
 #include "tr_steroids_scene.h"
 
+#include <algorithm>
+
 #include "tr_steroids_cmd.h"
 #include "tr_steroids_render.h"
 
@@ -27,8 +29,47 @@ namespace r2
         void GetCulledEntitySurfaces(
             const scene_t *scene,
             const camera_t *camera,
-            std::vector<culled_surface_t> &culledSurfaces)
+            std::vector<culled_surface_t> &culledSurfaces,
+            Allocator &allocator)
         {
+            int *particleEntityNums = ojkAllocArray<int>(
+                allocator, static_cast<size_t>(scene->entityCount));
+            int particleEntitiesCount = 0;
+
+            for (int i = 0; i < scene->entityCount; ++i)
+            {
+                const entity_t *entity = scene->entities + i;
+                const refEntity_t *refEntity = &entity->refEntity;
+                switch (refEntity->reType)
+                {
+                    case RT_BEAM:
+                    case RT_POLY:
+                    case RT_SPRITE:
+                    case RT_ORIENTED_QUAD:
+                    case RT_SABER_GLOW:
+                    case RT_ELECTRICITY:
+                    case RT_LINE:
+                    case RT_ORIENTEDLINE:
+                    case RT_CYLINDER:
+                    case RT_ENT_CHAIN:
+                        particleEntityNums[particleEntitiesCount++] = i;
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            const entity_t *entities = scene->entities;
+            std::sort(
+                particleEntityNums,
+                particleEntityNums + particleEntitiesCount,
+                [entities](int a, int b)
+                {
+                    return entities[a].refEntity.customShader <
+                        entities[b].refEntity.customShader;
+                });
+
             for (int i = 0; i < scene->entityCount; ++i)
             {
                 const entity_t *entity = scene->entities + i;
@@ -97,65 +138,8 @@ namespace r2
                         break;
                     }
 
-                    case RT_BEAM:
-                    {
-                        break;
-                    }
-
-                    case RT_POLY:
-                    {
-                        break;
-                    }
-
-                    case RT_SPRITE:
-                    {
-                        break;
-                    }
-
-                    case RT_ORIENTED_QUAD:
-                    {
-                        break;
-                    }
-
-                    case RT_SABER_GLOW:
-                    {
-                        break;
-                    }
-
-                    case RT_ELECTRICITY:
-                    {
-                        break;
-                    }
-
-                    case RT_PORTALSURFACE:
-                    {
-                        break;
-                    }
-
-                    case RT_LINE:
-                    {
-                        break;
-                    }
-
-                    case RT_ORIENTEDLINE:
-                    {
-                        break;
-                    }
-
-                    case RT_CYLINDER:
-                    {
-                        break;
-                    }
-
-                    case RT_ENT_CHAIN:
-                    {
-                        break;
-                    }
-
                     default:
-                    {
                         break;
-                    }
                 }
             }
         }
@@ -403,7 +387,7 @@ namespace r2
             sizeof(refdef->areamask));
 
         std::vector<culled_surface_t> culledSurfaces;
-        GetCulledEntitySurfaces(scene, &camera, culledSurfaces);
+        GetCulledEntitySurfaces(scene, &camera, culledSurfaces, *frame->memory);
         R_AddWorldSurfaces(&camera, culledSurfaces);
 #if 1
         std::sort(
