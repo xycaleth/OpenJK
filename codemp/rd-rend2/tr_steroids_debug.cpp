@@ -153,6 +153,46 @@ namespace r2
 
         TableBeginRow(&table);
         {
+            TableAddRowCell(&table, 1.0f, "Entity Count:");
+            TableAddRowCell(&table, 1.0f, "%d", debug->entityCount);
+        }
+        TableEndRow(&table);
+
+        TableBeginRow(&table);
+        {
+            TableAddRowCell(&table, 1.0f, "Culled Surfaces:");
+            TableAddRowCell(
+                &table,
+                1.0f,
+                "%d",
+                debug->worldSurfaceCount + debug->entitySurfaceCount);
+        }
+        TableEndRow(&table);
+
+        TableBeginRow(&table);
+        {
+            TableAddRowCell(&table, 1.0f, "    Entity:");
+            TableAddRowCell(
+                &table,
+                0.8f,
+                "%d",
+                debug->entitySurfaceCount);
+        }
+        TableEndRow(&table);
+
+        TableBeginRow(&table);
+        {
+            TableAddRowCell(&table, 1.0f, "    World:");
+            TableAddRowCell(
+                &table,
+                0.8f,
+                "%d",
+                debug->worldSurfaceCount);
+        }
+        TableEndRow(&table);
+
+        TableBeginRow(&table);
+        {
             TableAddRowCell(&table, 1.0f, "Scene Render:");
             TableAddRowCell(&table, 1.0f, "%dms", debug->sceneSubmitMsec);
         }

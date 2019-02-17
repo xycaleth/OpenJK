@@ -44,7 +44,11 @@ Tries to cull surfaces before they are lighted or
 added to the sorting list.
 ================
 */
-static qboolean	R_CullSurface( msurface_t *surf, int entityNum ) {
+static qboolean R_CullSurface(
+    msurface_t *surf,
+    const r2::camera_t *camera,
+    int entityNum)
+{
 	if ( r_nocull->integer || surf->cullinfo.type == CULLINFO_NONE) {
 		return qfalse;
 	}
@@ -79,6 +83,7 @@ static qboolean	R_CullSurface( msurface_t *surf, int entityNum ) {
 		*/
 
 		// shadowmaps draw back surfaces
+		/*
 		if ( tr.viewParms.flags & (VPF_SHADOWMAP | VPF_DEPTHSHADOW) )
 		{
 			if (ct == CT_FRONT_SIDED)
@@ -90,8 +95,10 @@ static qboolean	R_CullSurface( msurface_t *surf, int entityNum ) {
 				ct = CT_FRONT_SIDED;
 			}
 		}
+        */
 
 		// do proper cull for orthographic projection
+		/*
 		if (tr.viewParms.flags & VPF_ORTHOGRAPHIC) {
 			d = DotProduct(tr.viewParms.ori.axis[0], surf->cullinfo.plane.normal);
 			if ( ct == CT_FRONT_SIDED ) {
@@ -103,8 +110,9 @@ static qboolean	R_CullSurface( msurface_t *surf, int entityNum ) {
 			}
 			return qfalse;
 		}
+		*/
 
-		d = DotProduct (tr.ori.viewOrigin, surf->cullinfo.plane.normal);
+		d = DotProduct(camera->origin, surf->cullinfo.plane.normal);
 
 		// don't cull exactly on the plane, because there are levels of rounding
 		// through the BSP, ICD, and hardware that may cause pixel gaps if an
@@ -122,6 +130,8 @@ static qboolean	R_CullSurface( msurface_t *surf, int entityNum ) {
 		return qfalse;
 	}
 
+	// FIXME: Make use of the camera
+	/*
 	if (surf->cullinfo.type & CULLINFO_SPHERE)
 	{
 		int 	sphereCull;
@@ -153,6 +163,7 @@ static qboolean	R_CullSurface( msurface_t *surf, int entityNum ) {
 			return qtrue;
 		}
 	}
+	*/
 
 	return qfalse;
 }
@@ -340,16 +351,18 @@ static void R_AddWorldSurface(
 	int entityNum,
 	int dlightBits,
 	int pshadowBits,
+    const r2::camera_t *camera,
     std::vector<r2::culled_surface_t> &culledSurfaces)
 {
 	// FIXME: bmodel fog?
 
-#if 0
 	// try to cull before dlighting or adding
-	if ( R_CullSurface( surf, entityNum ) ) {
+    if (R_CullSurface(surf, camera, entityNum))
+    {
 		return;
 	}
 
+#if 0
 	// check for dlighting
 	if ( dlightBits ) {
 		dlightBits = R_DlightSurface( surf, dlightBits );
@@ -585,6 +598,7 @@ void R_AddBrushModelSurfaces(
 				entityNum,
 				ent->needDlights,
 				0,
+				camera,
 				culledSurfaces);
 		}
 	}
@@ -940,6 +954,7 @@ void R_AddWorldSurfaces(
             REFENTITYNUM_WORLD,
             tr.world->surfacesDlightBits[i],
             tr.world->surfacesPshadowBits[i],
+            camera,
             culledSurfaces);
     }
 
@@ -954,6 +969,7 @@ void R_AddWorldSurfaces(
             REFENTITYNUM_WORLD,
             tr.world->mergedSurfacesDlightBits[i],
             tr.world->mergedSurfacesPshadowBits[i],
+            camera,
             culledSurfaces);
     }
 }

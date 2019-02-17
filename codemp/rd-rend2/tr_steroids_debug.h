@@ -8,6 +8,9 @@ namespace r2
     {
         int fontHandle;
 
+        int entityCount;
+        int entitySurfaceCount;
+        int worldSurfaceCount;
         int shaderChanges;
         int sceneSubmitMsec;
         int backendMsec;

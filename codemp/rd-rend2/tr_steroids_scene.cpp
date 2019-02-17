@@ -388,34 +388,29 @@ namespace r2
 
         std::vector<culled_surface_t> culledSurfaces;
         GetCulledEntitySurfaces(scene, &camera, culledSurfaces, *frame->memory);
+        tr.debug.entitySurfaceCount = culledSurfaces.size();
+
         R_AddWorldSurfaces(&camera, culledSurfaces);
-#if 1
+        tr.debug.worldSurfaceCount =
+            culledSurfaces.size() - tr.debug.entitySurfaceCount;
+
         std::sort(
             std::begin(culledSurfaces),
             std::end(culledSurfaces),
             [](const culled_surface_t &a, const culled_surface_t &b)
             {
-                if (a.shader->sort < b.shader->sort)
+                if (a.shader->sortedIndex < b.shader->sortedIndex)
                 {
                     return true;
                 }
-                else if (a.shader->sort > b.shader->sort)
-                {
-                    return false;
-                }
-
-                if (a.shader->index < b.shader->index)
-                {
-                    return true;
-                }
-                else if (a.shader->index > b.shader->index)
+                else if (a.shader->sortedIndex > b.shader->sortedIndex)
                 {
                     return false;
                 }
 
                 return false;
             });
-#endif
+
         command_buffer_t *cmdBuffer = frame->cmdBuffer;
 
         // render sun shadow maps
@@ -583,5 +578,8 @@ namespace r2
 
         const int endTime = ri.Milliseconds();
         tr.debug.sceneSubmitMsec = endTime - startTime;
+        tr.debug.entityCount = scene->entityCount;
+
+        ++tr.viewCount;
     }
 }
