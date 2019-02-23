@@ -178,6 +178,7 @@ namespace r2
                 {
                     VectorScale(ambientLight, 1.0f / 255.0f, ambientLight);
                     VectorScale(directionalLight, 1.0f / 255.0f, directionalLight);
+
                     uniformDataWriter.SetUniformVec3(
                         UNIFORM_AMBIENTLIGHT, ambientLight);
                     uniformDataWriter.SetUniformVec3(
@@ -475,78 +476,83 @@ namespace r2
                 const DrawItem *drawItem = &surface.drawItem;
                 const shader_t *shader = surface.shader;
 
-                const shaderStage_t *stage = shader->stages[0];
-                if (stage == nullptr)
+
+                for (int stageIndex = 0; shader->stages[stageIndex] != nullptr;
+                     ++stageIndex)
                 {
-                    // FIX ME: Probably sky. Deal with this
-                    continue;
-                }
+                    const shaderStage_t *stage = shader->stages[stageIndex];
 
-                render_state_t renderState = {};
-                renderState.stateBits = stage->stateBits;
-                renderState.cullType = shader->cullType;
+                    if (stage->ss != nullptr)
+                    {
+                        continue;
+                    }
 
-                const UniformData *stageUniformData = MakeStageUniformData(
-                    stage, uniformDataWriter, *frame->memory);
+                    render_state_t renderState = {};
+                    renderState.stateBits = stage->stateBits;
+                    renderState.cullType = shader->cullType;
 
-                // draw them
-                const UniformData *uniforms[] = {
-                    stageUniformData,
-                    drawItem->uniformData,
-                    surface.entityNum == REFENTITYNUM_WORLD
+                    const UniformData *stageUniformData = MakeStageUniformData(
+                        stage, uniformDataWriter, *frame->memory);
+
+                    // draw them
+                    const UniformData *uniforms[] = {
+                        sceneUniformData,
+                        cameraUniformData,
+                        surface.entityNum == REFENTITYNUM_WORLD
                         ? worldEntityUniformData
                         : entityUniformData[surface.entityNum],
-                    cameraUniformData,
-                    sceneUniformData};
+                        drawItem->uniformData,
+                        stageUniformData};
 
-                uint32_t shaderVariant = surface.shaderFlags;
+                    uint32_t shaderVariant = surface.shaderFlags;
 
-                if (stage->bundle[TB_DIFFUSEMAP].image[0] != nullptr)
-                {
-                    SceneCmdSetTextureFromBundle(
+                    if (stage->bundle[TB_DIFFUSEMAP].image[0] != nullptr)
+                    {
+                        SceneCmdSetTextureFromBundle(
+                            cmdBuffer,
+                            &stage->bundle[TB_DIFFUSEMAP],
+                            TB_DIFFUSEMAP);
+                    }
+
+                    if (stage->bundle[TB_LIGHTMAP].image[0] != nullptr)
+                    {
+                        SceneCmdSetTextureFromBundle(
+                            cmdBuffer,
+                            &stage->bundle[TB_LIGHTMAP],
+                            TB_LIGHTMAP);
+                        shaderVariant |= LIGHTDEF_USE_LIGHTMAP;
+                    }
+
+                    const shaderProgram_t *shaderProgram = stage->glslShaderGroup;
+                    if (shaderProgram == nullptr)
+                    {
+                        shaderProgram = tr.genericShader;
+                    }
+                    else
+                    {
+                        shaderProgram = shaderProgram + shaderVariant;
+                    }
+
+                    CmdSetShaderProgram(
                         cmdBuffer,
-                        &stage->bundle[TB_DIFFUSEMAP],
-                        TB_DIFFUSEMAP);
-                }
-
-                if (stage->bundle[TB_LIGHTMAP].image[0] != nullptr)
-                {
-                    SceneCmdSetTextureFromBundle(
+                        shaderProgram,
+                        ARRAY_LEN(uniforms),
+                        uniforms);
+                    CmdSetVertexAttributes(
                         cmdBuffer,
-                        &stage->bundle[TB_LIGHTMAP],
-                        TB_LIGHTMAP);
-                    shaderVariant |= LIGHTDEF_USE_LIGHTMAP;
+                        surface.drawItem.numAttributes,
+                        surface.drawItem.attributes);
+                    CmdSetRenderState(cmdBuffer, &renderState);
+                    CmdSetIndexBuffer(cmdBuffer, drawItem->ibo);
+                    CmdDrawIndexed(
+                        cmdBuffer,
+                        PRIMITIVE_TYPE_TRIANGLES,
+                        drawItem->draw.params.indexed.numIndices,
+                        INDEX_TYPE_UINT32,
+                        drawItem->draw.params.indexed.firstIndex,
+                        1,
+                        0);
                 }
-
-                const shaderProgram_t *shaderProgram = stage->glslShaderGroup;
-                if (shaderProgram == nullptr)
-                {
-                    shaderProgram = tr.genericShader;
-                }
-                else
-                {
-                    shaderProgram = shaderProgram + shaderVariant;
-                }
-
-                CmdSetShaderProgram(
-                    cmdBuffer,
-                    shaderProgram,
-                    ARRAY_LEN(uniforms),
-                    uniforms);
-                CmdSetVertexAttributes(
-                    cmdBuffer,
-                    surface.drawItem.numAttributes,
-                    surface.drawItem.attributes);
-                CmdSetRenderState(cmdBuffer, &renderState);
-                CmdSetIndexBuffer(cmdBuffer, drawItem->ibo);
-                CmdDrawIndexed(
-                    cmdBuffer,
-                    PRIMITIVE_TYPE_TRIANGLES,
-                    drawItem->draw.params.indexed.numIndices,
-                    INDEX_TYPE_UINT32,
-                    drawItem->draw.params.indexed.firstIndex,
-                    1,
-                    0);
             }
             CmdEndRenderPass(cmdBuffer);
         }
