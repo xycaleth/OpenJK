@@ -156,10 +156,9 @@ void Sys_SetProcessorAffinity( void );
 
 typedef enum graphicsApi_e
 {
-	GRAPHICS_API_GENERIC,
-
-	// Only OpenGL needs special treatment..
+	GRAPHICS_API_D3D,
 	GRAPHICS_API_OPENGL,
+	GRAPHICS_API_VULKAN,
 } graphicsApi_t;
 
 // Graphics API

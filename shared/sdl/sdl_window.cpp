@@ -310,26 +310,245 @@ static bool GLimp_DetectAvailableModes(void)
 	return true;
 }
 
+static rserr_t GLimp_CreateOpenGLWindow(
+	const char *windowTitle,
+	const int x,
+	const int y,
+	const windowDesc_t *windowDesc,
+	const Uint32 flags,
+	const SDL_Surface *icon,
+	glconfig_t *glConfig)
+{
+	const bool fullscreen = (flags & SDL_WINDOW_FULLSCREEN) != 0;
+	int colorBits = 0;
+	int depthBits = 0;
+	int stencilBits = 0;
+	int samples = 0;
+
+	colorBits = r_colorbits->integer;
+	if ((!colorBits) || (colorBits >= 32))
+		colorBits = 24;
+
+	if (!r_depthbits->integer)
+		depthBits = 24;
+	else
+		depthBits = r_depthbits->integer;
+
+	stencilBits = r_stencilbits->integer;
+	samples = r_ext_multisample->integer;
+
+	for (int i = 0; i < 16; i++)
+	{
+		int testColorBits, testDepthBits, testStencilBits;
+
+		// 0 - default
+		// 1 - minus colorBits
+		// 2 - minus depthBits
+		// 3 - minus stencil
+		if ((i % 4) == 0 && i)
+		{
+			// one pass, reduce
+			switch (i / 4)
+			{
+				case 2 :
+					if (colorBits == 24)
+						colorBits = 16;
+					break;
+				case 1 :
+					if (depthBits == 24)
+						depthBits = 16;
+					else if (depthBits == 16)
+						depthBits = 8;
+				case 3 :
+					if (stencilBits == 24)
+						stencilBits = 16;
+					else if (stencilBits == 16)
+						stencilBits = 8;
+			}
+		}
+
+		testColorBits = colorBits;
+		testDepthBits = depthBits;
+		testStencilBits = stencilBits;
+
+		if ((i % 4) == 3)
+		{ // reduce colorBits
+			if (testColorBits == 24)
+				testColorBits = 16;
+		}
+
+		if ((i % 4) == 2)
+		{ // reduce depthBits
+			if (testDepthBits == 24)
+				testDepthBits = 16;
+			else if (testDepthBits == 16)
+				testDepthBits = 8;
+		}
+
+		if ((i % 4) == 1)
+		{ // reduce stencilBits
+			if (testStencilBits == 24)
+				testStencilBits = 16;
+			else if (testStencilBits == 16)
+				testStencilBits = 8;
+			else
+				testStencilBits = 0;
+		}
+
+		int perChannelColorBits;
+		if (testColorBits == 24)
+			perChannelColorBits = 8;
+		else
+			perChannelColorBits = 4;
+
+		SDL_GL_SetAttribute( SDL_GL_RED_SIZE, perChannelColorBits );
+		SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, perChannelColorBits );
+		SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, perChannelColorBits );
+		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, testDepthBits );
+		SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, testStencilBits );
+
+		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, samples ? 1 : 0 );
+		SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, samples );
+
+		if ( windowDesc->gl.majorVersion )
+		{
+			int compactVersion = windowDesc->gl.majorVersion * 100 + windowDesc->gl.minorVersion * 10;
+
+			SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, windowDesc->gl.majorVersion );
+			SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, windowDesc->gl.minorVersion );
+
+			if ( windowDesc->gl.profile == GLPROFILE_ES || compactVersion >= 320 )
+			{
+				int profile;
+				switch ( windowDesc->gl.profile )
+				{
+				default:
+				case GLPROFILE_COMPATIBILITY:
+					profile = SDL_GL_CONTEXT_PROFILE_COMPATIBILITY;
+					break;
+
+				case GLPROFILE_CORE:
+					profile = SDL_GL_CONTEXT_PROFILE_CORE;
+					break;
+
+				case GLPROFILE_ES:
+					profile = SDL_GL_CONTEXT_PROFILE_ES;
+					break;
+				}
+
+				SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, profile );
+			}
+		}
+
+		if ( windowDesc->gl.contextFlags & GLCONTEXT_DEBUG )
+		{
+			SDL_GL_SetAttribute( SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG );
+		}
+
+		if(r_stereo->integer)
+		{
+			glConfig->stereoEnabled = qtrue;
+			SDL_GL_SetAttribute(SDL_GL_STEREO, 1);
+		}
+		else
+		{
+			glConfig->stereoEnabled = qfalse;
+			SDL_GL_SetAttribute(SDL_GL_STEREO, 0);
+		}
+
+		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+		SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, !r_allowSoftwareGL->integer );
+
+		if( ( screen = SDL_CreateWindow( windowTitle, x, y,
+				glConfig->vidWidth, glConfig->vidHeight, flags ) ) == NULL )
+		{
+			Com_DPrintf( "SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
+			continue;
+		}
+
+#ifndef MACOS_X
+		SDL_SetWindowIcon( screen, icon );
+#endif
+
+		if( fullscreen )
+		{
+			SDL_DisplayMode mode;
+
+			switch( testColorBits )
+			{
+				case 16: mode.format = SDL_PIXELFORMAT_RGB565; break;
+				case 24: mode.format = SDL_PIXELFORMAT_RGB24;  break;
+				default: Com_DPrintf( "testColorBits is %d, can't fullscreen\n", testColorBits ); continue;
+			}
+
+			mode.w = glConfig->vidWidth;
+			mode.h = glConfig->vidHeight;
+			mode.refresh_rate = glConfig->displayFrequency = r_displayRefresh->integer;
+			mode.driverdata = NULL;
+
+			if( SDL_SetWindowDisplayMode( screen, &mode ) < 0 )
+			{
+				Com_DPrintf( "SDL_SetWindowDisplayMode failed: %s\n", SDL_GetError( ) );
+				continue;
+			}
+		}
+
+		if( ( opengl_context = SDL_GL_CreateContext( screen ) ) == NULL )
+		{
+			Com_Printf( "SDL_GL_CreateContext failed: %s\n", SDL_GetError( ) );
+			continue;
+		}
+
+		if ( SDL_GL_SetSwapInterval( r_swapInterval->integer ) == -1 )
+		{
+			Com_DPrintf( "SDL_GL_SetSwapInterval failed: %s\n", SDL_GetError() );
+		}
+
+		glConfig->colorBits = testColorBits;
+		glConfig->depthBits = testDepthBits;
+		glConfig->stencilBits = testStencilBits;
+
+		Com_Printf( "Using %d color bits, %d depth, %d stencil display.\n",
+				glConfig->colorBits, glConfig->depthBits, glConfig->stencilBits );
+		break;
+	}
+
+	if (opengl_context == NULL) {
+		return RSERR_UNKNOWN;
+	}
+
+	return RSERR_OK;
+}
+
 /*
 ===============
 GLimp_SetMode
 ===============
 */
-static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDesc, const char *windowTitle, int mode, qboolean fullscreen, qboolean noborder)
+static rserr_t GLimp_SetMode(
+	glconfig_t *glConfig,
+	const windowDesc_t *windowDesc,
+	const char *windowTitle,
+	int mode,
+	qboolean fullscreen,
+	qboolean noborder)
 {
-	int perChannelColorBits;
-	int colorBits, depthBits, stencilBits;
-	int samples;
-	int i = 0;
 	SDL_Surface *icon = NULL;
 	Uint32 flags = SDL_WINDOW_SHOWN;
 	SDL_DisplayMode desktopMode;
 	int display = 0;
 	int x = SDL_WINDOWPOS_UNDEFINED, y = SDL_WINDOWPOS_UNDEFINED;
 
-	if ( windowDesc->api == GRAPHICS_API_OPENGL )
+	switch (windowDesc->api)
 	{
-		flags |= SDL_WINDOW_OPENGL;
+		case GRAPHICS_API_OPENGL:
+			flags |= SDL_WINDOW_OPENGL;
+			break;
+		case GRAPHICS_API_VULKAN:
+			flags |= SDL_WINDOW_VULKAN;
+			break;
+		default:
+			break;
 	}
 
 	Com_Printf( "Initializing display\n");
@@ -357,7 +576,7 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 		}
 	}
 
-	if( display >= 0 && SDL_GetDesktopDisplayMode( display, &desktopMode ) == 0 )
+	if (display >= 0 && SDL_GetDesktopDisplayMode( display, &desktopMode ) == 0)
 	{
 		displayAspect = (float)desktopMode.w / (float)desktopMode.h;
 
@@ -386,10 +605,8 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 			glConfig->vidHeight = 480;
 			Com_Printf( "Cannot determine display resolution, assuming 640x480\n" );
 		}
-
-		//glConfig.windowAspect = (float)glConfig.vidWidth / (float)glConfig.vidHeight;
 	}
-	else if ( !R_GetModeInfo( &glConfig->vidWidth, &glConfig->vidHeight, /*&glConfig.windowAspect,*/ mode ) )
+	else if (!R_GetModeInfo(&glConfig->vidWidth, &glConfig->vidHeight, mode))
 	{
 		Com_Printf( " invalid mode\n" );
 		SDL_FreeSurface( icon );
@@ -432,224 +649,43 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 		glConfig->isFullscreen = qfalse;
 	}
 
-	colorBits = r_colorbits->integer;
-	if ((!colorBits) || (colorBits >= 32))
-		colorBits = 24;
-
-	if (!r_depthbits->integer)
-		depthBits = 24;
-	else
-		depthBits = r_depthbits->integer;
-
-	stencilBits = r_stencilbits->integer;
-	samples = r_ext_multisample->integer;
-
-	if ( windowDesc->api == GRAPHICS_API_OPENGL )
+	if (windowDesc->api == GRAPHICS_API_OPENGL)
 	{
-		for (i = 0; i < 16; i++)
+		const rserr_t rcode = GLimp_CreateOpenGLWindow(
+			windowTitle, x, y, windowDesc, flags, icon, glConfig);
+		if (rcode != RSERR_OK)
 		{
-			int testColorBits, testDepthBits, testStencilBits;
-
-			// 0 - default
-			// 1 - minus colorBits
-			// 2 - minus depthBits
-			// 3 - minus stencil
-			if ((i % 4) == 0 && i)
-			{
-				// one pass, reduce
-				switch (i / 4)
-				{
-					case 2 :
-						if (colorBits == 24)
-							colorBits = 16;
-						break;
-					case 1 :
-						if (depthBits == 24)
-							depthBits = 16;
-						else if (depthBits == 16)
-							depthBits = 8;
-					case 3 :
-						if (stencilBits == 24)
-							stencilBits = 16;
-						else if (stencilBits == 16)
-							stencilBits = 8;
-				}
-			}
-
-			testColorBits = colorBits;
-			testDepthBits = depthBits;
-			testStencilBits = stencilBits;
-
-			if ((i % 4) == 3)
-			{ // reduce colorBits
-				if (testColorBits == 24)
-					testColorBits = 16;
-			}
-
-			if ((i % 4) == 2)
-			{ // reduce depthBits
-				if (testDepthBits == 24)
-					testDepthBits = 16;
-				else if (testDepthBits == 16)
-					testDepthBits = 8;
-			}
-
-			if ((i % 4) == 1)
-			{ // reduce stencilBits
-				if (testStencilBits == 24)
-					testStencilBits = 16;
-				else if (testStencilBits == 16)
-					testStencilBits = 8;
-				else
-					testStencilBits = 0;
-			}
-
-			if (testColorBits == 24)
-				perChannelColorBits = 8;
-			else
-				perChannelColorBits = 4;
-
-			SDL_GL_SetAttribute( SDL_GL_RED_SIZE, perChannelColorBits );
-			SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, perChannelColorBits );
-			SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, perChannelColorBits );
-			SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, testDepthBits );
-			SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, testStencilBits );
-
-			SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, samples ? 1 : 0 );
-			SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, samples );
-
-			if ( windowDesc->gl.majorVersion )
-			{
-				int compactVersion = windowDesc->gl.majorVersion * 100 + windowDesc->gl.minorVersion * 10;
-
-				SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, windowDesc->gl.majorVersion );
-				SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, windowDesc->gl.minorVersion );
-
-				if ( windowDesc->gl.profile == GLPROFILE_ES || compactVersion >= 320 )
-				{
-					int profile;
-					switch ( windowDesc->gl.profile )
-					{
-					default:
-					case GLPROFILE_COMPATIBILITY:
-						profile = SDL_GL_CONTEXT_PROFILE_COMPATIBILITY;
-						break;
-
-					case GLPROFILE_CORE:
-						profile = SDL_GL_CONTEXT_PROFILE_CORE;
-						break;
-
-					case GLPROFILE_ES:
-						profile = SDL_GL_CONTEXT_PROFILE_ES;
-						break;
-					}
-
-					SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, profile );
-				}
-			}
-
-			if ( windowDesc->gl.contextFlags & GLCONTEXT_DEBUG )
-			{
-				SDL_GL_SetAttribute( SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG );
-			}
-
-			if(r_stereo->integer)
-			{
-				glConfig->stereoEnabled = qtrue;
-				SDL_GL_SetAttribute(SDL_GL_STEREO, 1);
-			}
-			else
-			{
-				glConfig->stereoEnabled = qfalse;
-				SDL_GL_SetAttribute(SDL_GL_STEREO, 0);
-			}
-
-			SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-			SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, !r_allowSoftwareGL->integer );
-
-			if( ( screen = SDL_CreateWindow( windowTitle, x, y,
-					glConfig->vidWidth, glConfig->vidHeight, flags ) ) == NULL )
-			{
-				Com_DPrintf( "SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
-				continue;
-			}
-
-#ifndef MACOS_X
-			SDL_SetWindowIcon( screen, icon );
-#endif
-
-			if( fullscreen )
-			{
-				SDL_DisplayMode mode;
-
-				switch( testColorBits )
-				{
-					case 16: mode.format = SDL_PIXELFORMAT_RGB565; break;
-					case 24: mode.format = SDL_PIXELFORMAT_RGB24;  break;
-					default: Com_DPrintf( "testColorBits is %d, can't fullscreen\n", testColorBits ); continue;
-				}
-
-				mode.w = glConfig->vidWidth;
-				mode.h = glConfig->vidHeight;
-				mode.refresh_rate = glConfig->displayFrequency = r_displayRefresh->integer;
-				mode.driverdata = NULL;
-
-				if( SDL_SetWindowDisplayMode( screen, &mode ) < 0 )
-				{
-					Com_DPrintf( "SDL_SetWindowDisplayMode failed: %s\n", SDL_GetError( ) );
-					continue;
-				}
-			}
-
-			if( ( opengl_context = SDL_GL_CreateContext( screen ) ) == NULL )
-			{
-				Com_Printf( "SDL_GL_CreateContext failed: %s\n", SDL_GetError( ) );
-				continue;
-			}
-
-			if ( SDL_GL_SetSwapInterval( r_swapInterval->integer ) == -1 )
-			{
-				Com_DPrintf( "SDL_GL_SetSwapInterval failed: %s\n", SDL_GetError() );
-			}
-
-			glConfig->colorBits = testColorBits;
-			glConfig->depthBits = testDepthBits;
-			glConfig->stencilBits = testStencilBits;
-
-			Com_Printf( "Using %d color bits, %d depth, %d stencil display.\n",
-					glConfig->colorBits, glConfig->depthBits, glConfig->stencilBits );
-			break;
-		}
-
-		if (opengl_context == NULL) {
 			SDL_FreeSurface(icon);
-			return RSERR_UNKNOWN;
+			return rcode;
 		}
 	}
 	else
 	{
 		// Just create a regular window
-		if( ( screen = SDL_CreateWindow( windowTitle, x, y,
-				glConfig->vidWidth, glConfig->vidHeight, flags ) ) == NULL )
+		screen = SDL_CreateWindow(
+			windowTitle, x, y, glConfig->vidWidth, glConfig->vidHeight, flags);
+		if (screen == NULL)
 		{
 			Com_DPrintf( "SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
 		}
 		else
 		{
 #ifndef MACOS_X
-			SDL_SetWindowIcon( screen, icon );
+			SDL_SetWindowIcon(screen, icon);
 #endif
-			if( fullscreen )
+			if (fullscreen)
 			{
-				if( SDL_SetWindowDisplayMode( screen, NULL ) < 0 )
+				if (SDL_SetWindowDisplayMode(screen, NULL) < 0)
 				{
-					Com_DPrintf( "SDL_SetWindowDisplayMode failed: %s\n", SDL_GetError( ) );
+					Com_DPrintf(
+						"SDL_SetWindowDisplayMode failed: %s\n",
+						SDL_GetError());
 				}
 			}
 		}
 	}
 
-	SDL_FreeSurface( icon );
+	SDL_FreeSurface(icon);
 
 	if (!GLimp_DetectAvailableModes())
 	{
@@ -664,7 +700,12 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 GLimp_StartDriverAndSetMode
 ===============
 */
-static qboolean GLimp_StartDriverAndSetMode(glconfig_t *glConfig, const windowDesc_t *windowDesc, int mode, qboolean fullscreen, qboolean noborder)
+static qboolean GLimp_StartDriverAndSetMode(
+	glconfig_t *glConfig,
+	const windowDesc_t *windowDesc,
+	int mode,
+	qboolean fullscreen,
+	qboolean noborder)
 {
 	rserr_t err;
 
