@@ -29,6 +29,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <array>
+#include <set>
+
 #include "../rd-common/tr_common.h"
 #include "tr_WorldEffects.h"
 #include "qcommon/MiniHeap.h"
@@ -370,6 +372,11 @@ static int PickPhysicalDeviceIndex(
 	return bestDeviceIndex;
 }
 
+static void InitializeDeviceQueue(VkDevice device, GpuQueue& queue)
+{
+	vkGetDeviceQueue(device, queue.queueFamily, 0, &queue.queue);
+}
+
 /*
 ** InitVulkan
 **
@@ -546,6 +553,13 @@ static void InitVulkan( void )
 		Com_Printf(
 			"Best physical device: %s\n", gpuContext.physicalDeviceName);
 
+		if (!ri.VK_CreateWindowSurface(
+				gpuContext.instance,
+				(void **)&gpuContext.windowSurface))
+		{
+			Com_Error(ERR_FATAL, "Failed to create window surface");
+		}
+
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(
 			gpuContext.physicalDevice, &queueFamilyCount, nullptr);
@@ -565,6 +579,13 @@ static void InitVulkan( void )
 		{
 			const auto& properties = queueFamilyProperties[i];
 
+			VkBool32 presentSupport = VK_FALSE;
+			vkGetPhysicalDeviceSurfaceSupportKHR(
+				gpuContext.physicalDevice,
+				i,
+				gpuContext.windowSurface,
+				&presentSupport);
+
 			char queueCaps[64] = {};
 			if (properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				Q_strcat(queueCaps, sizeof(queueCaps), "graphics ");
@@ -574,6 +595,9 @@ static void InitVulkan( void )
 
 			if (properties.queueFlags & VK_QUEUE_TRANSFER_BIT)
 				Q_strcat(queueCaps, sizeof(queueCaps), "transfer ");
+
+			if (presentSupport)
+				Q_strcat(queueCaps, sizeof(queueCaps), "present ");
 
 			Com_Printf(
 				"...%d: %d queues, supports %s\n",
@@ -585,6 +609,14 @@ static void InitVulkan( void )
 		for (int i = 0; i < queueFamilyCount; ++i)
 		{
 			const auto& properties = queueFamilyProperties[i];
+
+			VkBool32 presentSupport = VK_FALSE;
+			vkGetPhysicalDeviceSurfaceSupportKHR(
+				gpuContext.physicalDevice,
+				i,
+				gpuContext.windowSurface,
+				&presentSupport);
+
 			if (properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			{
 				gpuContext.graphicsQueue.queueFamily = i;
@@ -600,35 +632,38 @@ static void InitVulkan( void )
 				gpuContext.transferQueue.queueFamily = i;
 			}
 
+			if (presentSupport)
+			{
+				gpuContext.presentQueue.queueFamily = i;
+			}
+
 			if (gpuContext.graphicsQueue.queueFamily != -1 &&
-			    gpuContext.computeQueue.queueFamily != -1 &&
-			    gpuContext.transferQueue.queueFamily != -1)
+				gpuContext.computeQueue.queueFamily != -1 &&
+				gpuContext.transferQueue.queueFamily != -1 &&
+				gpuContext.presentQueue.queueFamily != 1)
 			{
 				break;
 			}
 		}
 
-		std::map<int, int> queuesPerFamily;
-		++queuesPerFamily[gpuContext.graphicsQueue.queueFamily];
-		++queuesPerFamily[gpuContext.computeQueue.queueFamily];
-		++queuesPerFamily[gpuContext.transferQueue.queueFamily];
-
-		std::map<int, std::vector<float>> prioritiesPerFamily;
-		prioritiesPerFamily[gpuContext.graphicsQueue.queueFamily].push_back(1.0f);
-		prioritiesPerFamily[gpuContext.computeQueue.queueFamily].push_back(1.0f);
-		prioritiesPerFamily[gpuContext.transferQueue.queueFamily].push_back(1.0f);
+		const std::set<int> queueFamilies = {
+			gpuContext.graphicsQueue.queueFamily,
+			gpuContext.computeQueue.queueFamily,
+			gpuContext.transferQueue.queueFamily,
+			gpuContext.presentQueue.queueFamily
+		};
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-		queueCreateInfos.reserve(queuesPerFamily.size());
+		queueCreateInfos.reserve(queueFamilies.size());
 
-		for (const auto& it : queuesPerFamily)
+		const float queuePriority = 1.0f;
+		for (const auto queueFamilyIndex : queueFamilies)
 		{
 			VkDeviceQueueCreateInfo queueCreateInfo = {};
 			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueCreateInfo.queueFamilyIndex = it.first;
-			queueCreateInfo.queueCount = it.second;
-			queueCreateInfo.pQueuePriorities =
-				prioritiesPerFamily[it.first].data();
+			queueCreateInfo.queueFamilyIndex = queueFamilyIndex;
+			queueCreateInfo.queueCount = 1;
+			queueCreateInfo.pQueuePriorities = &queuePriority;
 
 			queueCreateInfos.emplace_back(queueCreateInfo);
 		}
@@ -682,18 +717,20 @@ static void InitVulkan( void )
 			Com_Error(ERR_FATAL, "Failed to create logical device");
 		}
 
-		if (!ri.VK_CreateWindowSurface(
-				gpuContext.instance,
-				(void **)&gpuContext.windowSurface))
-		{
-			Com_Error(ERR_FATAL, "Failed to create window surface");
-		}
-
 		Com_Printf("Vulkan initialized\n");
 
+		InitializeDeviceQueue(
+			gpuContext.logicalDevice, gpuContext.graphicsQueue);
+		InitializeDeviceQueue(
+			gpuContext.logicalDevice, gpuContext.computeQueue);
+		InitializeDeviceQueue(
+			gpuContext.logicalDevice, gpuContext.transferQueue);
+		InitializeDeviceQueue(
+			gpuContext.logicalDevice, gpuContext.presentQueue);
+
+		vkDestroyDevice(gpuContext.logicalDevice, nullptr); 
 		vkDestroySurfaceKHR(
 			gpuContext.instance, gpuContext.windowSurface, nullptr);
-		vkDestroyDevice(gpuContext.logicalDevice, nullptr); 
 		vkDestroyInstance(gpuContext.instance, nullptr);
 #if 0
 		Com_Printf( "GL_RENDERER: %s\n", (char *)qglGetString (GL_RENDERER) );
