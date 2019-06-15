@@ -28,16 +28,30 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <vulkan/vulkan.h>
 
 #include <algorithm>
+#include <array>
 #include "../rd-common/tr_common.h"
 #include "tr_WorldEffects.h"
 #include "qcommon/MiniHeap.h"
 #include "ghoul2/g2_local.h"
+
+struct GpuQueue
+{
+	int queueFamily = -1;
+	VkQueue queue;
+};
 
 struct GpuContext
 {
 	VkInstance instance;
 	VkPhysicalDevice physicalDevice;
 	char physicalDeviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
+	VkDevice logicalDevice;
+	VkSurfaceKHR windowSurface;
+
+	GpuQueue graphicsQueue;
+	GpuQueue computeQueue;
+	GpuQueue transferQueue;
+	GpuQueue presentQueue;
 } gpuContext;
 
 glconfig_t	glConfig;
@@ -403,9 +417,14 @@ static void InitVulkan( void )
 			&instanceLayerCount, instanceLayers.data());
 
 		Com_Printf("%d instance layers available\n", instanceLayerCount);
-		for (const auto& layer : instanceLayers)
+		if (instanceLayerCount > 0)
 		{
-			Com_Printf("...%s\n", layer.layerName);
+			Com_Printf("...");
+			for (const auto& layer : instanceLayers)
+			{
+				Com_Printf("%s ", layer.layerName);
+			}
+			Com_Printf("\n");
 		}
 
 		uint32_t extensionCount = 0;
@@ -416,10 +435,15 @@ static void InitVulkan( void )
 		vkEnumerateInstanceExtensionProperties(
 			nullptr, &extensionCount, extensions.data());
 
-		Com_Printf("%d extensions available\n", extensionCount);
-		for (const auto& extension : extensions)
+		Com_Printf("%d instance extensions available\n", extensionCount);
+		if (extensionCount > 0)
 		{
-			Com_Printf("...%s\n", extension.extensionName);
+			Com_Printf("...");
+			for (const auto& extension : extensions)
+			{
+				Com_Printf("%s ", extension.extensionName);
+			}
+			Com_Printf("\n");
 		}
 
 		uint32_t requiredExtensionCount = 0;
@@ -429,7 +453,8 @@ static void InitVulkan( void )
 		ri.VK_GetInstanceExtensions(
 			&requiredExtensionCount, requiredExtensions.data());
 
-		Com_Printf("%d extensions will be used\n", requiredExtensionCount);
+		Com_Printf(
+			"%d instance extensions will be used\n", requiredExtensionCount);
 		for (const auto& extension : requiredExtensions)
 		{
 			Com_Printf("...%s\n", extension);
@@ -453,8 +478,7 @@ static void InitVulkan( void )
 			&instanceCreateInfo, nullptr, &gpuContext.instance);
 		if (result != VK_SUCCESS)
 		{
-			Com_Printf(S_COLOR_RED "Failed to create Vulkan instance\n");
-			return;
+			Com_Error(ERR_FATAL, "Failed to create Vulkan instance\n");
 		}
 
 		uint32_t physicalDeviceCount = 0;
@@ -497,8 +521,8 @@ static void InitVulkan( void )
 
 			Com_Printf(
 				"...%s '%s', "
-				"version id %d, "
-				"vendor id %d, "
+				"version id 0x%08x, "
+				"vendor id 0x%08x, "
 				"driver version %d, "
 				"max supported Vulkan version %d.%d.%d\n",
 				deviceType,
@@ -537,9 +561,10 @@ static void InitVulkan( void )
 			"%d queue families available for '%s'\n",
 			queueFamilyCount,
 			gpuContext.physicalDeviceName);
-		int queueFamilyIndex = 0;
-		for (const auto& properties : queueFamilyProperties)
+		for (int i = 0; i < queueFamilyCount; ++i)
 		{
+			const auto& properties = queueFamilyProperties[i];
+
 			char queueCaps[64] = {};
 			if (properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				Q_strcat(queueCaps, sizeof(queueCaps), "graphics ");
@@ -552,13 +577,124 @@ static void InitVulkan( void )
 
 			Com_Printf(
 				"...%d: %d queues, supports %s\n",
-				queueFamilyIndex,
+				i,
 				properties.queueCount,
-				supportedQueues);
-
-			++queueFamilyIndex;
+				queueCaps);
 		}
 
+		for (int i = 0; i < queueFamilyCount; ++i)
+		{
+			const auto& properties = queueFamilyProperties[i];
+			if (properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			{
+				gpuContext.graphicsQueue.queueFamily = i;
+			}
+
+			if (properties.queueFlags & VK_QUEUE_COMPUTE_BIT)
+			{
+				gpuContext.computeQueue.queueFamily = i;
+			}
+
+			if (properties.queueFlags & VK_QUEUE_TRANSFER_BIT)
+			{
+				gpuContext.transferQueue.queueFamily = i;
+			}
+
+			if (gpuContext.graphicsQueue.queueFamily != -1 &&
+			    gpuContext.computeQueue.queueFamily != -1 &&
+			    gpuContext.transferQueue.queueFamily != -1)
+			{
+				break;
+			}
+		}
+
+		std::map<int, int> queuesPerFamily;
+		++queuesPerFamily[gpuContext.graphicsQueue.queueFamily];
+		++queuesPerFamily[gpuContext.computeQueue.queueFamily];
+		++queuesPerFamily[gpuContext.transferQueue.queueFamily];
+
+		std::map<int, std::vector<float>> prioritiesPerFamily;
+		prioritiesPerFamily[gpuContext.graphicsQueue.queueFamily].push_back(1.0f);
+		prioritiesPerFamily[gpuContext.computeQueue.queueFamily].push_back(1.0f);
+		prioritiesPerFamily[gpuContext.transferQueue.queueFamily].push_back(1.0f);
+
+		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+		queueCreateInfos.reserve(queuesPerFamily.size());
+
+		for (const auto& it : queuesPerFamily)
+		{
+			VkDeviceQueueCreateInfo queueCreateInfo = {};
+			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queueCreateInfo.queueFamilyIndex = it.first;
+			queueCreateInfo.queueCount = it.second;
+			queueCreateInfo.pQueuePriorities =
+				prioritiesPerFamily[it.first].data();
+
+			queueCreateInfos.emplace_back(queueCreateInfo);
+		}
+
+		uint32_t deviceExtensionCount = 0;
+		vkEnumerateDeviceExtensionProperties(
+			gpuContext.physicalDevice,
+			nullptr,
+			&deviceExtensionCount,
+			nullptr);
+
+		std::vector<VkExtensionProperties> deviceExtensions(
+			deviceExtensionCount);
+		vkEnumerateDeviceExtensionProperties(
+			gpuContext.physicalDevice,
+			nullptr,
+			&deviceExtensionCount,
+			deviceExtensions.data());
+
+		Com_Printf("%d device extensions available\n", deviceExtensionCount);
+		if (deviceExtensionCount > 0)
+		{
+			Com_Printf("...");
+			for (const auto& extension : deviceExtensions)
+			{
+				Com_Printf("%s ", extension.extensionName);
+			}
+			Com_Printf("\n");
+		}
+
+		const VkPhysicalDeviceFeatures enableDeviceFeatures = {};
+		const std::array<char *, 1> requiredDeviceExtensions = {
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		};
+		VkDeviceCreateInfo deviceCreateInfo = {};
+		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+		deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.size();
+		deviceCreateInfo.pEnabledFeatures = &enableDeviceFeatures;
+		deviceCreateInfo.ppEnabledExtensionNames =
+			requiredDeviceExtensions.data();
+		deviceCreateInfo.enabledExtensionCount =
+			requiredDeviceExtensions.size();
+
+		if (vkCreateDevice(
+				gpuContext.physicalDevice,
+				&deviceCreateInfo,
+				nullptr,
+				&gpuContext.logicalDevice) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to create logical device");
+		}
+
+		if (!ri.VK_CreateWindowSurface(
+				gpuContext.instance,
+				(void **)&gpuContext.windowSurface))
+		{
+			Com_Error(ERR_FATAL, "Failed to create window surface");
+		}
+
+		Com_Printf("Vulkan initialized\n");
+
+		vkDestroySurfaceKHR(
+			gpuContext.instance, gpuContext.windowSurface, nullptr);
+		vkDestroyDevice(gpuContext.logicalDevice, nullptr); 
+		vkDestroyInstance(gpuContext.instance, nullptr);
 #if 0
 		Com_Printf( "GL_RENDERER: %s\n", (char *)qglGetString (GL_RENDERER) );
 
