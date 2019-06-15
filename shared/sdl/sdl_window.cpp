@@ -20,6 +20,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <SDL.h>
+#include <SDL_vulkan.h>
 #include <SDL_syswm.h>
 #include "qcommon/qcommon.h"
 #include "rd-common/tr_types.h"
@@ -925,4 +926,22 @@ void *WIN_GL_GetProcAddress( const char *proc )
 qboolean WIN_GL_ExtensionSupported( const char *extension )
 {
 	return SDL_GL_ExtensionSupported( extension ) == SDL_TRUE ? qtrue : qfalse;
+}
+
+qboolean WIN_VK_GetInstanceExtensions(
+	unsigned int *extensionCount,
+	const char *extensions[])
+{
+	return static_cast<qboolean>(SDL_Vulkan_GetInstanceExtensions(
+		screen,
+		extensionCount,
+		extensions));
+}
+
+qboolean WIN_VK_CreateWindowSurface(void *instance, void **surface)
+{
+	return static_cast<qboolean>(SDL_Vulkan_CreateSurface(
+		screen,
+		reinterpret_cast<VkInstance>(instance),
+		reinterpret_cast<VkSurfaceKHR *>(surface)));
 }

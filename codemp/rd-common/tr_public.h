@@ -333,6 +333,10 @@ typedef struct refimport_s {
 	void *			(*GL_GetProcAddress)				( const char *name );
 	qboolean		(*GL_ExtensionSupported)			( const char *extension );
 
+	// Vulkan-specific
+	qboolean		(*VK_GetInstanceExtensions)			( unsigned int *extensionCount, const char *extensions[] );
+	qboolean		(*VK_CreateWindowSurface)           ( void *instance, void **surface );
+
 	// gpvCachedMapDiskImage
 	void *			(*CM_GetCachedMapDiskImage)			( void );
 	void			(*CM_SetCachedMapDiskImage)			( void *ptr );

@@ -201,5 +201,7 @@ void		WIN_SetGamma( glconfig_t *glConfig, byte red[256], byte green[256], byte b
 void		WIN_Shutdown( void );
 void *		WIN_GL_GetProcAddress( const char *proc );
 qboolean	WIN_GL_ExtensionSupported( const char *extension );
+qboolean	WIN_VK_GetInstanceExtensions( unsigned int *extensionCount, const char *extensions[] );
+qboolean	WIN_VK_CreateWindowSurface( void *instance, void **surface ); 
 
 uint8_t ConvertUTF32ToExpectedCharset( uint32_t utf32 );
