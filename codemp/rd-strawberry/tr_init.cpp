@@ -44,26 +44,33 @@ struct GpuQueue
 	VkQueue queue;
 };
 
+struct GpuSwapchain
+{
+	VkSwapchainKHR swapchain;
+	VkFormat surfaceFormat;
+
+	uint32_t imageCount;
+	std::vector<VkImage> images;
+	std::vector<VkImageView> imageViews;
+};
+
 struct GpuContext
 {
 	VkInstance instance;
+	VkDebugUtilsMessengerEXT debugUtilsMessenger;
+
 	VkPhysicalDevice physicalDevice;
 	char physicalDeviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
 	VkDevice device;
 	VkSurfaceKHR windowSurface;
 
-	VkSwapchainKHR swapchain;
+	GpuSwapchain swapchain;
 
 	GpuQueue graphicsQueue;
 	GpuQueue computeQueue;
 	GpuQueue transferQueue;
 	GpuQueue presentQueue;
 } gpuContext;
-
-struct GpuSwapChain
-{
-
-};
 
 glconfig_t	glConfig;
 glconfigExt_t glConfigExt;
@@ -1077,7 +1084,6 @@ static void InitVulkan( void )
 		//
 		// debug utils
 		//
-		VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 		if (r_debugApi->integer)
 		{
 			auto vkCreateDebugUtilsMessengerEXT =
@@ -1088,7 +1094,7 @@ static void InitVulkan( void )
 					gpuContext.instance,
 					&debugUtilsMessageCreateInfo,
 					nullptr,
-					&debugUtilsMessenger) != VK_SUCCESS)
+					&gpuContext.debugUtilsMessenger) != VK_SUCCESS)
 			{
 				Com_Printf(
 					S_COLOR_YELLOW
@@ -1369,6 +1375,7 @@ static void InitVulkan( void )
 				surfaceCapabilities.maxImageCount);
 		}
 
+
 		uint32_t surfaceFormatCount = 0;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(
 			gpuContext.physicalDevice,
@@ -1462,29 +1469,57 @@ static void InitVulkan( void )
 				gpuContext.device,
 				&swapchainCreateInfo,
 				nullptr,
-				&gpuContext.swapchain) != VK_SUCCESS)
+				&gpuContext.swapchain.swapchain) != VK_SUCCESS)
 		{
 			Com_Error(ERR_FATAL, "Failed to create swapchain");
 		}
 
-		//
-		// shutdown
-		//
-		vkDestroySwapchainKHR(
-			gpuContext.device, gpuContext.swapchain, nullptr);
-		vkDestroyDevice(gpuContext.device, nullptr); 
+		gpuContext.swapchain.surfaceFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
-		if (debugUtilsMessenger != VK_NULL_HANDLE)
+		vkGetSwapchainImagesKHR(
+			gpuContext.device,
+			gpuContext.swapchain.swapchain,
+			&gpuContext.swapchain.imageCount,
+			nullptr);
+		gpuContext.swapchain.images.resize(gpuContext.swapchain.imageCount);
+
+		vkGetSwapchainImagesKHR(
+			gpuContext.device,
+			gpuContext.swapchain.swapchain,
+			&gpuContext.swapchain.imageCount,
+			gpuContext.swapchain.images.data());
+
+		gpuContext.swapchain.imageViews.resize(
+			gpuContext.swapchain.imageCount);
+
+		for (uint32_t i = 0; i < gpuContext.swapchain.imageCount; ++i)
 		{
-			auto vkDestroyDebugUtilsMessengerEXT =
-				(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-					gpuContext.instance, "vkDestroyDebugUtilsMessengerEXT");
-			vkDestroyDebugUtilsMessengerEXT(
-				gpuContext.instance, debugUtilsMessenger, nullptr);
+			VkImageViewCreateInfo imageViewCreateInfo = {};
+			imageViewCreateInfo.sType =
+				VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			imageViewCreateInfo.image = gpuContext.swapchain.images[i];
+			imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			imageViewCreateInfo.format = gpuContext.swapchain.surfaceFormat;
+			imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_R;
+			imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_G;
+			imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_B;
+			imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_A;
+			imageViewCreateInfo.subresourceRange.aspectMask =
+				VK_IMAGE_ASPECT_COLOR_BIT;
+			imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+			imageViewCreateInfo.subresourceRange.levelCount = 1;
+			imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+			imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+			if (vkCreateImageView(
+					gpuContext.device,
+					&imageViewCreateInfo,
+					nullptr,
+					&gpuContext.swapchain.imageViews[i]) != VK_SUCCESS)
+			{
+				Com_Error(ERR_FATAL, "Failed to create image view");
+			}
 		}
-		vkDestroySurfaceKHR(
-			gpuContext.instance, gpuContext.windowSurface, nullptr);
-		vkDestroyInstance(gpuContext.instance, nullptr);
 #if 0
 		Com_Printf( "GL_RENDERER: %s\n", (char *)qglGetString (GL_RENDERER) );
 
@@ -2507,6 +2542,30 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 
 	for ( size_t i = 0; i < numCommands; i++ )
 		ri.Cmd_RemoveCommand( commands[i].cmd );
+
+	//
+	// shutdown
+	//
+	for (const auto imageView : gpuContext.swapchain.imageViews)
+	{
+		vkDestroyImageView(gpuContext.device, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(
+		gpuContext.device, gpuContext.swapchain.swapchain, nullptr);
+	vkDestroyDevice(gpuContext.device, nullptr); 
+
+	if (gpuContext.debugUtilsMessenger != VK_NULL_HANDLE)
+	{
+		auto vkDestroyDebugUtilsMessengerEXT =
+			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+				gpuContext.instance, "vkDestroyDebugUtilsMessengerEXT");
+		vkDestroyDebugUtilsMessengerEXT(
+			gpuContext.instance, gpuContext.debugUtilsMessenger, nullptr);
+	}
+	vkDestroySurfaceKHR(
+		gpuContext.instance, gpuContext.windowSurface, nullptr);
+	vkDestroyInstance(gpuContext.instance, nullptr);
 
 	if ( r_DynamicGlow && r_DynamicGlow->integer )
 	{
