@@ -248,6 +248,8 @@ cvar_t *se_language;
 cvar_t *r_aviMotionJpegQuality;
 cvar_t *r_screenshotJpegQuality;
 
+cvar_t *r_debugApi;
+
 PFNGLACTIVETEXTUREARBPROC qglActiveTextureARB;
 PFNGLCLIENTACTIVETEXTUREARBPROC qglClientActiveTextureARB;
 PFNGLMULTITEXCOORD2FARBPROC qglMultiTexCoord2fARB;
@@ -832,8 +834,56 @@ static const char *VkPresentModeToString(const VkPresentModeKHR presentMode)
 			return "FIFO";
 		case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
 			return "Relaxed";
+		default:
+			return "Unknown";
 	}
 }
+
+static VkBool32 VKAPI_PTR VulkanDebugMessageCallback(
+	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+	VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+	const VkDebugUtilsMessengerCallbackDataEXT *callbackData,
+	void *userData)
+{
+	const char *severity = "UnknownSeverity";
+	switch (messageSeverity)
+	{
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+			severity = "Verbose";
+			break;
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+			severity = "Info";
+			break;
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+			severity = "Warning";
+			break;
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+			severity = "Error";
+			break;
+		default:
+			break;
+	}
+
+	char reason[64] = {};
+	if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+		Q_strcat(reason, sizeof(reason), "[General]");
+
+	if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+		Q_strcat(reason, sizeof(reason), "[Validation]");
+
+	if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+		Q_strcat(reason, sizeof(reason), "[Performance]");
+
+	Com_Printf(
+		"[VULKAN DEBUG][%s]%s[%s]: %s\n",
+		severity,
+		reason,
+		callbackData->pMessageIdName,
+		callbackData->pMessage);
+
+	return VK_FALSE;
+}
+
 
 /*
 ** InitVulkan
@@ -923,9 +973,19 @@ static void InitVulkan( void )
 		uint32_t requiredExtensionCount = 0;
 		ri.VK_GetInstanceExtensions(&requiredExtensionCount, nullptr);
 
+		std::vector<const char *> requiredLayers;
+		if (r_debugApi->integer)
+		{
+			requiredLayers.push_back("VK_LAYER_KHRONOS_validation");
+		}
+
 		std::vector<const char *> requiredExtensions(requiredExtensionCount);
 		ri.VK_GetInstanceExtensions(
 			&requiredExtensionCount, requiredExtensions.data());
+		if (r_debugApi->integer)
+		{
+			requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		}
 
 		Com_Printf(
 			"%d instance extensions will be used\n", requiredExtensionCount);
@@ -942,17 +1002,60 @@ static void InitVulkan( void )
 		applicationInfo.pEngineName = "OpenJK";
 		applicationInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 
+		VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessageCreateInfo = {};
+		debugUtilsMessageCreateInfo.sType =
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		debugUtilsMessageCreateInfo.messageSeverity =
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		debugUtilsMessageCreateInfo.messageType =
+			VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		debugUtilsMessageCreateInfo.pfnUserCallback =
+			VulkanDebugMessageCallback;
+
 		VkInstanceCreateInfo instanceCreateInfo = {};
 		instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		instanceCreateInfo.pApplicationInfo = &applicationInfo;
 		instanceCreateInfo.enabledExtensionCount = requiredExtensions.size();
 		instanceCreateInfo.ppEnabledExtensionNames = requiredExtensions.data();
+		instanceCreateInfo.enabledLayerCount = requiredLayers.size();
+		instanceCreateInfo.ppEnabledLayerNames = requiredLayers.data();
+
+		if (r_debugApi->integer)
+		{
+			instanceCreateInfo.pNext = &debugUtilsMessageCreateInfo;
+		}
 
 		VkResult result = vkCreateInstance(
 			&instanceCreateInfo, nullptr, &gpuContext.instance);
 		if (result != VK_SUCCESS)
 		{
 			Com_Error(ERR_FATAL, "Failed to create Vulkan instance\n");
+		}
+
+		//
+		// debug utils
+		//
+		VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
+		if (r_debugApi->integer)
+		{
+			auto vkCreateDebugUtilsMessengerEXT =
+				(PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+					gpuContext.instance, "vkCreateDebugUtilsMessengerEXT");
+
+			if (vkCreateDebugUtilsMessengerEXT(
+					gpuContext.instance,
+					&debugUtilsMessageCreateInfo,
+					nullptr,
+					&debugUtilsMessenger) != VK_SUCCESS)
+			{
+				Com_Printf(
+					S_COLOR_YELLOW
+					"Unable to initialise Vulkan debug utils\n");
+			}
 		}
 
 		//
@@ -1276,6 +1379,15 @@ static void InitVulkan( void )
 		// shutdown
 		//
 		vkDestroyDevice(gpuContext.logicalDevice, nullptr); 
+
+		if (debugUtilsMessenger != VK_NULL_HANDLE)
+		{
+			auto vkDestroyDebugUtilsMessengerEXT =
+				(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+					gpuContext.instance, "vkDestroyDebugUtilsMessengerEXT");
+			vkDestroyDebugUtilsMessengerEXT(
+				gpuContext.instance, debugUtilsMessenger, nullptr);
+		}
 		vkDestroySurfaceKHR(
 			gpuContext.instance, gpuContext.windowSurface, nullptr);
 		vkDestroyInstance(gpuContext.instance, nullptr);
@@ -2186,6 +2298,8 @@ Ghoul2 Insert End
 
 	ri.Cvar_CheckRange( r_aviMotionJpegQuality, 10, 100, qtrue );
 	ri.Cvar_CheckRange( r_screenshotJpegQuality, 10, 100, qtrue );
+
+	r_debugApi							= ri.Cvar_Get( "r_debugApi",						"0",						CVAR_LATCH, "Enable Vulkan validation layer" );
 
 	for ( size_t i = 0; i < numCommands; i++ )
 		ri.Cmd_AddCommand( commands[i].cmd, commands[i].func, "" );

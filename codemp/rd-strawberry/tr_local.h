@@ -1238,6 +1238,8 @@ extern	cvar_t	*r_noServerGhoul2;
 /*
 Ghoul2 Insert End
 */
+
+extern	cvar_t	*r_debugApi;
 //====================================================================
 
 void R_SwapBuffers( int );
