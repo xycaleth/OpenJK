@@ -40,7 +40,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 struct GpuQueue
 {
-	int queueFamily = -1;
+	uint32_t queueFamily = -1;
 	VkQueue queue;
 };
 
@@ -49,8 +49,10 @@ struct GpuContext
 	VkInstance instance;
 	VkPhysicalDevice physicalDevice;
 	char physicalDeviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
-	VkDevice logicalDevice;
+	VkDevice device;
 	VkSurfaceKHR windowSurface;
+
+	VkSwapchainKHR swapchain;
 
 	GpuQueue graphicsQueue;
 	GpuQueue computeQueue;
@@ -845,20 +847,20 @@ static VkBool32 VKAPI_PTR VulkanDebugMessageCallback(
 	const VkDebugUtilsMessengerCallbackDataEXT *callbackData,
 	void *userData)
 {
-	const char *severity = "UnknownSeverity";
+	const char *color = "";
 	switch (messageSeverity)
 	{
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-			severity = "Verbose";
+			color = S_COLOR_CYAN;
 			break;
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-			severity = "Info";
+			color = S_COLOR_WHITE;
 			break;
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-			severity = "Warning";
+			color = S_COLOR_YELLOW;
 			break;
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-			severity = "Error";
+			color = S_COLOR_RED;
 			break;
 		default:
 			break;
@@ -875,8 +877,8 @@ static VkBool32 VKAPI_PTR VulkanDebugMessageCallback(
 		Q_strcat(reason, sizeof(reason), "[Performance]");
 
 	Com_Printf(
-		"[VULKAN DEBUG][%s]%s[%s]: %s\n",
-		severity,
+		"%s[VULKAN DEBUG]%s[%s]: %s\n",
+		color,
 		reason,
 		callbackData->pMessageIdName,
 		callbackData->pMessage);
@@ -884,6 +886,42 @@ static VkBool32 VKAPI_PTR VulkanDebugMessageCallback(
 	return VK_FALSE;
 }
 
+static VkPresentModeKHR PickBestPresentMode(
+	const std::vector<VkPresentModeKHR>& presentModes)
+{
+	VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
+	int bestScore = -1;
+	for (auto mode : presentModes)
+	{
+		int score = 0;
+		switch (mode)
+		{
+			case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+				score = 4;
+				break;
+			case VK_PRESENT_MODE_FIFO_KHR:
+				score = 3;
+				break;
+			case VK_PRESENT_MODE_MAILBOX_KHR:
+				score = 2;
+				break;
+			case VK_PRESENT_MODE_IMMEDIATE_KHR:
+				score = 1;
+				break;
+			default:
+				break;
+
+		}
+
+		if (bestScore == -1 || score > bestScore)
+		{
+			bestScore = score;
+			bestMode = mode;
+		}
+	}
+
+	return bestMode;
+}
 
 /*
 ** InitVulkan
@@ -1261,7 +1299,7 @@ static void InitVulkan( void )
 		//
 		// logical device
 		//
-		const std::set<int> queueFamilies = {
+		const std::set<uint32_t> queueFamilies = {
 			gpuContext.graphicsQueue.queueFamily,
 			gpuContext.computeQueue.queueFamily,
 			gpuContext.transferQueue.queueFamily,
@@ -1298,19 +1336,19 @@ static void InitVulkan( void )
 				gpuContext.physicalDevice,
 				&deviceCreateInfo,
 				nullptr,
-				&gpuContext.logicalDevice) != VK_SUCCESS)
+				&gpuContext.device) != VK_SUCCESS)
 		{
 			Com_Error(ERR_FATAL, "Failed to create logical device");
 		}
 
 		InitializeDeviceQueue(
-			gpuContext.logicalDevice, gpuContext.graphicsQueue);
+			gpuContext.device, gpuContext.graphicsQueue);
 		InitializeDeviceQueue(
-			gpuContext.logicalDevice, gpuContext.computeQueue);
+			gpuContext.device, gpuContext.computeQueue);
 		InitializeDeviceQueue(
-			gpuContext.logicalDevice, gpuContext.transferQueue);
+			gpuContext.device, gpuContext.transferQueue);
 		InitializeDeviceQueue(
-			gpuContext.logicalDevice, gpuContext.presentQueue);
+			gpuContext.device, gpuContext.presentQueue);
 
 		Com_Printf("Vulkan context initialized\n");
 
@@ -1322,6 +1360,14 @@ static void InitVulkan( void )
 			gpuContext.physicalDevice,
 			gpuContext.windowSurface,
 			&surfaceCapabilities);
+
+		uint32_t swapChainImageCount = surfaceCapabilities.minImageCount + 1;
+		if (surfaceCapabilities.maxImageCount > 0)
+		{
+			swapChainImageCount = std::max(
+				swapChainImageCount,
+				surfaceCapabilities.maxImageCount);
+		}
 
 		uint32_t surfaceFormatCount = 0;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(
@@ -1375,10 +1421,58 @@ static void InitVulkan( void )
 			Com_Printf("\n");
 		}
 
+		VkSwapchainCreateInfoKHR swapchainCreateInfo = {};
+		swapchainCreateInfo.sType =
+			VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		swapchainCreateInfo.surface = gpuContext.windowSurface;
+		swapchainCreateInfo.minImageCount = swapChainImageCount;
+		swapchainCreateInfo.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+		swapchainCreateInfo.imageColorSpace =
+			VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		swapchainCreateInfo.imageArrayLayers = 1;
+		swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchainCreateInfo.imageExtent = surfaceCapabilities.currentExtent;
+
+		const std::array<uint32_t, 2> swapchainQueueFamilyIndices = {
+			gpuContext.graphicsQueue.queueFamily,
+			gpuContext.presentQueue.queueFamily
+		};
+
+		if (gpuContext.graphicsQueue.queueFamily ==
+			gpuContext.presentQueue.queueFamily)
+		{
+			swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
+		else
+		{
+			swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			swapchainCreateInfo.queueFamilyIndexCount =
+				swapchainQueueFamilyIndices.size();
+			swapchainCreateInfo.pQueueFamilyIndices =
+				swapchainQueueFamilyIndices.data();
+		}
+		swapchainCreateInfo.preTransform =
+			surfaceCapabilities.currentTransform;
+		swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		swapchainCreateInfo.presentMode = PickBestPresentMode(presentModes);
+		swapchainCreateInfo.clipped = VK_TRUE;
+		swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
+
+		if (vkCreateSwapchainKHR(
+				gpuContext.device,
+				&swapchainCreateInfo,
+				nullptr,
+				&gpuContext.swapchain) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to create swapchain");
+		}
+
 		//
 		// shutdown
 		//
-		vkDestroyDevice(gpuContext.logicalDevice, nullptr); 
+		vkDestroySwapchainKHR(
+			gpuContext.device, gpuContext.swapchain, nullptr);
+		vkDestroyDevice(gpuContext.device, nullptr); 
 
 		if (debugUtilsMessenger != VK_NULL_HANDLE)
 		{
