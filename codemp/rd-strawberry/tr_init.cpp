@@ -30,6 +30,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <array>
 #include <set>
+#include <string>
+#include <vector>
 
 #include "../rd-common/tr_common.h"
 #include "tr_WorldEffects.h"
@@ -55,6 +57,11 @@ struct GpuContext
 	GpuQueue transferQueue;
 	GpuQueue presentQueue;
 } gpuContext;
+
+struct GpuSwapChain
+{
+
+};
 
 glconfig_t	glConfig;
 glconfigExt_t glConfigExt;
@@ -336,15 +343,56 @@ void R_Splash()
 	ri.WIN_Present(&window);
 }
 
+static bool AllExtensionsSupported(
+	const VkPhysicalDevice physicalDevice,
+	const std::vector<const char *>& requiredExtensions)
+{
+	uint32_t extensionCount = 0;
+	vkEnumerateDeviceExtensionProperties(
+		physicalDevice,
+		nullptr,
+		&extensionCount,
+		nullptr);
+
+	std::vector<VkExtensionProperties> deviceExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(
+		physicalDevice,
+		nullptr,
+		&extensionCount,
+		deviceExtensions.data());
+
+	std::set<std::string> requiredExtensionSet(
+		std::begin(requiredExtensions), std::end(requiredExtensions));
+
+	for (const auto& extension : deviceExtensions)
+	{
+		requiredExtensionSet.erase(extension.extensionName);
+	}
+
+	return requiredExtensionSet.empty();
+}
+	
+
 static int PickPhysicalDeviceIndex(
-	const std::vector<VkPhysicalDeviceProperties>& physicalDeviceProperties)
+	const std::vector<VkPhysicalDevice>& physicalDevices,
+	const std::vector<const char *>& requiredExtensions)
 {
 	int bestDeviceIndex = -1;
 	int bestScore = 0;
-	for (int i = 0; i < physicalDeviceProperties.size(); ++i)
+	for (int i = 0; i < physicalDevices.size(); ++i)
 	{
+		VkPhysicalDevice physicalDevice = physicalDevices[i];
+
+		if (!AllExtensionsSupported(physicalDevice, requiredExtensions))
+		{
+			continue;
+		}
+
+		VkPhysicalDeviceProperties properties = {};
+		vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
 		int score = 0;
-		switch (physicalDeviceProperties[i].deviceType)
+		switch (properties.deviceType)
 		{
 			case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
 				score = 3;
@@ -377,6 +425,416 @@ static void InitializeDeviceQueue(VkDevice device, GpuQueue& queue)
 	vkGetDeviceQueue(device, queue.queueFamily, 0, &queue.queue);
 }
 
+static const char *VkFormatToString(const VkFormat format)
+{
+	switch (format)
+	{
+		case VK_FORMAT_UNDEFINED:
+			return "UNDEFINED";
+		case VK_FORMAT_R4G4_UNORM_PACK8:
+			return "R4G4_UNORM_PACK8";
+		case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+			return "R4G4B4A4_UNORM_PACK16";
+		case VK_FORMAT_B4G4R4A4_UNORM_PACK16:
+			return "B4G4R4A4_UNORM_PACK16";
+		case VK_FORMAT_R5G6B5_UNORM_PACK16:
+			return "R5G6B5_UNORM_PACK16";
+		case VK_FORMAT_B5G6R5_UNORM_PACK16:
+			return "B5G6R5_UNORM_PACK16";
+		case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
+			return "R5G5B5A1_UNORM_PACK16";
+		case VK_FORMAT_B5G5R5A1_UNORM_PACK16:
+			return "B5G5R5A1_UNORM_PACK16";
+		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
+			return "A1R5G5B5_UNORM_PACK16";
+		case VK_FORMAT_R8_UNORM:
+			return "R8_UNORM";
+		case VK_FORMAT_R8_SNORM:
+			return "R8_SNORM";
+		case VK_FORMAT_R8_USCALED:
+			return "R8_USCALED";
+		case VK_FORMAT_R8_SSCALED:
+			return "R8_SSCALED";
+		case VK_FORMAT_R8_UINT:
+			return "R8_UINT";
+		case VK_FORMAT_R8_SINT:
+			return "R8_SINT";
+		case VK_FORMAT_R8_SRGB:
+			return "R8_SRGB";
+		case VK_FORMAT_R8G8_UNORM:
+			return "R8G8_UNORM";
+		case VK_FORMAT_R8G8_SNORM:
+			return "R8G8_SNORM";
+		case VK_FORMAT_R8G8_USCALED:
+			return "R8G8_USCALED";
+		case VK_FORMAT_R8G8_SSCALED:
+			return "R8G8_SSCALED";
+		case VK_FORMAT_R8G8_UINT:
+			return "R8G8_UINT";
+		case VK_FORMAT_R8G8_SINT:
+			return "R8G8_SINT";
+		case VK_FORMAT_R8G8_SRGB:
+			return "R8G8_SRGB";
+		case VK_FORMAT_R8G8B8_UNORM:
+			return "R8G8B8_UNORM";
+		case VK_FORMAT_R8G8B8_SNORM:
+			return "R8G8B8_SNORM";
+		case VK_FORMAT_R8G8B8_USCALED:
+			return "R8G8B8_USCALED";
+		case VK_FORMAT_R8G8B8_SSCALED:
+			return "R8G8B8_SSCALED";
+		case VK_FORMAT_R8G8B8_UINT:
+			return "R8G8B8_UINT";
+		case VK_FORMAT_R8G8B8_SINT:
+			return "R8G8B8_SINT";
+		case VK_FORMAT_R8G8B8_SRGB:
+			return "R8G8B8_SRGB";
+		case VK_FORMAT_B8G8R8_UNORM:
+			return "B8G8R8_UNORM";
+		case VK_FORMAT_B8G8R8_SNORM:
+			return "B8G8R8_SNORM";
+		case VK_FORMAT_B8G8R8_USCALED:
+			return "B8G8R8_USCALED";
+		case VK_FORMAT_B8G8R8_SSCALED:
+			return "B8G8R8_SSCALED";
+		case VK_FORMAT_B8G8R8_UINT:
+			return "B8G8R8_UINT";
+		case VK_FORMAT_B8G8R8_SINT:
+			return "B8G8R8_SINT";
+		case VK_FORMAT_B8G8R8_SRGB:
+			return "B8G8R8_SRGB";
+		case VK_FORMAT_R8G8B8A8_UNORM:
+			return "R8G8B8A8_UNORM";
+		case VK_FORMAT_R8G8B8A8_SNORM:
+			return "R8G8B8A8_SNORM";
+		case VK_FORMAT_R8G8B8A8_USCALED:
+			return "R8G8B8A8_USCALED";
+		case VK_FORMAT_R8G8B8A8_SSCALED:
+			return "R8G8B8A8_SSCALED";
+		case VK_FORMAT_R8G8B8A8_UINT:
+			return "R8G8B8A8_UINT";
+		case VK_FORMAT_R8G8B8A8_SINT:
+			return "R8G8B8A8_SINT";
+		case VK_FORMAT_R8G8B8A8_SRGB:
+			return "R8G8B8A8_SRGB";
+		case VK_FORMAT_B8G8R8A8_UNORM:
+			return "B8G8R8A8_UNORM";
+		case VK_FORMAT_B8G8R8A8_SNORM:
+			return "B8G8R8A8_SNORM";
+		case VK_FORMAT_B8G8R8A8_USCALED:
+			return "B8G8R8A8_USCALED";
+		case VK_FORMAT_B8G8R8A8_SSCALED:
+			return "B8G8R8A8_SSCALED";
+		case VK_FORMAT_B8G8R8A8_UINT:
+			return "B8G8R8A8_UINT";
+		case VK_FORMAT_B8G8R8A8_SINT:
+			return "B8G8R8A8_SINT";
+		case VK_FORMAT_B8G8R8A8_SRGB:
+			return "B8G8R8A8_SRGB";
+		case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+			return "A8B8G8R8_UNORM_PACK32";
+		case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
+			return "A8B8G8R8_SNORM_PACK32";
+		case VK_FORMAT_A8B8G8R8_USCALED_PACK32:
+			return "A8B8G8R8_USCALED_PACK32";
+		case VK_FORMAT_A8B8G8R8_SSCALED_PACK32:
+			return "A8B8G8R8_SSCALED_PACK32";
+		case VK_FORMAT_A8B8G8R8_UINT_PACK32:
+			return "A8B8G8R8_UINT_PACK32";
+		case VK_FORMAT_A8B8G8R8_SINT_PACK32:
+			return "A8B8G8R8_SINT_PACK32";
+		case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+			return "A8B8G8R8_SRGB_PACK32";
+		case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+			return "A2R10G10B10_UNORM_PACK32";
+		case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
+			return "A2R10G10B10_SNORM_PACK32";
+		case VK_FORMAT_A2R10G10B10_USCALED_PACK32:
+			return "A2R10G10B10_USCALED_PACK32";
+		case VK_FORMAT_A2R10G10B10_SSCALED_PACK32:
+			return "A2R10G10B10_SSCALED_PACK32";
+		case VK_FORMAT_A2R10G10B10_UINT_PACK32:
+			return "A2R10G10B10_UINT_PACK32";
+		case VK_FORMAT_A2R10G10B10_SINT_PACK32:
+			return "A2R10G10B10_SINT_PACK32";
+		case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+			return "A2B10G10R10_UNORM_PACK32";
+		case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
+			return "A2B10G10R10_SNORM_PACK32";
+		case VK_FORMAT_A2B10G10R10_USCALED_PACK32:
+			return "A2B10G10R10_USCALED_PACK32";
+		case VK_FORMAT_A2B10G10R10_SSCALED_PACK32:
+			return "A2B10G10R10_SSCALED_PACK32";
+		case VK_FORMAT_A2B10G10R10_UINT_PACK32:
+			return "A2B10G10R10_UINT_PACK32";
+		case VK_FORMAT_A2B10G10R10_SINT_PACK32:
+			return "A2B10G10R10_SINT_PACK32";
+		case VK_FORMAT_R16_UNORM:
+			return "R16_UNORM";
+		case VK_FORMAT_R16_SNORM:
+			return "R16_SNORM";
+		case VK_FORMAT_R16_USCALED:
+			return "R16_USCALED";
+		case VK_FORMAT_R16_SSCALED:
+			return "R16_SSCALED";
+		case VK_FORMAT_R16_UINT:
+			return "R16_UINT";
+		case VK_FORMAT_R16_SINT:
+			return "R16_SINT";
+		case VK_FORMAT_R16_SFLOAT:
+			return "R16_SFLOAT";
+		case VK_FORMAT_R16G16_UNORM:
+			return "R16G16_UNORM";
+		case VK_FORMAT_R16G16_SNORM:
+			return "R16G16_SNORM";
+		case VK_FORMAT_R16G16_USCALED:
+			return "R16G16_USCALED";
+		case VK_FORMAT_R16G16_SSCALED:
+			return "R16G16_SSCALED";
+		case VK_FORMAT_R16G16_UINT:
+			return "R16G16_UINT";
+		case VK_FORMAT_R16G16_SINT:
+			return "R16G16_SINT";
+		case VK_FORMAT_R16G16_SFLOAT:
+			return "R16G16_SFLOAT";
+		case VK_FORMAT_R16G16B16_UNORM:
+			return "R16G16B16_UNORM";
+		case VK_FORMAT_R16G16B16_SNORM:
+			return "R16G16B16_SNORM";
+		case VK_FORMAT_R16G16B16_USCALED:
+			return "R16G16B16_USCALED";
+		case VK_FORMAT_R16G16B16_SSCALED:
+			return "R16G16B16_SSCALED";
+		case VK_FORMAT_R16G16B16_UINT:
+			return "R16G16B16_UINT";
+		case VK_FORMAT_R16G16B16_SINT:
+			return "R16G16B16_SINT";
+		case VK_FORMAT_R16G16B16_SFLOAT:
+			return "R16G16B16_SFLOAT";
+		case VK_FORMAT_R16G16B16A16_UNORM:
+			return "R16G16B16A16_UNORM";
+		case VK_FORMAT_R16G16B16A16_SNORM:
+			return "R16G16B16A16_SNORM";
+		case VK_FORMAT_R16G16B16A16_USCALED:
+			return "R16G16B16A16_USCALED";
+		case VK_FORMAT_R16G16B16A16_SSCALED:
+			return "R16G16B16A16_SSCALED";
+		case VK_FORMAT_R16G16B16A16_UINT:
+			return "R16G16B16A16_UINT";
+		case VK_FORMAT_R16G16B16A16_SINT:
+			return "R16G16B16A16_SINT";
+		case VK_FORMAT_R16G16B16A16_SFLOAT:
+			return "R16G16B16A16_SFLOAT";
+		case VK_FORMAT_R32_UINT:
+			return "R32_UINT";
+		case VK_FORMAT_R32_SINT:
+			return "R32_SINT";
+		case VK_FORMAT_R32_SFLOAT:
+			return "R32_SFLOAT";
+		case VK_FORMAT_R32G32_UINT:
+			return "R32G32_UINT";
+		case VK_FORMAT_R32G32_SINT:
+			return "R32G32_SINT";
+		case VK_FORMAT_R32G32_SFLOAT:
+			return "R32G32_SFLOAT";
+		case VK_FORMAT_R32G32B32_UINT:
+			return "R32G32B32_UINT";
+		case VK_FORMAT_R32G32B32_SINT:
+			return "R32G32B32_SINT";
+		case VK_FORMAT_R32G32B32_SFLOAT:
+			return "R32G32B32_SFLOAT";
+		case VK_FORMAT_R32G32B32A32_UINT:
+			return "R32G32B32A32_UINT";
+		case VK_FORMAT_R32G32B32A32_SINT:
+			return "R32G32B32A32_SINT";
+		case VK_FORMAT_R32G32B32A32_SFLOAT:
+			return "R32G32B32A32_SFLOAT";
+		case VK_FORMAT_R64_UINT:
+			return "R64_UINT";
+		case VK_FORMAT_R64_SINT:
+			return "R64_SINT";
+		case VK_FORMAT_R64_SFLOAT:
+			return "R64_SFLOAT";
+		case VK_FORMAT_R64G64_UINT:
+			return "R64G64_UINT";
+		case VK_FORMAT_R64G64_SINT:
+			return "R64G64_SINT";
+		case VK_FORMAT_R64G64_SFLOAT:
+			return "R64G64_SFLOAT";
+		case VK_FORMAT_R64G64B64_UINT:
+			return "R64G64B64_UINT";
+		case VK_FORMAT_R64G64B64_SINT:
+			return "R64G64B64_SINT";
+		case VK_FORMAT_R64G64B64_SFLOAT:
+			return "R64G64B64_SFLOAT";
+		case VK_FORMAT_R64G64B64A64_UINT:
+			return "R64G64B64A64_UINT";
+		case VK_FORMAT_R64G64B64A64_SINT:
+			return "R64G64B64A64_SINT";
+		case VK_FORMAT_R64G64B64A64_SFLOAT:
+			return "R64G64B64A64_SFLOAT";
+		case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
+			return "B10G11R11_UFLOAT_PACK32";
+		case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
+			return "E5B9G9R9_UFLOAT_PACK32";
+		case VK_FORMAT_D16_UNORM:
+			return "D16_UNORM";
+		case VK_FORMAT_X8_D24_UNORM_PACK32:
+			return "X8_D24_UNORM_PACK32";
+		case VK_FORMAT_D32_SFLOAT:
+			return "D32_SFLOAT";
+		case VK_FORMAT_S8_UINT:
+			return "S8_UINT";
+		case VK_FORMAT_D16_UNORM_S8_UINT:
+			return "D16_UNORM_S8_UINT";
+		case VK_FORMAT_D24_UNORM_S8_UINT:
+			return "D24_UNORM_S8_UINT";
+		case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			return "D32_SFLOAT_S8_UINT";
+		case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
+			return "BC1_RGB_UNORM_BLOCK";
+		case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+			return "BC1_RGB_SRGB_BLOCK";
+		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+			return "BC1_RGBA_UNORM_BLOCK";
+		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+			return "BC1_RGBA_SRGB_BLOCK";
+		case VK_FORMAT_BC2_UNORM_BLOCK:
+			return "BC2_UNORM_BLOCK";
+		case VK_FORMAT_BC2_SRGB_BLOCK:
+			return "BC2_SRGB_BLOCK";
+		case VK_FORMAT_BC3_UNORM_BLOCK:
+			return "BC3_UNORM_BLOCK";
+		case VK_FORMAT_BC3_SRGB_BLOCK:
+			return "BC3_SRGB_BLOCK";
+		case VK_FORMAT_BC4_UNORM_BLOCK:
+			return "BC4_UNORM_BLOCK";
+		case VK_FORMAT_BC4_SNORM_BLOCK:
+			return "BC4_SNORM_BLOCK";
+		case VK_FORMAT_BC5_UNORM_BLOCK:
+			return "BC5_UNORM_BLOCK";
+		case VK_FORMAT_BC5_SNORM_BLOCK:
+			return "BC5_SNORM_BLOCK";
+		case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+			return "BC6H_UFLOAT_BLOCK";
+		case VK_FORMAT_BC6H_SFLOAT_BLOCK:
+			return "BC6H_SFLOAT_BLOCK";
+		case VK_FORMAT_BC7_UNORM_BLOCK:
+			return "BC7_UNORM_BLOCK";
+		case VK_FORMAT_BC7_SRGB_BLOCK:
+			return "BC7_SRGB_BLOCK";
+		case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK:
+			return "ETC2_R8G8B8_UNORM_BLOCK";
+		case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
+			return "ETC2_R8G8B8_SRGB_BLOCK";
+		case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:
+			return "ETC2_R8G8B8A1_UNORM_BLOCK";
+		case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
+			return "ETC2_R8G8B8A1_SRGB_BLOCK";
+		case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
+			return "ETC2_R8G8B8A8_UNORM_BLOCK";
+		case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+			return "ETC2_R8G8B8A8_SRGB_BLOCK";
+		case VK_FORMAT_EAC_R11_UNORM_BLOCK:
+			return "EAC_R11_UNORM_BLOCK";
+		case VK_FORMAT_EAC_R11_SNORM_BLOCK:
+			return "EAC_R11_SNORM_BLOCK";
+		case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:
+			return "EAC_R11G11_UNORM_BLOCK";
+		case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
+			return "EAC_R11G11_SNORM_BLOCK";
+		case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
+			return "ASTC_4x4_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
+			return "ASTC_4x4_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
+			return "ASTC_5x4_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
+			return "ASTC_5x4_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
+			return "ASTC_5x5_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
+			return "ASTC_5x5_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
+			return "ASTC_6x5_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
+			return "ASTC_6x5_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
+			return "ASTC_6x6_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
+			return "ASTC_6x6_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
+			return "ASTC_8x5_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
+			return "ASTC_8x5_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
+			return "ASTC_8x6_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
+			return "ASTC_8x6_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
+			return "ASTC_8x8_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
+			return "ASTC_8x8_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
+			return "ASTC_10x5_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
+			return "ASTC_10x5_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
+			return "ASTC_10x6_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
+			return "ASTC_10x6_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
+			return "ASTC_10x8_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
+			return "ASTC_10x8_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
+			return "ASTC_10x10_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
+			return "ASTC_10x10_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
+			return "ASTC_12x10_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
+			return "ASTC_12x10_SRGB_BLOCK";
+		case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
+			return "ASTC_12x12_UNORM_BLOCK";
+		case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
+			return "ASTC_12x12_SRGB_BLOCK";
+		case VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG:
+			return "PVRTC1_2BPP_UNORM_BLOCK_IMG";
+		case VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG:
+			return "PVRTC1_4BPP_UNORM_BLOCK_IMG";
+		case VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG:
+			return "PVRTC2_2BPP_UNORM_BLOCK_IMG";
+		case VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG:
+			return "PVRTC2_4BPP_UNORM_BLOCK_IMG";
+		case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
+			return "PVRTC1_2BPP_SRGB_BLOCK_IMG";
+		case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
+			return "PVRTC1_4BPP_SRGB_BLOCK_IMG";
+		case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
+			return "PVRTC2_2BPP_SRGB_BLOCK_IMG";
+		case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
+			return "PVRTC2_4BPP_SRGB_BLOCK_IMG";
+		default:
+			return "UNKNOWN";
+	}
+}
+
+static const char *VkPresentModeToString(const VkPresentModeKHR presentMode)
+{
+	switch (presentMode)
+	{
+		case VK_PRESENT_MODE_IMMEDIATE_KHR:
+			return "Immediate";
+		case VK_PRESENT_MODE_MAILBOX_KHR:
+			return "Mailbox";
+		case VK_PRESENT_MODE_FIFO_KHR:
+			return "FIFO";
+		case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+			return "Relaxed";
+	}
+}
+
 /*
 ** InitVulkan
 **
@@ -407,6 +865,9 @@ static void InitVulkan( void )
 		windowDesc_t windowDesc = { GRAPHICS_API_VULKAN };
 		window = ri.WIN_Init(&windowDesc, &glConfig);
 
+		//
+		// instance layers
+		//
 		uint32_t maxSupportedDriverApiVersion = 0;
 		vkEnumerateInstanceVersion(&maxSupportedDriverApiVersion);
 
@@ -434,6 +895,9 @@ static void InitVulkan( void )
 			Com_Printf("\n");
 		}
 
+		//
+		// instance extensions
+		//
 		uint32_t extensionCount = 0;
 		vkEnumerateInstanceExtensionProperties(
 			nullptr, &extensionCount, nullptr);
@@ -453,6 +917,9 @@ static void InitVulkan( void )
 			Com_Printf("\n");
 		}
 
+		//
+		// Vulkan instance
+		//
 		uint32_t requiredExtensionCount = 0;
 		ri.VK_GetInstanceExtensions(&requiredExtensionCount, nullptr);
 
@@ -488,6 +955,9 @@ static void InitVulkan( void )
 			Com_Error(ERR_FATAL, "Failed to create Vulkan instance\n");
 		}
 
+		//
+		// physical devices
+		//
 		uint32_t physicalDeviceCount = 0;
 		vkEnumeratePhysicalDevices(
 			gpuContext.instance, &physicalDeviceCount, nullptr);
@@ -542,8 +1012,12 @@ static void InitVulkan( void )
 				VK_VERSION_PATCH(properties.apiVersion));
 		}
 
+		const std::vector<const char *> requiredDeviceExtensions = {
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		};
+
 		const int bestPhysicalDeviceIndex =
-			PickPhysicalDeviceIndex(physicalDeviceProperties);
+			PickPhysicalDeviceIndex(physicalDevices, requiredDeviceExtensions);
 		gpuContext.physicalDevice = physicalDevices[bestPhysicalDeviceIndex];
 		Q_strncpyz(
 			gpuContext.physicalDeviceName,
@@ -553,6 +1027,38 @@ static void InitVulkan( void )
 		Com_Printf(
 			"Best physical device: %s\n", gpuContext.physicalDeviceName);
 
+		//
+		// physical device extensions
+		//
+		uint32_t deviceExtensionCount = 0;
+		vkEnumerateDeviceExtensionProperties(
+			gpuContext.physicalDevice,
+			nullptr,
+			&deviceExtensionCount,
+			nullptr);
+
+		std::vector<VkExtensionProperties> deviceExtensions(
+			deviceExtensionCount);
+		vkEnumerateDeviceExtensionProperties(
+			gpuContext.physicalDevice,
+			nullptr,
+			&deviceExtensionCount,
+			deviceExtensions.data());
+
+		Com_Printf("%d device extensions available\n", deviceExtensionCount);
+		if (deviceExtensionCount > 0)
+		{
+			Com_Printf("...");
+			for (const auto& extension : deviceExtensions)
+			{
+				Com_Printf("%s ", extension.extensionName);
+			}
+			Com_Printf("\n");
+		}
+
+		//
+		// window surface
+		//
 		if (!ri.VK_CreateWindowSurface(
 				gpuContext.instance,
 				(void **)&gpuContext.windowSurface))
@@ -560,6 +1066,9 @@ static void InitVulkan( void )
 			Com_Error(ERR_FATAL, "Failed to create window surface");
 		}
 
+		//
+		// queue families
+		//
 		uint32_t queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(
 			gpuContext.physicalDevice, &queueFamilyCount, nullptr);
@@ -646,6 +1155,9 @@ static void InitVulkan( void )
 			}
 		}
 
+		//
+		// logical device
+		//
 		const std::set<int> queueFamilies = {
 			gpuContext.graphicsQueue.queueFamily,
 			gpuContext.computeQueue.queueFamily,
@@ -668,36 +1180,7 @@ static void InitVulkan( void )
 			queueCreateInfos.emplace_back(queueCreateInfo);
 		}
 
-		uint32_t deviceExtensionCount = 0;
-		vkEnumerateDeviceExtensionProperties(
-			gpuContext.physicalDevice,
-			nullptr,
-			&deviceExtensionCount,
-			nullptr);
-
-		std::vector<VkExtensionProperties> deviceExtensions(
-			deviceExtensionCount);
-		vkEnumerateDeviceExtensionProperties(
-			gpuContext.physicalDevice,
-			nullptr,
-			&deviceExtensionCount,
-			deviceExtensions.data());
-
-		Com_Printf("%d device extensions available\n", deviceExtensionCount);
-		if (deviceExtensionCount > 0)
-		{
-			Com_Printf("...");
-			for (const auto& extension : deviceExtensions)
-			{
-				Com_Printf("%s ", extension.extensionName);
-			}
-			Com_Printf("\n");
-		}
-
 		const VkPhysicalDeviceFeatures enableDeviceFeatures = {};
-		const std::array<char *, 1> requiredDeviceExtensions = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME
-		};
 		VkDeviceCreateInfo deviceCreateInfo = {};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -717,8 +1200,6 @@ static void InitVulkan( void )
 			Com_Error(ERR_FATAL, "Failed to create logical device");
 		}
 
-		Com_Printf("Vulkan initialized\n");
-
 		InitializeDeviceQueue(
 			gpuContext.logicalDevice, gpuContext.graphicsQueue);
 		InitializeDeviceQueue(
@@ -728,6 +1209,72 @@ static void InitVulkan( void )
 		InitializeDeviceQueue(
 			gpuContext.logicalDevice, gpuContext.presentQueue);
 
+		Com_Printf("Vulkan context initialized\n");
+
+		//
+		// swap chain
+		//
+		VkSurfaceCapabilitiesKHR surfaceCapabilities;
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+			gpuContext.physicalDevice,
+			gpuContext.windowSurface,
+			&surfaceCapabilities);
+
+		uint32_t surfaceFormatCount = 0;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(
+			gpuContext.physicalDevice,
+			gpuContext.windowSurface,
+			&surfaceFormatCount,
+			nullptr);
+
+		std::vector<VkSurfaceFormatKHR> surfaceFormats(surfaceFormatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(
+			gpuContext.physicalDevice,
+			gpuContext.windowSurface,
+			&surfaceFormatCount,
+			surfaceFormats.data());
+
+		Com_Printf(
+			"%d window surface formats available\n", surfaceFormatCount);
+		if (surfaceFormatCount > 0)
+		{
+			Com_Printf("...");
+			for (const auto& format : surfaceFormats)
+			{
+				Com_Printf("%s ", VkFormatToString(format.format));
+			}
+			Com_Printf("\n");
+		}
+
+		uint32_t presentModeCount = 0;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(
+			gpuContext.physicalDevice,
+			gpuContext.windowSurface,
+			&presentModeCount,
+			nullptr);
+
+		std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(
+			gpuContext.physicalDevice,
+			gpuContext.windowSurface,
+			&presentModeCount,
+			presentModes.data());
+
+		Com_Printf(
+			"%d window present modes available\n", presentModeCount);
+		if (presentModeCount > 0)
+		{
+			Com_Printf("...");
+			for (const auto& mode : presentModes)
+			{
+				Com_Printf("%s ", VkPresentModeToString(mode));
+			}
+			Com_Printf("\n");
+		}
+
+		//
+		// shutdown
+		//
 		vkDestroyDevice(gpuContext.logicalDevice, nullptr); 
 		vkDestroySurfaceKHR(
 			gpuContext.instance, gpuContext.windowSurface, nullptr);
