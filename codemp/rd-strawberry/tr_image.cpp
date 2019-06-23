@@ -538,7 +538,7 @@ static uint32_t PickBestMemoryType(
 	return -1;
 }
 
-static void TransitionImageLayout(
+void TransitionImageLayout(
 	VkCommandBuffer cmdBuffer,
 	VkImage image,
 	VkImageLayout oldLayout,
@@ -571,6 +571,22 @@ static void TransitionImageLayout(
 		imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+			 newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+	{
+		imageMemoryBarrier.srcAccessMask = 0;
+		imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+			 newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+	{
+		imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageMemoryBarrier.dstAccessMask = 0;
+		imageMemoryBarrier.srcQueueFamilyIndex =
+			gpuContext.graphicsQueue.queueFamily;
+		imageMemoryBarrier.dstQueueFamilyIndex =
+			gpuContext.presentQueue.queueFamily;
+	}
 
 	vkCmdPipelineBarrier(
 		cmdBuffer,
@@ -592,6 +608,7 @@ Upload32
 ===============
 */
 static void Upload32(
+	VkImage image,
 	unsigned *data,
 	GLenum format,
 	qboolean mipmap,
@@ -676,68 +693,8 @@ static void Upload32(
 		gpuContext.device, stagingBuffer, stagingBufferMemory, 0);
 
 	//
-	// image
+	// do the copy
 	//
-	VkImageCreateInfo imageCreateInfo = {};
-	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	imageCreateInfo.flags = 0;
-	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-	imageCreateInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
-	imageCreateInfo.extent.width = width;
-	imageCreateInfo.extent.height = height;
-	imageCreateInfo.extent.depth = 1;
-	imageCreateInfo.mipLevels = 1;
-	imageCreateInfo.arrayLayers = 1;
-	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-	imageCreateInfo.usage =
-		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-	VkImage image;
-	if (vkCreateImage(
-			gpuContext.device,
-			&imageCreateInfo,
-			nullptr,
-			&image) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to create image\n");
-		vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
-		vkFreeMemory(gpuContext.device, stagingBufferMemory, nullptr);
-		return;
-	}
-
-	VkMemoryRequirements imageMemoryRequirements = {};
-	vkGetImageMemoryRequirements(
-		gpuContext.device, image, &imageMemoryRequirements);
-
-	VkDeviceMemory imageMemory;
-	{
-		VkMemoryAllocateInfo allocateInfo = {};
-		allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocateInfo.allocationSize = imageMemoryRequirements.size;
-		allocateInfo.memoryTypeIndex = PickBestMemoryType(
-			gpuContext.physicalDevice,
-			imageMemoryRequirements.memoryTypeBits,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		if (vkAllocateMemory(
-				gpuContext.device,
-				&allocateInfo,
-				nullptr,
-				&imageMemory) != VK_SUCCESS)
-		{
-			Com_Printf(S_COLOR_RED "Failed to allocate image memory\n");
-			vkDestroyImage(gpuContext.device, image, nullptr);
-			vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
-			vkFreeMemory(gpuContext.device, stagingBufferMemory, nullptr);
-			return;
-		}
-	}
-
-	vkBindImageMemory(gpuContext.device, image, imageMemory, 0);
-
 	VkCommandBufferAllocateInfo cmdBufferAllocateInfo = {};
 	cmdBufferAllocateInfo.sType =
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -745,9 +702,6 @@ static void Upload32(
 	cmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	cmdBufferAllocateInfo.commandBufferCount = 1;
 
-	//
-	// do the copy
-	//
 	VkCommandBuffer cmdBuffer;
 	if (vkAllocateCommandBuffers(
 			gpuContext.device,
@@ -1254,7 +1208,62 @@ image_t *R_CreateImage(
 
 	image = (image_t*)Z_Malloc(sizeof(image_t), TAG_IMAGE_T, qtrue);
 
-	//image->texnum = 1024 + giTextureBindNum++;
+	VkImageCreateInfo imageCreateInfo = {};
+	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageCreateInfo.flags = 0;
+	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageCreateInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+	imageCreateInfo.extent.width = width;
+	imageCreateInfo.extent.height = height;
+	imageCreateInfo.extent.depth = 1;
+	imageCreateInfo.mipLevels = 1;
+	imageCreateInfo.arrayLayers = 1;
+	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageCreateInfo.usage =
+		VK_IMAGE_USAGE_SAMPLED_BIT |
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	if (vkCreateImage(
+			gpuContext.device,
+			&imageCreateInfo,
+			nullptr,
+			&image->handle) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create image\n");
+		return nullptr;
+	}
+
+	VkMemoryRequirements imageMemoryRequirements = {};
+	vkGetImageMemoryRequirements(
+		gpuContext.device, image->handle, &imageMemoryRequirements);
+
+	VkDeviceMemory imageMemory;
+	{
+		VkMemoryAllocateInfo allocateInfo = {};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocateInfo.allocationSize = imageMemoryRequirements.size;
+		allocateInfo.memoryTypeIndex = PickBestMemoryType(
+			gpuContext.physicalDevice,
+			imageMemoryRequirements.memoryTypeBits,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		if (vkAllocateMemory(
+				gpuContext.device,
+				&allocateInfo,
+				nullptr,
+				&imageMemory) != VK_SUCCESS)
+		{
+			Com_Printf(S_COLOR_RED "Failed to allocate image memory\n");
+			vkDestroyImage(gpuContext.device, image->handle, nullptr);
+			return nullptr;
+		}
+	}
+
+	vkBindImageMemory(gpuContext.device, image->handle, imageMemory, 0);
 
 	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
 	image->mipmap = !!mipmap;
@@ -1265,6 +1274,7 @@ image_t *R_CreateImage(
 	image->wrapClampMode = glWrapClampMode;
 
 	Upload32(
+		image->handle,
 		(unsigned *)pic,
 		format,
 		(qboolean)image->mipmap,

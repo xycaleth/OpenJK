@@ -291,34 +291,148 @@ void R_Splash()
 	}
 */
 	pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
-	extern void	RB_SetGL2D (void);
-	RB_SetGL2D();
-	if (pImage )
-	{//invalid paths?
-		GL_Bind( pImage );
+
+	VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkSemaphore blitFinishedSemaphore;
+	if (vkCreateSemaphore(
+			gpuContext.device,
+			&semaphoreCreateInfo,
+			nullptr,
+			&blitFinishedSemaphore) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create semaphore\n");
 	}
-	GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
 
-	const int width = 640;
-	const int height = 480;
-	const float x1 = 320 - width / 2;
-	const float x2 = 320 + width / 2;
-	const float y1 = 240 - height / 2;
-	const float y2 = 240 + height / 2;
+	VkCommandBufferAllocateInfo cmdBufferAllocateInfo = {};
+	cmdBufferAllocateInfo.sType =
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	cmdBufferAllocateInfo.commandPool = gpuContext.gfxCommandPool;
+	cmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	cmdBufferAllocateInfo.commandBufferCount = 1;
 
+	VkCommandBuffer cmdBuffer = {};
+	if (vkAllocateCommandBuffers(
+			gpuContext.device,
+			&cmdBufferAllocateInfo,
+			&cmdBuffer) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to allocate command buffer\n");
+		return;
+	}
 
-	qglBegin (GL_TRIANGLE_STRIP);
-		qglTexCoord2f( 0,  0 );
-		qglVertex2f(x1, y1);
-		qglTexCoord2f( 1 ,  0 );
-		qglVertex2f(x2, y1);
-		qglTexCoord2f( 0, 1 );
-		qglVertex2f(x1, y2);
-		qglTexCoord2f( 1, 1 );
-		qglVertex2f(x2, y2);
-	qglEnd();
+	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
+	cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	ri.WIN_Present(&window);
+	if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create command buffer\n");
+		return;
+	}
+
+	GpuSwapchain& swapchain = gpuContext.swapchain;
+
+	uint32_t nextImageIndex;
+	VkSemaphore imageAvailableSem = 
+		swapchain.imageAvailableSemaphores[swapchain.frameIndex];
+
+	vkAcquireNextImageKHR(
+		gpuContext.device,
+		swapchain.swapchain,
+		std::numeric_limits<uint64_t>::max(),
+		imageAvailableSem,
+		VK_NULL_HANDLE,
+		&nextImageIndex);
+
+	VkImage backBufferImage = swapchain.images[nextImageIndex];
+
+	TransitionImageLayout(
+		cmdBuffer,
+		pImage->handle,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+	TransitionImageLayout(
+		cmdBuffer,
+		backBufferImage,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+	VkImageBlit imageBlit = {};
+	imageBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageBlit.srcSubresource.mipLevel = 0;
+	imageBlit.srcSubresource.baseArrayLayer = 0;
+	imageBlit.srcSubresource.layerCount = 1;
+	imageBlit.srcOffsets[0] = {0, 0, 0};
+	imageBlit.srcOffsets[1] = {pImage->width, pImage->height, 1};
+	imageBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageBlit.dstSubresource.mipLevel = 0;
+	imageBlit.dstSubresource.baseArrayLayer = 0;
+	imageBlit.dstSubresource.layerCount = 1;
+	imageBlit.dstOffsets[0] = {0, 0, 0};
+	imageBlit.dstOffsets[1] = {
+		static_cast<int32_t>(gpuContext.swapchain.width),
+		static_cast<int32_t>(gpuContext.swapchain.height),
+		1
+	};
+
+	vkCmdBlitImage(
+		cmdBuffer,
+		pImage->handle,
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		backBufferImage,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1,
+		&imageBlit,
+		VK_FILTER_LINEAR);
+
+	TransitionImageLayout(
+		cmdBuffer,
+		backBufferImage,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+
+	vkEndCommandBuffer(cmdBuffer);
+
+	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuffer;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = &imageAvailableSem;
+	submitInfo.pWaitDstStageMask = &waitStage;
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = &blitFinishedSemaphore;
+
+    vkQueueSubmit(
+		gpuContext.graphicsQueue.queue,
+		1,
+		&submitInfo,
+		VK_NULL_HANDLE);
+    vkDeviceWaitIdle(gpuContext.device);
+    vkFreeCommandBuffers(
+		gpuContext.device, gpuContext.gfxCommandPool, 1, &cmdBuffer);
+
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = &gpuContext.swapchain.swapchain;
+	presentInfo.pImageIndices = &nextImageIndex;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = &blitFinishedSemaphore;
+	vkQueuePresentKHR(
+		gpuContext.transferQueue.queue, &presentInfo);
+
+    vkDeviceWaitIdle(gpuContext.device);
 }
 
 static bool AllExtensionsSupported(
@@ -1404,7 +1518,9 @@ static void InitVulkan( void )
 		swapchainCreateInfo.imageColorSpace =
 			VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		swapchainCreateInfo.imageArrayLayers = 1;
-		swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchainCreateInfo.imageUsage =
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		swapchainCreateInfo.imageExtent = surfaceCapabilities.currentExtent;
 
 		const std::array<uint32_t, 2> swapchainQueueFamilyIndices = {
@@ -1442,6 +1558,8 @@ static void InitVulkan( void )
 		}
 
 		gpuContext.swapchain.surfaceFormat = VK_FORMAT_B8G8R8A8_UNORM;
+		gpuContext.swapchain.width = surfaceCapabilities.currentExtent.width;
+		gpuContext.swapchain.height = surfaceCapabilities.currentExtent.height;
 
 		vkGetSwapchainImagesKHR(
 			gpuContext.device,
@@ -1457,6 +1575,9 @@ static void InitVulkan( void )
 			gpuContext.swapchain.images.data());
 
 		gpuContext.swapchain.imageViews.resize(
+			gpuContext.swapchain.imageCount);
+
+		gpuContext.swapchain.imageAvailableSemaphores.resize(
 			gpuContext.swapchain.imageCount);
 
 		for (uint32_t i = 0; i < gpuContext.swapchain.imageCount; ++i)
@@ -1486,25 +1607,61 @@ static void InitVulkan( void )
 			{
 				Com_Error(ERR_FATAL, "Failed to create image view");
 			}
+
+			VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+			semaphoreCreateInfo.sType =
+				VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+			VkSemaphore *semaphore = 
+				&gpuContext.swapchain.imageAvailableSemaphores[i];
+			if (vkCreateSemaphore(
+					gpuContext.device,
+					&semaphoreCreateInfo,
+					nullptr,
+					semaphore) != VK_SUCCESS)
+			{
+				Com_Printf(S_COLOR_RED "Failed to create semaphore\n");
+			}
 		}
 
 		//
 		// command buffer pool
 		//
-		VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
-		cmdPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		cmdPoolCreateInfo.queueFamilyIndex =
-			gpuContext.transferQueue.queueFamily;
-
-		if (vkCreateCommandPool(
-				gpuContext.device,
-				&cmdPoolCreateInfo,
-				nullptr,
-				&gpuContext.transferCommandPool) != VK_SUCCESS)
 		{
-			Com_Error(ERR_FATAL, "Failed to create command pool");
+			VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
+			cmdPoolCreateInfo.sType =
+				VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			cmdPoolCreateInfo.queueFamilyIndex =
+				gpuContext.transferQueue.queueFamily;
+
+			if (vkCreateCommandPool(
+					gpuContext.device,
+					&cmdPoolCreateInfo,
+					nullptr,
+					&gpuContext.transferCommandPool) != VK_SUCCESS)
+			{
+				Com_Error(ERR_FATAL, "Failed to create transfer command pool");
+			}
 		}
 
+		{
+			VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
+			cmdPoolCreateInfo.sType =
+				VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			cmdPoolCreateInfo.queueFamilyIndex =
+				gpuContext.graphicsQueue.queueFamily;
+
+			if (vkCreateCommandPool(
+					gpuContext.device,
+					&cmdPoolCreateInfo,
+					nullptr,
+					&gpuContext.gfxCommandPool) != VK_SUCCESS)
+			{
+				Com_Error(ERR_FATAL, "Failed to create graphics command pool");
+			}
+		}
+
+		R_Splash();
 #if 0
 		// OpenGL driver constants
 		qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
@@ -2472,6 +2629,7 @@ void R_Init( void ) {
 	}
 	InitVulkan();
 
+#if 0
 	R_InitImages();
 	R_InitShaders(qfalse);
 	R_InitSkins();
@@ -2495,6 +2653,7 @@ void R_Init( void ) {
 	GfxInfo_f();
 
 //	ri.Printf( PRINT_ALL, "----- finished R_Init -----\n" );
+#endif
 }
 
 /*
@@ -2513,7 +2672,14 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 	// shutdown
 	//
 	vkDestroyCommandPool(
+		gpuContext.device, gpuContext.gfxCommandPool, nullptr);
+	vkDestroyCommandPool(
 		gpuContext.device, gpuContext.transferCommandPool, nullptr);
+
+	for (const auto semaphore : gpuContext.swapchain.imageAvailableSemaphores)
+	{
+		vkDestroySemaphore(gpuContext.device, semaphore, nullptr);
+	}
 
 	for (const auto imageView : gpuContext.swapchain.imageViews)
 	{
