@@ -509,7 +509,7 @@ static void R_Images_DeleteImageContents( image_t *pImage )
 	assert(pImage);	// should never be called with NULL
 	if (pImage)
 	{
-		qglDeleteTextures( 1, &pImage->texnum );
+		vkDestroyImage(gpuContext.device, pImage->handle, nullptr);
 		Z_Free(pImage);
 	}
 }
@@ -950,20 +950,6 @@ done:
 #endif
 }
 
-static void GL_ResetBinds(void)
-{
-	memset( glState.currenttextures, 0, sizeof( glState.currenttextures ) );
-	if ( qglActiveTextureARB ) {
-		GL_SelectTexture( 1 );
-		qglBindTexture( GL_TEXTURE_2D, 0 );
-		GL_SelectTexture( 0 );
-		qglBindTexture( GL_TEXTURE_2D, 0 );
-	} else {
-		qglBindTexture( GL_TEXTURE_2D, 0 );
-	}
-}
-
-
 // special function used in conjunction with "devmapbsp"...
 //
 // (avoid using ri->xxxx stuff here in case running on dedicated)
@@ -985,8 +971,6 @@ void R_Images_DeleteLightMaps(void)
 			++itImage;
 		}
 	}
-
-	GL_ResetBinds();
 }
 
 // special function currently only called by Dissolve code...
@@ -1095,8 +1079,6 @@ qboolean RE_RegisterImages_LevelLoadEnd(void)
 //	}
 
 	ri.Printf( PRINT_DEVELOPER, S_COLOR_RED "RE_RegisterImages_LevelLoadEnd(): Ok\n");
-
-	GL_ResetBinds();
 
 	return imageDeleted;
 }
@@ -1794,6 +1776,5 @@ R_DeleteTextures
 void R_DeleteTextures( void ) {
 
 	R_Images_Clear();
-	GL_ResetBinds();
 }
 

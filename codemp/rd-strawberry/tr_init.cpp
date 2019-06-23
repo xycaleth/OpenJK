@@ -2668,40 +2668,6 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 	for ( size_t i = 0; i < numCommands; i++ )
 		ri.Cmd_RemoveCommand( commands[i].cmd );
 
-	//
-	// shutdown
-	//
-	vkDestroyCommandPool(
-		gpuContext.device, gpuContext.gfxCommandPool, nullptr);
-	vkDestroyCommandPool(
-		gpuContext.device, gpuContext.transferCommandPool, nullptr);
-
-	for (const auto semaphore : gpuContext.swapchain.imageAvailableSemaphores)
-	{
-		vkDestroySemaphore(gpuContext.device, semaphore, nullptr);
-	}
-
-	for (const auto imageView : gpuContext.swapchain.imageViews)
-	{
-		vkDestroyImageView(gpuContext.device, imageView, nullptr);
-	}
-
-	vkDestroySwapchainKHR(
-		gpuContext.device, gpuContext.swapchain.swapchain, nullptr);
-	vkDestroyDevice(gpuContext.device, nullptr); 
-
-	if (gpuContext.debugUtilsMessenger != VK_NULL_HANDLE)
-	{
-		auto vkDestroyDebugUtilsMessengerEXT =
-			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-				gpuContext.instance, "vkDestroyDebugUtilsMessengerEXT");
-		vkDestroyDebugUtilsMessengerEXT(
-			gpuContext.instance, gpuContext.debugUtilsMessenger, nullptr);
-	}
-	vkDestroySurfaceKHR(
-		gpuContext.instance, gpuContext.windowSurface, nullptr);
-	vkDestroyInstance(gpuContext.instance, nullptr);
-
 	if ( r_DynamicGlow && r_DynamicGlow->integer )
 	{
 		// Release the Glow Vertex Shader.
@@ -2761,6 +2727,41 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 			}
 		}
 	}
+
+	//
+	// shutdown
+	//
+	vkDestroyCommandPool(
+		gpuContext.device, gpuContext.gfxCommandPool, nullptr);
+	vkDestroyCommandPool(
+		gpuContext.device, gpuContext.transferCommandPool, nullptr);
+
+	for (const auto semaphore : gpuContext.swapchain.imageAvailableSemaphores)
+	{
+		vkDestroySemaphore(gpuContext.device, semaphore, nullptr);
+	}
+
+	for (const auto imageView : gpuContext.swapchain.imageViews)
+	{
+		vkDestroyImageView(gpuContext.device, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(
+		gpuContext.device, gpuContext.swapchain.swapchain, nullptr);
+	vkDestroyDevice(gpuContext.device, nullptr); 
+
+	if (gpuContext.debugUtilsMessenger != VK_NULL_HANDLE)
+	{
+		auto vkDestroyDebugUtilsMessengerEXT =
+			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+				gpuContext.instance, "vkDestroyDebugUtilsMessengerEXT");
+		vkDestroyDebugUtilsMessengerEXT(
+			gpuContext.instance, gpuContext.debugUtilsMessenger, nullptr);
+	}
+	vkDestroySurfaceKHR(
+		gpuContext.instance, gpuContext.windowSurface, nullptr);
+	vkDestroyInstance(gpuContext.instance, nullptr);
+
 
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {

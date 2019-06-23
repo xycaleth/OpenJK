@@ -98,6 +98,7 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 	// clear it out, in case this is a sync and not a buffer flip
 	cmdList->used = 0;
 
+#if 0
 	// at this point, the back end thread is idle, so it is ok
 	// to look at it's performance counters
 	if ( runPerformanceCounters ) {
@@ -109,6 +110,7 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 		// let it start on the new batch
 		RB_ExecuteRenderCommands( cmdList->cmds );
 	}
+#endif
 }
 
 
