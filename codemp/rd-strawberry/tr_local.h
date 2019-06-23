@@ -116,6 +116,7 @@ typedef struct image_s {
 	int			width, height;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
 	GLuint		texnum;					// gl texture binding
 	VkImage		handle;
+	VkDeviceMemory deviceMemory;
 
 	int			frameUsed;			// for texture usage in frame statistics
 

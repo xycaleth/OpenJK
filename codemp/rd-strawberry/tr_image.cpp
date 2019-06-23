@@ -509,6 +509,7 @@ static void R_Images_DeleteImageContents( image_t *pImage )
 	assert(pImage);	// should never be called with NULL
 	if (pImage)
 	{
+		vkFreeMemory(gpuContext.device, pImage->deviceMemory, nullptr);
 		vkDestroyImage(gpuContext.device, pImage->handle, nullptr);
 		Z_Free(pImage);
 	}
@@ -771,6 +772,8 @@ static void Upload32(
 	}
 
 	vkDeviceWaitIdle(gpuContext.device);
+	vkFreeMemory(gpuContext.device, stagingBufferMemory, nullptr);
+	vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
 	vkFreeCommandBuffers(
 		gpuContext.device, gpuContext.transferCommandPool, 1, &cmdBuffer);
 
@@ -1069,15 +1072,6 @@ qboolean RE_RegisterImages_LevelLoadEnd(void)
 		}
 	}
 
-
-	// this check can be deleted AFAIC, it seems to be just a quake thing...
-	//
-//	iNumImages = R_Images_StartIteration();
-//	if (iNumImages > MAX_DRAWIMAGES)
-//	{
-//		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "Level uses %d images, old limit was MAX_DRAWIMAGES (%d)\n", iNumImages, MAX_DRAWIMAGES);
-//	}
-
 	ri.Printf( PRINT_DEVELOPER, S_COLOR_RED "RE_RegisterImages_LevelLoadEnd(): Ok\n");
 
 	return imageDeleted;
@@ -1223,29 +1217,27 @@ image_t *R_CreateImage(
 	vkGetImageMemoryRequirements(
 		gpuContext.device, image->handle, &imageMemoryRequirements);
 
-	VkDeviceMemory imageMemory;
-	{
-		VkMemoryAllocateInfo allocateInfo = {};
-		allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocateInfo.allocationSize = imageMemoryRequirements.size;
-		allocateInfo.memoryTypeIndex = PickBestMemoryType(
-			gpuContext.physicalDevice,
-			imageMemoryRequirements.memoryTypeBits,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VkMemoryAllocateInfo allocateInfo = {};
+	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocateInfo.allocationSize = imageMemoryRequirements.size;
+	allocateInfo.memoryTypeIndex = PickBestMemoryType(
+		gpuContext.physicalDevice,
+		imageMemoryRequirements.memoryTypeBits,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		if (vkAllocateMemory(
-				gpuContext.device,
-				&allocateInfo,
-				nullptr,
-				&imageMemory) != VK_SUCCESS)
-		{
-			Com_Printf(S_COLOR_RED "Failed to allocate image memory\n");
-			vkDestroyImage(gpuContext.device, image->handle, nullptr);
-			return nullptr;
-		}
+	if (vkAllocateMemory(
+			gpuContext.device,
+			&allocateInfo,
+			nullptr,
+			&image->deviceMemory) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to allocate image memory\n");
+		vkDestroyImage(gpuContext.device, image->handle, nullptr);
+		return nullptr;
 	}
 
-	vkBindImageMemory(gpuContext.device, image->handle, imageMemory, 0);
+	vkBindImageMemory(
+		gpuContext.device, image->handle, image->deviceMemory, 0);
 
 	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
 	image->mipmap = !!mipmap;

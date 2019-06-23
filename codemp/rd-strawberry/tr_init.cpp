@@ -433,6 +433,8 @@ void R_Splash()
 		gpuContext.transferQueue.queue, &presentInfo);
 
     vkDeviceWaitIdle(gpuContext.device);
+
+	vkDestroySemaphore(gpuContext.device, blitFinishedSemaphore, nullptr);
 }
 
 static bool AllExtensionsSupported(
@@ -2667,6 +2669,8 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 
 	for ( size_t i = 0; i < numCommands; i++ )
 		ri.Cmd_RemoveCommand( commands[i].cmd );
+
+	vkDeviceWaitIdle(gpuContext.device);
 
 	if ( r_DynamicGlow && r_DynamicGlow->integer )
 	{
