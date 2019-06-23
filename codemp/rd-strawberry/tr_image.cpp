@@ -26,6 +26,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "../rd-common/tr_common.h"
 #include "glext.h"
 
+#include "tr_gpu.h"
+
 #include <map>
 
 static byte			 s_intensitytable[256];
@@ -422,54 +424,6 @@ static void R_MipMap2( unsigned *in, int inWidth, int inHeight ) {
 }
 
 /*
-================
-R_MipMap
-
-Operates in place, quartering the size of the texture
-================
-*/
-static void R_MipMap (byte *in, int width, int height) {
-	int		i, j;
-	byte	*out;
-	int		row;
-
-	if ( !r_simpleMipMaps->integer ) {
-		R_MipMap2( (unsigned *)in, width, height );
-		return;
-	}
-
-	if ( width == 1 && height == 1 ) {
-		return;
-	}
-
-	row = width * 4;
-	out = in;
-	width >>= 1;
-	height >>= 1;
-
-	if ( width == 0 || height == 0 ) {
-		width += height;	// get largest
-		for (i=0 ; i<width ; i++, out+=4, in+=8 ) {
-			out[0] = ( in[0] + in[4] )>>1;
-			out[1] = ( in[1] + in[5] )>>1;
-			out[2] = ( in[2] + in[6] )>>1;
-			out[3] = ( in[3] + in[7] )>>1;
-		}
-		return;
-	}
-
-	for (i=0 ; i<height ; i++, in+=row) {
-		for (j=0 ; j<width ; j++, out+=4, in+=8) {
-			out[0] = (in[0] + in[4] + in[row+0] + in[row+4])>>2;
-			out[1] = (in[1] + in[5] + in[row+1] + in[row+5])>>2;
-			out[2] = (in[2] + in[6] + in[row+2] + in[row+6])>>2;
-			out[3] = (in[3] + in[7] + in[row+3] + in[row+7])>>2;
-		}
-	}
-}
-
-
-/*
 ==================
 R_BlendOverTexture
 
@@ -561,8 +515,75 @@ static void R_Images_DeleteImageContents( image_t *pImage )
 }
 
 
+static uint32_t PickBestMemoryType(
+    VkPhysicalDevice physicalDevice,
+    uint32_t memoryTypeBits,
+    VkMemoryPropertyFlags propertyFlags)
+{
+    VkPhysicalDeviceMemoryProperties deviceMemoryProperties = {};
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &deviceMemoryProperties);
 
+    for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; ++i)
+    {
+		const uint32_t typePropertyFlags = 
+			deviceMemoryProperties.memoryTypes[i].propertyFlags;
 
+        if ((memoryTypeBits & (1u << i)) != 0 &&
+            (typePropertyFlags & propertyFlags) == propertyFlags)
+        {
+            return i;
+        }
+    }
+
+	return -1;
+}
+
+static void TransitionImageLayout(
+	VkCommandBuffer cmdBuffer,
+	VkImage image,
+	VkImageLayout oldLayout,
+	VkImageLayout newLayout,
+	VkPipelineStageFlags srcStageMask,
+	VkPipelineStageFlags dstStageMask)
+{
+	VkImageMemoryBarrier imageMemoryBarrier = {};
+	imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	imageMemoryBarrier.oldLayout = oldLayout;
+	imageMemoryBarrier.newLayout = newLayout;
+	imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imageMemoryBarrier.image = image;
+	imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
+	imageMemoryBarrier.subresourceRange.levelCount = 1;
+	imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
+	imageMemoryBarrier.subresourceRange.layerCount = 1;
+
+	if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+		newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+	{
+		imageMemoryBarrier.srcAccessMask = 0;
+		imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+			 newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	}
+
+	vkCmdPipelineBarrier(
+		cmdBuffer,
+		srcStageMask,
+		dstStageMask,
+		0,
+		0,
+		nullptr,
+		0,
+		nullptr,
+		1,
+		&imageMemoryBarrier);
+}
 
 /*
 ===============
@@ -570,194 +591,397 @@ Upload32
 
 ===============
 */
-static void Upload32( unsigned *data,
-						 GLenum format,
-						 qboolean mipmap,
-						 qboolean picmip,
-						 qboolean isLightmap,
-						 qboolean allowTC,
-						 int *pformat,
-						 word *pUploadWidth, word *pUploadHeight, bool bRectangle = false )
+static void Upload32(
+	unsigned *data,
+	GLenum format,
+	qboolean mipmap,
+	qboolean picmip,
+	qboolean isLightmap,
+	qboolean allowTC,
+	int *pformat,
+	int *pUploadWidth,
+	int *pUploadHeight)
 {
-	GLuint uiTarget = GL_TEXTURE_2D;
-	if ( bRectangle )
+	const uint32_t width = *pUploadWidth;
+	const uint32_t height = *pUploadHeight;
+
+	const uint32_t imageByteSize = width * height * 4;
+
+	//
+	// staging buffer
+	// 
+	VkBufferCreateInfo bufferCreateInfo = {};
+	bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferCreateInfo.size = imageByteSize;
+	bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VkBuffer stagingBuffer;
+	if (vkCreateBuffer(
+			gpuContext.device,
+			&bufferCreateInfo,
+			nullptr,
+			&stagingBuffer) != VK_SUCCESS)
 	{
-		uiTarget = GL_TEXTURE_RECTANGLE_ARB;
+		Com_Printf(S_COLOR_RED "Failed to create staging buffer\n");
+		return;
 	}
 
-	if (format == GL_RGBA)
+	VkMemoryRequirements bufferMemoryRequirements = {};
+	vkGetBufferMemoryRequirements(
+		gpuContext.device, stagingBuffer, &bufferMemoryRequirements);
+
+	VkDeviceMemory stagingBufferMemory;
+	VkMemoryAllocateInfo allocateInfo = {};
+	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocateInfo.allocationSize = imageByteSize;
+	allocateInfo.memoryTypeIndex = PickBestMemoryType(
+		gpuContext.physicalDevice,
+		bufferMemoryRequirements.memoryTypeBits,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+	if (vkAllocateMemory(
+			gpuContext.device,
+			&allocateInfo,
+			nullptr,
+			&stagingBufferMemory) != VK_SUCCESS)
 	{
-		int			samples;
-		int			i, c;
-		byte		*scan;
-		float		rMax = 0, gMax = 0, bMax = 0;
-		int			width = *pUploadWidth;
-		int			height = *pUploadHeight;
+		Com_Printf(S_COLOR_RED "Failed to allocate staging buffer memory\n");
+		vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
+		return;
+	}
 
-		//
-		// perform optional picmip operation
-		//
-		if ( picmip ) {
-			for(i = 0; i < r_picmip->integer; i++) {
-				R_MipMap( (byte *)data, width, height );
-				width >>= 1;
-				height >>= 1;
-				if (width < 1) {
-					width = 1;
-				}
-				if (height < 1) {
-					height = 1;
-				}
-			}
+	//
+	// upload image data to staging buffer
+	//
+	void *stagingBufferData = nullptr;
+	if (vkMapMemory(
+			gpuContext.device,
+			stagingBufferMemory,
+			0,
+			VK_WHOLE_SIZE,
+			0,
+			&stagingBufferData) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to map memory\n");
+		vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
+		vkFreeMemory(gpuContext.device, stagingBufferMemory, nullptr);
+		return;
+	}
+	memcpy(stagingBufferData, data, imageByteSize);
+	vkUnmapMemory(gpuContext.device, stagingBufferMemory);
+
+	vkBindBufferMemory(
+		gpuContext.device, stagingBuffer, stagingBufferMemory, 0);
+
+	//
+	// image
+	//
+	VkImageCreateInfo imageCreateInfo = {};
+	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageCreateInfo.flags = 0;
+	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageCreateInfo.format = VK_FORMAT_B8G8R8A8_UNORM;
+	imageCreateInfo.extent.width = width;
+	imageCreateInfo.extent.height = height;
+	imageCreateInfo.extent.depth = 1;
+	imageCreateInfo.mipLevels = 1;
+	imageCreateInfo.arrayLayers = 1;
+	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageCreateInfo.usage =
+		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	VkImage image;
+	if (vkCreateImage(
+			gpuContext.device,
+			&imageCreateInfo,
+			nullptr,
+			&image) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create image\n");
+		vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
+		vkFreeMemory(gpuContext.device, stagingBufferMemory, nullptr);
+		return;
+	}
+
+	VkMemoryRequirements imageMemoryRequirements = {};
+	vkGetImageMemoryRequirements(
+		gpuContext.device, image, &imageMemoryRequirements);
+
+	VkDeviceMemory imageMemory;
+	{
+		VkMemoryAllocateInfo allocateInfo = {};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocateInfo.allocationSize = imageMemoryRequirements.size;
+		allocateInfo.memoryTypeIndex = PickBestMemoryType(
+			gpuContext.physicalDevice,
+			imageMemoryRequirements.memoryTypeBits,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		if (vkAllocateMemory(
+				gpuContext.device,
+				&allocateInfo,
+				nullptr,
+				&imageMemory) != VK_SUCCESS)
+		{
+			Com_Printf(S_COLOR_RED "Failed to allocate image memory\n");
+			vkDestroyImage(gpuContext.device, image, nullptr);
+			vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
+			vkFreeMemory(gpuContext.device, stagingBufferMemory, nullptr);
+			return;
 		}
+	}
 
-		//
-		// clamp to the current upper OpenGL limit
-		// scale both axis down equally so we don't have to
-		// deal with a half mip resampling
-		//
-		while ( width > glConfig.maxTextureSize	|| height > glConfig.maxTextureSize ) {
+	vkBindImageMemory(gpuContext.device, image, imageMemory, 0);
+
+	VkCommandBufferAllocateInfo cmdBufferAllocateInfo = {};
+	cmdBufferAllocateInfo.sType =
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	cmdBufferAllocateInfo.commandPool = gpuContext.transferCommandPool;
+	cmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	cmdBufferAllocateInfo.commandBufferCount = 1;
+
+	//
+	// do the copy
+	//
+	VkCommandBuffer cmdBuffer;
+	if (vkAllocateCommandBuffers(
+			gpuContext.device,
+			&cmdBufferAllocateInfo,
+			&cmdBuffer) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create command buffer\n");
+		return;
+	}
+
+	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
+	cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
+	{
+		return;
+	}
+
+	TransitionImageLayout(
+		cmdBuffer,
+		image, 
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+	VkBufferImageCopy bufferImageCopy = {};
+	bufferImageCopy.bufferOffset = 0;
+	bufferImageCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	bufferImageCopy.imageSubresource.mipLevel = 0;
+	bufferImageCopy.imageSubresource.baseArrayLayer = 0;
+	bufferImageCopy.imageSubresource.layerCount = 1;
+	bufferImageCopy.imageOffset = {0, 0, 0};
+	bufferImageCopy.imageExtent = {width, height, 1};
+
+	vkCmdCopyBufferToImage(
+		cmdBuffer,
+		stagingBuffer,
+		image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1,
+		&bufferImageCopy);
+
+	TransitionImageLayout(
+		cmdBuffer,
+		image, 
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+	vkEndCommandBuffer(cmdBuffer);
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &cmdBuffer;
+
+	if (vkQueueSubmit(
+			gpuContext.transferQueue.queue,
+			1,
+			&submitInfo,
+			VK_NULL_HANDLE) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to submit command buffers to queue\n");
+	}
+
+	vkDeviceWaitIdle(gpuContext.device);
+	vkFreeCommandBuffers(
+		gpuContext.device, gpuContext.transferCommandPool, 1, &cmdBuffer);
+
+#if 0
+	//
+	// perform optional picmip operation
+	//
+	if ( picmip ) {
+		for(i = 0; i < r_picmip->integer; i++) {
 			R_MipMap( (byte *)data, width, height );
 			width >>= 1;
 			height >>= 1;
+			if (width < 1) {
+				width = 1;
+			}
+			if (height < 1) {
+				height = 1;
+			}
 		}
+	}
 
-		//
-		// scan the texture for each channel's max values
-		// and verify if the alpha channel is being used or not
-		//
-		c = width*height;
-		scan = ((byte *)data);
-		samples = 3;
-		for ( i = 0; i < c; i++ )
-		{
-			if ( scan[i*4+0] > rMax )
-			{
-				rMax = scan[i*4+0];
-			}
-			if ( scan[i*4+1] > gMax )
-			{
-				gMax = scan[i*4+1];
-			}
-			if ( scan[i*4+2] > bMax )
-			{
-				bMax = scan[i*4+2];
-			}
-			if ( scan[i*4 + 3] != 255 )
-			{
-				samples = 4;
-				break;
-			}
-		}
+	//
+	// clamp to the current upper OpenGL limit
+	// scale both axis down equally so we don't have to
+	// deal with a half mip resampling
+	//
+	while ( width > glConfig.maxTextureSize	|| height > glConfig.maxTextureSize ) {
+		R_MipMap( (byte *)data, width, height );
+		width >>= 1;
+		height >>= 1;
+	}
 
-		// select proper internal format
-		if ( samples == 3 )
+	//
+	// scan the texture for each channel's max values
+	// and verify if the alpha channel is being used or not
+	//
+	c = width*height;
+	scan = ((byte *)data);
+	samples = 3;
+	for ( i = 0; i < c; i++ )
+	{
+		if ( scan[i*4+0] > rMax )
 		{
-			if ( glConfig.textureCompression == TC_S3TC && allowTC )
-			{
-				*pformat = GL_RGB4_S3TC;
-			}
-			else if ( glConfig.textureCompression == TC_S3TC_DXT && allowTC )
-			{	// Compress purely color - no alpha
-				if ( r_texturebits->integer == 16 ) {
-					*pformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;	//this format cuts to 16 bit
-				}
-				else {//if we aren't using 16 bit then, use 32 bit compression
-					*pformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-				}
-			}
-			else if ( isLightmap && r_texturebitslm->integer > 0 )
-			{
-				int lmBits = r_texturebitslm->integer & 0x30; // 16 or 32
-				// Allow different bit depth when we are a lightmap
-				if ( lmBits == 16 )
-					*pformat = GL_RGB5;
-				else
-					*pformat = GL_RGB8;
-			}
-			else if ( r_texturebits->integer == 16 )
-			{
-				*pformat = GL_RGB5;
-			}
-			else if ( r_texturebits->integer == 32 )
-			{
-				*pformat = GL_RGB8;
-			}
-			else
-			{
-				*pformat = 3;
-			}
+			rMax = scan[i*4+0];
 		}
-		else if ( samples == 4 )
+		if ( scan[i*4+1] > gMax )
 		{
-			if ( glConfig.textureCompression == TC_S3TC_DXT && allowTC)
-			{	// Compress both alpha and color
+			gMax = scan[i*4+1];
+		}
+		if ( scan[i*4+2] > bMax )
+		{
+			bMax = scan[i*4+2];
+		}
+		if ( scan[i*4 + 3] != 255 )
+		{
+			samples = 4;
+			break;
+		}
+	}
+
+	// select proper internal format
+	if ( samples == 3 )
+	{
+		if ( glConfig.textureCompression == TC_S3TC && allowTC )
+		{
+			*pformat = GL_RGB4_S3TC;
+		}
+		else if ( glConfig.textureCompression == TC_S3TC_DXT && allowTC )
+		{	// Compress purely color - no alpha
+			if ( r_texturebits->integer == 16 ) {
+				*pformat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;	//this format cuts to 16 bit
+			}
+			else {//if we aren't using 16 bit then, use 32 bit compression
 				*pformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 			}
-			else if ( r_texturebits->integer == 16 )
-			{
-				*pformat = GL_RGBA4;
-			}
-			else if ( r_texturebits->integer == 32 )
-			{
-				*pformat = GL_RGBA8;
-			}
+		}
+		else if ( isLightmap && r_texturebitslm->integer > 0 )
+		{
+			int lmBits = r_texturebitslm->integer & 0x30; // 16 or 32
+			// Allow different bit depth when we are a lightmap
+			if ( lmBits == 16 )
+				*pformat = GL_RGB5;
 			else
-			{
-				*pformat = 4;
-			}
+				*pformat = GL_RGB8;
 		}
-
-		*pUploadWidth = width;
-		*pUploadHeight = height;
-
-		// copy or resample data as appropriate for first MIP level
-		if (!mipmap)
+		else if ( r_texturebits->integer == 16 )
 		{
-			qglTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-			goto done;
+			*pformat = GL_RGB5;
 		}
-
-		R_LightScaleTexture (data, width, height, (qboolean)!mipmap );
-
-		qglTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-
-		if (mipmap)
+		else if ( r_texturebits->integer == 32 )
 		{
-			int		miplevel;
-
-			miplevel = 0;
-			while (width > 1 || height > 1)
-			{
-				R_MipMap( (byte *)data, width, height );
-				width >>= 1;
-				height >>= 1;
-				if (width < 1)
-					width = 1;
-				if (height < 1)
-					height = 1;
-				miplevel++;
-
-				if ( r_colorMipLevels->integer )
-				{
-					R_BlendOverTexture( (byte *)data, width * height, mipBlendColors[miplevel] );
-				}
-
-				qglTexImage2D( uiTarget, miplevel, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-			}
+			*pformat = GL_RGB8;
+		}
+		else
+		{
+			*pformat = 3;
 		}
 	}
-	else
+	else if ( samples == 4 )
 	{
+		if ( glConfig.textureCompression == TC_S3TC_DXT && allowTC)
+		{	// Compress both alpha and color
+			*pformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+		}
+		else if ( r_texturebits->integer == 16 )
+		{
+			*pformat = GL_RGBA4;
+		}
+		else if ( r_texturebits->integer == 32 )
+		{
+			*pformat = GL_RGBA8;
+		}
+		else
+		{
+			*pformat = 4;
+		}
 	}
+
+	*pUploadWidth = width;
+	*pUploadHeight = height;
+
+	// copy or resample data as appropriate for first MIP level
+	if (!mipmap)
+	{
+		qglTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+		goto done;
+	}
+
+	R_LightScaleTexture (data, width, height, (qboolean)!mipmap );
+
+	qglTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+
+	if (mipmap)
+	{
+		int		miplevel;
+
+		miplevel = 0;
+		while (width > 1 || height > 1)
+		{
+			R_MipMap( (byte *)data, width, height );
+			width >>= 1;
+			height >>= 1;
+			if (width < 1)
+				width = 1;
+			if (height < 1)
+				height = 1;
+			miplevel++;
+
+			if ( r_colorMipLevels->integer )
+			{
+				R_BlendOverTexture( (byte *)data, width * height, mipBlendColors[miplevel] );
+			}
+
+			qglTexImage2D( uiTarget, miplevel, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+		}
+	}
+}
 
 done:
-
 	if (mipmap)
 	{
 		qglTexParameterf(uiTarget, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 		qglTexParameterf(uiTarget, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-		if(r_ext_texture_filter_anisotropic->integer>1 && glConfig.maxTextureFilterAnisotropy>0)
+		if (r_ext_texture_filter_anisotropic->integer > 1 &&
+			glConfig.maxTextureFilterAnisotropy > 0)
 		{
 			qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value );
 		}
@@ -769,6 +993,7 @@ done:
 	}
 
 	GL_CheckErrors();
+#endif
 }
 
 static void GL_ResetBinds(void)
@@ -976,98 +1201,83 @@ R_CreateImage
 This is the only way any image_t are created
 ================
 */
-image_t *R_CreateImage( const char *name, const byte *pic, int width, int height,
-					   GLenum format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int glWrapClampMode, bool bRectangle )
+image_t *R_CreateImage(
+	const char *name,
+	const byte *pic,
+	int width,
+	int height,
+	GLenum format,
+	qboolean mipmap,
+	qboolean allowPicmip,
+	qboolean allowTC,
+	int glWrapClampMode,
+	bool bRectangle)
 {
 	image_t		*image;
 	qboolean	isLightmap = qfalse;
 
-	if (strlen(name) >= MAX_QPATH ) {
+	if ((strlen(name) + 1) >= MAX_QPATH) {
 		Com_Error (ERR_DROP, "R_CreateImage: \"%s\" is too long\n", name);
 	}
 
-	if(glConfig.clampToEdgeAvailable && glWrapClampMode == GL_CLAMP) {
+	if (glWrapClampMode == GL_CLAMP) {
 		glWrapClampMode = GL_CLAMP_TO_EDGE;
 	}
 
 	if (name[0] == '*')
 	{
 		const char *psLightMapNameSearchPos = strrchr(name,'/');
-		if (  psLightMapNameSearchPos && !strncmp( psLightMapNameSearchPos+1, "lightmap", 8 ) ) {
-			isLightmap = qtrue;
-		}
+		isLightmap = (qboolean)(
+			psLightMapNameSearchPos &&
+			!strncmp(psLightMapNameSearchPos + 1, "lightmap", 8));
 	}
 
-	if ( (width&(width-1)) || (height&(height-1)) )
+	if ((width & (width - 1)) || (height & (height - 1)))
 	{
-		Com_Error( ERR_FATAL, "R_CreateImage: %s dimensions (%i x %i) not power of 2!\n",name,width,height);
+		Com_Error(
+			ERR_FATAL,
+			"R_CreateImage: %s dimensions (%i x %i) not power of 2!\n",
+			name,
+			width,
+			height);
 	}
 
-	image = R_FindImageFile_NoLoad(name, mipmap, allowPicmip, allowTC, glWrapClampMode );
+	image = R_FindImageFile_NoLoad(
+		name,
+		mipmap,
+		allowPicmip,
+		allowTC,
+		glWrapClampMode);
 	if (image) {
 		return image;
 	}
 
-	image = (image_t*) Z_Malloc( sizeof( image_t ), TAG_IMAGE_T, qtrue );
-//	memset(image,0,sizeof(*image));	// qtrue above does this
+	image = (image_t*)Z_Malloc(sizeof(image_t), TAG_IMAGE_T, qtrue);
 
-	image->texnum = 1024 + giTextureBindNum++;	// ++ is of course staggeringly important...
+	//image->texnum = 1024 + giTextureBindNum++;
 
-	// record which map it was used on...
-	//
 	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
-
 	image->mipmap = !!mipmap;
 	image->allowPicmip = !!allowPicmip;
-
 	Q_strncpyz(image->imgName, name, sizeof(image->imgName));
-
 	image->width = width;
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
 
-	if ( qglActiveTextureARB ) {
-		GL_SelectTexture( 0 );
-	}
-
-	GLuint uiTarget = GL_TEXTURE_2D;
-	if ( bRectangle )
-	{
-		qglDisable( uiTarget );
-		uiTarget = GL_TEXTURE_RECTANGLE_ARB;
-		qglEnable( uiTarget );
-		glWrapClampMode = GL_CLAMP_TO_EDGE;	// default mode supported by rectangle.
-		qglBindTexture( uiTarget, image->texnum );
-	}
-	else
-	{
-		GL_Bind(image);
-	}
-
-	Upload32( (unsigned *)pic,	format,
-								(qboolean)image->mipmap,
-								allowPicmip,
-								isLightmap,
-								allowTC,
-								&image->internalFormat,
-								&image->width,
-								&image->height, bRectangle );
-
-	qglTexParameterf( uiTarget, GL_TEXTURE_WRAP_S, glWrapClampMode );
-	qglTexParameterf( uiTarget, GL_TEXTURE_WRAP_T, glWrapClampMode );
-
-	qglBindTexture( uiTarget, 0 );	//jfm: i don't know why this is here, but it breaks lightmaps when there's only 1
-	glState.currenttextures[glState.currenttmu] = 0;	//mark it not bound
+	Upload32(
+		(unsigned *)pic,
+		format,
+		(qboolean)image->mipmap,
+		allowPicmip,
+		isLightmap,
+		allowTC,
+		&image->internalFormat,
+		&image->width,
+		&image->height);
 
 	const char *psNewName = GenerateImageMappingName(name);
 	Q_strncpyz(image->imgName, psNewName, sizeof(image->imgName));
-	AllocatedImages[ image->imgName ] = image;
-
-	if ( bRectangle )
-	{
-		qglDisable( uiTarget );
-		qglEnable( GL_TEXTURE_2D );
-	}
+	AllocatedImages[image->imgName] = image;
 
 	return image;
 }
@@ -1080,24 +1290,32 @@ Finds or loads the given image.
 Returns NULL if it fails, not a default image.
 ==============
 */
-image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int glWrapClampMode ) {
+image_t	*R_FindImageFile(
+	const char *name,
+	qboolean mipmap,
+	qboolean allowPicmip,
+	qboolean allowTC,
+	int glWrapClampMode)
+{
 	image_t	*image;
 	int		width, height;
 	byte	*pic;
 
-	if (!name || ri.Cvar_VariableIntegerValue( "dedicated" ) )	// stop ghoul2 horribleness as regards image loading from server
+	// stop ghoul2 horribleness as regards image loading from server
+	if (!name || ri.Cvar_VariableIntegerValue( "dedicated" ) )	
 	{
 		return NULL;
 	}
 
-	// need to do this here as well as in R_CreateImage, or R_FindImageFile_NoLoad() may complain about
-	//	different clamp parms used...
+	// need to do this here as well as in R_CreateImage, or
+	// R_FindImageFile_NoLoad() may complain about different clamp parms used..
 	//
-	if(glConfig.clampToEdgeAvailable && glWrapClampMode == GL_CLAMP) {
+	if (glWrapClampMode == GL_CLAMP) {
 		glWrapClampMode = GL_CLAMP_TO_EDGE;
 	}
 
-	image = R_FindImageFile_NoLoad(name, mipmap, allowPicmip, allowTC, glWrapClampMode );
+	image = R_FindImageFile_NoLoad(
+		name, mipmap, allowPicmip, allowTC, glWrapClampMode);
 	if (image) {
 		return image;
 	}
@@ -1106,21 +1324,36 @@ image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmi
 	// load the pic from disk
 	//
 	R_LoadImage( name, &pic, &width, &height );
-	if ( pic == NULL ) {                                    // if we dont get a successful load
-		return NULL;                                        // bail
-	}
-
-
-	// refuse to find any files not power of 2 dims...
-	//
-	if ( (width&(width-1)) || (height&(height-1)) )
-	{
-		ri.Printf( PRINT_ALL, "Refusing to load non-power-2-dims(%d,%d) pic \"%s\"...\n", width,height,name );
+	if ( pic == NULL ) {                                    
+		// if we dont get a successful load, bail
 		return NULL;
 	}
 
-	image = R_CreateImage( ( char * ) name, pic, width, height, GL_RGBA, mipmap, allowPicmip, allowTC, glWrapClampMode );
-	Z_Free( pic );
+	// refuse to find any files not power of 2 dims...
+	if ((width & (width - 1)) || (height & (height - 1)))
+	{
+		ri.Printf(
+			PRINT_ALL,
+			"Refusing to load non-power-2-dims(%dx%d) pic \"%s\"...\n",
+			width,
+			height,
+			name);
+		return NULL;
+	}
+
+	image = R_CreateImage(
+		(char *)name,
+		pic,
+		width,
+		height,
+		GL_RGBA,
+		mipmap,
+		allowPicmip,
+		allowTC,
+		glWrapClampMode);
+
+	Z_Free(pic);
+
 	return image;
 }
 

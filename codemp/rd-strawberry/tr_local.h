@@ -32,6 +32,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
 
+extern struct GpuContext gpuContext;
+
 #define LL(x) x=LittleLong(x)
 
 // 14 bits
@@ -110,7 +112,7 @@ typedef struct orientationr_s {
 
 typedef struct image_s {
 	char		imgName[MAX_QPATH];		// game path, including extension
-	word		width, height;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
+	int			width, height;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
 	GLuint		texnum;					// gl texture binding
 
 	int			frameUsed;			// for texture usage in frame statistics
@@ -122,7 +124,6 @@ typedef struct image_s {
 	bool		allowPicmip;
 
 	short		iLastLevelUsedOn;
-
 } image_t;
 
 //===============================================================================

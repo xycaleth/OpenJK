@@ -24,8 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // tr_init.c -- functions that are not called every frame
 
 #include "tr_local.h"
-
-#include <vulkan/vulkan.h>
+#include "tr_gpu.h"
 
 #include <algorithm>
 #include <array>
@@ -38,39 +37,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/MiniHeap.h"
 #include "ghoul2/g2_local.h"
 
-struct GpuQueue
-{
-	uint32_t queueFamily = -1;
-	VkQueue queue;
-};
-
-struct GpuSwapchain
-{
-	VkSwapchainKHR swapchain;
-	VkFormat surfaceFormat;
-
-	uint32_t imageCount;
-	std::vector<VkImage> images;
-	std::vector<VkImageView> imageViews;
-};
-
-struct GpuContext
-{
-	VkInstance instance;
-	VkDebugUtilsMessengerEXT debugUtilsMessenger;
-
-	VkPhysicalDevice physicalDevice;
-	char physicalDeviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
-	VkDevice device;
-	VkSurfaceKHR windowSurface;
-
-	GpuSwapchain swapchain;
-
-	GpuQueue graphicsQueue;
-	GpuQueue computeQueue;
-	GpuQueue transferQueue;
-	GpuQueue presentQueue;
-} gpuContext;
+GpuContext gpuContext;
 
 glconfig_t	glConfig;
 glconfigExt_t glConfigExt;
@@ -1520,36 +1487,35 @@ static void InitVulkan( void )
 				Com_Error(ERR_FATAL, "Failed to create image view");
 			}
 		}
+
+		//
+		// command buffer pool
+		//
+		VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
+		cmdPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		cmdPoolCreateInfo.queueFamilyIndex =
+			gpuContext.transferQueue.queueFamily;
+
+		if (vkCreateCommandPool(
+				gpuContext.device,
+				&cmdPoolCreateInfo,
+				nullptr,
+				&gpuContext.transferCommandPool) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to create command pool");
+		}
+
 #if 0
-		Com_Printf( "GL_RENDERER: %s\n", (char *)qglGetString (GL_RENDERER) );
-
-		// get our config strings
-		glConfig.vendor_string = (const char *)qglGetString (GL_VENDOR);
-		glConfig.renderer_string = (const char *)qglGetString (GL_RENDERER);
-		glConfig.version_string = (const char *)qglGetString (GL_VERSION);
-		glConfig.extensions_string = (const char *)qglGetString (GL_EXTENSIONS);
-
-		glConfigExt.originalExtensionString = glConfig.extensions_string;
-		glConfig.extensions_string = TruncateGLExtensionsString(glConfigExt.originalExtensionString, 128);
-
 		// OpenGL driver constants
 		qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
 
 		// stubbed or broken drivers may have reported 0...
 		glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
 
-		// initialize extensions
-		GLimp_InitExtensions( );
-
 		// set default state
 		GL_SetDefaultState();
 		R_Splash();	//get something on screen asap
 #endif
-	}
-	else
-	{
-		// set default state
-		GL_SetDefaultState();
 	}
 }
 
@@ -2546,6 +2512,9 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 	//
 	// shutdown
 	//
+	vkDestroyCommandPool(
+		gpuContext.device, gpuContext.transferCommandPool, nullptr);
+
 	for (const auto imageView : gpuContext.swapchain.imageViews)
 	{
 		vkDestroyImageView(gpuContext.device, imageView, nullptr);
