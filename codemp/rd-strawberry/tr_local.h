@@ -899,6 +899,13 @@ typedef struct frontEndCounters_s {
 #define FUNCTABLE_SIZE2		10
 #define FUNCTABLE_MASK		(FUNCTABLE_SIZE-1)
 
+struct rect_t
+{
+	int x;
+	int y;
+	int width;
+	int height;
+};
 
 // the renderer front end should never modify glstate_t
 typedef struct glstate_s {
@@ -910,6 +917,12 @@ typedef struct glstate_s {
 	cullMode_t	cullMode;
 	bool		polygonOffset;
 	uint32_t	glStateBits;
+	float		projectionMatrix[16];
+	float		modelviewMatrix[16];
+	rect_t		viewport;
+	rect_t		scissorRect;
+	float		depthRangeMin;
+	float		depthRangeMax;
 } glstate_t;
 
 

@@ -40,126 +40,64 @@ color4ub_t	styleColors[MAX_LIGHT_STYLES];
 
 extern bool g_bRenderGlowingObjects;
 
-/*
-================
-R_ArrayElementDiscrete
 
-This is just for OpenGL conformance testing, it should never be the fastest
-================
-*/
-static void APIENTRY R_ArrayElementDiscrete( GLint index ) {
-	qglColor4ubv( tess.svars.colors[ index ] );
-	if ( glState.currenttmu ) {
-		qglMultiTexCoord2fARB( 0, tess.svars.texcoords[ 0 ][ index ][0], tess.svars.texcoords[ 0 ][ index ][1] );
-		qglMultiTexCoord2fARB( 1, tess.svars.texcoords[ 1 ][ index ][0], tess.svars.texcoords[ 1 ][ index ][1] );
-	} else {
-		qglTexCoord2fv( tess.svars.texcoords[ 0 ][ index ] );
-	}
-	qglVertex3fv( tess.xyz[ index ] );
-}
-
-/*
-===================
-R_DrawStripElements
-
-===================
-*/
-static int		c_vertexes;		// for seeing how long our average strips are
-static int		c_begins;
-static void R_DrawStripElements( int numIndexes, const glIndex_t *indexes, void ( APIENTRY *element )(GLint) ) {
-	int i;
-	glIndex_t last[3];
-	qboolean even;
-
-	c_begins++;
-
-	if ( numIndexes <= 0 ) {
-		return;
-	}
-
-	qglBegin( GL_TRIANGLE_STRIP );
-
-	// prime the strip
-	element( indexes[0] );
-	element( indexes[1] );
-	element( indexes[2] );
-	c_vertexes += 3;
-
-	last[0] = indexes[0];
-	last[1] = indexes[1];
-	last[2] = indexes[2];
-
-	even = qfalse;
-
-	for ( i = 3; i < numIndexes; i += 3 )
+static VkCullModeFlags GetVkCullMode(cullType_t cullType)
+{
+	switch (cullType)
 	{
-		// odd numbered triangle in potential strip
-		if ( !even )
-		{
-			// check previous triangle to see if we're continuing a strip
-			if ( ( indexes[i+0] == last[2] ) && ( indexes[i+1] == last[1] ) )
-			{
-				element( indexes[i+2] );
-				c_vertexes++;
-				assert( (int)indexes[i+2] < tess.numVertexes );
-				even = qtrue;
-			}
-			// otherwise we're done with this strip so finish it and start
-			// a new one
-			else
-			{
-				qglEnd();
-
-				qglBegin( GL_TRIANGLE_STRIP );
-				c_begins++;
-
-				element( indexes[i+0] );
-				element( indexes[i+1] );
-				element( indexes[i+2] );
-
-				c_vertexes += 3;
-
-				even = qfalse;
-			}
-		}
-		else
-		{
-			// check previous triangle to see if we're continuing a strip
-			if ( ( last[2] == indexes[i+1] ) && ( last[0] == indexes[i+0] ) )
-			{
-				element( indexes[i+2] );
-				c_vertexes++;
-
-				even = qfalse;
-			}
-			// otherwise we're done with this strip so finish it and start
-			// a new one
-			else
-			{
-				qglEnd();
-
-				qglBegin( GL_TRIANGLE_STRIP );
-				c_begins++;
-
-				element( indexes[i+0] );
-				element( indexes[i+1] );
-				element( indexes[i+2] );
-				c_vertexes += 3;
-
-				even = qfalse;
-			}
-		}
-
-		// cache the last three vertices
-		last[0] = indexes[i+0];
-		last[1] = indexes[i+1];
-		last[2] = indexes[i+2];
+		case CT_FRONT_SIDED: return VK_CULL_MODE_BACK_BIT;
+		case CT_BACK_SIDED: return VK_CULL_MODE_FRONT_BIT;
+		case CT_TWO_SIDED: return VK_CULL_MODE_NONE;
 	}
-
-	qglEnd();
 }
 
+static VkBlendFactor GetVkSrcBlendFactor(int stateBits)
+{
+	switch (stateBits & GLS_SRCBLEND_BITS)
+	{
+		case GLS_SRCBLEND_ZERO:
+			return VK_BLEND_FACTOR_ZERO;
+		case GLS_SRCBLEND_ONE:
+			return VK_BLEND_FACTOR_ONE;
+		case GLS_SRCBLEND_DST_COLOR:
+			return VK_BLEND_FACTOR_DST_COLOR;
+		case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+		case GLS_SRCBLEND_SRC_ALPHA:
+			return VK_BLEND_FACTOR_SRC_ALPHA;
+		case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		case GLS_SRCBLEND_DST_ALPHA:
+			return VK_BLEND_FACTOR_DST_ALPHA;
+		case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+		case GLS_SRCBLEND_ALPHA_SATURATE:
+			return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+	}
+}
 
+static VkBlendFactor GetVkDstBlendFactor(int stateBits)
+{
+	switch ( stateBits & GLS_DSTBLEND_BITS )
+	{
+		case GLS_DSTBLEND_ZERO:
+			return VK_BLEND_FACTOR_ZERO;
+		case GLS_DSTBLEND_ONE:
+			return VK_BLEND_FACTOR_ONE;
+		case GLS_DSTBLEND_SRC_COLOR:
+			return VK_BLEND_FACTOR_SRC_COLOR;
+		case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+		case GLS_DSTBLEND_SRC_ALPHA:
+			return VK_BLEND_FACTOR_SRC_ALPHA;
+		case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		case GLS_DSTBLEND_DST_ALPHA:
+			return VK_BLEND_FACTOR_DST_ALPHA;
+		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+	}
+}
 
 /*
 ==================
@@ -171,43 +109,104 @@ without compiled vertex arrays.
 ==================
 */
 static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
-	int		primitives;
+	// STRAWB draw everythingggg
+	//qglDrawElements(GL_TRIANGLES, numIndexes, GL_INDEX_TYPE, indexes);
+	const int stateBits = glState.stateBits;
 
-	primitives = r_primitives->integer;
+	VkShaderModule renderModule;
+	VkPipelineShaderStageCreateInfo stageCreateInfos[2] = {};
+	stageCreateInfos[0].sType =
+		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stageCreateInfos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+	stageCreateInfos[0].module = renderModule;
+	stageCreateInfos[0].pName = "vertexMain";
+	stageCreateInfos[1].sType =
+		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stageCreateInfos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	stageCreateInfos[1].module = renderModule;
+	stageCreateInfos[1].pName = "fragmentMain";
 
-	// default is to use triangles if compiled vertex arrays are present
-	if ( primitives == 0 ) {
-		if ( qglLockArraysEXT ) {
-			primitives = 2;
-		} else {
-			primitives = 1;
-		}
-	}
+	VkPipelineVertexInputStateCreateInfo viCreateInfo = {};
+	viCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
+	VkPipelineInputAssemblyStateCreateInfo iaCreateInfo = {};
+	iaCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	iaCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-	if ( primitives == 2 ) {
-		qglDrawElements( GL_TRIANGLES,
-						numIndexes,
-						GL_INDEX_TYPE,
-						indexes );
-		return;
-	}
+	VkViewport viewport = {};
+	viewport.x = glState.viewport.x;
+	viewport.y = glState.viewport.y;
+	viewport.width = glState.viewport.width;
+	viewport.height = glState.viewport.height;
+	viewport.minDepth = glState.depthRangeMin;
+	viewport.maxDepth = glState.depthRangeMax;
 
-	if ( primitives == 1 ) {
-		R_DrawStripElements( numIndexes,  indexes, qglArrayElement );
-		return;
-	}
+	VkRect2D scissor = {};
+	scissor.offset = {glState.viewport.x, glState.viewport.y};
+	scissor.extent = {glState.viewport.width, glState.viewport.height};
 
-	if ( primitives == 3 ) {
-		R_DrawStripElements( numIndexes,  indexes, R_ArrayElementDiscrete );
-		return;
-	}
+	VkPipelineViewportStateCreateInfo viewportCreateInfo = {};
+	viewportCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportCreateInfo.viewportCount = 1;
+	viewportCreateInfo.pViewports = &viewport;
+	viewportCreateInfo.scissorCount = 1;
+	viewportCreateInfo.pScissors = &scissor;
 
-	// anything else will cause no drawing
+	VkPipelineRasterizationStateCreateInfo rsCreateInfo = {};
+	rsCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rsCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	rsCreateInfo.cullMode = GetVkCullMode(glState.cullType);
+	rsCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+	VkPipelineDepthStencilStateCreateInfo dsCreateInfo = {};
+	dsCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	dsCreateInfo.depthTestEnable = !(stateBits & GLS_DEPTHTEST_DISABLE);
+	dsCreateInfo.depthWriteEnable =
+		(stateBits & GLS_DEPTHMASK_TRUE) ? VK_TRUE : VK_FALSE;
+	dsCreateInfo.depthCompareOp =
+		(stateBits & GLS_DEPTHFUNC_EQUAL) ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL;
+
+	VkPipelineColorBlendAttachmentState cbAttachment = {};
+	cbAttachment.blendEnable =
+		(stateBits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS)) ? VK_TRUE : VK_FALSE;
+	cbAttachment.srcColorBlendFactor = GetVkSrcBlendFactor(stateBits);
+	cbAttachment.dstColorBlendFactor = GetVkDstBlendFactor(stateBits);
+	cbAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	cbAttachment.srcAlphaBlendFactor = GetVkSrcBlendFactor(stateBits);
+	cbAttachment.dstAlphaBlendFactor = GetVkDstBlendFactor(stateBits);
+	cbAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+	cbAttachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT |
+		VK_COLOR_COMPONENT_G_BIT |
+		VK_COLOR_COMPONENT_B_BIT |
+		VK_COLOR_COMPONENT_A_BIT;
+
+	VkPipelineColorBlendStateCreateInfo cbCreateInfo = {};
+	cbCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	cbCreateInfo.attachmentCount = 1;
+	cbCreateInfo.pAttachments = cbAttachment;
+
+	VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+	pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineCreateInfo.flags = 0;
+	pipelineCreateInfo.stageCount = 2;
+	pipelineCreateInfo.pStages = stageCreateInfos;
+	pipelineCreateInfo.pVertexInputState = &viCreateInfo;
+	pipelineCreateInfo.pInputAssemblyState = &iaCreateInfo;
+	pipelineCreateInfo.pViewportState = &viewportCreateInfo;
+	pipelineCreateInfo.pRasterizationState = &rsCreateInfo;
+	pipelineCreateInfo.pDepthStencilState = &dsCreateInfo;
+	pipelineCreateInfo.pColorBlendState = &cbCreateInfo;
+	pipelineCreateInfo.layout = 0;
+	pipelineCreateInfo.renderPass = 0;
+	pipelineCreateInfo.subPass = 0;
 }
-
-
-
 
 /*
 =============================================================
@@ -392,21 +391,19 @@ static void DrawMultitextured( shaderCommands_t *input, int stage ) {
 
 	pStage = &tess.xstages[stage];
 
-	GL_State( pStage->stateBits );
+	GL_State(pStage->stateBits);
 
 	//
 	// base
 	//
 	GL_SelectTexture( 0 );
-	qglTexCoordPointer( 2, GL_FLOAT, 0, input->svars.texcoords[0] );
+	// STRAWB upload texture arrays input->svars.texcoords[0] to tex0
 	R_BindAnimatedImage( &pStage->bundle[0] );
 
 	//
 	// lightmap/secondary pass
 	//
 	GL_SelectTexture( 1 );
-	qglEnable( GL_TEXTURE_2D );
-	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
 
 	if ( r_lightmap->integer ) {
 		GL_TexEnv( GL_REPLACE );
@@ -414,17 +411,10 @@ static void DrawMultitextured( shaderCommands_t *input, int stage ) {
 		GL_TexEnv( tess.shader->multitextureEnv );
 	}
 
-	qglTexCoordPointer( 2, GL_FLOAT, 0, input->svars.texcoords[1] );
-
+	// STRAWB upload texture arrays input->svars.texcoords1 to tex1
 	R_BindAnimatedImage( &pStage->bundle[1] );
 
 	R_DrawElements( input->numIndexes, input->indexes );
-
-	//
-	// disable texturing on TEXTURE1, then select TEXTURE0
-	//
-	//qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
-	qglDisable( GL_TEXTURE_2D );
 
 	GL_SelectTexture( 0 );
 }
@@ -1567,6 +1557,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 	bool FogColorChange = false;
 	fog_t *fog = NULL;
 
+#ifdef STRAWB
 	if (tess.fogNum &&
 		tess.shader->fogPass &&
 		(tess.fogNum == tr.world->globalFog || tess.fogNum == tr.world->numfogs) &&
@@ -1626,6 +1617,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		qglEnable(GL_FOG);
 		UseGLFog = true;
 	}
+#endif
 
 	for (int stage = 0; stage < input->shader->numUnfoggedPasses; stage++)
 	{
@@ -1682,6 +1674,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			continue;
 		}
 
+#ifdef STRAWB
 		if (UseGLFog)
 		{
 			if (pStage->mGLFogColorOverride)
@@ -1697,6 +1690,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				qglFogfv(GL_FOG_COLOR, fog->parms.color);
 			}
 		}
+#endif
 
 		if (!input->fading)
 		{
@@ -1708,8 +1702,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 		if (!setArraysOnce)
 		{
-			qglEnableClientState(GL_COLOR_ARRAY);
-			qglColorPointer(4, GL_UNSIGNED_BYTE, 0, input->svars.colors);
+			// STRAWB upload color arrays
 		}
 
 		//
@@ -1725,7 +1718,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 			if (!setArraysOnce)
 			{
-				qglTexCoordPointer(2, GL_FLOAT, 0, input->svars.texcoords[0]);
+				// STRAWB upload texcoord arrays
 			}
 
 			//
@@ -1752,6 +1745,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			if (tess.shader == tr.distortionShader &&
 				glConfig.stencilBits >= 4)
 			{
+#ifdef STRAWB
 				// draw it to the stencil buffer!
 				tr_stencilled = true;
 				lStencilled = true;
@@ -1762,6 +1756,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 				//don't depthmask, don't blend.. don't do anything
 				GL_State(0);
+#endif
 			}
 			else if (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA)
 			{
@@ -1798,18 +1793,22 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 			if (lStencilled)
 			{
+#ifdef STRAWB
 				// re-enable the color buffer, disable stencil test
 				lStencilled = false;
 				qglDisable(GL_STENCIL_TEST);
 				qglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+#endif
 			}
 		}
 	}
 
+#ifdef STRAWB
 	if (FogColorChange)
 	{
 		qglFogfv(GL_FOG_COLOR, fog->parms.color);
 	}
+#endif
 }
 
 
@@ -1859,38 +1858,19 @@ void RB_StageIteratorGeneric( void )
 	if ( tess.numPasses > 1 || input->shader->multitextureEnv )
 	{
 		setArraysOnce = qfalse;
-		qglDisableClientState (GL_COLOR_ARRAY);
-		qglDisableClientState (GL_TEXTURE_COORD_ARRAY);
 	}
 	else
 	{
 		setArraysOnce = qtrue;
-
-		qglEnableClientState( GL_COLOR_ARRAY);
-		qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.svars.colors );
-
-		qglEnableClientState( GL_TEXTURE_COORD_ARRAY);
-		qglTexCoordPointer( 2, GL_FLOAT, 0, tess.svars.texcoords[0] );
+		// STRAWB upload color and texcoords here
+		// tess.svars.colors
+		// tess.svars.texcoords[0]
 	}
 
 	//
 	// lock XYZ
 	//
-	qglVertexPointer (3, GL_FLOAT, 16, input->xyz);	// padded for SIMD
-	if (qglLockArraysEXT)
-	{
-		qglLockArraysEXT(0, input->numVertexes);
-		GLimp_LogComment( "glLockArraysEXT\n" );
-	}
-
-	//
-	// enable color and texcoord arrays after the lock if necessary
-	//
-	if ( !setArraysOnce )
-	{
-		qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-		qglEnableClientState( GL_COLOR_ARRAY );
-	}
+	// STRAWB upload position data from tess.xyz
 
 	//
 	// call shader function
@@ -1939,9 +1919,12 @@ void RB_StageIteratorGeneric( void )
 	if ( input->shader->polygonOffset )
 	{
 		GL_PolygonOffset(false);
+#if 0
 		qglDisable( GL_POLYGON_OFFSET_FILL );
+#endif
 	}
 
+#if 0
 	// Now check for surfacesprites.
 	if (r_surfaceSprites->integer)
 	{
@@ -1961,6 +1944,7 @@ void RB_StageIteratorGeneric( void )
 	{
 		qglDisable(GL_FOG);
 	}
+#endif
 }
 
 
