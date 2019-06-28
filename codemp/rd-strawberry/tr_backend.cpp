@@ -128,42 +128,44 @@ void GL_SelectTexture( int unit )
 ** GL_Cull
 */
 void GL_Cull( int cullType ) {
-	if ( glState.faceCulling == cullType ) {
-		return;
-	}
-	glState.faceCulling = cullType;
-	if (backEnd.projection2D) {	//don't care, we're in 2d when it's always disabled
+	if (glState.faceCulling == cullType)
+	{
 		return;
 	}
 
-	if ( cullType == CT_TWO_SIDED )
+	glState.faceCulling = cullType;
+	if (backEnd.projection2D) {
+		//don't care, we're in 2d when it's always disabled
+		glState.cullMode = CULL_MODE_NONE;
+		return;
+	}
+
+	if (cullType == CT_TWO_SIDED)
 	{
-		qglDisable( GL_CULL_FACE );
+		glState.cullMode = CULL_MODE_NONE;
 	}
 	else
 	{
-		qglEnable( GL_CULL_FACE );
-
-		if ( cullType == CT_BACK_SIDED )
+		if (cullType == CT_BACK_SIDED)
 		{
-			if ( backEnd.viewParms.isMirror )
+			if (backEnd.viewParms.isMirror)
 			{
-				qglCullFace( GL_FRONT );
+				glState.cullMode = CULL_MODE_FRONT;
 			}
 			else
 			{
-				qglCullFace( GL_BACK );
+				glState.cullMode = CULL_MODE_BACK;
 			}
 		}
 		else
 		{
-			if ( backEnd.viewParms.isMirror )
+			if (backEnd.viewParms.isMirror)
 			{
-				qglCullFace( GL_BACK );
+				glState.cullMode = CULL_MODE_BACK;
 			}
 			else
 			{
-				qglCullFace( GL_FRONT );
+				glState.cullMode = CULL_MODE_FRONT;
 			}
 		}
 	}
@@ -397,6 +399,10 @@ void GL_State( uint32_t stateBits )
 	glState.glStateBits = stateBits;
 }
 
+void GL_PolygonOffset(bool enable)
+{
+	glState.polygonOffset = enable;
+}
 
 
 /*
@@ -408,10 +414,6 @@ A player has predicted a teleport, but hasn't arrived yet
 */
 static void RB_Hyperspace( void ) {
 	float		c;
-
-	if ( !backEnd.isHyperspace ) {
-		// do initialization shit
-	}
 
 	c = ( backEnd.refdef.time & 255 ) / 255.0f;
 	qglClearColor( c, c, c, 1 );
@@ -444,14 +446,7 @@ to actually render the visible surfaces for this view
 void RB_BeginDrawingView (void) {
 	int clearBits = GL_DEPTH_BUFFER_BIT;
 
-	// sync with gl if needed
-	if ( r_finish->integer == 1 && !glState.finishCalled ) {
-		qglFinish ();
-		glState.finishCalled = qtrue;
-	}
-	if ( r_finish->integer == 0 ) {
-		glState.finishCalled = qtrue;
-	}
+	glState.finishCalled = qtrue;
 
 	// we will need to change the projection matrix before drawing
 	// 2D images again
@@ -463,7 +458,7 @@ void RB_BeginDrawingView (void) {
 	SetViewportAndScissor();
 
 	// ensures that depth writes are enabled for the depth clear
-	GL_State( GLS_DEFAULT );
+	GL_State(GLS_DEFAULT);
 
 	// clear relevant buffers
 	if ( r_measureOverdraw->integer || r_shadows->integer == 2 || tr_stencilled )
@@ -498,14 +493,23 @@ void RB_BeginDrawingView (void) {
 		}
 	}
 
-	if ( tr.refdef.rdflags & RDF_AUTOMAP || (!( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) && r_DynamicGlow->integer && !g_bRenderGlowingObjects ) )
+	if ((tr.refdef.rdflags & RDF_AUTOMAP) ||
+		((backEnd.refdef.rdflags & RDF_NOWORLDMODEL) == 0 &&
+		 r_DynamicGlow->integer &&
+		 !g_bRenderGlowingObjects))
 	{
 		if (tr.world && tr.world->globalFog != -1)
-		{ //this is because of a bug in multiple scenes I think, it needs to clear for the second scene but it doesn't normally.
-			const fog_t		*fog = &tr.world->fogs[tr.world->globalFog];
+		{
+			//this is because of a bug in multiple scenes I think, it needs to
+			//clear for the second scene but it doesn't normally.
+			const fog_t *fog = &tr.world->fogs[tr.world->globalFog];
 
 			clearBits |= GL_COLOR_BUFFER_BIT;
-			qglClearColor(fog->parms.color[0],  fog->parms.color[1], fog->parms.color[2], 1.0f );
+			qglClearColor(
+				fog->parms.color[0],
+				fog->parms.color[1],
+				fog->parms.color[2],
+				1.0f);
 		}
 	}
 
@@ -634,42 +638,6 @@ typedef struct postRender_s {
 static postRender_t g_postRenders[MAX_POST_RENDERS];
 static int g_numPostRenders = 0;
 
-#if 0
-//get the "average" (ideally center) position of a surface on the tess.
-//this is a kind of lame method because I can't think correctly right now.
-static inline bool R_AverageTessXYZ(vec3_t dest)
-{
-	int i = 1;
-	float bd = 0.0f;
-	float d = 0.0f;
-	int b = -1;
-	vec3_t v;
-
-	while (i < tess.numVertexes)
-	{
-		VectorSubtract(tess.xyz[i], tess.xyz[i], v);
-		d = VectorLength(v);
-		if (b == -1 || d < bd)
-		{
-			b = i;
-			bd = d;
-		}
-		i++;
-	}
-	if (b != -1)
-	{
-		VectorSubtract(tess.xyz[0], tess.xyz[b], v);
-
-		VectorScale(v, 0.5f, dest);
-		VectorAdd(dest, tess.xyz[0], dest);
-
-		return true;
-	}
-
-	return false;
-}
-#endif
-
 void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	shader_t		*shader, *oldShader;
 	int				fogNum, oldFogNum;
@@ -685,7 +653,8 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	bool			didShadowPass = false;
 
 	if (g_bRenderGlowingObjects)
-	{ //only shadow on initial passes
+	{
+		//only shadow on initial passes
 		didShadowPass = true;
 	}
 
@@ -717,7 +686,8 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 		R_DecomposeSort( drawSurf->sort, &entityNum, &shader, &fogNum, &dlighted );
 
-		// If we're rendering glowing objects, but this shader has no stages with glow, skip it!
+		// If we're rendering glowing objects, but this shader has no stages
+		// with glow, skip it!
 		if ( g_bRenderGlowingObjects && !shader->hasGlow )
 		{
 			shader = oldShader;
@@ -733,13 +703,15 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		// change the tess parameters if needed
 		// a "entityMergable" shader is a shader that can have surfaces from seperate
 		// entities merged into a single batch, like smoke and blood puff sprites
+		//
 		if (entityNum != REFENTITYNUM_WORLD &&
 			g_numPostRenders < MAX_POST_RENDERS)
 		{
 			if ( (backEnd.refdef.entities[entityNum].e.renderfx & RF_DISTORTION) ||
 				 (backEnd.refdef.entities[entityNum].e.renderfx & RF_FORCEPOST) ||
 				 (backEnd.refdef.entities[entityNum].e.renderfx & RF_FORCE_ENT_ALPHA) )
-			{ //must render last
+			{
+				//must render last
 				curEnt = &backEnd.refdef.entities[entityNum];
 				pRender = &g_postRenders[g_numPostRenders];
 
@@ -769,17 +741,7 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				pRender->dlighted = dlighted;
 				pRender->fogNum = fogNum;
 				pRender->shader = shader;
-
-				/*
-				if (shader == tr.distortionShader)
-				{
-					pRender->eValid = qfalse;
-				}
-				else
-				*/
-				{
-					pRender->eValid = qtrue;
-				}
+				pRender->eValid = qtrue;
 
 				//assure the info is back to the last set state
 				shader = oldShader;
@@ -787,50 +749,14 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				fogNum = oldFogNum;
 				dlighted = oldDlighted;
 
-				oldSort = -20; //invalidate this thing, cause we may want to postrender more surfs of the same sort
+				//invalidate this thing, cause we may want to postrender more
+				//surfs of the same sort
+				oldSort = -20; 
 
 				//continue without bothering to begin a draw surf
 				continue;
 			}
 		}
-		/*
-		else if (shader == tr.distortionShader &&
-			g_numPostRenders < MAX_POST_RENDERS)
-		{ //not an ent, just a surface that needs this effect
-			pRender = &g_postRenders[g_numPostRenders];
-
-			g_numPostRenders++;
-
-			depthRange = 0;
-			pRender->depthRange = depthRange;
-
-			//It is not necessary to update the old* values because
-			//we are not updating now with the current values.
-			depthRange = oldDepthRange;
-
-			//store off the ent num
-			pRender->entNum = entityNum;
-
-			//remember the other values necessary for rendering this surf
-			pRender->drawSurf = drawSurf;
-			pRender->dlighted = dlighted;
-			pRender->fogNum = fogNum;
-			pRender->shader = shader;
-
-			pRender->eValid = qfalse;
-
-			//assure the info is back to the last set state
-			shader = oldShader;
-			entityNum = oldEntityNum;
-			fogNum = oldFogNum;
-			dlighted = oldDlighted;
-
-			oldSort = -20; //invalidate this thing, cause we may want to postrender more surfs of the same sort
-
-			//continue without bothering to begin a draw surf
-			continue;
-		}
-		*/
 
 		if (shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted
 			|| ( entityNum != oldEntityNum && !shader->entityMergable ) )
@@ -853,10 +779,10 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		//
 		// change the modelview matrix if needed
 		//
-		if ( entityNum != oldEntityNum ) {
+		if (entityNum != oldEntityNum) {
 			depthRange = 0;
 
-			if ( entityNum != REFENTITYNUM_WORLD ) {
+			if (entityNum != REFENTITYNUM_WORLD) {
 				backEnd.currentEntity = &backEnd.refdef.entities[entityNum];
 
 				backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
@@ -869,7 +795,10 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 				// set up the dynamic lighting if needed
 				if ( backEnd.currentEntity->needDlights ) {
-					R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
+					R_TransformDlights(
+						backEnd.refdef.num_dlights,
+						backEnd.refdef.dlights,
+						&backEnd.ori);
 				}
 
 				if ( backEnd.currentEntity->e.renderfx & RF_NODEPTH ) {
@@ -887,7 +816,10 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				// we have to reset the shaderTime as well otherwise image animations on
 				// the world (like water) continue with the wrong frame
 				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-				R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
+				R_TransformDlights(
+					backEnd.refdef.num_dlights,
+					backEnd.refdef.dlights,
+					&backEnd.ori);
 			}
 
 			qglLoadMatrixf( backEnd.ori.modelMatrix );
@@ -923,17 +855,9 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 	backEnd.refdef.floatTime = originalTime;
 
-	// draw the contents of the last shader batch
-	//assert(entityNum < MAX_GENTITIES);
-
 	if (oldShader != NULL) {
 		RB_EndSurface();
 	}
-
-#ifdef _CRAZY_ATTRIB_DEBUG
-	qglPopAttrib();
-	glState.glStateBits = -1;
-#endif
 
 	if (tr_stencilled && tr_distortionPrePost)
 	{ //ok, cap it now
@@ -953,35 +877,22 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 			RB_BeginSurface( pRender->shader, pRender->fogNum );
 
-			/*
-			if (!pRender->eValid && pRender->entNum == REFENTITYNUM_WORLD)
-			{ //world/other surface
-				backEnd.currentEntity = &tr.worldEntity;
-				backEnd.refdef.floatTime = originalTime;
-				backEnd.ori = backEnd.viewParms.world;
-				// we have to reset the shaderTime as well otherwise image animations on
-				// the world (like water) continue with the wrong frame
-				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+			backEnd.currentEntity = &backEnd.refdef.entities[pRender->entNum];
 
-				R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
-			}
-			else
-			*/
-			{ //ent
-				backEnd.currentEntity = &backEnd.refdef.entities[pRender->entNum];
+			backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
+			// we have to reset the shaderTime as well otherwise image animations start
+			// from the wrong frame
+			tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
 
-				backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
-				// we have to reset the shaderTime as well otherwise image animations start
-				// from the wrong frame
-				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+			// set up the transformation matrix
+			R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.ori );
 
-				// set up the transformation matrix
-				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.ori );
-
-				// set up the dynamic lighting if needed
-				if ( backEnd.currentEntity->needDlights ) {
-					R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
-				}
+			// set up the dynamic lighting if needed
+			if ( backEnd.currentEntity->needDlights ) {
+				R_TransformDlights(
+					backEnd.refdef.num_dlights,
+					backEnd.refdef.dlights,
+					&backEnd.ori );
 			}
 
 			qglLoadMatrixf( backEnd.ori.modelMatrix );
@@ -1003,108 +914,21 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 					break;
 			}
 
-			/*
-			if (!pRender->eValid)
-			{ //special full-screen "distortion" (or refraction or whatever the heck you want to call it)
-				if (!tr_stencilled)
-				{ //only need to do this once every frame (that a surface using it is around)
-					int radX = 2048;
-					int radY = 2048;
-					int x = glConfig.vidWidth/2;
-					int y = glConfig.vidHeight/2;
-					int cX, cY;
-
-					GL_Bind( tr.screenImage );
-					//using this method, we could pixel-filter the texture and all sorts of crazy stuff.
-					//but, it is slow as hell.
-#if 0
-					static byte *tmp = NULL;
-					if (!tmp)
-					{
-						tmp = (byte *)Z_Malloc((sizeof(byte)*4)*(glConfig.vidWidth*glConfig.vidHeight), TAG_ICARUS, qtrue);
-					}
-					qglReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
-					qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
-#endif
-
-					if (radX > glConfig.maxTextureSize)
-					{
-						radX = glConfig.maxTextureSize;
-					}
-					if (radY > glConfig.maxTextureSize)
-					{
-						radY = glConfig.maxTextureSize;
-					}
-
-					while (glConfig.vidWidth < radX)
-					{
-						radX /= 2;
-					}
-					while (glConfig.vidHeight < radY)
-					{
-						radY /= 2;
-					}
-
-					cX = x-(radX/2);
-					cY = y-(radY/2);
-
-					if (cX+radX > glConfig.vidWidth)
-					{ //would it go off screen?
-						cX = glConfig.vidWidth-radX;
-					}
-					else if (cX < 0)
-					{ //cap it off at 0
-						cX = 0;
-					}
-
-					if (cY+radY > glConfig.vidHeight)
-					{ //would it go off screen?
-						cY = glConfig.vidHeight-radY;
-					}
-					else if (cY < 0)
-					{ //cap it off at 0
-						cY = 0;
-					}
-
-					qglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, cX, cY, radX, radY, 0);
-				}
-				lastPostEnt = ENTITYNUM_NONE;
-			}
-			*/
-			if (!pRender->eValid)
-			{
-			}
-			else if ((backEnd.refdef.entities[pRender->entNum].e.renderfx & RF_DISTORTION) &&
+			if (pRender->eValid &&
+				(backEnd.refdef.entities[pRender->entNum].e.renderfx & RF_DISTORTION) &&
 				lastPostEnt != pRender->entNum)
-			{ //do the capture now, we only need to do it once per ent
+			{
+				// do the capture now, we only need to do it once per ent
 				int x, y;
 				int rad;
 				bool r;
+
 				//We are going to just bind this, and then the CopyTexImage is going to
 				//stomp over this texture num in texture memory.
 				GL_Bind( tr.screenImage );
 
-#if 0 //yeah.. this kinda worked but it was stupid
-				if (pRender->eValid)
-				{
-					r = R_WorldCoordToScreenCoord( backEnd.currentEntity->e.origin, &x, &y );
-					rad = backEnd.currentEntity->e.radius;
-				}
-				else
-				{
-					vec3_t v;
-					//probably a little bit expensive.. but we're doing this for looks, not speed!
-					if (!R_AverageTessXYZ(v))
-					{ //failed, just use first vert I guess
-						VectorCopy(tess.xyz[0], v);
-					}
-					r = R_WorldCoordToScreenCoord( v, &x, &y );
-					rad = 256;
-				}
-#else
 				r = R_WorldCoordToScreenCoord( backEnd.currentEntity->e.origin, &x, &y );
 				rad = backEnd.currentEntity->e.radius;
-#endif
 
 				if (r)
 				{
@@ -1148,24 +972,18 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		qglDepthRange (0, 1);
 	}
 
-#if 0
-	RB_DrawSun();
-#endif
 	if (tr_stencilled && !tr_distortionPrePost)
-	{ //draw in the stencil buffer's cutout
+	{
+		//draw in the stencil buffer's cutout
 		RB_DistortionFill();
 	}
+
 	if (!didShadowPass)
 	{
 		// darken down any stencil shadows
 		RB_ShadowFinish();
 		didShadowPass = true;
 	}
-
-	// add light flares on lights that aren't obscured
-
-	// rww - 9-13-01 [1-26-01-sof2]
-//	RB_RenderFlares();
 }
 
 
@@ -1186,6 +1004,7 @@ RB_SetGL2D
 void	RB_SetGL2D (void) {
 	backEnd.projection2D = qtrue;
 
+#if 0
 	// set 2D virtual screen size
 	qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
 	qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
@@ -1201,6 +1020,7 @@ void	RB_SetGL2D (void) {
 
 	qglDisable( GL_CULL_FACE );
 	qglDisable( GL_CLIP_PLANE0 );
+#endif
 
 	// set time for 2D shaders
 	backEnd.refdef.time = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
@@ -1217,78 +1037,73 @@ Stretches a raw 32 bit power of 2 bitmap image over the given screen rectangle.
 Used for cinematics.
 =============
 */
-void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty)
+void RE_StretchRaw(
+	int x,
+	int y,
+	int w,
+	int h,
+	int cols,
+	int rows,
+	const byte *data,
+	int client,
+	qboolean dirty)
 {
-	int			start, end;
-
-	if ( !tr.registered ) {
+	if (!tr.registered)
+	{
 		return;
 	}
 
 #if 0
-	R_IssuePendingRenderCommands();
-
 	if ( tess.numIndexes ) {
 		RB_EndSurface();
 	}
+#endif
 
-	// we definately want to sync every frame for the cinematics
-	qglFinish();
-
-	start = end = 0;
-	if ( r_speeds->integer ) {
-		start = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
-	}
-
-	// make sure rows and cols are powers of 2
-	if ( (cols&(cols-1)) || (rows&(rows-1)) )
+	int start = 0;
+	if (r_speeds->integer)
 	{
-		Com_Error (ERR_DROP, "Draw_StretchRaw: size not a power of 2: %i by %i", cols, rows);
+		start = ri.Milliseconds() * ri.Cvar_VariableValue("timescale");
 	}
 
-	GL_Bind( tr.scratchImage[client] );
+#if 0
+	// make sure rows and cols are powers of 2
+	if ((cols & (cols - 1)) || (rows & (rows - 1)))
+	{
+		Com_Error(
+			ERR_DROP,
+			"Draw_StretchRaw: size not a power of 2: %i by %i",
+			cols,
+			rows);
+	}
+#endif
 
 	// if the scratchImage isn't in the format we want, specify it as a new texture
-	if ( cols != tr.scratchImage[client]->width || rows != tr.scratchImage[client]->height ) {
-		tr.scratchImage[client]->width = cols;
-		tr.scratchImage[client]->height = rows;
-		qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGB8, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, glConfig.clampToEdgeAvailable ? GL_CLAMP_TO_EDGE : GL_CLAMP );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, glConfig.clampToEdgeAvailable ? GL_CLAMP_TO_EDGE : GL_CLAMP );
-	} else {
-		if (dirty) {
-			// otherwise, just subimage upload it so that drivers can tell we are going to be changing
-			// it and don't try and do a texture compression
-			qglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cols, rows, GL_RGBA, GL_UNSIGNED_BYTE, data );
-		}
+	if (cols != tr.scratchImage[client]->width ||
+		rows != tr.scratchImage[client]->height)
+	{
+		// find new image to accommodate new size
+		// then upload
+	}
+	else if (dirty)
+	{
+		// upload to new image of same size
 	}
 
-	if ( r_speeds->integer ) {
-		end = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
-		ri.Printf( PRINT_ALL, "qglTexSubImage2D %i, %i: %i msec\n", cols, rows, end - start );
+	if (r_speeds->integer)
+	{
+		int end = ri.Milliseconds() * ri.Cvar_VariableValue("timescale");
+		ri.Printf(
+			PRINT_ALL,
+			"qglTexSubImage2D %i, %i: %i msec\n",
+			cols,
+			rows,
+			end - start);
 	}
 
-	RB_SetGL2D();
-
-	qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
-
-	qglBegin (GL_QUADS);
-	qglTexCoord2f ( 0.5f / cols,  0.5f / rows );
-	qglVertex2f (x, y);
-	qglTexCoord2f ( ( cols - 0.5f ) / cols ,  0.5f / rows );
-	qglVertex2f (x+w, y);
-	qglTexCoord2f ( ( cols - 0.5f ) / cols, ( rows - 0.5f ) / rows );
-	qglVertex2f (x+w, y+h);
-	qglTexCoord2f ( 0.5f / cols, ( rows - 0.5f ) / rows );
-	qglVertex2f (x, y+h);
-	qglEnd ();
-#endif
+	// Blit to screen in region (x, y), (x + w, y + h)
 }
 
 void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty) {
-
 	GL_Bind( tr.scratchImage[client] );
 
 	// if the scratchImage isn't in the format we want, specify it as a new texture
@@ -1641,7 +1456,9 @@ const void	*RB_DrawSurfs( const void *data ) {
 	*/
 
 	// Render dynamic glowing/flaring objects.
-	if ( !(backEnd.refdef.rdflags & RDF_NOWORLDMODEL) && g_bDynamicGlowSupported && r_DynamicGlow->integer )
+	if ((backEnd.refdef.rdflags & RDF_NOWORLDMODEL) == 0 &&
+		g_bDynamicGlowSupported &&
+		r_DynamicGlow->integer)
 	{
 		// Copy the normal scene to texture.
 		qglDisable( GL_TEXTURE_2D );

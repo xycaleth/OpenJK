@@ -352,7 +352,8 @@ because a surface may be forced to perform a RB_End due
 to overflow.
 ==============
 */
-void RB_BeginSurface( shader_t *shader, int fogNum ) {
+void RB_BeginSurface(shader_t *shader, int fogNum)
+{
 	shader_t *state = (shader->remappedShader) ? shader->remappedShader : shader;
 
 	tess.numIndexes = 0;
@@ -362,10 +363,12 @@ void RB_BeginSurface( shader_t *shader, int fogNum ) {
 	tess.dlightBits = 0;		// will be OR'd in by surface functions
 	tess.xstages = state->stages;
 	tess.numPasses = state->numUnfoggedPasses;
-	tess.currentStageIteratorFunc = shader->sky ? RB_StageIteratorSky : RB_StageIteratorGeneric;
+	tess.currentStageIteratorFunc =
+		shader->sky ? RB_StageIteratorSky : RB_StageIteratorGeneric;
 
 	tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-	if (tess.shader->clampTime && tess.shaderTime >= tess.shader->clampTime) {
+	if (tess.shader->clampTime && tess.shaderTime >= tess.shader->clampTime)
+	{
 		tess.shaderTime = tess.shader->clampTime;
 	}
 
@@ -390,12 +393,6 @@ static void DrawMultitextured( shaderCommands_t *input, int stage ) {
 	pStage = &tess.xstages[stage];
 
 	GL_State( pStage->stateBits );
-
-	// this is an ugly hack to work around a GeForce driver
-	// bug with multitexture and clip planes
-	if ( backEnd.viewParms.isPortal ) {
-		qglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-	}
 
 	//
 	// base
@@ -660,7 +657,7 @@ static void ProjectDlightTexture2( void ) {
 
 
 		dStage = NULL;
-		if (tess.shader && qglActiveTextureARB)
+		if (tess.shader)
 		{
 			int i = 0;
 			while (i < tess.shader->numUnfoggedPasses)
@@ -1566,29 +1563,36 @@ static const float logtestExp2 = (sqrt( -log( 1.0 / 255.0 ) ));
 extern bool tr_stencilled; //tr_backend.cpp
 static void RB_IterateStagesGeneric( shaderCommands_t *input )
 {
-	int stage;
-	bool	UseGLFog = false;
-	bool	FogColorChange = false;
-	fog_t	*fog = NULL;
+	bool UseGLFog = false;
+	bool FogColorChange = false;
+	fog_t *fog = NULL;
 
-	if (tess.fogNum && tess.shader->fogPass && (tess.fogNum == tr.world->globalFog || tess.fogNum == tr.world->numfogs)
-		&& r_drawfog->value == 2)
-	{	// only gl fog global fog and the "special fog"
+	if (tess.fogNum &&
+		tess.shader->fogPass &&
+		(tess.fogNum == tr.world->globalFog || tess.fogNum == tr.world->numfogs) &&
+		r_drawfog->value == 2)
+	{
+		// only gl fog global fog and the "special fog"
 		fog = tr.world->fogs + tess.fogNum;
 
 		if (tr.rangedFog)
-		{ //ranged fog, used for sniper scope
+		{
+			//ranged fog, used for sniper scope
 			float fStart = fog->parms.depthForOpaque;
 
 			if (tr.rangedFog < 0.0f)
-			{ //special designer override
+			{
+				//special designer override
 				fStart = -tr.rangedFog;
 			}
 			else
 			{
-				//the greater tr.rangedFog is, the more fog we will get between the view point and cull distance
-				if ((tr.distanceCull-fStart) < tr.rangedFog)
-				{ //assure a minimum range between fog beginning and cutoff distance
+				// the greater tr.rangedFog is, the more fog we will get
+				// between the view point and cull distance
+				if ((tr.distanceCull - fStart) < tr.rangedFog)
+				{
+					// ensure a minimum range between fog beginning and cutoff
+					// distance
 					fStart = tr.distanceCull-tr.rangedFog;
 
 					if (fStart < 16.0f)
@@ -1608,57 +1612,68 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			qglFogi(GL_FOG_MODE, GL_EXP2);
 			qglFogf(GL_FOG_DENSITY, logtestExp2 / fog->parms.depthForOpaque);
 		}
-		if ( g_bRenderGlowingObjects )
+
+		if (g_bRenderGlowingObjects)
 		{
 			const float fogColor[3] = { 0.0f, 0.0f, 0.0f };
-			qglFogfv(GL_FOG_COLOR, fogColor );
+			qglFogfv(GL_FOG_COLOR, fogColor);
 		}
 		else
 		{
 			qglFogfv(GL_FOG_COLOR, fog->parms.color);
 		}
+
 		qglEnable(GL_FOG);
 		UseGLFog = true;
 	}
 
-	for ( stage = 0; stage < input->shader->numUnfoggedPasses; stage++ )
+	for (int stage = 0; stage < input->shader->numUnfoggedPasses; stage++)
 	{
 		shaderStage_t *pStage = &tess.xstages[stage];
 		int forceRGBGen = 0;
 		int stateBits = 0;
 
-		if ( !pStage->active )
+		if (!pStage->active)
 		{
 			break;
 		}
 
-		// Reject this stage if it's not a glow stage but we are doing a glow pass.
-		if ( g_bRenderGlowingObjects && !pStage->glow )
+		// Reject this stage if it's not a glow stage but we are doing a glow
+		// pass.
+		if (g_bRenderGlowingObjects && !pStage->glow)
 		{
 			continue;
 		}
 
-		if ( stage && r_lightmap->integer && !( pStage->bundle[0].isLightmap || pStage->bundle[1].isLightmap || pStage->bundle[0].vertexLightmap ) )
+		if (stage &&
+			r_lightmap->integer &&
+			!(pStage->bundle[0].isLightmap ||
+				pStage->bundle[1].isLightmap ||
+				pStage->bundle[0].vertexLightmap))
 		{
 			break;
 		}
 
 		stateBits = pStage->stateBits;
 
-		if ( backEnd.currentEntity )
+		assert(backEnd.currentEntity->e.renderfx >= 0);
+
+		if (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1)
 		{
-			assert(backEnd.currentEntity->e.renderfx >= 0);
+			// we want to be able to rip a hole in the thing being
+			// disintegrated, and by doing the depth-testing it avoids some
+			// kinds of artefacts, but will probably introduce others?
+			stateBits =
+				GLS_SRCBLEND_SRC_ALPHA |
+				GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
+				GLS_DEPTHMASK_TRUE |
+				GLS_ATEST_GE_C0;
+		}
 
-			if ( backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1 )
-			{
-				// we want to be able to rip a hole in the thing being disintegrated, and by doing the depth-testing it avoids some kinds of artefacts, but will probably introduce others?
-				stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
-			}
-
-			if ( backEnd.currentEntity->e.renderfx & RF_RGB_TINT )
-			{//want to use RGBGen from ent
-				forceRGBGen = CGEN_ENTITY;
-			}
+		if (backEnd.currentEntity->e.renderfx & RF_RGB_TINT)
+		{
+			//want to use RGBGen from ent
+			forceRGBGen = CGEN_ENTITY;
 		}
 
 		if (pStage->ss && pStage->ss->surfaceSpriteType)
@@ -1671,7 +1686,9 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		{
 			if (pStage->mGLFogColorOverride)
 			{
-				qglFogfv(GL_FOG_COLOR, GLFogOverrideColors[pStage->mGLFogColorOverride]);
+				qglFogfv(
+					GL_FOG_COLOR,
+					GLFogOverrideColors[pStage->mGLFogColorOverride]);
 				FogColorChange = true;
 			}
 			else if (FogColorChange && fog)
@@ -1682,53 +1699,60 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		}
 
 		if (!input->fading)
-		{ //this means ignore this, while we do a fade-out
-			ComputeColors( pStage, forceRGBGen );
-		}
-		ComputeTexCoords( pStage );
-
-		if ( !setArraysOnce )
 		{
-			qglEnableClientState( GL_COLOR_ARRAY );
-			qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, input->svars.colors );
+			//this means ignore this, while we do a fade-out
+			ComputeColors(pStage, forceRGBGen);
+		}
+
+		ComputeTexCoords(pStage);
+
+		if (!setArraysOnce)
+		{
+			qglEnableClientState(GL_COLOR_ARRAY);
+			qglColorPointer(4, GL_UNSIGNED_BYTE, 0, input->svars.colors);
 		}
 
 		//
 		// do multitexture
 		//
-		if ( pStage->bundle[1].image != 0 )
+		if (pStage->bundle[1].image != 0)
 		{
-			DrawMultitextured( input, stage );
+			DrawMultitextured(input, stage);
 		}
 		else
 		{
-			static bool lStencilled = false;
+			bool lStencilled = false;
 
-			if ( !setArraysOnce )
+			if (!setArraysOnce)
 			{
-				qglTexCoordPointer( 2, GL_FLOAT, 0, input->svars.texcoords[0] );
+				qglTexCoordPointer(2, GL_FLOAT, 0, input->svars.texcoords[0]);
 			}
 
 			//
 			// set state
 			//
-			if ( (tess.shader == tr.distortionShader) ||
-				 (backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_DISTORTION)) )
-			{ //special distortion effect -rww
-				//tr.screenImage should have been set for this specific entity before we got in here.
-				GL_Bind( tr.screenImage );
+			if ((tess.shader == tr.distortionShader) ||
+				 (backEnd.currentEntity &&
+				  (backEnd.currentEntity->e.renderfx & RF_DISTORTION)))
+			{
+				GL_Bind(tr.screenImage);
 				GL_Cull(CT_TWO_SIDED);
 			}
-			else if ( pStage->bundle[0].vertexLightmap && ( r_vertexLight->integer && !r_uiFullScreen->integer ) && r_lightmap->integer )
+			else if (pStage->bundle[0].vertexLightmap &&
+					 (r_vertexLight->integer && !r_uiFullScreen->integer) &&
+					 r_lightmap->integer)
 			{
-				GL_Bind( tr.whiteImage );
+				GL_Bind(tr.whiteImage);
 			}
 			else
+			{
 				R_BindAnimatedImage( &pStage->bundle[0] );
+			}
 
 			if (tess.shader == tr.distortionShader &&
 				glConfig.stencilBits >= 4)
-			{ //draw it to the stencil buffer!
+			{
+				// draw it to the stencil buffer!
 				tr_stencilled = true;
 				lStencilled = true;
 				qglEnable(GL_STENCIL_TEST);
@@ -1739,17 +1763,27 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				//don't depthmask, don't blend.. don't do anything
 				GL_State(0);
 			}
-			else if (backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA))
+			else if (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA)
 			{
-				ForceAlpha((unsigned char *) tess.svars.colors, backEnd.currentEntity->e.shaderRGBA[3]);
+				ForceAlpha(
+					(unsigned char *)tess.svars.colors,
+					backEnd.currentEntity->e.shaderRGBA[3]);
 				if (backEnd.currentEntity->e.renderfx & RF_ALPHA_DEPTH)
-				{ //depth write, so faces through the model will be stomped over by nearer ones. this works because
-					//we draw RF_FORCE_ENT_ALPHA stuff after everything else, including standard alpha surfs.
-					GL_State(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE);
+				{
+					// depth write, so faces through the model will be
+					// stomped over by nearer ones. this works because we
+					// draw RF_FORCE_ENT_ALPHA stuff after everything else,
+					// including standard alpha surfs.
+					GL_State(
+						GLS_SRCBLEND_SRC_ALPHA |
+						GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
+						GLS_DEPTHMASK_TRUE);
 				}
 				else
 				{
-					GL_State(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
+					GL_State(
+						GLS_SRCBLEND_SRC_ALPHA |
+						GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
 				}
 			}
 			else
@@ -1763,13 +1797,15 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			R_DrawElements( input->numIndexes, input->indexes );
 
 			if (lStencilled)
-			{ //re-enable the color buffer, disable stencil test
+			{
+				// re-enable the color buffer, disable stencil test
 				lStencilled = false;
 				qglDisable(GL_STENCIL_TEST);
 				qglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			}
 		}
 	}
+
 	if (FogColorChange)
 	{
 		qglFogfv(GL_FOG_COLOR, fog->parms.color);
@@ -1807,8 +1843,11 @@ void RB_StageIteratorGeneric( void )
 	// set polygon offset if necessary
 	if ( input->shader->polygonOffset )
 	{
+		GL_PolygonOffset(true);
+#if 0
 		qglEnable( GL_POLYGON_OFFSET_FILL );
 		qglPolygonOffset( r_offsetFactor->value, r_offsetUnits->value );
+#endif
 	}
 
 	//
@@ -1876,7 +1915,11 @@ void RB_StageIteratorGeneric( void )
 	//
 	// now do fog
 	//
-	if (tr.world && (tess.fogNum != tr.world->globalFog || r_drawfog->value != 2) && r_drawfog->value && tess.fogNum && tess.shader->fogPass)
+	if (tr.world &&
+		(tess.fogNum != tr.world->globalFog || r_drawfog->value != 2) &&
+		r_drawfog->value &&
+		tess.fogNum &&
+		tess.shader->fogPass)
 	{
 		RB_FogPass();
 	}
@@ -1895,6 +1938,7 @@ void RB_StageIteratorGeneric( void )
 	//
 	if ( input->shader->polygonOffset )
 	{
+		GL_PolygonOffset(false);
 		qglDisable( GL_POLYGON_OFFSET_FILL );
 	}
 
@@ -1949,23 +1993,27 @@ void RB_EndSurface( void ) {
 		return;
 	}
 
-	if ( skyboxportal )
+	if (skyboxportal)
 	{
-		// world
-		if(!(backEnd.refdef.rdflags & RDF_SKYBOXPORTAL))
+		const bool isTessUsingSkyFunc =
+			(tess.currentStageIteratorFunc == RB_StageIteratorSky);
+		if (!(backEnd.refdef.rdflags & RDF_SKYBOXPORTAL))
 		{
-			if(tess.currentStageIteratorFunc == RB_StageIteratorSky)
-			{	// don't process these tris at all
+			// world
+			if (isTessUsingSkyFunc)
+			{
+				// don't process these tris at all
 				return;
 			}
 		}
-		// portal sky
 		else
 		{
-			if(!drawskyboxportal)
+			// portal sky
+			if (!drawskyboxportal)
 			{
-				if( !(tess.currentStageIteratorFunc == RB_StageIteratorSky))
-				{	// /only/ process sky tris
+				if (isTessUsingSkyFunc)
+				{
+					// /only/ process sky tris
 					return;
 				}
 			}

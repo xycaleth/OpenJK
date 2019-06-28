@@ -412,6 +412,13 @@ typedef enum {
 	CT_TWO_SIDED
 } cullType_t;
 
+enum cullMode_t
+{
+	CULL_MODE_NONE,
+	CULL_MODE_FRONT,
+	CULL_MODE_BACK,
+};
+
 typedef enum {
 	FP_NONE,		// surface is translucent and will just be adjusted properly
 	FP_EQUAL,		// surface is opaque but possibly alpha tested
@@ -900,6 +907,8 @@ typedef struct glstate_s {
 	qboolean	finishCalled;
 	int			texEnv[2];
 	int			faceCulling;
+	cullMode_t	cullMode;
+	bool		polygonOffset;
 	uint32_t	glStateBits;
 } glstate_t;
 
@@ -1286,6 +1295,7 @@ void	GL_CheckErrors( void );
 void	GL_State( uint32_t stateVector );
 void	GL_TexEnv( int env );
 void	GL_Cull( int cullType );
+void	GL_PolygonOffset(bool enable);
 
 #define GLS_SRCBLEND_ZERO						0x00000001
 #define GLS_SRCBLEND_ONE						0x00000002
