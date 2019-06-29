@@ -113,7 +113,166 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	//qglDrawElements(GL_TRIANGLES, numIndexes, GL_INDEX_TYPE, indexes);
 	const int stateBits = glState.stateBits;
 
+	//
+	// Render pass object
+	//
+	VkAttachmentDescription passAttachment = {};
+	passAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	passAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	passAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	passAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	passAttachment.stencilStoreOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	passAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	passAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference colorAttachment = {};
+	colorAttachment.attachment = 0;
+	colorAttachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpassDescription = {};
+	subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpassDescription.inputAttachmentCount = 0;
+	subpassDescription.colorAttachmentCount = 1;
+	subpassDescription.pColorAttachments = &colorAttachment;
+
+	VkRenderPassCreateInfo renderPassCreateInfo = {};
+	renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassCreateInfo.attachmentCount = 1;
+	renderPassCreateInfo.pAttachments = &passAttachment;
+	renderPassCreateInfo.subpassCount = 1;
+	renderPassCreateInfo.pSubpasses = &subpassDescription;
+	renderPassCreateInfo.depenencyCount = 0;
+
+	VkRenderPass renderPass;
+	if (vkCreateRenderPass(
+			gpuContext.device,
+			&renderPassCreateInfo,
+			nullptr,
+			&renderPass) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create render pass\n");
+	}
+
+	//
+	// Descriptor set layout
+	//
+	VkDescriptorSetLayoutBinding bindings[1] = {};
+	bindings[0].binding = 0;
+	bindings[0].descriptorType = VL_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	bindings[0].descriptorCount = 1;
+	bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
+	setLayoutCreateInfo.sType =
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	setLayoutCreateInfo.bindingCount = 1;
+	setLayoutCreateInfo.pBindings = bindings;
+
+	VkDesciptorSetLayout setLayout;
+	if (vkCreateDescriptorSetLayout(
+			gpuContext.device,
+			&setLayoutCreateInfo,
+			nullptr,
+			&setLayout) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Derp\n");
+	}
+
+	//
+	// Descriptor set
+	//
+	VkDescriptorPoolSize poolSizes[1] = {};
+	poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[0].descriptorCount = 4096;
+
+	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
+	descriptorPoolCreateInfo.sType =
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	descriptorPoolCreateInfo.maxSets = 2048;
+	descriptorPoolCreateInfo.poolSizeCount = 1;
+	descriptorPoolCreateInfo.pPoolSizes = poolSizes;
+
+	VkDescriptorPool descriptorPool;
+	if (vkCreateDescriptorPool(
+			gpuContext.device,
+			&descriptorPoolCreateInfo,
+			nullptr,
+			&descriptorPool) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create descriptor pool\n");
+	}
+
+	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
+	descriptorSetAllocateInfo.sType =
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO; 
+	descriptorSetAllocateInfo.descriptorPool = descriptorPool;
+	descriptorSetAllocateInfo.descriptorSetCount = 1;
+	descriptorSetAllocateInfo.pSetLayouts = &setLayout;
+
+	VkDescriptorSet descriptorSet;
+	if (vkAllocateDescriptorSets(
+			gpuContext.device,
+			&descriptorSetAllocateInfo,
+			&descriptorSet) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create descriptor set\n");
+	}
+
+	VkDescriptorImageInfo descriptorImageInfo = {};
+	descriptorImageInfo.sampler = VK_NULL_HANDLE;
+	descriptorImageInfo.imageView = imageView;
+	descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet descriptorWrite = {};
+	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.dstSet = descriptorSet;
+	descriptorWrite.dstBinding = 0;
+	descriptorWrite.dstArrayElement = 0;
+	descriptorWrite.descriptorCount = 1;
+	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrite.pImageInfo = &descriptorImageInfo;
+	vkUpdateDescriptorSets(gpuContext.device, 1, &descriptorWrite, 0, nullptr);
+
+	//
+	// pipeline layout
+	//
+	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
+	pipelineLayoutCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO; 
+	pipelineLayoutCreateInfo.setLayoutCount = 1;
+	pipelineLayoutCreateInfo.pSetLayouts = &setLayout;
+
+	VkPipelineLayout pipelineLayout;
+	if (vkCreatePipelineLayout(
+			gpuContext.device,
+			&pipelineLayoutCreateInfo,
+			nullptr,
+			&pipelineLayout) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create pipeline layout\n");
+	}
+
+	//
+	// load fake shader
+	//
+	VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
+	shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	shaderModuleCreateInfo.codeSize = 0;
+	shaderModuleCreateInfo.pCode = nullptr;
+
 	VkShaderModule renderModule;
+	if (vkCreateShaderModule(
+			gpuContext.device,
+			&shaderModuleCreateInfo,
+			nullptr,
+			&renderModule) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_WARNING "Failed to create shader module\n");
+	}
+
+	//
+	// creating the graphics pipeline 
+	//
 	VkPipelineShaderStageCreateInfo stageCreateInfos[2] = {};
 	stageCreateInfos[0].sType =
 		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -203,9 +362,101 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	pipelineCreateInfo.pRasterizationState = &rsCreateInfo;
 	pipelineCreateInfo.pDepthStencilState = &dsCreateInfo;
 	pipelineCreateInfo.pColorBlendState = &cbCreateInfo;
-	pipelineCreateInfo.layout = 0;
-	pipelineCreateInfo.renderPass = 0;
+	pipelineCreateInfo.layout = pipelineLayout;
+	pipelineCreateInfo.renderPass = renderPass;
 	pipelineCreateInfo.subPass = 0;
+
+	VkPipeline graphicsPipeline;
+	if (vkCreateGraphicsPipelines(
+			gpuContext.device,
+			VK_NULL_HANDLE,  // TODO: Add pipeline cache
+			1,
+			&pipelineCreateInfo,
+			nullptr,
+			&graphicsPipeline) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create graphics pipeline\n");
+	}
+
+	VkImageView attachments[] = {VK_NULL_HANDLE};
+
+	VkFramebufferCreateInfo framebufferCreateInfo = {};
+	framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO; 
+	framebufferCreateInfo.renderPass = renderPass;
+	framebufferCreateInfo.attachmentCount = 1;
+	framebufferCreateInfo.pAttachments = attachments;
+	framebufferCreateInfo.width = backEnd.viewParms.viewportWidth;
+	framebufferCreateInfo.height = backEnd.viewParms.viewportHeight;
+	framebufferCreateInfo.layers = 1;
+
+	VkFramebuffer framebuffer;
+	if (vkCreateFramebuffer(
+			gpuContext.device,
+			&framebufferCreateInfo,
+			nullptr,
+			&framebuffer) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to create framebuffer\n");
+	}
+
+	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
+	cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to begin command buffer recording\n");
+	}
+
+	VkClearValue clearValue = {};
+	clearValue.color = {0.0f, 0.0f, 0.0f, 1.0f};
+	clearValue.depthStencil = {1.0f, 0};
+
+	VkRenderPassBeginInfo passBeginInfo = {};
+	passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	passBeginInfo.renderPass = renderPass;
+	passBeginInfo.framebuffer = framebuffer;
+	passBeginInfo.renderArea.offset = {
+		backEnd.viewParms.x,
+		backEnd.viewParms.y
+	};
+	passBeginInfo.renderArea.extent = {
+		backEnd.viewParms.width,
+		backEnd.viewParms.height
+	};
+	passBeginInfo.clearValueCount = 1;
+	passBeginInfo.pClearValues = &clearValue;
+
+	vkCmdRenderPassBegin(
+		cmdBuffer,
+		&passBeginInfo,
+		VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(
+		cmdBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		graphicsPipeline);
+
+	vkCmdBindDescriptorSets(
+		cmdBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		pipelineLayout,
+		0,
+		1,
+		descriptorSet,
+		0,
+		nullptr);
+
+	vkCmdBindIndexBuffer(cmdBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+	const VkDeviceSize offsets[] = {0};
+	vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
+
+	vkCmdDrawIndexed(cmdBuffer, numIndexes, 1, 0, 0, 0);
+
+	vkCmdRenderPassEnd(cmdBuffer);
+
+	vkEndCommandBuffer(cmdBuffer);
 }
 
 /*
