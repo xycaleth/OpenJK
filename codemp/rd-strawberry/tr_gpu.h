@@ -8,6 +8,17 @@ struct GpuQueue
 	VkQueue queue;
 };
 
+struct GpuSwapchainResources
+{
+	VkImage image;
+
+	VkSemaphore imageAvailableSemaphore;
+	VkImageView imageView;
+	VkFramebuffer framebuffer;
+
+	VkCommandBuffer gfxCommandBuffer;
+};
+
 struct GpuSwapchain
 {
 	VkSwapchainKHR swapchain;
@@ -15,10 +26,7 @@ struct GpuSwapchain
 	uint32_t width;
 	uint32_t height;
 
-	uint32_t imageCount;
-	std::vector<VkSemaphore> imageAvailableSemaphores;
-	std::vector<VkImage> images;
-	std::vector<VkImageView> imageViews;
+	std::vector<GpuSwapchainResources> swapchainResources;
 
 	int frameIndex;
 };
@@ -42,4 +50,5 @@ struct GpuContext
 
 	VkCommandPool transferCommandPool;
 	VkCommandPool gfxCommandPool;
+	VkRenderPass renderPass;
 };

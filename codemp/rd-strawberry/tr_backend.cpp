@@ -841,6 +841,10 @@ void RE_StretchRaw(
 	int client,
 	qboolean dirty)
 {
+#ifndef STRAWB
+	return;
+#endif
+
 	if (!tr.registered)
 	{
 		return;

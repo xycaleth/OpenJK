@@ -111,47 +111,14 @@ without compiled vertex arrays.
 static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	// STRAWB draw everythingggg
 	//qglDrawElements(GL_TRIANGLES, numIndexes, GL_INDEX_TYPE, indexes);
+#if 0
 	const int stateBits = glState.stateBits;
 
-	//
-	// Render pass object
-	//
-	VkAttachmentDescription passAttachment = {};
-	passAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	passAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	passAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	passAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	passAttachment.stencilStoreOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	passAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	passAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-	VkAttachmentReference colorAttachment = {};
-	colorAttachment.attachment = 0;
-	colorAttachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	VkSubpassDescription subpassDescription = {};
-	subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpassDescription.inputAttachmentCount = 0;
-	subpassDescription.colorAttachmentCount = 1;
-	subpassDescription.pColorAttachments = &colorAttachment;
-
-	VkRenderPassCreateInfo renderPassCreateInfo = {};
-	renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassCreateInfo.attachmentCount = 1;
-	renderPassCreateInfo.pAttachments = &passAttachment;
-	renderPassCreateInfo.subpassCount = 1;
-	renderPassCreateInfo.pSubpasses = &subpassDescription;
-	renderPassCreateInfo.depenencyCount = 0;
-
-	VkRenderPass renderPass;
-	if (vkCreateRenderPass(
-			gpuContext.device,
-			&renderPassCreateInfo,
-			nullptr,
-			&renderPass) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to create render pass\n");
-	}
+	GpuSwapchain& swapchain = gpuContext.swapchain;
+	const int swapchainIndex =
+		swapchain.frameIndex % swapchain.swapchainResources.size();
+	GpuSwapchainResources& swapchainResources =
+		swapchain.swapchainResources[swapchainIndex];
 
 	//
 	// Descriptor set layout
@@ -378,31 +345,11 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 		Com_Printf(S_COLOR_RED "Failed to create graphics pipeline\n");
 	}
 
-	VkImageView attachments[] = {VK_NULL_HANDLE};
-
-	VkFramebufferCreateInfo framebufferCreateInfo = {};
-	framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO; 
-	framebufferCreateInfo.renderPass = renderPass;
-	framebufferCreateInfo.attachmentCount = 1;
-	framebufferCreateInfo.pAttachments = attachments;
-	framebufferCreateInfo.width = backEnd.viewParms.viewportWidth;
-	framebufferCreateInfo.height = backEnd.viewParms.viewportHeight;
-	framebufferCreateInfo.layers = 1;
-
-	VkFramebuffer framebuffer;
-	if (vkCreateFramebuffer(
-			gpuContext.device,
-			&framebufferCreateInfo,
-			nullptr,
-			&framebuffer) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to create framebuffer\n");
-	}
-
 	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
 	cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	cmdBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
+	VkCommandBuffer cmdBuffer = swapchainResources.gfxCommandBuffer;
 	if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
 	{
 		Com_Printf(S_COLOR_RED "Failed to begin command buffer recording\n");
@@ -457,6 +404,7 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	vkCmdRenderPassEnd(cmdBuffer);
 
 	vkEndCommandBuffer(cmdBuffer);
+#endif
 }
 
 /*
