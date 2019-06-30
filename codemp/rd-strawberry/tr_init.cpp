@@ -282,24 +282,28 @@ void R_Splash()
 	image_t *pImage = R_FindImageFile(
 		"menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
 
-	VkSemaphoreCreateInfo semaphoreCreateInfo = {};
-	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	VkSemaphore blitFinishedSemaphore;
-	if (vkCreateSemaphore(
-			gpuContext.device,
-			&semaphoreCreateInfo,
-			nullptr,
-			&blitFinishedSemaphore) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to create semaphore\n");
-	}
+	FrameResources& frameResources = gpuContext.frameResources[0];
+	vkWaitForFences(
+		gpuContext.device,
+		1,
+		&frameResources.frameExecutedFence,
+		VK_TRUE,
+		std::numeric_limits<uint64_t>::max());
+	vkResetFences(gpuContext.device, 1, &frameResources.frameExecutedFence);
 
 	GpuSwapchain& swapchain = gpuContext.swapchain;
-	const int swapchainIndex =
-		swapchain.frameIndex % swapchain.swapchainResources.size();
-	GpuSwapchainResources& swapchainResources =
-		swapchain.swapchainResources[swapchainIndex];
+
+	uint32_t nextImageIndex;
+	vkAcquireNextImageKHR(
+		gpuContext.device,
+		swapchain.swapchain,
+		std::numeric_limits<uint64_t>::max(),
+		frameResources.imageAvailableSemaphore,
+		VK_NULL_HANDLE,
+		&nextImageIndex);
+
+	GpuSwapchain::Resources& swapchainResources =
+		swapchain.resources[nextImageIndex];
 
 	VkCommandBuffer cmdBuffer = swapchainResources.gfxCommandBuffer;
 	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
@@ -311,15 +315,6 @@ void R_Splash()
 		Com_Printf(S_COLOR_RED "Failed to create command buffer\n");
 		return;
 	}
-
-	uint32_t nextImageIndex;
-	vkAcquireNextImageKHR(
-		gpuContext.device,
-		swapchain.swapchain,
-		std::numeric_limits<uint64_t>::max(),
-		swapchainResources.imageAvailableSemaphore,
-		VK_NULL_HANDLE,
-		&nextImageIndex);
 
 	VkImage backBufferImage = swapchainResources.image;
 	TransitionImageLayout(
@@ -382,17 +377,16 @@ void R_Splash()
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &cmdBuffer;
 	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = &swapchainResources.imageAvailableSemaphore;
+	submitInfo.pWaitSemaphores = &frameResources.imageAvailableSemaphore;
 	submitInfo.pWaitDstStageMask = &waitStage;
 	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = &blitFinishedSemaphore;
+	submitInfo.pSignalSemaphores = &frameResources.renderFinishedSemaphore;
 
     vkQueueSubmit(
 		gpuContext.graphicsQueue.queue,
 		1,
 		&submitInfo,
-		VK_NULL_HANDLE);
-    vkDeviceWaitIdle(gpuContext.device);
+		frameResources.frameExecutedFence);
 
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -400,13 +394,9 @@ void R_Splash()
 	presentInfo.pSwapchains = &swapchain.swapchain;
 	presentInfo.pImageIndices = &nextImageIndex;
 	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &blitFinishedSemaphore;
+	presentInfo.pWaitSemaphores = &frameResources.renderFinishedSemaphore;
 	vkQueuePresentKHR(
-		gpuContext.transferQueue.queue, &presentInfo);
-
-    vkDeviceWaitIdle(gpuContext.device);
-
-	vkDestroySemaphore(gpuContext.device, blitFinishedSemaphore, nullptr);
+		gpuContext.presentQueue.queue, &presentInfo);
 }
 
 static bool AllExtensionsSupported(
@@ -1540,7 +1530,7 @@ static void InitVulkan( void )
 		//
 		VkAttachmentDescription passAttachment = {};
 		passAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		passAttachment.format = VK_FORMAT_B8G8R8A8_UNORM;
+		passAttachment.format = gpuContext.swapchain.surfaceFormat;
 		passAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		passAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		passAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -1558,13 +1548,26 @@ static void InitVulkan( void )
 		subpassDescription.colorAttachmentCount = 1;
 		subpassDescription.pColorAttachments = &colorAttachment;
 
+		VkSubpassDependency subpassDependency = {};
+		subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		subpassDependency.dstSubpass = 0;
+		subpassDependency.srcStageMask =
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependency.dstStageMask =
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		subpassDependency.srcAccessMask = 0;
+		subpassDependency.dstAccessMask =
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+			VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+
 		VkRenderPassCreateInfo renderPassCreateInfo = {};
 		renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		renderPassCreateInfo.attachmentCount = 1;
 		renderPassCreateInfo.pAttachments = &passAttachment;
 		renderPassCreateInfo.subpassCount = 1;
 		renderPassCreateInfo.pSubpasses = &subpassDescription;
-		renderPassCreateInfo.dependencyCount = 0;
+		renderPassCreateInfo.dependencyCount = 1;
+		renderPassCreateInfo.pDependencies = &subpassDependency;
 
 		if (vkCreateRenderPass(
 				gpuContext.device,
@@ -1582,6 +1585,8 @@ static void InitVulkan( void )
 			VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
 			cmdPoolCreateInfo.sType =
 				VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			cmdPoolCreateInfo.flags =
+				VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 			cmdPoolCreateInfo.queueFamilyIndex =
 				gpuContext.transferQueue.queueFamily;
 
@@ -1599,6 +1604,8 @@ static void InitVulkan( void )
 			VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
 			cmdPoolCreateInfo.sType =
 				VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			cmdPoolCreateInfo.flags =
+				VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 			cmdPoolCreateInfo.queueFamilyIndex =
 				gpuContext.graphicsQueue.queueFamily;
 
@@ -1629,12 +1636,12 @@ static void InitVulkan( void )
 			&swapchainImageCount,
 			swapchainImages.data());
 
-		auto& swapchainResources = gpuContext.swapchain.swapchainResources;
+		auto& swapchainResources = gpuContext.swapchain.resources;
 		swapchainResources.resize(swapchainImageCount);
 
 		for (uint32_t i = 0; i < swapchainImageCount; ++i)
 		{
-			GpuSwapchainResources& resources = swapchainResources[i];
+			GpuSwapchain::Resources& resources = swapchainResources[i];
 
 			resources.image = swapchainImages[i];
 
@@ -1664,20 +1671,6 @@ static void InitVulkan( void )
 					&resources.imageView) != VK_SUCCESS)
 			{
 				Com_Error(ERR_FATAL, "Failed to create image view");
-			}
-
-			// semaphore
-			VkSemaphoreCreateInfo semaphoreCreateInfo = {};
-			semaphoreCreateInfo.sType =
-				VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-			if (vkCreateSemaphore(
-					gpuContext.device,
-					&semaphoreCreateInfo,
-					nullptr,
-					&resources.imageAvailableSemaphore) != VK_SUCCESS)
-			{
-				Com_Printf(S_COLOR_RED "Failed to create semaphore\n");
 			}
 
 			// framebuffer
@@ -1719,6 +1712,44 @@ static void InitVulkan( void )
 			{
 				Com_Printf(S_COLOR_RED "Failed to allocate command buffer\n");
 				return;
+			}
+		}
+
+		for (auto& resources : gpuContext.frameResources)
+		{
+			VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+			semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+			if (vkCreateSemaphore(
+					gpuContext.device,
+					&semaphoreCreateInfo,
+					nullptr,
+					&resources.renderFinishedSemaphore) != VK_SUCCESS)
+			{
+				Com_Printf(S_COLOR_RED "Failed to create semaphore\n");
+			}
+
+			if (vkCreateSemaphore(
+					gpuContext.device,
+					&semaphoreCreateInfo,
+					nullptr,
+					&resources.imageAvailableSemaphore) != VK_SUCCESS)
+			{
+				Com_Printf(S_COLOR_RED "Failed to create semaphore\n");
+			}
+
+			// fence
+			VkFenceCreateInfo fenceCreateInfo = {};
+			fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+			if (vkCreateFence(
+					gpuContext.device,
+					&fenceCreateInfo,
+					nullptr,
+					&resources.frameExecutedFence) != VK_SUCCESS)
+			{
+				Com_Printf(S_COLOR_RED "Failed to create fence\n");
 			}
 		}
 
@@ -2800,13 +2831,8 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 		gpuContext.device, gpuContext.transferCommandPool, nullptr);
 	vkDestroyRenderPass(gpuContext.device, gpuContext.renderPass, nullptr); 
 
-	for (auto& swapchainResources : gpuContext.swapchain.swapchainResources)
+	for (auto& swapchainResources : gpuContext.swapchain.resources)
 	{
-		vkDestroySemaphore(
-			gpuContext.device,
-			swapchainResources.imageAvailableSemaphore,
-			nullptr);
-
 		vkDestroyImageView(
 			gpuContext.device,
 			swapchainResources.imageView,
@@ -2815,6 +2841,24 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 		vkDestroyFramebuffer(
 			gpuContext.device,
 			swapchainResources.framebuffer,
+			nullptr);
+	}
+
+	for (auto& frameResources : gpuContext.frameResources)
+	{
+		vkDestroySemaphore(
+			gpuContext.device,
+			frameResources.imageAvailableSemaphore,
+			nullptr);
+
+		vkDestroySemaphore(
+			gpuContext.device,
+			frameResources.renderFinishedSemaphore,
+			nullptr);
+
+		vkDestroyFence(
+			gpuContext.device,
+			frameResources.frameExecutedFence,
 			nullptr);
 	}
 

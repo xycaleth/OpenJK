@@ -345,40 +345,6 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 		Com_Printf(S_COLOR_RED "Failed to create graphics pipeline\n");
 	}
 
-	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
-	cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	cmdBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-	VkCommandBuffer cmdBuffer = swapchainResources.gfxCommandBuffer;
-	if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to begin command buffer recording\n");
-	}
-
-	VkClearValue clearValue = {};
-	clearValue.color = {0.0f, 0.0f, 0.0f, 1.0f};
-	clearValue.depthStencil = {1.0f, 0};
-
-	VkRenderPassBeginInfo passBeginInfo = {};
-	passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	passBeginInfo.renderPass = renderPass;
-	passBeginInfo.framebuffer = framebuffer;
-	passBeginInfo.renderArea.offset = {
-		backEnd.viewParms.x,
-		backEnd.viewParms.y
-	};
-	passBeginInfo.renderArea.extent = {
-		backEnd.viewParms.width,
-		backEnd.viewParms.height
-	};
-	passBeginInfo.clearValueCount = 1;
-	passBeginInfo.pClearValues = &clearValue;
-
-	vkCmdRenderPassBegin(
-		cmdBuffer,
-		&passBeginInfo,
-		VK_SUBPASS_CONTENTS_INLINE);
-
 	vkCmdBindPipeline(
 		cmdBuffer,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -400,10 +366,6 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
 
 	vkCmdDrawIndexed(cmdBuffer, numIndexes, 1, 0, 0, 0);
-
-	vkCmdRenderPassEnd(cmdBuffer);
-
-	vkEndCommandBuffer(cmdBuffer);
 #endif
 }
 

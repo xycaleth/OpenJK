@@ -98,7 +98,6 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 	// clear it out, in case this is a sync and not a buffer flip
 	cmdList->used = 0;
 
-#if 0
 	// at this point, the back end thread is idle, so it is ok
 	// to look at it's performance counters
 	if ( runPerformanceCounters ) {
@@ -110,7 +109,6 @@ void R_IssueRenderCommands( qboolean runPerformanceCounters ) {
 		// let it start on the new batch
 		RB_ExecuteRenderCommands( cmdList->cmds );
 	}
-#endif
 }
 
 
@@ -122,12 +120,10 @@ Issue any pending commands and wait for them to complete.
 ====================
 */
 void R_IssuePendingRenderCommands( void ) {
-#if 0
 	if ( !tr.registered ) {
 		return;
 	}
 	R_IssueRenderCommands( qfalse );
-#endif
 }
 
 /*
@@ -352,7 +348,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 		}
 		else
 		{
-#if 0
+#ifdef STRAWB
 			R_IssuePendingRenderCommands();
 			qglEnable( GL_STENCIL_TEST );
 			qglStencilMask( ~0U );
@@ -367,7 +363,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	{
 		// this is only reached if it was on and is now off
 		if ( r_measureOverdraw->modified ) {
-#if 0
+#ifdef STRAWB
 			R_IssuePendingRenderCommands();
 			qglDisable( GL_STENCIL_TEST );
 #endif
@@ -379,7 +375,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	// texturemode stuff
 	//
 	if ( r_textureMode->modified || r_ext_texture_filter_anisotropic->modified) {
-#if 0
+#ifdef STRAWB
 		R_IssuePendingRenderCommands();
 		GL_TextureMode( r_textureMode->string );
 #endif
@@ -393,7 +389,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 	if ( r_gamma->modified ) {
 		r_gamma->modified = qfalse;
 
-#if 0
+#ifdef STRAWB
 		R_IssuePendingRenderCommands();
 		R_SetColorMappings();
 		R_SetGammaCorrectionLUT();
@@ -402,7 +398,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 
 	// check for errors
 	if ( !r_ignoreGLErrors->integer ) {
-#if 0
+#ifdef STRAWB
 		R_IssuePendingRenderCommands();
 
 		GLenum err = qglGetError();
@@ -420,26 +416,7 @@ void RE_BeginFrame( stereoFrame_t stereoFrame ) {
 		return;
 	}
 	cmd->commandId = RC_DRAW_BUFFER;
-
-	if ( glConfig.stereoEnabled ) {
-		if ( stereoFrame == STEREO_LEFT ) {
-			cmd->buffer = (int)GL_BACK_LEFT;
-		} else if ( stereoFrame == STEREO_RIGHT ) {
-			cmd->buffer = (int)GL_BACK_RIGHT;
-		} else {
-			Com_Error( ERR_FATAL, "RE_BeginFrame: Stereo is enabled, but stereoFrame was %i", stereoFrame );
-		}
-	} else {
-		if ( stereoFrame != STEREO_CENTER ) {
-			Com_Error( ERR_FATAL, "RE_BeginFrame: Stereo is disabled, but stereoFrame was %i", stereoFrame );
-		}
-//		if ( !Q_stricmp( r_drawBuffer->string, "GL_FRONT" ) ) {
-//			cmd->buffer = (int)GL_FRONT;
-//		} else
-		{
-			cmd->buffer = (int)GL_BACK;
-		}
-	}
+	cmd->frameIndex = tr.frameCount;
 }
 
 

@@ -1,5 +1,6 @@
 #include <vulkan/vulkan.h>
 
+#include <array>
 #include <vector>
 
 struct GpuQueue
@@ -8,27 +9,33 @@ struct GpuQueue
 	VkQueue queue;
 };
 
-struct GpuSwapchainResources
-{
-	VkImage image;
-
-	VkSemaphore imageAvailableSemaphore;
-	VkImageView imageView;
-	VkFramebuffer framebuffer;
-
-	VkCommandBuffer gfxCommandBuffer;
-};
-
 struct GpuSwapchain
 {
+	struct Resources
+	{
+		VkImage image;
+		VkImageView imageView;
+		VkFramebuffer framebuffer;
+		VkCommandBuffer gfxCommandBuffer;
+	};
+
 	VkSwapchainKHR swapchain;
 	VkFormat surfaceFormat;
 	uint32_t width;
 	uint32_t height;
 
-	std::vector<GpuSwapchainResources> swapchainResources;
+	std::vector<Resources> resources;
+};
 
-	int frameIndex;
+// How many frames we want to be able to have in the pipeline at any one time
+// If we are about to start more than this many frames, we have to wait for
+// a frame to finish rendering before proceeding.
+const int MAX_FRAMES_IN_FLIGHT = 3;
+struct FrameResources
+{
+	VkFence frameExecutedFence;
+	VkSemaphore imageAvailableSemaphore;
+	VkSemaphore renderFinishedSemaphore;
 };
 
 struct GpuContext
@@ -42,6 +49,7 @@ struct GpuContext
 	VkSurfaceKHR windowSurface;
 
 	GpuSwapchain swapchain;
+	std::array<FrameResources, MAX_FRAMES_IN_FLIGHT> frameResources;
 
 	GpuQueue graphicsQueue;
 	GpuQueue computeQueue;

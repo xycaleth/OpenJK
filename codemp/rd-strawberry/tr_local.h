@@ -953,7 +953,6 @@ typedef struct backEndState_s {
 
 	qboolean	projection2D;	// if qtrue, drawstretchpic doesn't need to change modes
 	byte		color2D[4];
-	qboolean	vertexes2D;		// shader needs to be finished
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
 } backEndState_t;
 
@@ -1779,7 +1778,7 @@ typedef struct setColorCommand_s {
 
 typedef struct drawBufferCommand_s {
 	int		commandId;
-	int		buffer;
+	int		frameIndex;
 } drawBufferCommand_t;
 
 typedef struct subImageCommand_s {
@@ -1852,6 +1851,7 @@ typedef enum {
 
 // all of the information needed by the back end must be
 // contained in a backEndData_t.
+struct FrameResources;
 typedef struct backEndData_s {
 	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
 	dlight_t	dlights[MAX_DLIGHTS];
@@ -1860,6 +1860,9 @@ typedef struct backEndData_s {
 	srfPoly_t	*polys;//[MAX_POLYS];
 	polyVert_t	*polyVerts;//[MAX_POLYVERTS];
 	renderCommandList_t	commands;
+
+	FrameResources *frameResources;
+	uint32_t swapchainImageIndex;
 } backEndData_t;
 
 extern	int		max_polys;

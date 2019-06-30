@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "tr_local.h"
 #include "glext.h"
 #include "tr_WorldEffects.h"
+#include "tr_gpu.h"
 
 backEndData_t	*backEndData;
 backEndState_t	backEnd;
@@ -1327,15 +1328,57 @@ const void	*RB_DrawBuffer( const void *data ) {
 
 	cmd = (const drawBufferCommand_t *)data;
 
-	qglDrawBuffer( cmd->buffer );
+	int frameIndex = cmd->frameIndex % MAX_FRAMES_IN_FLIGHT;
+	FrameResources& frameResources = gpuContext.frameResources[frameIndex];
+	backEndData->frameResources = &frameResources;
+
+	vkWaitForFences(
+		gpuContext.device,
+		1,
+		&frameResources.frameExecutedFence,
+		VK_TRUE,
+		std::numeric_limits<uint64_t>::max());
+	vkResetFences(gpuContext.device, 1, &frameResources.frameExecutedFence);
+
+	uint32_t nextImageIndex;
+	vkAcquireNextImageKHR(
+		gpuContext.device,
+		gpuContext.swapchain.swapchain,
+		std::numeric_limits<uint64_t>::max(),
+		frameResources.imageAvailableSemaphore,
+		VK_NULL_HANDLE,
+		&nextImageIndex);
+
+	GpuSwapchain& swapchain = gpuContext.swapchain;
+	GpuSwapchain::Resources& swapchainResources =
+		swapchain.resources[nextImageIndex];
+
+	backEndData->swapchainImageIndex = nextImageIndex;
+
+	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
+	cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+	VkCommandBuffer cmdBuffer = swapchainResources.gfxCommandBuffer;
+
+	if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to begin command buffer recording\n");
+	}
+
+	VkClearValue clearValue = {};
+	clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
 
 	// clear screen for debugging
 	if (tr.world && tr.world->globalFog != -1)
 	{
 		const fog_t		*fog = &tr.world->fogs[tr.world->globalFog];
 
-		qglClearColor(fog->parms.color[0],  fog->parms.color[1], fog->parms.color[2], 1.0f );
-		qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+		clearValue.color = {{
+			fog->parms.color[0],
+			fog->parms.color[1],
+			fog->parms.color[2],
+			1.0f
+		}};
 	}
 	else if ( r_clear->integer ) {
 		int i = r_clear->integer;
@@ -1346,35 +1389,51 @@ const void	*RB_DrawBuffer( const void *data ) {
 		switch (i)
 		{
 		default:
-			qglClearColor( 1, 0, 0.5, 1 ); // default q3 pink
+			clearValue.color = {{1.0f, 0.0f, 0.5f, 1.0f}}; // default q3 pink
 			break;
 		case 1:
-			qglClearColor( 1.0, 0.0, 0.0, 1.0); //red
+			clearValue.color = {{1.0f, 0.0f, 0.0f, 1.0f}}; //red
 			break;
 		case 2:
-			qglClearColor( 0.0, 1.0, 0.0, 1.0); //green
+			clearValue.color = {{1.0f, 1.0f, 0.0f, 1.0f}}; //green
 			break;
 		case 3:
-			qglClearColor( 1.0, 1.0, 0.0, 1.0); //yellow
+			clearValue.color = {{1.0f, 1.0f, 0.0f, 1.0f}}; //yellow
 			break;
 		case 4:
-			qglClearColor( 0.0, 0.0, 1.0, 1.0); //blue
+			clearValue.color = {{0.0f, 0.0f, 1.0f, 1.0f}}; //blue
 			break;
 		case 5:
-			qglClearColor( 0.0, 1.0, 1.0, 1.0); //cyan
+			clearValue.color = {{0.0f, 1.0f, 1.0f, 1.0f}}; //cyan
 			break;
 		case 6:
-			qglClearColor( 1.0, 0.0, 1.0, 1.0); //magenta
+			clearValue.color = {{1.0f, 0.0f, 1.0f, 1.0f}}; //magenta
 			break;
 		case 7:
-			qglClearColor( 1.0, 1.0, 1.0, 1.0); //white
+			clearValue.color = {{1.0f, 1.0f, 1.0f, 1.0f}}; //white
 			break;
 		case 8:
-			qglClearColor( 0.0, 0.0, 0.0, 1.0); //black
+			clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}}; //black
 			break;
 		}
-		qglClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	}
+
+	VkRenderPassBeginInfo passBeginInfo = {};
+	passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	passBeginInfo.renderPass = gpuContext.renderPass;
+	passBeginInfo.framebuffer = swapchainResources.framebuffer;
+	passBeginInfo.renderArea.offset = { 0, 0 };
+	passBeginInfo.renderArea.extent = {
+		gpuContext.swapchain.width,
+		gpuContext.swapchain.height
+	};
+	passBeginInfo.clearValueCount = 1;
+	passBeginInfo.pClearValues = &clearValue;
+
+	vkCmdBeginRenderPass(
+		cmdBuffer,
+		&passBeginInfo,
+		VK_SUBPASS_CONTENTS_INLINE);
 
 	return (const void *)(cmd + 1);
 }
@@ -1530,13 +1589,48 @@ const void	*RB_SwapBuffers( const void *data ) {
 		Hunk_FreeTempMemory( stencilReadback );
 	}
 
-    if ( !glState.finishCalled ) {
-        qglFinish();
-	}
+	auto *frameResources = backEndData->frameResources;
+
+	GpuSwapchain& swapchain = gpuContext.swapchain;
+	GpuSwapchain::Resources& swapchainResources =
+		swapchain.resources[backEndData->swapchainImageIndex];
+
+	VkCommandBuffer cmdBuffer = swapchainResources.gfxCommandBuffer;
+
+	vkCmdEndRenderPass(cmdBuffer);
+	vkEndCommandBuffer(cmdBuffer);
 
     GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
+	
+	VkPipelineStageFlags waitStage =
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuffer;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = &frameResources->imageAvailableSemaphore;
+	submitInfo.pWaitDstStageMask = &waitStage;
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = &frameResources->renderFinishedSemaphore;
 
-    ri.WIN_Present(&window);
+    if (vkQueueSubmit(
+			gpuContext.graphicsQueue.queue,
+			1,
+			&submitInfo,
+			frameResources->frameExecutedFence) != VK_SUCCESS)
+	{
+		Com_Printf(S_COLOR_RED "Failed to submit render commands\n");
+	}
+
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = &gpuContext.swapchain.swapchain;
+	presentInfo.pImageIndices = &backEndData->swapchainImageIndex;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = &frameResources->renderFinishedSemaphore;
+	vkQueuePresentKHR(gpuContext.presentQueue.queue, &presentInfo);
 
 	backEnd.projection2D = qfalse;
 
