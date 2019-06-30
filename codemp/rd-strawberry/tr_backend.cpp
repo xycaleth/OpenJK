@@ -1395,7 +1395,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 			clearValue.color = {{1.0f, 0.0f, 0.0f, 1.0f}}; //red
 			break;
 		case 2:
-			clearValue.color = {{1.0f, 1.0f, 0.0f, 1.0f}}; //green
+			clearValue.color = {{0.0f, 1.0f, 0.0f, 1.0f}}; //green
 			break;
 		case 3:
 			clearValue.color = {{1.0f, 1.0f, 0.0f, 1.0f}}; //yellow
