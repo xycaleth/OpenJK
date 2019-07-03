@@ -523,29 +523,6 @@ static void R_Images_DeleteImageContents( image_t *pImage )
 }
 
 
-static uint32_t PickBestMemoryType(
-    VkPhysicalDevice physicalDevice,
-    uint32_t memoryTypeBits,
-    VkMemoryPropertyFlags propertyFlags)
-{
-    VkPhysicalDeviceMemoryProperties deviceMemoryProperties = {};
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &deviceMemoryProperties);
-
-    for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; ++i)
-    {
-		const uint32_t typePropertyFlags = 
-			deviceMemoryProperties.memoryTypes[i].propertyFlags;
-
-        if ((memoryTypeBits & (1u << i)) != 0 &&
-            (typePropertyFlags & propertyFlags) == propertyFlags)
-        {
-            return i;
-        }
-    }
-
-	return -1;
-}
-
 void TransitionImageLayout(
 	VkCommandBuffer cmdBuffer,
 	VkImage image,
