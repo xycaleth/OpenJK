@@ -48,6 +48,8 @@ set(MPStrawberryRendererFiles
 	tr_curve.cpp
 	tr_decals.cpp
 	tr_ghoul2.cpp
+	tr_gpu.cpp
+	tr_gpu.h
 	tr_image.cpp
 	tr_init.cpp
 	tr_light.cpp

@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ghoul2/ghoul2_shared.h" //rwwRMG - added
 #include "qgl.h"
 #include <vulkan/vulkan.h>
+#include "vk_mem_alloc.h"
 
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
@@ -116,7 +117,9 @@ typedef struct image_s {
 	int			width, height;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
 	GLuint		texnum;					// gl texture binding
 	VkImage		handle;
-	VkDeviceMemory deviceMemory;
+	VkImageView	imageView;
+	VkSampler	sampler;
+	VmaAllocation memory;
 
 	int			frameUsed;			// for texture usage in frame statistics
 
@@ -1381,6 +1384,8 @@ void    	R_Init( void );
 image_t		*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int glWrapClampMode );
 
 image_t		*R_CreateImage( const char *name, const byte *pic, int width, int height, GLenum format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int wrapClampMode, bool bRectangle = false );
+
+VkImageView R_CreateImageView(VkImage image, VkFormat imageFormat);
 void TransitionImageLayout(
 	VkCommandBuffer cmdBuffer,
 	VkImage image,

@@ -1,4 +1,5 @@
 #include <vulkan/vulkan.h>
+#include "vk_mem_alloc.h"
 
 #include <array>
 #include <vector>
@@ -47,6 +48,8 @@ struct GpuContext
 	char physicalDeviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE];
 	VkDevice device;
 	VkSurfaceKHR windowSurface;
+
+	VmaAllocator allocator;
 
 	GpuSwapchain swapchain;
 	std::array<FrameResources, MAX_FRAMES_IN_FLIGHT> frameResources;

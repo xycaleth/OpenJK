@@ -93,8 +93,12 @@ void GL_TextureMode( const char *string ) {
 	gl_filter_max = modes[i].maximize;
 
 	// If the level they requested is less than possible, set the max possible...
-	if ( r_ext_texture_filter_anisotropic->value > glConfig.maxTextureFilterAnisotropy )
-		ri.Cvar_SetValue( "r_ext_texture_filter_anisotropic", glConfig.maxTextureFilterAnisotropy );
+	if (r_ext_texture_filter_anisotropic->value > glConfig.maxTextureFilterAnisotropy)
+	{
+		ri.Cvar_SetValue(
+			"r_ext_texture_filter_anisotropic",
+			glConfig.maxTextureFilterAnisotropy );
+	}
 
 	// change all the existing mipmap texture objects
 					 R_Images_StartIteration();
@@ -509,8 +513,11 @@ static void R_Images_DeleteImageContents( image_t *pImage )
 	assert(pImage);	// should never be called with NULL
 	if (pImage)
 	{
-		vkFreeMemory(gpuContext.device, pImage->deviceMemory, nullptr);
+		vkDestroySampler(gpuContext.device, pImage->sampler, nullptr);
+		vkDestroyImageView(gpuContext.device, pImage->imageView, nullptr);
+		vmaFreeMemory(gpuContext.allocator, pImage->memory);
 		vkDestroyImage(gpuContext.device, pImage->handle, nullptr);
+
 		Z_Free(pImage);
 	}
 }
@@ -634,64 +641,36 @@ static void Upload32(
 	bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+	VmaAllocationCreateInfo allocCreateInfo = {};
+	allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+
+	VmaAllocation stagingBufferMemory;
 	VkBuffer stagingBuffer;
-	if (vkCreateBuffer(
-			gpuContext.device,
+	if (vmaCreateBuffer(
+			gpuContext.allocator,
 			&bufferCreateInfo,
-			nullptr,
-			&stagingBuffer) != VK_SUCCESS)
+			&allocCreateInfo,
+			&stagingBuffer,
+			&stagingBufferMemory,
+			nullptr) != VK_SUCCESS)
 	{
-		Com_Printf(S_COLOR_RED "Failed to create staging buffer\n");
-		return;
-	}
-
-	VkMemoryRequirements bufferMemoryRequirements = {};
-	vkGetBufferMemoryRequirements(
-		gpuContext.device, stagingBuffer, &bufferMemoryRequirements);
-
-	VkDeviceMemory stagingBufferMemory;
-	VkMemoryAllocateInfo allocateInfo = {};
-	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocateInfo.allocationSize = imageByteSize;
-	allocateInfo.memoryTypeIndex = PickBestMemoryType(
-		gpuContext.physicalDevice,
-		bufferMemoryRequirements.memoryTypeBits,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-	if (vkAllocateMemory(
-			gpuContext.device,
-			&allocateInfo,
-			nullptr,
-			&stagingBufferMemory) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to allocate staging buffer memory\n");
-		vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
-		return;
+		Com_Error(ERR_FATAL, "Failed to create staging buffer");
 	}
 
 	//
 	// upload image data to staging buffer
 	//
 	void *stagingBufferData = nullptr;
-	if (vkMapMemory(
-			gpuContext.device,
+	if (vmaMapMemory(
+			gpuContext.allocator,
 			stagingBufferMemory,
-			0,
-			VK_WHOLE_SIZE,
-			0,
 			&stagingBufferData) != VK_SUCCESS)
 	{
-		Com_Printf(S_COLOR_RED "Failed to map memory\n");
-		vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
-		vkFreeMemory(gpuContext.device, stagingBufferMemory, nullptr);
-		return;
+		Com_Error(ERR_FATAL, "Failed to map staging memory buffer into CPU");
 	}
-	memcpy(stagingBufferData, data, imageByteSize);
-	vkUnmapMemory(gpuContext.device, stagingBufferMemory);
 
-	vkBindBufferMemory(
-		gpuContext.device, stagingBuffer, stagingBufferMemory, 0);
+	memcpy(stagingBufferData, data, imageByteSize);
+	vmaUnmapMemory(gpuContext.allocator, stagingBufferMemory);
 
 	//
 	// do the copy
@@ -709,8 +688,7 @@ static void Upload32(
 			&cmdBufferAllocateInfo,
 			&cmdBuffer) != VK_SUCCESS)
 	{
-		Com_Printf(S_COLOR_RED "Failed to create command buffer\n");
-		return;
+		Com_Error(ERR_FATAL, "Failed to create command buffer");
 	}
 
 	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
@@ -719,7 +697,7 @@ static void Upload32(
 
 	if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
 	{
-		return;
+		Com_Error(ERR_FATAL, "Failed to begin command buffer");
 	}
 
 	TransitionImageLayout(
@@ -768,11 +746,11 @@ static void Upload32(
 			&submitInfo,
 			VK_NULL_HANDLE) != VK_SUCCESS)
 	{
-		Com_Printf(S_COLOR_RED "Failed to submit command buffers to queue\n");
+		Com_Error(ERR_FATAL, "Failed to submit command buffers to queue");
 	}
 
 	vkDeviceWaitIdle(gpuContext.device);
-	vkFreeMemory(gpuContext.device, stagingBufferMemory, nullptr);
+	vmaFreeMemory(gpuContext.allocator, stagingBufferMemory);
 	vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
 	vkFreeCommandBuffers(
 		gpuContext.device, gpuContext.transferCommandPool, 1, &cmdBuffer);
@@ -1122,7 +1100,163 @@ static image_t *R_FindImageFile_NoLoad(const char *name, qboolean mipmap, qboole
 	return NULL;
 }
 
+static VkSamplerAddressMode GetVkSamplerAddressMode(int glWrapMode)
+{
+	switch (glWrapMode)
+	{
+		default:
+		case GL_REPEAT:
+			return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		case GL_CLAMP:
+		case GL_CLAMP_TO_EDGE:
+			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	}
+}
 
+static VkFilter GetVkFilter(int filter)
+{
+	switch (filter)
+	{
+		case GL_LINEAR: return VK_FILTER_LINEAR;
+		case GL_NEAREST: return VK_FILTER_NEAREST;
+	}
+}
+
+static VkSamplerMipmapMode GetVkMipmapMode(int filter)
+{
+	switch (filter)
+	{
+		case GL_NEAREST:
+		case GL_NEAREST_MIPMAP_NEAREST:
+		case GL_LINEAR_MIPMAP_NEAREST:
+			return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		case GL_LINEAR:
+		case GL_NEAREST_MIPMAP_LINEAR:
+		case GL_LINEAR_MIPMAP_LINEAR:
+			return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	}
+}
+
+static VkImage R_CreateImageHandle(
+	VmaAllocator& allocator,
+	uint32_t width,
+	uint32_t height,
+	VkFormat imageFormat,
+	VmaAllocation& allocation)
+{
+	VkImageCreateInfo imageCreateInfo = {};
+	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageCreateInfo.flags = 0;
+	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageCreateInfo.format = imageFormat;
+	imageCreateInfo.extent.width = width;
+	imageCreateInfo.extent.height = height;
+	imageCreateInfo.extent.depth = 1;
+	imageCreateInfo.mipLevels = 1;
+	imageCreateInfo.arrayLayers = 1;
+	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageCreateInfo.usage =
+		VK_IMAGE_USAGE_SAMPLED_BIT |
+		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	VmaAllocationCreateInfo allocCreateInfo = {};
+	allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+	VkImage image;
+	if (vmaCreateImage(
+			allocator,
+			&imageCreateInfo,
+			&allocCreateInfo,
+			&image,
+			&allocation,
+			nullptr) != VK_SUCCESS)
+	{
+		Com_Error(ERR_FATAL, "Failed to create image");
+	}
+
+	return image;
+}
+
+VkImageView R_CreateImageView(VkImage image, VkFormat imageFormat)
+{
+	VkImageViewCreateInfo imageViewCreateInfo = {};
+	imageViewCreateInfo.sType =
+		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+
+	imageViewCreateInfo.image = image;
+	imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	imageViewCreateInfo.format = imageFormat;
+	imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_R;
+	imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_G;
+	imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_B;
+	imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_A;
+	imageViewCreateInfo.subresourceRange.aspectMask =
+		VK_IMAGE_ASPECT_COLOR_BIT;
+	imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+	imageViewCreateInfo.subresourceRange.levelCount = 1;
+	imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+	imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+	VkImageView imageView;
+	if (vkCreateImageView(
+			gpuContext.device,
+			&imageViewCreateInfo,
+			nullptr,
+			&imageView) != VK_SUCCESS)
+	{
+		Com_Error(ERR_FATAL, "Failed to create image view");
+	}
+
+	return imageView;
+}
+
+static VkSampler R_CreateSampler(int glWrapClampMode, bool mipmap)
+{
+	VkSamplerAddressMode addressMode =
+		GetVkSamplerAddressMode(glWrapClampMode);
+
+	VkFilter minFilter = GetVkFilter(mipmap ? gl_filter_min : GL_LINEAR);
+	VkFilter magFilter = GetVkFilter(mipmap ? gl_filter_max : GL_LINEAR);
+	VkSamplerMipmapMode mipmapMode =
+		GetVkMipmapMode(mipmap ? gl_filter_max : GL_NEAREST);
+
+	VkSamplerCreateInfo samplerCreateInfo = {};
+	samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerCreateInfo.magFilter = magFilter;
+	samplerCreateInfo.minFilter = minFilter;
+	samplerCreateInfo.mipmapMode = mipmapMode;
+	samplerCreateInfo.addressModeU = addressMode;
+	samplerCreateInfo.addressModeV = addressMode;
+	samplerCreateInfo.addressModeW = addressMode;
+
+	samplerCreateInfo.anisotropyEnable = VK_FALSE;
+	if (mipmap)
+	{
+		if (r_ext_texture_filter_anisotropic->integer > 1 &&
+			glConfig.maxTextureFilterAnisotropy > 0)
+		{
+			samplerCreateInfo.anisotropyEnable = VK_TRUE;
+			samplerCreateInfo.maxAnisotropy =
+				r_ext_texture_filter_anisotropic->value;
+		}
+	}
+
+	VkSampler sampler;
+	if (vkCreateSampler(
+			gpuContext.device,
+			&samplerCreateInfo,
+			nullptr,
+			&sampler) != VK_SUCCESS)
+	{
+		Com_Error(ERR_FATAL, "Failed to create image sampler");
+	}
+
+	return sampler;
+}
 
 /*
 ================
@@ -1184,61 +1318,10 @@ image_t *R_CreateImage(
 
 	image = (image_t*)Z_Malloc(sizeof(image_t), TAG_IMAGE_T, qtrue);
 
-	VkImageCreateInfo imageCreateInfo = {};
-	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	imageCreateInfo.flags = 0;
-	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-	imageCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-	imageCreateInfo.extent.width = width;
-	imageCreateInfo.extent.height = height;
-	imageCreateInfo.extent.depth = 1;
-	imageCreateInfo.mipLevels = 1;
-	imageCreateInfo.arrayLayers = 1;
-	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-	imageCreateInfo.usage =
-		VK_IMAGE_USAGE_SAMPLED_BIT |
-		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-		VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	const VkFormat IMAGE_FORMAT = VK_FORMAT_R8G8B8A8_UNORM;
 
-	if (vkCreateImage(
-			gpuContext.device,
-			&imageCreateInfo,
-			nullptr,
-			&image->handle) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to create image\n");
-		return nullptr;
-	}
-
-	VkMemoryRequirements imageMemoryRequirements = {};
-	vkGetImageMemoryRequirements(
-		gpuContext.device, image->handle, &imageMemoryRequirements);
-
-	VkMemoryAllocateInfo allocateInfo = {};
-	allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	allocateInfo.allocationSize = imageMemoryRequirements.size;
-	allocateInfo.memoryTypeIndex = PickBestMemoryType(
-		gpuContext.physicalDevice,
-		imageMemoryRequirements.memoryTypeBits,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	if (vkAllocateMemory(
-			gpuContext.device,
-			&allocateInfo,
-			nullptr,
-			&image->deviceMemory) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to allocate image memory\n");
-		vkDestroyImage(gpuContext.device, image->handle, nullptr);
-		return nullptr;
-	}
-
-	vkBindImageMemory(
-		gpuContext.device, image->handle, image->deviceMemory, 0);
-
+	image->handle = R_CreateImageHandle(
+		gpuContext.allocator, width, height, IMAGE_FORMAT, image->memory);
 	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
 	image->mipmap = !!mipmap;
 	image->allowPicmip = !!allowPicmip;
@@ -1246,6 +1329,8 @@ image_t *R_CreateImage(
 	image->width = width;
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
+	image->sampler = R_CreateSampler(glWrapClampMode, mipmap);
+	image->imageView = R_CreateImageView(image->handle, IMAGE_FORMAT);
 
 	Upload32(
 		image->handle,

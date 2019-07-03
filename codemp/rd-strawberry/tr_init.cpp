@@ -975,6 +975,46 @@ static VkPresentModeKHR PickBestPresentMode(
 	return bestMode;
 }
 
+static void ConfigureRenderer(
+	glconfig_t& config,
+	VkPhysicalDeviceFeatures& requiredFeatures,
+	const VkPhysicalDeviceFeatures& features,
+	const VkPhysicalDeviceProperties& properties)
+{
+	requiredFeatures = {};
+
+	Com_Printf("Configuring physical device features\n");
+
+	const VkPhysicalDeviceLimits& limits = properties.limits;
+	config.maxTextureSize = limits.maxImageDimension2D;
+
+	Com_Printf("...Max 2D image dimension = %d\n", config.maxTextureSize);
+
+	if (features.samplerAnisotropy)
+	{
+		Com_Printf("...Sampler anisotropy available\n");
+		config.maxTextureFilterAnisotropy = limits.maxSamplerAnisotropy;
+
+		ri.Cvar_SetValue(
+			"r_ext_texture_filter_anisotropic_avail",
+			config.maxTextureFilterAnisotropy);
+		if (r_ext_texture_filter_anisotropic->value >
+				config.maxTextureFilterAnisotropy)
+		{
+			ri.Cvar_SetValue(
+				"r_ext_texture_filter_anisotropic_avail",
+				config.maxTextureFilterAnisotropy);
+		}
+
+		requiredFeatures.samplerAnisotropy = VK_TRUE;
+	}
+	else
+	{
+		Com_Printf ("...Sampler anisotropy is not available\n");
+		ri.Cvar_Set("r_ext_texture_filter_anisotropic_avail", "0");
+	}
+}
+
 /*
 ** InitVulkan
 **
@@ -1219,6 +1259,17 @@ static void InitVulkan( void )
 		Com_Printf(
 			"Best physical device: %s\n", gpuContext.physicalDeviceName);
 
+		VkPhysicalDeviceFeatures deviceFeatures = {};
+		vkGetPhysicalDeviceFeatures(
+			gpuContext.physicalDevice, &deviceFeatures);
+
+		VkPhysicalDeviceFeatures enableDeviceFeatures = {};
+		ConfigureRenderer(
+			glConfig,
+			enableDeviceFeatures,
+			deviceFeatures,
+			physicalDeviceProperties[bestPhysicalDeviceIndex]);
+
 		//
 		// physical device extensions
 		//
@@ -1372,7 +1423,6 @@ static void InitVulkan( void )
 			queueCreateInfos.emplace_back(queueCreateInfo);
 		}
 
-		const VkPhysicalDeviceFeatures enableDeviceFeatures = {};
 		VkDeviceCreateInfo deviceCreateInfo = {};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -1402,6 +1452,15 @@ static void InitVulkan( void )
 			gpuContext.device, gpuContext.presentQueue);
 
 		Com_Printf("Vulkan context initialized\n");
+
+		//
+		// memory allocator
+		//
+		VmaAllocatorCreateInfo allocatorCreateInfo = {};
+		allocatorCreateInfo.physicalDevice = gpuContext.physicalDevice;
+		allocatorCreateInfo.device = gpuContext.device;
+
+		vmaCreateAllocator(&allocatorCreateInfo, &gpuContext.allocator);
 
 		//
 		// swap chain
@@ -1644,34 +1703,9 @@ static void InitVulkan( void )
 			GpuSwapchain::Resources& resources = swapchainResources[i];
 
 			resources.image = swapchainImages[i];
-
-			// image view
-			VkImageViewCreateInfo imageViewCreateInfo = {};
-			imageViewCreateInfo.sType =
-				VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-
-			imageViewCreateInfo.image = swapchainImages[i];
-			imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			imageViewCreateInfo.format = gpuContext.swapchain.surfaceFormat;
-			imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_R;
-			imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_G;
-			imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_B;
-			imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_A;
-			imageViewCreateInfo.subresourceRange.aspectMask =
-				VK_IMAGE_ASPECT_COLOR_BIT;
-			imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-			imageViewCreateInfo.subresourceRange.levelCount = 1;
-			imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-			imageViewCreateInfo.subresourceRange.layerCount = 1;
-
-			if (vkCreateImageView(
-					gpuContext.device,
-					&imageViewCreateInfo,
-					nullptr,
-					&resources.imageView) != VK_SUCCESS)
-			{
-				Com_Error(ERR_FATAL, "Failed to create image view");
-			}
+			resources.imageView = R_CreateImageView(
+				swapchainImages[i], 
+				gpuContext.swapchain.surfaceFormat);
 
 			// framebuffer
 			VkImageView attachments[] = {resources.imageView};
@@ -1755,15 +1789,8 @@ static void InitVulkan( void )
 
 		R_Splash();
 #if 0
-		// OpenGL driver constants
-		qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
-
-		// stubbed or broken drivers may have reported 0...
-		glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
-
 		// set default state
 		GL_SetDefaultState();
-		R_Splash();	//get something on screen asap
 #endif
 	}
 }
@@ -2861,6 +2888,8 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 			frameResources.frameExecutedFence,
 			nullptr);
 	}
+
+	vmaDestroyAllocator(gpuContext.allocator);
 
 	vkDestroySwapchainKHR(
 		gpuContext.device, gpuContext.swapchain.swapchain, nullptr);

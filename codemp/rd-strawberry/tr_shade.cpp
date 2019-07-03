@@ -114,12 +114,6 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 #if 0
 	const int stateBits = glState.stateBits;
 
-	GpuSwapchain& swapchain = gpuContext.swapchain;
-	const int swapchainIndex =
-		swapchain.frameIndex % swapchain.swapchainResources.size();
-	GpuSwapchainResources& swapchainResources =
-		swapchain.swapchainResources[swapchainIndex];
-
 	//
 	// Descriptor set layout
 	//
@@ -252,9 +246,38 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	stageCreateInfos[1].module = renderModule;
 	stageCreateInfos[1].pName = "fragmentMain";
 
+	std::array<VkVertexInputBindingDescription, 3> vertexBindings;
+	vertexBindings[0].binding = 0;
+	vertexBindings[0].stride = 0;
+	vertexBindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+	vertexBindings[1].binding = 1;
+	vertexBindings[1].stride = 0;
+	vertexBindings[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+	vertexBindings[2].binding = 2;
+	vertexBindings[2].stride = 0;
+	vertexBindings[2].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	std::array<VkVertexInputAttributeDescription, 3> vertexAttributes;
+	vertexAttributes[0].location = 0;
+	vertexAttributes[0].binding = 0;
+	vertexAttributes[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	vertexAttributes[0].offset = 0;
+	vertexAttributes[1].location = 0;
+	vertexAttributes[1].binding = 1;
+	vertexAttributes[1].format = VK_FORMAT_R32G32_SFLOAT;
+	vertexAttributes[1].offset = 0;
+	vertexAttributes[2].location = 0;
+	vertexAttributes[2].binding = 2;
+	vertexAttributes[2].format = VK_FORMAT_R8G8B8A8_UNORM;
+	vertexAttributes[2].offset = 0;
+
 	VkPipelineVertexInputStateCreateInfo viCreateInfo = {};
 	viCreateInfo.sType =
 		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	viCreateInfo.vertexBindingDescriptionCount = 3;
+	viCreateInfo.pVertexBindingDescriptions = vertexBindings.data();
+	viCreateInfo.vertexAttributeDescriptionCount = 3;
+	viCreateInfo.pVertexAttributeDescriptions = vertexAttributes.data();
 
 	VkPipelineInputAssemblyStateCreateInfo iaCreateInfo = {};
 	iaCreateInfo.sType =
@@ -284,7 +307,10 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	VkPipelineRasterizationStateCreateInfo rsCreateInfo = {};
 	rsCreateInfo.sType =
 		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	rsCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	rsCreateInfo.polygonMode =
+		(stateBits & GLS_POLYMODE_LINE)
+			? VK_POLYGON_MODE_LINE
+			: VK_POLYGON_MODE_FILL;
 	rsCreateInfo.cullMode = GetVkCullMode(glState.cullType);
 	rsCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
@@ -295,7 +321,9 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	dsCreateInfo.depthWriteEnable =
 		(stateBits & GLS_DEPTHMASK_TRUE) ? VK_TRUE : VK_FALSE;
 	dsCreateInfo.depthCompareOp =
-		(stateBits & GLS_DEPTHFUNC_EQUAL) ? VK_COMPARE_OP_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL;
+		(stateBits & GLS_DEPTHFUNC_EQUAL)
+			? VK_COMPARE_OP_EQUAL
+			: VK_COMPARE_OP_LESS_OR_EQUAL;
 
 	VkPipelineColorBlendAttachmentState cbAttachment = {};
 	cbAttachment.blendEnable =
@@ -336,7 +364,7 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	VkPipeline graphicsPipeline;
 	if (vkCreateGraphicsPipelines(
 			gpuContext.device,
-			VK_NULL_HANDLE,  // TODO: Add pipeline cache
+			VK_NULL_HANDLE,
 			1,
 			&pipelineCreateInfo,
 			nullptr,
