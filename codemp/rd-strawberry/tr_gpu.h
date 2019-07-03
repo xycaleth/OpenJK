@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vulkan/vulkan.h>
 #include "vk_mem_alloc.h"
 
@@ -63,3 +65,7 @@ struct GpuContext
 	VkCommandPool gfxCommandPool;
 	VkRenderPass renderPass;
 };
+
+void GpuContextInit(GpuContext& context);
+void GpuContextPreShutdown(GpuContext& context);
+void GpuContextShutdown(GpuContext& context);
