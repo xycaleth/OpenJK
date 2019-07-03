@@ -644,13 +644,9 @@ void ConfigureRenderer(
 		ri.Cvar_Set("r_ext_texture_filter_anisotropic_avail", "0");
 	}
 }
-}
 
-void GpuContextInit(GpuContext& context)
+void ReportInstanceLayers()
 {
-	//
-	// instance layers
-	//
 	uint32_t maxSupportedDriverApiVersion = 0;
 	vkEnumerateInstanceVersion(&maxSupportedDriverApiVersion);
 
@@ -677,10 +673,10 @@ void GpuContextInit(GpuContext& context)
 		}
 		Com_Printf("\n");
 	}
+}
 
-	//
-	// instance extensions
-	//
+void ReportInstanceExtensions()
+{
 	uint32_t extensionCount = 0;
 	vkEnumerateInstanceExtensionProperties(
 		nullptr, &extensionCount, nullptr);
@@ -699,10 +695,26 @@ void GpuContextInit(GpuContext& context)
 		}
 		Com_Printf("\n");
 	}
+}
 
-	//
-	// Vulkan instance
-	//
+void SetDebugUtilsMessengerDefaults(
+	VkDebugUtilsMessengerCreateInfoEXT& debugUtilsMessengerCreateInfo)
+{
+	debugUtilsMessengerCreateInfo.sType =
+		VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	debugUtilsMessengerCreateInfo.messageSeverity =
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	debugUtilsMessengerCreateInfo.messageType =
+		VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	debugUtilsMessengerCreateInfo.pfnUserCallback = VulkanDebugMessageCallback;
+}
+
+VkInstance CreateInstance()
+{
 	uint32_t requiredExtensionCount = 0;
 	ri.VK_GetInstanceExtensions(&requiredExtensionCount, nullptr);
 
@@ -735,20 +747,6 @@ void GpuContextInit(GpuContext& context)
 	applicationInfo.pEngineName = "OpenJK";
 	applicationInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 
-	VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessageCreateInfo = {};
-	debugUtilsMessageCreateInfo.sType =
-		VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	debugUtilsMessageCreateInfo.messageSeverity =
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debugUtilsMessageCreateInfo.messageType =
-		VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	debugUtilsMessageCreateInfo.pfnUserCallback =
-		VulkanDebugMessageCallback;
-
 	VkInstanceCreateInfo instanceCreateInfo = {};
 	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	instanceCreateInfo.pApplicationInfo = &applicationInfo;
@@ -757,17 +755,32 @@ void GpuContextInit(GpuContext& context)
 	instanceCreateInfo.enabledLayerCount = requiredLayers.size();
 	instanceCreateInfo.ppEnabledLayerNames = requiredLayers.data();
 
+	VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo = {};
 	if (r_debugApi->integer)
 	{
-		instanceCreateInfo.pNext = &debugUtilsMessageCreateInfo;
+		SetDebugUtilsMessengerDefaults(debugUtilsMessengerCreateInfo);
+		instanceCreateInfo.pNext = &debugUtilsMessengerCreateInfo;
 	}
 
+	VkInstance instance;
 	VkResult result = vkCreateInstance(
-		&instanceCreateInfo, nullptr, &context.instance);
+		&instanceCreateInfo, nullptr, &instance);
 	if (result != VK_SUCCESS)
 	{
 		Com_Error(ERR_FATAL, "Failed to create Vulkan instance\n");
 	}
+
+	return instance;
+}
+}
+
+void GpuContextInit(GpuContext& context)
+{
+	ReportInstanceLayers();
+
+	ReportInstanceExtensions();
+
+	gpuContext.instance = CreateInstance();
 
 	//
 	// debug utils
@@ -778,9 +791,11 @@ void GpuContextInit(GpuContext& context)
 			(PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
 				context.instance, "vkCreateDebugUtilsMessengerEXT");
 
+		VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo;
+		SetDebugUtilsMessengerDefaults(debugUtilsMessengerCreateInfo);
 		if (vkCreateDebugUtilsMessengerEXT(
 				context.instance,
-				&debugUtilsMessageCreateInfo,
+				&debugUtilsMessengerCreateInfo,
 				nullptr,
 				&context.debugUtilsMessenger) != VK_SUCCESS)
 		{
