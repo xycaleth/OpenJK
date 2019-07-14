@@ -1612,22 +1612,30 @@ const void	*RB_SwapBuffers( const void *data ) {
 	auto *frameResources = backEndData->frameResources;
 
 	GpuSwapchain& swapchain = gpuContext.swapchain;
-	VkCommandBuffer cmdBuffer =
-		backEndData->swapchainResources->gfxCommandBuffer;
+	GpuSwapchainResources *swapchainResources =
+		backEndData->swapchainResources;
+	VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
 
 	vkCmdEndRenderPass(cmdBuffer);
 	vkEndCommandBuffer(cmdBuffer);
 
+	VkDeviceSize vertexBufferFlushEndRange =
+		static_cast<char *>(swapchainResources->vertexBufferData) -
+		static_cast<char *>(swapchainResources->vertexBufferBase);
 	vmaFlushAllocation(
 		gpuContext.allocator,
-		backEndData->swapchainResources->vertexBufferAllocation,
+		swapchainResources->vertexBufferAllocation,
 		0,
-		VK_WHOLE_SIZE);
+		vertexBufferFlushEndRange);
+
+	VkDeviceSize indexBufferFlushEndRange =
+		static_cast<char *>(swapchainResources->indexBufferData) -
+		static_cast<char *>(swapchainResources->indexBufferBase);
 	vmaFlushAllocation(
 		gpuContext.allocator,
-		backEndData->swapchainResources->indexBufferAllocation,
+		swapchainResources->indexBufferAllocation,
 		0,
-		VK_WHOLE_SIZE);
+		indexBufferFlushEndRange);
 
     GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
 	
