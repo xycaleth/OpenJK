@@ -1752,10 +1752,12 @@ void R_SetColorMappings( void ) {
 			s_gammatable[i] = inf;
 		}
 
+#ifdef STRAWB
 		if ( glConfig.deviceSupportsGamma )
 		{
 			ri.WIN_SetGamma( &glConfig, s_gammatable, s_gammatable, s_gammatable );
 		}
+#endif
 	}
 
 	for (i=0 ; i<256 ; i++) {
@@ -1820,9 +1822,7 @@ R_InitImages
 */
 void	R_InitImages( void ) {
 	// build brightness translation tables
-#ifdef STRAWB
 	R_SetColorMappings();
-#endif
 
 	// create default texture and white texture
 	R_CreateBuiltinImages();

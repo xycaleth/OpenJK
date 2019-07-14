@@ -10,5 +10,5 @@ layout(location = 0) out vec4 out_Color;
 void main()
 {
 	vec4 color = texture(u_Diffuse, in_TexCoord0);
-	out_Color = color;
+	out_Color = in_Color * color;
 }

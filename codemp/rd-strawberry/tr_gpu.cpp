@@ -1853,7 +1853,7 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 	vertexAttributes[2].location = 2;
 	vertexAttributes[2].binding = 0;
 	vertexAttributes[2].format = VK_FORMAT_R8G8B8A8_UNORM;
-	vertexAttributes[2].offset = sizeof(float) * 2;
+	vertexAttributes[2].offset = sizeof(float) * 2 + sizeof(float) * 4;
 
 	VkPipelineVertexInputStateCreateInfo viCreateInfo = {};
 	viCreateInfo.sType =
