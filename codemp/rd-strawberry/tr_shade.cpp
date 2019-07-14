@@ -47,22 +47,11 @@ static VkDeviceSize GetBufferOffset(const void *base, const void *pointer)
 		static_cast<const char *>(base);
 }
 
-/*
-==================
-R_DrawElements
-
-Optionally performs our own glDrawElements that looks for strip conditions
-instead of using the single glDrawElements call that may be inefficient
-without compiled vertex arrays.
-==================
-*/
-static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
-	GpuSwapchainResources *swapchainResources =
-		backEndData->swapchainResources;
-
-	//
-	// upload the vertex data
-	//
+static void UploadVertexAndIndexData(
+	GpuSwapchainResources *swapchainResources,
+	VkDeviceSize *vertexOffset,
+	VkDeviceSize *indexOffset)
+{
 	struct vertex
 	{
 		vec4_t position;
@@ -72,7 +61,8 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	};
 	static_assert(sizeof(vertex) == 32, "vertex must be 32 bytes in size");
 
-	VkDeviceSize vertexOffset = GetBufferOffset(
+	// Vertex data
+	*vertexOffset = GetBufferOffset(
 		swapchainResources->vertexBufferBase,
 		swapchainResources->vertexBufferData);
 
@@ -96,21 +86,23 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 
 	swapchainResources->vertexBufferData = out + tess.numVertexes;
 
-	VkDeviceSize indexOffset = GetBufferOffset(
+	// Index data
+	*indexOffset = GetBufferOffset(
 		swapchainResources->indexBufferBase,
 		swapchainResources->indexBufferData);
 
 	auto *outIndexes =
 		static_cast<uint16_t *>(swapchainResources->indexBufferData);
-	for (int i = 0; i < numIndexes; ++i)
+	for (int i = 0; i < tess.numIndexes; ++i)
 	{
-		outIndexes[i] = indexes[i];
+		outIndexes[i] = tess.indexes[i];
 	}
-	swapchainResources->indexBufferData = outIndexes + numIndexes;
+	swapchainResources->indexBufferData = outIndexes + tess.numIndexes;
+}
 
-	//
-	// create descriptor set
-	//
+static VkDescriptorSet CreateDescriptorSet(
+	GpuSwapchainResources *swapchainResources)
+{
 	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
 	descriptorSetAllocateInfo.sType =
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO; 
@@ -146,9 +138,28 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	descriptorWrite.pImageInfo = &descriptorImageInfo;
 	vkUpdateDescriptorSets(gpuContext.device, 1, &descriptorWrite, 0, nullptr);
 
-	//
-	// start drawing
-	//
+	return descriptorSet;
+}
+
+/*
+==================
+R_DrawElements
+
+Optionally performs our own glDrawElements that looks for strip conditions
+instead of using the single glDrawElements call that may be inefficient
+without compiled vertex arrays.
+==================
+*/
+static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
+	GpuSwapchainResources *swapchainResources =
+		backEndData->swapchainResources;
+
+	VkDeviceSize vertexOffset = 0;
+	VkDeviceSize indexOffset = 0;
+	UploadVertexAndIndexData(swapchainResources, &vertexOffset, &indexOffset);
+
+	VkDescriptorSet descriptorSet = CreateDescriptorSet(swapchainResources);
+
 	VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
 
 	const RenderState renderState = {
