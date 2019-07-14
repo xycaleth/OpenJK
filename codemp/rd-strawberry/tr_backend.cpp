@@ -807,10 +807,10 @@ void RB_SetGL2D (void) {
 			 GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
 
 	const float orthoProjection[16] = {
-		2.0f / 640.0f, 0.0f, 0.0f, -1.0f,
-		0.0f, 2.0f / 480.0f, 0.0f, -1.0f,
+		2.0f / 640.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 2.0f / 480.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+		-1.0f, -1.0f, 0.0f, 1.0f
 	};
 	const float identityModelview[16] = {
 		1.0f, 0.0f, 0.0f, 0.0f,

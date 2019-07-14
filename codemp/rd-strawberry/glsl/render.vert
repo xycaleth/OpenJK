@@ -15,10 +15,7 @@ layout(location = 1) out vec4 out_Color;
 
 void main()
 {
-	gl_Position.x = (2.0 / 640.0) * in_Position.x - 1.0;
-	gl_Position.y = (2.0 / 480.0) * in_Position.y - 1.0;
-	gl_Position.z = in_Position.z;
-	gl_Position.w = 1.0;
+	gl_Position = u_ProjectionMatrix * u_ModelviewMatrix * in_Position;
 
 	out_TexCoord0 = in_TexCoord0;
 	out_Color = in_Color;

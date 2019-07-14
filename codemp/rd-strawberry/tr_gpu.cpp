@@ -842,8 +842,8 @@ void CreatePipelineLayouts(GpuContext& context)
 	pipelineLayoutCreateInfo.sType =
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO; 
 	pipelineLayoutCreateInfo.setLayoutCount = 1;
-	pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-	pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
+	pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+	pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstants;
 
 	for (int i = 0; i < DESCRIPTOR_SET_COUNT; ++i)
 	{

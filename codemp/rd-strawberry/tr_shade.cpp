@@ -184,7 +184,6 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
 		graphicsPipeline);
 
-#if 0
 	vkCmdPushConstants(
 		cmdBuffer,
 		pipelineLayout,
@@ -192,7 +191,6 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 		0,
 		sizeof(gpuMatrices_t),
 		&glState.matrices);
-#endif
 
 	vkCmdBindDescriptorSets(
 		cmdBuffer,
