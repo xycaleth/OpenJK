@@ -812,11 +812,14 @@ void RB_StageIteratorSky( void )
 	// front of everything to allow developers to see how
 	// much sky is getting sucked in
 	if ( r_showsky->integer ) {
-		qglDepthRange( 0.0, 0.0 );
+		glState.depthRangeMin = 0.0f;
+		glState.depthRangeMax = 0.0f;
 	} else {
-		qglDepthRange( 1.0, 1.0 );
+		glState.depthRangeMin = 1.0f;
+		glState.depthRangeMax = 1.0f;
 	}
 
+#ifdef STRAWB
 	// draw the outer skybox
 	if ( tess.shader->sky->outerbox[0] && tess.shader->sky->outerbox[0] != tr.defaultImage ) {
 		qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
@@ -829,6 +832,7 @@ void RB_StageIteratorSky( void )
 
 		qglPopMatrix();
 	}
+#endif
 
 	// generate the vertexes for all the clouds, which will be drawn
 	// by the generic shader routine
@@ -839,11 +843,9 @@ void RB_StageIteratorSky( void )
 		RB_StageIteratorGeneric();
 	}
 
-	// draw the inner skybox
-
-
 	// back to normal depth range
-	qglDepthRange( 0.0, 1.0 );
+	glState.depthRangeMin = 0.0f;
+	glState.depthRangeMax = 1.0f;
 
 	// note that sky was drawn so we will draw a sun later
 	backEnd.skyRenderedThisView = qtrue;

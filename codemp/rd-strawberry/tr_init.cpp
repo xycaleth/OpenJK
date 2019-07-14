@@ -1330,13 +1330,10 @@ void R_Init( void ) {
 	int i;
 	byte *ptr;
 
-//	ri.Printf( PRINT_ALL, "----- R_Init -----\n" );
 	// clear all our internal state
 	memset( &tr, 0, sizeof( tr ) );
 	memset( &backEnd, 0, sizeof( backEnd ) );
 	memset( &tess, 0, sizeof( tess ) );
-
-//	Swap_Init();
 
 #ifndef FINAL_BUILD
 	if ( (intptr_t)tess.xyz & 15 ) {
@@ -1403,8 +1400,7 @@ void R_Init( void ) {
 	R_InitFonts();
 
 	R_ModelInit();
-	R_InitDecals ( );
-
+	R_InitDecals();
 
 	R_InitWorldEffects();
 
@@ -1428,8 +1424,6 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 
 	for ( size_t i = 0; i < numCommands; i++ )
 		ri.Cmd_RemoveCommand( commands[i].cmd );
-
-	GpuContextPreShutdown(gpuContext);
 
 	if ( r_DynamicGlow && r_DynamicGlow->integer )
 	{
@@ -1482,19 +1476,22 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 		R_IssuePendingRenderCommands();
 		if (destroyWindow)
 		{
+			GpuContextPreShutdown(gpuContext);
+
 			R_DeleteTextures();		// only do this for vid_restart now, not during things like map load
+
+			vkDestroyShaderModule(gpuContext.device, tr.renderModuleVert, nullptr);
+			vkDestroyShaderModule(gpuContext.device, tr.renderModuleFrag, nullptr);
+
+			GpuContextShutdown(gpuContext);
 
 			if ( restarting )
 			{
 				SaveGhoul2InfoArray();
 			}
 		}
+
 	}
-
-	vkDestroyShaderModule(gpuContext.device, tr.renderModuleVert, nullptr);
-	vkDestroyShaderModule(gpuContext.device, tr.renderModuleFrag, nullptr);
-
-	GpuContextShutdown(gpuContext);
 
 	// shut down platform specific OpenGL stuff
 	if ( destroyWindow ) {
@@ -1513,9 +1510,6 @@ Touch all images to make sure they are resident
 */
 void RE_EndRegistration( void ) {
 	R_IssuePendingRenderCommands();
-	if (!ri.Sys_LowPhysicalMemory()) {
-		RB_ShowImages();
-	}
 }
 
 void RE_GetLightStyle(int style, color4ub_t color)

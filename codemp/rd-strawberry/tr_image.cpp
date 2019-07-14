@@ -1096,8 +1096,18 @@ static VkFilter GetVkFilter(int filter)
 {
 	switch (filter)
 	{
-		case GL_LINEAR: return VK_FILTER_LINEAR;
-		case GL_NEAREST: return VK_FILTER_NEAREST;
+		case GL_LINEAR_MIPMAP_NEAREST:
+		case GL_LINEAR_MIPMAP_LINEAR:
+		case GL_LINEAR:
+			return VK_FILTER_LINEAR;
+
+		case GL_NEAREST_MIPMAP_NEAREST:
+		case GL_NEAREST_MIPMAP_LINEAR:
+		case GL_NEAREST:
+			return VK_FILTER_NEAREST;
+
+		default:
+			assert(!"Invalid texture filter type");
 	}
 }
 
@@ -1113,6 +1123,8 @@ static VkSamplerMipmapMode GetVkMipmapMode(int filter)
 		case GL_NEAREST_MIPMAP_LINEAR:
 		case GL_LINEAR_MIPMAP_LINEAR:
 			return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		default:
+			assert(!"Invalid mipmap mode");
 	}
 }
 

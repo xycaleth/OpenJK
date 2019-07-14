@@ -588,7 +588,7 @@ VkPresentModeKHR PickBestPresentMode(
 				score = 2;
 				break;
 			case VK_PRESENT_MODE_IMMEDIATE_KHR:
-				score = 1;
+				score = 5;
 				break;
 			default:
 				break;

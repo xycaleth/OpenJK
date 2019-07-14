@@ -336,11 +336,15 @@ void RB_BeginDrawingView (void) {
 		plane2[2] = DotProduct (backEnd.viewParms.ori.axis[2], plane);
 		plane2[3] = DotProduct (plane, backEnd.viewParms.ori.origin) - plane[3];
 
+#ifdef STRAWB
 		qglLoadMatrixf( s_flipMatrix );
 		qglClipPlane (GL_CLIP_PLANE0, plane2);
 		qglEnable (GL_CLIP_PLANE0);
+#endif
 	} else {
+#ifdef STRAWB
 		qglDisable (GL_CLIP_PLANE0);
+#endif
 	}
 }
 
@@ -1458,67 +1462,6 @@ const void	*RB_DrawBuffer( const void *data ) {
 	return (const void *)(cmd + 1);
 }
 
-/*
-===============
-RB_ShowImages
-
-Draw all the images to the screen, on top of whatever
-was there.  This is used to test for texture thrashing.
-
-Also called by RE_EndRegistration
-===============
-*/
-void RB_ShowImages( void ) {
-	image_t	*image;
-	float	x, y, w, h;
-//	int		start, end;
-
-	if ( !backEnd.projection2D ) {
-		RB_SetGL2D();
-	}
-
-	qglClear( GL_COLOR_BUFFER_BIT );
-
-	qglFinish();
-
-//	start = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
-
-
-	int i=0;
-	   				 R_Images_StartIteration();
-	while ( (image = R_Images_GetNextIteration()) != NULL)
-	{
-		w = glConfig.vidWidth / 20;
-		h = glConfig.vidHeight / 15;
-		x = i % 20 * w;
-		y = i / 20 * h;
-
-		// show in proportional size in mode 2
-		if ( r_showImages->integer == 2 ) {
-			w *= image->width / 512.0;
-			h *= image->height / 512.0;
-		}
-
-		GL_Bind( image );
-		qglBegin (GL_QUADS);
-		qglTexCoord2f( 0, 0 );
-		qglVertex2f( x, y );
-		qglTexCoord2f( 1, 0 );
-		qglVertex2f( x + w, y );
-		qglTexCoord2f( 1, 1 );
-		qglVertex2f( x + w, y + h );
-		qglTexCoord2f( 0, 1 );
-		qglVertex2f( x, y + h );
-		qglEnd();
-		i++;
-	}
-
-	qglFinish();
-
-//	end = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
-//	ri.Printf( PRINT_ALL, "%i msec to draw all images\n", end - start );
-}
-
 static void RB_GammaCorrectRender()
 {
 	qglPushAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
@@ -1582,11 +1525,6 @@ const void	*RB_SwapBuffers( const void *data ) {
 	if ( glConfigExt.doGammaCorrectionWithShaders )
 	{
 		RB_GammaCorrectRender();
-	}
-
-	// texture swapping test
-	if ( r_showImages->integer ) {
-		RB_ShowImages();
 	}
 
 	cmd = (const swapBuffersCommand_t *)data;
