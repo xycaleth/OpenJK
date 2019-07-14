@@ -59,22 +59,23 @@ static const float s_flipMatrix[16] = {
 ** GL_Bind
 */
 void GL_Bind( image_t *image ) {
-	int texnum;
-
-	if ( !image ) {
+	image_t *bindImage = image;
+	if (!image)
+	{
 		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "GL_Bind: NULL image\n" );
-		texnum = tr.defaultImage->texnum;
-	} else {
-		texnum = image->texnum;
+		bindImage = tr.defaultImage;
 	}
 
-	if ( r_nobind->integer && tr.dlightImage ) {		// performance evaluation option
-		texnum = tr.dlightImage->texnum;
+	if (r_nobind->integer && tr.dlightImage)
+	{
+		// performance evaluation option
+		bindImage = tr.dlightImage;
 	}
 
-	if ( glState.currenttextures[glState.currenttmu] != texnum ) {
-		image->frameUsed = tr.frameCount;
-		glState.currenttextures[glState.currenttmu] = texnum;
+	if (glState.currenttextures[glState.currenttmu] != bindImage)
+	{
+		bindImage->frameUsed = tr.frameCount;
+		glState.currenttextures[glState.currenttmu] = bindImage;
 	}
 }
 
@@ -86,49 +87,49 @@ void GL_SelectTexture( int unit )
 	glState.currenttmu = unit;
 }
 
-
 /*
 ** GL_Cull
 */
 void GL_Cull( int cullType ) {
-	if (glState.faceCulling == cullType)
-	{
-		return;
-	}
-
-	glState.faceCulling = cullType;
+	glState.glStateBits2 &= ~GLS2_CULLMODE_BITS;
 	if (backEnd.projection2D) {
 		//don't care, we're in 2d when it's always disabled
-		glState.cullMode = CULL_MODE_NONE;
-		return;
-	}
-
-	if (cullType == CT_TWO_SIDED)
-	{
-		glState.cullMode = CULL_MODE_NONE;
+		glState.glStateBits2 |= GLS2_CULLMODE_NONE;
 	}
 	else
 	{
-		if (cullType == CT_BACK_SIDED)
+		switch (cullType)
 		{
-			if (backEnd.viewParms.isMirror)
+			case CT_TWO_SIDED:
 			{
-				glState.cullMode = CULL_MODE_FRONT;
+				glState.glStateBits2 |= GLS2_CULLMODE_NONE;
+				break;
 			}
-			else
+
+			case CT_BACK_SIDED:
 			{
-				glState.cullMode = CULL_MODE_BACK;
+				if (backEnd.viewParms.isMirror)
+				{
+					glState.glStateBits2 |= GLS2_CULLMODE_FRONT;
+				}
+				else
+				{
+					glState.glStateBits2 |= GLS2_CULLMODE_BACK;
+				}
+				break;
 			}
-		}
-		else
-		{
-			if (backEnd.viewParms.isMirror)
+
+			case CT_FRONT_SIDED:
 			{
-				glState.cullMode = CULL_MODE_BACK;
-			}
-			else
-			{
-				glState.cullMode = CULL_MODE_FRONT;
+				if (backEnd.viewParms.isMirror)
+				{
+					glState.glStateBits2 |= GLS2_CULLMODE_BACK;
+				}
+				else
+				{
+					glState.glStateBits2 |= GLS2_CULLMODE_FRONT;
+				}
+				break;
 			}
 		}
 	}
@@ -150,35 +151,35 @@ void GL_TexEnv( int env )
 */
 void GL_State( uint32_t stateBits )
 {
-	uint32_t diff = stateBits ^ glState.glStateBits;
-
-	if ( !diff )
-	{
-		return;
-	}
-
 	glState.glStateBits = stateBits;
 }
 
 void GL_PolygonOffset(bool enable)
 {
-	glState.polygonOffset = enable;
+	if (enable)
+	{
+		glState.glStateBits2 &= ~GLS2_POLYGONOFFSET;
+	}
+	else
+	{
+		glState.glStateBits2 |= GLS2_POLYGONOFFSET;
+	}
 }
 
 void GL_ProjectionMatrix(const float *projectionMatrix)
 {
 	Com_Memcpy(
-		glState.projectionMatrix,
+		glState.matrices.projectionMatrix,
 		projectionMatrix,
-		sizeof(glState.projectionMatrix));
+		sizeof(glState.matrices.projectionMatrix));
 }
 
 void GL_ModelviewMatrix(const float *modelviewMatrix)
 {
 	Com_Memcpy(
-		glState.modelviewMatrix,
+		glState.matrices.modelviewMatrix,
 		modelviewMatrix,
-		sizeof(glState.modelviewMatrix));
+		sizeof(glState.matrices.modelviewMatrix));
 }
 
 
@@ -228,8 +229,6 @@ to actually render the visible surfaces for this view
 */
 void RB_BeginDrawingView (void) {
 	int clearBits = GL_DEPTH_BUFFER_BIT;
-
-	glState.finishCalled = qtrue;
 
 	// we will need to change the projection matrix before drawing
 	// 2D images again
@@ -318,8 +317,6 @@ void RB_BeginDrawingView (void) {
 	{
 		backEnd.isHyperspace = qfalse;
 	}
-
-	glState.faceCulling = -1;		// force face culling to set next time
 
 	// we will only draw a sun if there was sky rendered in this view
 	backEnd.skyRenderedThisView = qfalse;
@@ -795,26 +792,34 @@ RB_SetGL2D
 
 ================
 */
-void	RB_SetGL2D (void) {
+void RB_SetGL2D (void) {
 	backEnd.projection2D = qtrue;
 
-#if 0
-	// set 2D virtual screen size
-	qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
-	qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
-	qglMatrixMode(GL_PROJECTION);
-    qglLoadIdentity ();
-	qglOrtho (0, 640, 480, 0, 0, 1);
-	qglMatrixMode(GL_MODELVIEW);
-    qglLoadIdentity ();
+	glState.viewport.x = 0;
+	glState.viewport.y = 0;
+	glState.viewport.width = glConfig.vidWidth;
+	glState.viewport.height = glConfig.vidHeight;
+	glState.depthRangeMin = 0.0f;
+	glState.depthRangeMax = 1.0f;
 
-	GL_State( GLS_DEPTHTEST_DISABLE |
-			  GLS_SRCBLEND_SRC_ALPHA |
-			  GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
+	GL_State(GLS_DEPTHTEST_DISABLE |
+			 GLS_SRCBLEND_SRC_ALPHA |
+			 GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
 
-	qglDisable( GL_CULL_FACE );
-	qglDisable( GL_CLIP_PLANE0 );
-#endif
+	const float orthoProjection[16] = {
+		2.0f / 640.0f, 0.0f, 0.0f, -1.0f,
+		0.0f, 2.0f / 480.0f, 0.0f, -1.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	const float identityModelview[16] = {
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	GL_ProjectionMatrix(orthoProjection);
+	GL_ModelviewMatrix(identityModelview);
 
 	// set time for 2D shaders
 	backEnd.refdef.time = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
@@ -902,6 +907,7 @@ void RE_StretchRaw(
 }
 
 void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty) {
+#ifdef STRAWB
 	GL_Bind( tr.scratchImage[client] );
 
 	// if the scratchImage isn't in the format we want, specify it as a new texture
@@ -921,6 +927,7 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 			qglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cols, rows, GL_RGBA, GL_UNSIGNED_BYTE, data );
 		}
 	}
+#endif
 }
 
 
@@ -1350,15 +1357,28 @@ const void	*RB_DrawBuffer( const void *data ) {
 		&nextImageIndex);
 
 	GpuSwapchain& swapchain = gpuContext.swapchain;
-	GpuSwapchain::Resources& swapchainResources =
-		swapchain.resources[nextImageIndex];
+	GpuSwapchainResources *swapchainResources =
+		&swapchain.resources[nextImageIndex];
 
+	backEndData->swapchainResources = swapchainResources;
 	backEndData->swapchainImageIndex = nextImageIndex;
+
+	swapchainResources->vertexBufferData =
+		swapchainResources->vertexBufferBase;
+	swapchainResources->indexBufferData =
+		swapchainResources->indexBufferBase;
+
+	vkResetDescriptorPool(
+		gpuContext.device, swapchainResources->descriptorPool, 0);
+
+	VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
+
+	vkResetCommandBuffer(
+		cmdBuffer,
+		VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 
 	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
 	cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-	VkCommandBuffer cmdBuffer = swapchainResources.gfxCommandBuffer;
 
 	if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
 	{
@@ -1421,7 +1441,7 @@ const void	*RB_DrawBuffer( const void *data ) {
 	VkRenderPassBeginInfo passBeginInfo = {};
 	passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	passBeginInfo.renderPass = gpuContext.renderPass;
-	passBeginInfo.framebuffer = swapchainResources.framebuffer;
+	passBeginInfo.framebuffer = swapchainResources->framebuffer;
 	passBeginInfo.renderArea.offset = { 0, 0 };
 	passBeginInfo.renderArea.extent = {
 		gpuContext.swapchain.width,
@@ -1592,13 +1612,22 @@ const void	*RB_SwapBuffers( const void *data ) {
 	auto *frameResources = backEndData->frameResources;
 
 	GpuSwapchain& swapchain = gpuContext.swapchain;
-	GpuSwapchain::Resources& swapchainResources =
-		swapchain.resources[backEndData->swapchainImageIndex];
-
-	VkCommandBuffer cmdBuffer = swapchainResources.gfxCommandBuffer;
+	VkCommandBuffer cmdBuffer =
+		backEndData->swapchainResources->gfxCommandBuffer;
 
 	vkCmdEndRenderPass(cmdBuffer);
 	vkEndCommandBuffer(cmdBuffer);
+
+	vmaFlushAllocation(
+		gpuContext.allocator,
+		backEndData->swapchainResources->vertexBufferAllocation,
+		0,
+		VK_WHOLE_SIZE);
+	vmaFlushAllocation(
+		gpuContext.allocator,
+		backEndData->swapchainResources->indexBufferAllocation,
+		0,
+		VK_WHOLE_SIZE);
 
     GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
 	
@@ -1626,7 +1655,7 @@ const void	*RB_SwapBuffers( const void *data ) {
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = &gpuContext.swapchain.swapchain;
+	presentInfo.pSwapchains = &swapchain.swapchain;
 	presentInfo.pImageIndices = &backEndData->swapchainImageIndex;
 	presentInfo.waitSemaphoreCount = 1;
 	presentInfo.pWaitSemaphores = &frameResources->renderFinishedSemaphore;

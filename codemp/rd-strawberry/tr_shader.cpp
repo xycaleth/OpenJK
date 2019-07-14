@@ -4157,6 +4157,7 @@ static void CreateInternalShaders( void ) {
 	stages[0].stateBits = GLS_DEFAULT;
 	tr.defaultShader = FinishShader();
 
+#ifdef STRAWB
 	// shadow shader is just a marker
 	Q_strncpyz( shader.name, "<stencil shadow>", sizeof( shader.name ) );
 	shader.sort = SS_BANNER; //SS_STENCIL_SHADOW;
@@ -4170,6 +4171,7 @@ static void CreateInternalShaders( void ) {
 	shader.defaultShader = qtrue;
 
 	ARB_InitGPUShaders();
+#endif
 }
 
 static void CreateExternalShaders( void ) {

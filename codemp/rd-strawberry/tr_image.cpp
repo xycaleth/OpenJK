@@ -732,6 +732,8 @@ static void Upload32(
 	vkFreeCommandBuffers(
 		gpuContext.device, gpuContext.transferCommandPool, 1, &cmdBuffer);
 
+	// STRAWB TODO: Mipmaps, 16-bit textures
+
 #if 0
 	//
 	// perform optional picmip operation
@@ -1114,7 +1116,7 @@ static VkSamplerMipmapMode GetVkMipmapMode(int filter)
 	}
 }
 
-static VkImage R_CreateImageHandle(
+static VkImage CreateImageHandle(
 	VmaAllocator& allocator,
 	uint32_t width,
 	uint32_t height,
@@ -1158,7 +1160,7 @@ static VkImage R_CreateImageHandle(
 	return image;
 }
 
-VkImageView R_CreateImageView(VkImage image, VkFormat imageFormat)
+VkImageView CreateImageView(VkImage image, VkFormat imageFormat)
 {
 	VkImageViewCreateInfo imageViewCreateInfo = {};
 	imageViewCreateInfo.sType =
@@ -1191,7 +1193,7 @@ VkImageView R_CreateImageView(VkImage image, VkFormat imageFormat)
 	return imageView;
 }
 
-static VkSampler R_CreateSampler(int glWrapClampMode, bool mipmap)
+static VkSampler CreateSampler(int glWrapClampMode, bool mipmap)
 {
 	VkSamplerAddressMode addressMode =
 		GetVkSamplerAddressMode(glWrapClampMode);
@@ -1283,6 +1285,9 @@ image_t *R_CreateImage(
 			height);
 	}
 
+	// STRAWB: Can optimise this. The sampler defines the mipmap/picmip/clamp
+	// etc so we can avoid loading the image multiple times and just use a
+	// different sampler
 	image = R_FindImageFile_NoLoad(
 		name,
 		mipmap,
@@ -1297,7 +1302,7 @@ image_t *R_CreateImage(
 
 	const VkFormat IMAGE_FORMAT = VK_FORMAT_R8G8B8A8_UNORM;
 
-	image->handle = R_CreateImageHandle(
+	image->handle = CreateImageHandle(
 		gpuContext.allocator, width, height, IMAGE_FORMAT, image->memory);
 	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
 	image->mipmap = !!mipmap;
@@ -1306,8 +1311,8 @@ image_t *R_CreateImage(
 	image->width = width;
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
-	image->sampler = R_CreateSampler(glWrapClampMode, mipmap);
-	image->imageView = R_CreateImageView(image->handle, IMAGE_FORMAT);
+	image->sampler = CreateSampler(glWrapClampMode, mipmap);
+	image->imageView = CreateImageView(image->handle, IMAGE_FORMAT);
 
 	Upload32(
 		image->handle,
@@ -1542,7 +1547,9 @@ static void R_CreateFogImage( void ) {
 	borderColor[2] = 1.0;
 	borderColor[3] = 1;
 
+#ifdef STRAWB
 	qglTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
+#endif
 }
 
 /*
@@ -1598,6 +1605,7 @@ void R_CreateBuiltinImages( void ) {
 
 	tr.screenImage = R_CreateImage("*screen", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT );
 
+#ifdef STRAWB
 	// Create the scene glow image. - AReis
 	tr.screenGlow = 1024 + giTextureBindNum++;
 	qglDisable( GL_TEXTURE_2D );
@@ -1662,6 +1670,7 @@ void R_CreateBuiltinImages( void ) {
 			data[y][x][3] = 255;
 		}
 	}
+#endif
 
 	tr.identityLightImage = R_CreateImage("*identityLight", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT);
 
@@ -1810,14 +1819,17 @@ R_InitImages
 ===============
 */
 void	R_InitImages( void ) {
-	//memset(hashTable, 0, sizeof(hashTable));	// DO NOT DO THIS NOW (because of image cacheing)	-ste.
 	// build brightness translation tables
+#ifdef STRAWB
 	R_SetColorMappings();
+#endif
 
 	// create default texture and white texture
 	R_CreateBuiltinImages();
 
+#ifdef STRAWB
 	R_SetGammaCorrectionLUT();
+#endif
 }
 
 /*

@@ -115,7 +115,6 @@ typedef struct orientationr_s {
 typedef struct image_s {
 	char		imgName[MAX_QPATH];		// game path, including extension
 	int			width, height;	// after power of two and picmip but not including clamp to MAX_TEXTURE_SIZE
-	GLuint		texnum;					// gl texture binding
 	VkImage		handle;
 	VkImageView	imageView;
 	VkSampler	sampler;
@@ -414,13 +413,6 @@ typedef enum {
 	CT_BACK_SIDED,
 	CT_TWO_SIDED
 } cullType_t;
-
-enum cullMode_t
-{
-	CULL_MODE_NONE,
-	CULL_MODE_FRONT,
-	CULL_MODE_BACK,
-};
 
 typedef enum {
 	FP_NONE,		// surface is translucent and will just be adjusted properly
@@ -910,18 +902,20 @@ struct rect_t
 	int height;
 };
 
+struct gpuMatrices_t
+{
+	float		modelviewMatrix[16];
+	float		projectionMatrix[16];
+};
+
 // the renderer front end should never modify glstate_t
 typedef struct glstate_s {
-	int			currenttextures[2];
+	image_t		*currenttextures[2];
 	int			currenttmu;
-	qboolean	finishCalled;
 	int			texEnv[2];
-	int			faceCulling;
-	cullMode_t	cullMode;
-	bool		polygonOffset;
 	uint32_t	glStateBits;
-	float		projectionMatrix[16];
-	float		modelviewMatrix[16];
+	uint32_t	glStateBits2;
+	gpuMatrices_t matrices;
 	rect_t		viewport;
 	rect_t		scissorRect;
 	float		depthRangeMin;
@@ -998,6 +992,9 @@ typedef struct trGlobals_s {
 	image_t					*identityLightImage;	// full of tr.identityLightByte
 
 	image_t					*screenImage; //reserve us a gl texnum to use with RF_DISTORTION
+
+	VkShaderModule			renderModuleVert;
+	VkShaderModule			renderModuleFrag;
 
 	// Handle to the Glow Effect Vertex Shader. - AReis
 	GLuint					glowVShader;
@@ -1321,7 +1318,7 @@ void	GL_PolygonOffset(bool enable);
 #define GLS_SRCBLEND_DST_ALPHA					0x00000007
 #define GLS_SRCBLEND_ONE_MINUS_DST_ALPHA		0x00000008
 #define GLS_SRCBLEND_ALPHA_SATURATE				0x00000009
-#define		GLS_SRCBLEND_BITS					0x0000000f
+#define GLS_SRCBLEND_BITS						0x0000000f
 
 #define GLS_DSTBLEND_ZERO						0x00000010
 #define GLS_DSTBLEND_ONE						0x00000020
@@ -1331,7 +1328,7 @@ void	GL_PolygonOffset(bool enable);
 #define GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA		0x00000060
 #define GLS_DSTBLEND_DST_ALPHA					0x00000070
 #define GLS_DSTBLEND_ONE_MINUS_DST_ALPHA		0x00000080
-#define		GLS_DSTBLEND_BITS					0x000000f0
+#define GLS_DSTBLEND_BITS						0x000000f0
 
 #define GLS_DEPTHMASK_TRUE						0x00000100
 
@@ -1344,10 +1341,19 @@ void	GL_PolygonOffset(bool enable);
 #define GLS_ATEST_LT_80							0x20000000
 #define GLS_ATEST_GE_80							0x40000000
 #define GLS_ATEST_GE_C0							0x80000000
-#define		GLS_ATEST_BITS						0xF0000000
+#define GLS_ATEST_BITS							0xF0000000
 
-#define GLS_DEFAULT			GLS_DEPTHMASK_TRUE
+#define GLS_DEFAULT			(GLS_DEPTHMASK_TRUE)
 #define GLS_ALPHA			(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA)
+
+#define GLS2_CULLMODE_NONE						0x00000001
+#define GLS2_CULLMODE_FRONT						0x00000002
+#define GLS2_CULLMODE_BACK						0x00000003
+#define GLS2_CULLMODE_BITS						0x00000003
+
+#define GLS2_POLYGONOFFSET						0x00000010
+
+#define GLS2_DEFAULT							(GLS2_CULLMODE_FRONT)
 
 void	RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty);
 void	RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty);
@@ -1385,7 +1391,7 @@ image_t		*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicm
 
 image_t		*R_CreateImage( const char *name, const byte *pic, int width, int height, GLenum format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int wrapClampMode, bool bRectangle = false );
 
-VkImageView R_CreateImageView(VkImage image, VkFormat imageFormat);
+VkImageView CreateImageView(VkImage image, VkFormat imageFormat);
 void TransitionImageLayout(
 	VkCommandBuffer cmdBuffer,
 	VkImage image,
@@ -1857,6 +1863,7 @@ typedef enum {
 // all of the information needed by the back end must be
 // contained in a backEndData_t.
 struct FrameResources;
+struct GpuSwapchainResources;
 typedef struct backEndData_s {
 	drawSurf_t	drawSurfs[MAX_DRAWSURFS];
 	dlight_t	dlights[MAX_DLIGHTS];
@@ -1867,6 +1874,7 @@ typedef struct backEndData_s {
 	renderCommandList_t	commands;
 
 	FrameResources *frameResources;
+	GpuSwapchainResources *swapchainResources;
 	uint32_t swapchainImageIndex;
 } backEndData_t;
 

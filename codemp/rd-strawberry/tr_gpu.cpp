@@ -772,6 +772,198 @@ VkInstance CreateInstance()
 
 	return instance;
 }
+
+void CreateDescriptorSetLayouts(GpuContext& context)
+{
+	// single texture
+	{
+		VkDescriptorSetLayoutBinding bindings[1] = {};
+		bindings[0].binding = 0;
+		bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		bindings[0].descriptorCount = 1;
+		bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
+		setLayoutCreateInfo.sType =
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		setLayoutCreateInfo.bindingCount = 1;
+		setLayoutCreateInfo.pBindings = bindings;
+
+		if (vkCreateDescriptorSetLayout(
+				context.device,
+				&setLayoutCreateInfo,
+				nullptr,
+				&context.descriptorSetLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE]) != VK_SUCCESS)
+		{
+			Com_Error(
+				ERR_FATAL,
+				"Failed to create single-texture descriptor set layout");
+		}
+	}
+	
+	{
+		VkDescriptorSetLayoutBinding bindings[2] = {};
+		bindings[0].binding = 0;
+		bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		bindings[0].descriptorCount = 1;
+		bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		bindings[1].binding = 1;
+		bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		bindings[1].descriptorCount = 1;
+		bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
+		setLayoutCreateInfo.sType =
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		setLayoutCreateInfo.bindingCount = 2;
+		setLayoutCreateInfo.pBindings = bindings;
+
+		if (vkCreateDescriptorSetLayout(
+				context.device,
+				&setLayoutCreateInfo,
+				nullptr,
+				&context.descriptorSetLayouts[DESCRIPTOR_SET_MULTI_TEXTURE]) != VK_SUCCESS)
+		{
+			Com_Error(
+				ERR_FATAL,
+				"Failed to create multi-texture descriptor set layout");
+		}
+	}
+}
+
+void CreatePipelineLayouts(GpuContext& context)
+{
+	VkPushConstantRange pushConstants = {};
+	pushConstants.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	pushConstants.offset = 0;
+	pushConstants.size = sizeof(gpuMatrices_t);
+
+	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
+	pipelineLayoutCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO; 
+	pipelineLayoutCreateInfo.setLayoutCount = 1;
+	pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+	pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
+
+	for (int i = 0; i < DESCRIPTOR_SET_COUNT; ++i)
+	{
+		VkDescriptorSetLayout layout = context.descriptorSetLayouts[i];
+		pipelineLayoutCreateInfo.pSetLayouts = &layout;
+
+		if (vkCreatePipelineLayout(
+				context.device,
+				&pipelineLayoutCreateInfo,
+				nullptr,
+				&context.pipelineLayouts[i]) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to create pipeline layout");
+		}
+	}
+}
+
+VkCullModeFlags GetVkCullMode(uint32_t stateBits2)
+{
+	switch (stateBits2 & GLS2_CULLMODE_BITS)
+	{
+		case GLS2_CULLMODE_FRONT: return VK_CULL_MODE_BACK_BIT;
+		case GLS2_CULLMODE_BACK: return VK_CULL_MODE_FRONT_BIT;
+		case GLS2_CULLMODE_NONE: return VK_CULL_MODE_NONE;
+	}
+}
+
+VkBlendFactor GetVkSrcBlendFactor(uint32_t stateBits)
+{
+	switch (stateBits & GLS_SRCBLEND_BITS)
+	{
+		case GLS_SRCBLEND_ZERO:
+			return VK_BLEND_FACTOR_ZERO;
+		case GLS_SRCBLEND_ONE:
+			return VK_BLEND_FACTOR_ONE;
+		case GLS_SRCBLEND_DST_COLOR:
+			return VK_BLEND_FACTOR_DST_COLOR;
+		case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+		case GLS_SRCBLEND_SRC_ALPHA:
+			return VK_BLEND_FACTOR_SRC_ALPHA;
+		case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		case GLS_SRCBLEND_DST_ALPHA:
+			return VK_BLEND_FACTOR_DST_ALPHA;
+		case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+		case GLS_SRCBLEND_ALPHA_SATURATE:
+			return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+		default:
+			return VK_BLEND_FACTOR_ONE;
+	}
+}
+
+VkBlendFactor GetVkDstBlendFactor(uint32_t stateBits)
+{
+	switch ( stateBits & GLS_DSTBLEND_BITS )
+	{
+		case GLS_DSTBLEND_ZERO:
+			return VK_BLEND_FACTOR_ZERO;
+		case GLS_DSTBLEND_ONE:
+			return VK_BLEND_FACTOR_ONE;
+		case GLS_DSTBLEND_SRC_COLOR:
+			return VK_BLEND_FACTOR_SRC_COLOR;
+		case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+		case GLS_DSTBLEND_SRC_ALPHA:
+			return VK_BLEND_FACTOR_SRC_ALPHA;
+		case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		case GLS_DSTBLEND_DST_ALPHA:
+			return VK_BLEND_FACTOR_DST_ALPHA;
+		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+		default:
+			return VK_BLEND_FACTOR_ZERO;
+	}
+}
+
+}
+
+bool operator<(const RenderState& lhs, const RenderState& rhs)
+{
+	if (lhs.stateBits < rhs.stateBits)
+	{
+		return true;
+	}
+	else if (lhs.stateBits > rhs.stateBits)
+	{
+		return false;
+	}
+
+	if (lhs.stateBits2 < rhs.stateBits2)
+	{
+		return true;
+	}
+	else if (lhs.stateBits2 > rhs.stateBits2)
+	{
+		return false;
+	}
+
+	if (lhs.attributes < rhs.attributes)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+	if (!lhs.multitexture && rhs.multitexture)
+	{
+		return true;
+	}
+	else if (lhs.multitexture && !rhs.multitexture)
+	{
+		return false;
+	}
+
+	return false;
 }
 
 void GpuContextInit(GpuContext& context)
@@ -1318,10 +1510,10 @@ void GpuContextInit(GpuContext& context)
 
 	for (uint32_t i = 0; i < swapchainImageCount; ++i)
 	{
-		GpuSwapchain::Resources& resources = swapchainResources[i];
+		GpuSwapchainResources& resources = swapchainResources[i];
 
 		resources.image = swapchainImages[i];
-		resources.imageView = R_CreateImageView(
+		resources.imageView = CreateImageView(
 			swapchainImages[i], 
 			context.swapchain.surfaceFormat);
 
@@ -1365,6 +1557,80 @@ void GpuContextInit(GpuContext& context)
 			Com_Printf(S_COLOR_RED "Failed to allocate command buffer\n");
 			return;
 		}
+
+		// Descriptor pool
+		VkDescriptorPoolSize poolSizes[1] = {};
+		poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[0].descriptorCount = 4096;
+
+		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
+		descriptorPoolCreateInfo.sType =
+			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCreateInfo.maxSets = 2048;
+		descriptorPoolCreateInfo.poolSizeCount = 1;
+		descriptorPoolCreateInfo.pPoolSizes = poolSizes;
+
+		if (vkCreateDescriptorPool(
+				gpuContext.device,
+				&descriptorPoolCreateInfo,
+				nullptr,
+				&resources.descriptorPool) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to create descriptor pool");
+		}
+
+		VkBufferCreateInfo indexBufferCreateInfo = {};
+		indexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		indexBufferCreateInfo.size = 1 * 1024 * 1024;
+		indexBufferCreateInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+		VkBufferCreateInfo vertexBufferCreateInfo = {};
+		vertexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		vertexBufferCreateInfo.size = 4 * 1024 * 1024;
+		vertexBufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+		VmaAllocationCreateInfo bufferAllocCreateInfo = {};
+		bufferAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+		if (vmaCreateBuffer(
+				context.allocator, 
+				&indexBufferCreateInfo,
+				&bufferAllocCreateInfo,
+				&resources.indexBuffer,
+				&resources.indexBufferAllocation,
+				nullptr) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to create index buffer");
+		}
+
+		if (vmaMapMemory(
+				context.allocator,
+				resources.indexBufferAllocation,
+				&resources.indexBufferBase) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to map index buffer into memory");
+		}
+		resources.indexBufferData = resources.indexBufferBase;
+
+		if (vmaCreateBuffer(
+				context.allocator, 
+				&vertexBufferCreateInfo,
+				&bufferAllocCreateInfo,
+				&resources.vertexBuffer,
+				&resources.vertexBufferAllocation,
+				nullptr) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to create vertex buffer");
+		}
+
+		if (vmaMapMemory(
+				context.allocator,
+				resources.vertexBufferAllocation,
+				&resources.vertexBufferBase) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to map vertex buffer into memory");
+		}
+		resources.vertexBufferData = resources.vertexBufferBase;
 	}
 
 	for (auto& resources : context.frameResources)
@@ -1404,6 +1670,9 @@ void GpuContextInit(GpuContext& context)
 			Com_Printf(S_COLOR_RED "Failed to create fence\n");
 		}
 	}
+
+	CreateDescriptorSetLayouts(gpuContext);
+	CreatePipelineLayouts(gpuContext);
 }
 
 void GpuContextPreShutdown(GpuContext& context)
@@ -1413,61 +1682,302 @@ void GpuContextPreShutdown(GpuContext& context)
 
 void GpuContextShutdown(GpuContext& context)
 {
-	//
-	// shutdown
-	//
-	vkDestroyCommandPool(
-		gpuContext.device, gpuContext.gfxCommandPool, nullptr);
-	vkDestroyCommandPool(
-		gpuContext.device, gpuContext.transferCommandPool, nullptr);
-	vkDestroyRenderPass(gpuContext.device, gpuContext.renderPass, nullptr); 
-
-	for (auto& swapchainResources : gpuContext.swapchain.resources)
+	for (auto iter : context.graphicsPipelines)
 	{
+		vkDestroyPipeline(context.device, iter.second, nullptr);
+	}
+
+	for (auto pipelineLayout : context.pipelineLayouts)
+	{
+		vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
+	}
+
+	for (auto layout : context.descriptorSetLayouts)
+	{
+		vkDestroyDescriptorSetLayout(context.device, layout, nullptr);
+	}
+
+	vkDestroyCommandPool(context.device, context.gfxCommandPool, nullptr);
+	vkDestroyCommandPool(context.device, context.transferCommandPool, nullptr);
+	vkDestroyRenderPass(context.device, context.renderPass, nullptr); 
+
+	for (auto& swapchainResources : context.swapchain.resources)
+	{
+		vmaUnmapMemory(
+			context.allocator,
+			swapchainResources.vertexBufferAllocation);
+
+		vmaFreeMemory(
+			context.allocator,
+			swapchainResources.vertexBufferAllocation);
+
+		vkDestroyBuffer(
+			context.device,
+			swapchainResources.vertexBuffer,
+			nullptr);
+
+		vmaUnmapMemory(
+			context.allocator,
+			swapchainResources.indexBufferAllocation);
+
+		vmaFreeMemory(
+			context.allocator,
+			swapchainResources.indexBufferAllocation);
+
+		vkDestroyBuffer(
+			context.device,
+			swapchainResources.indexBuffer,
+			nullptr);
+
+		vkDestroyDescriptorPool(
+			context.device,
+			swapchainResources.descriptorPool,
+			nullptr);
+
 		vkDestroyImageView(
-			gpuContext.device,
+			context.device,
 			swapchainResources.imageView,
 			nullptr);
 
 		vkDestroyFramebuffer(
-			gpuContext.device,
+			context.device,
 			swapchainResources.framebuffer,
 			nullptr);
 	}
 
-	for (auto& frameResources : gpuContext.frameResources)
+	for (auto& frameResources : context.frameResources)
 	{
 		vkDestroySemaphore(
-			gpuContext.device,
+			context.device,
 			frameResources.imageAvailableSemaphore,
 			nullptr);
 
 		vkDestroySemaphore(
-			gpuContext.device,
+			context.device,
 			frameResources.renderFinishedSemaphore,
 			nullptr);
 
 		vkDestroyFence(
-			gpuContext.device,
+			context.device,
 			frameResources.frameExecutedFence,
 			nullptr);
 	}
 
-	vmaDestroyAllocator(gpuContext.allocator);
+	vmaDestroyAllocator(context.allocator);
 
 	vkDestroySwapchainKHR(
-		gpuContext.device, gpuContext.swapchain.swapchain, nullptr);
-	vkDestroyDevice(gpuContext.device, nullptr); 
+		context.device, context.swapchain.swapchain, nullptr);
+	vkDestroyDevice(context.device, nullptr); 
 
-	if (gpuContext.debugUtilsMessenger != VK_NULL_HANDLE)
+	if (context.debugUtilsMessenger != VK_NULL_HANDLE)
 	{
 		auto vkDestroyDebugUtilsMessengerEXT =
 			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-				gpuContext.instance, "vkDestroyDebugUtilsMessengerEXT");
+				context.instance, "vkDestroyDebugUtilsMessengerEXT");
 		vkDestroyDebugUtilsMessengerEXT(
-			gpuContext.instance, gpuContext.debugUtilsMessenger, nullptr);
+			context.instance, context.debugUtilsMessenger, nullptr);
 	}
-	vkDestroySurfaceKHR(
-		gpuContext.instance, gpuContext.windowSurface, nullptr);
-	vkDestroyInstance(gpuContext.instance, nullptr);
+	vkDestroySurfaceKHR(context.instance, context.windowSurface, nullptr);
+	vkDestroyInstance(context.instance, nullptr);
+}
+
+VkShaderModule GpuCreateShaderModuleFromFile(
+	GpuContext& context, const char *filePath)
+{
+	void *code = nullptr;
+	uint32_t codeSizeInBytes = ri.FS_ReadFile((char *)filePath, &code);
+	if (codeSizeInBytes < 0 || !code)
+	{
+		Com_Error(ERR_FATAL, "Failed to load shader module from file '%s'", filePath);
+	}
+
+	VkShaderModuleCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	createInfo.codeSize = codeSizeInBytes;
+	createInfo.pCode = static_cast<const uint32_t *>(code);
+
+	VkShaderModule module;
+	if (vkCreateShaderModule(
+			context.device,
+			&createInfo,
+			nullptr,
+			&module) != VK_SUCCESS)
+	{
+		ri.FS_FreeFile(code);
+		Com_Error(ERR_FATAL, "Failed to create shader module");
+	}
+
+	ri.FS_FreeFile(code);
+
+	return module;
+}
+
+VkPipeline GpuGetGraphicsPipelineForRenderState(
+	GpuContext& context,
+	const RenderState& renderState)
+{
+	const auto iter = context.graphicsPipelines.find(renderState);
+	if (iter != std::end(context.graphicsPipelines))
+	{
+		return iter->second;
+	}
+
+	std::array<VkPipelineShaderStageCreateInfo, 2> stageCreateInfos = {};
+	stageCreateInfos[0].sType =
+		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stageCreateInfos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+	stageCreateInfos[0].module = tr.renderModuleVert;
+	stageCreateInfos[0].pName = "main";
+	stageCreateInfos[1].sType =
+		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stageCreateInfos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	stageCreateInfos[1].module = tr.renderModuleFrag;
+	stageCreateInfos[1].pName = "main";
+
+	std::array<VkVertexInputBindingDescription, 1> vertexBindings = {};
+	vertexBindings[0].binding = 0;
+	vertexBindings[0].stride = 32;
+	vertexBindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	std::array<VkVertexInputAttributeDescription, 3> vertexAttributes = {};
+	vertexAttributes[0].location = 0;
+	vertexAttributes[0].binding = 0;
+	vertexAttributes[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+	vertexAttributes[0].offset = 0;
+
+	vertexAttributes[1].location = 1;
+	vertexAttributes[1].binding = 0;
+	vertexAttributes[1].format = VK_FORMAT_R32G32_SFLOAT;
+	vertexAttributes[1].offset = sizeof(float) * 4;
+
+	vertexAttributes[2].location = 2;
+	vertexAttributes[2].binding = 0;
+	vertexAttributes[2].format = VK_FORMAT_R8G8B8A8_UNORM;
+	vertexAttributes[2].offset = sizeof(float) * 2;
+
+	VkPipelineVertexInputStateCreateInfo viCreateInfo = {};
+	viCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	viCreateInfo.vertexBindingDescriptionCount = vertexBindings.size();
+	viCreateInfo.pVertexBindingDescriptions = vertexBindings.data();
+	viCreateInfo.vertexAttributeDescriptionCount = vertexAttributes.size();
+	viCreateInfo.pVertexAttributeDescriptions = vertexAttributes.data();
+
+	VkPipelineInputAssemblyStateCreateInfo iaCreateInfo = {};
+	iaCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	iaCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+	VkPipelineViewportStateCreateInfo viewportCreateInfo = {};
+	viewportCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportCreateInfo.viewportCount = 1;
+	viewportCreateInfo.pViewports = nullptr;
+	viewportCreateInfo.scissorCount = 1;
+	viewportCreateInfo.pScissors = nullptr;
+
+	VkPipelineRasterizationStateCreateInfo rsCreateInfo = {};
+	rsCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rsCreateInfo.polygonMode =
+		(renderState.stateBits & GLS_POLYMODE_LINE)
+			? VK_POLYGON_MODE_LINE
+			: VK_POLYGON_MODE_FILL;
+	rsCreateInfo.cullMode = GetVkCullMode(renderState.stateBits2);
+	rsCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rsCreateInfo.lineWidth = 1.0f;
+
+	VkPipelineMultisampleStateCreateInfo msCreateInfo = {};
+	msCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	msCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	msCreateInfo.sampleShadingEnable = VK_FALSE;
+	msCreateInfo.minSampleShading = 0.0f;
+	msCreateInfo.pSampleMask = nullptr;
+	msCreateInfo.alphaToCoverageEnable = VK_FALSE;
+	msCreateInfo.alphaToOneEnable = VK_FALSE;
+
+	VkPipelineDepthStencilStateCreateInfo dsCreateInfo = {};
+	dsCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	dsCreateInfo.depthTestEnable = VK_FALSE;
+//		!(renderState.stateBits & GLS_DEPTHTEST_DISABLE);
+	dsCreateInfo.depthWriteEnable = VK_FALSE;
+//		(renderState.stateBits & GLS_DEPTHMASK_TRUE) ? VK_TRUE : VK_FALSE;
+	dsCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+		//(renderState.stateBits & GLS_DEPTHFUNC_EQUAL)
+			//? VK_COMPARE_OP_EQUAL
+			//: VK_COMPARE_OP_LESS_OR_EQUAL;
+	dsCreateInfo.minDepthBounds = 0.0f;
+	dsCreateInfo.maxDepthBounds = 1.0f;
+
+	VkPipelineColorBlendAttachmentState cbAttachment = {};
+	cbAttachment.blendEnable =
+		(renderState.stateBits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS))
+		? VK_TRUE
+		: VK_FALSE;
+	cbAttachment.srcColorBlendFactor = GetVkSrcBlendFactor(renderState.stateBits);
+	cbAttachment.dstColorBlendFactor = GetVkDstBlendFactor(renderState.stateBits);
+	cbAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+	cbAttachment.srcAlphaBlendFactor = GetVkSrcBlendFactor(renderState.stateBits);
+	cbAttachment.dstAlphaBlendFactor = GetVkDstBlendFactor(renderState.stateBits);
+	cbAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+	cbAttachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT |
+		VK_COLOR_COMPONENT_G_BIT |
+		VK_COLOR_COMPONENT_B_BIT |
+		VK_COLOR_COMPONENT_A_BIT;
+
+	VkPipelineColorBlendStateCreateInfo cbCreateInfo = {};
+	cbCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	cbCreateInfo.attachmentCount = 1;
+	cbCreateInfo.pAttachments = &cbAttachment;
+
+	const std::array<VkDynamicState, 2> states = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
+	dynamicStateCreateInfo.sType =
+		VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicStateCreateInfo.dynamicStateCount = states.size();
+	dynamicStateCreateInfo.pDynamicStates = states.data();
+
+	VkPipelineLayout pipelineLayout =
+		context.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+
+	VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+	pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineCreateInfo.flags = 0;
+	pipelineCreateInfo.stageCount = stageCreateInfos.size();
+	pipelineCreateInfo.pStages = stageCreateInfos.data();
+	pipelineCreateInfo.pVertexInputState = &viCreateInfo;
+	pipelineCreateInfo.pInputAssemblyState = &iaCreateInfo;
+	pipelineCreateInfo.pViewportState = &viewportCreateInfo;
+	pipelineCreateInfo.pRasterizationState = &rsCreateInfo;
+	pipelineCreateInfo.pMultisampleState = &msCreateInfo;
+	pipelineCreateInfo.pDepthStencilState = &dsCreateInfo;
+	pipelineCreateInfo.pColorBlendState = &cbCreateInfo;
+	pipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
+	pipelineCreateInfo.layout = pipelineLayout;
+	pipelineCreateInfo.renderPass = context.renderPass;
+	pipelineCreateInfo.subpass = 0;
+
+	VkPipeline graphicsPipeline;
+	if (vkCreateGraphicsPipelines(
+			context.device,
+			VK_NULL_HANDLE,
+			1,
+			&pipelineCreateInfo,
+			nullptr,
+			&graphicsPipeline) != VK_SUCCESS)
+	{
+		Com_Error(ERR_FATAL, "Failed to create graphics pipeline");
+	}
+
+	context.graphicsPipelines.insert(
+		std::make_pair(renderState, graphicsPipeline));
+
+	return graphicsPipeline;
 }

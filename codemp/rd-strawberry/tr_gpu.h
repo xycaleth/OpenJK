@@ -4,7 +4,37 @@
 #include "vk_mem_alloc.h"
 
 #include <array>
+#include <map>
 #include <vector>
+
+enum DescriptorSetId
+{
+	DESCRIPTOR_SET_SINGLE_TEXTURE,
+	DESCRIPTOR_SET_MULTI_TEXTURE,
+
+	DESCRIPTOR_SET_COUNT
+};
+
+#define BIT(n) (1u << (n))
+enum VertexAttributeBit
+{
+	VERTEX_ATTRIBUTE_POSITION_BIT = BIT(0),
+	VERTEX_ATTRIBUTE_TEXCOORD0_BIT = BIT(1),
+	VERTEX_ATTRIBUTE_TEXCOORD1_BIT = BIT(2),
+	VERTEX_ATTRIBUTE_COLOR_BIT = BIT(3),
+};
+using VertexAttributeBits = uint32_t;
+
+#undef BIT
+
+struct RenderState
+{
+	uint32_t stateBits;
+	uint32_t stateBits2;
+	VertexAttributeBits attributes;
+	bool multitexture;
+};
+bool operator<(const RenderState& lhs, const RenderState& rhs);
 
 struct GpuQueue
 {
@@ -12,22 +42,35 @@ struct GpuQueue
 	VkQueue queue;
 };
 
+struct GpuSwapchainResources
+{
+	VkImage image;
+	VkImageView imageView;
+	VkFramebuffer framebuffer;
+	VkCommandBuffer gfxCommandBuffer;
+	VkDescriptorPool descriptorPool;
+
+	VkBuffer vertexBuffer;
+	VmaAllocation vertexBufferAllocation;
+	uint32_t vertexBufferOffset;
+	void *vertexBufferBase;
+	void *vertexBufferData;
+
+	VkBuffer indexBuffer;
+	VmaAllocation indexBufferAllocation;
+	uint32_t indexBufferOffset;
+	void *indexBufferBase;
+	void *indexBufferData;
+};
+
 struct GpuSwapchain
 {
-	struct Resources
-	{
-		VkImage image;
-		VkImageView imageView;
-		VkFramebuffer framebuffer;
-		VkCommandBuffer gfxCommandBuffer;
-	};
-
 	VkSwapchainKHR swapchain;
 	VkFormat surfaceFormat;
 	uint32_t width;
 	uint32_t height;
 
-	std::vector<Resources> resources;
+	std::vector<GpuSwapchainResources> resources;
 };
 
 // How many frames we want to be able to have in the pipeline at any one time
@@ -64,8 +107,18 @@ struct GpuContext
 	VkCommandPool transferCommandPool;
 	VkCommandPool gfxCommandPool;
 	VkRenderPass renderPass;
+
+	std::array<VkDescriptorSetLayout, DESCRIPTOR_SET_COUNT> descriptorSetLayouts;
+	std::array<VkPipelineLayout, DESCRIPTOR_SET_COUNT> pipelineLayouts;
+
+	std::map<RenderState, VkPipeline> graphicsPipelines;
 };
 
 void GpuContextInit(GpuContext& context);
 void GpuContextPreShutdown(GpuContext& context);
 void GpuContextShutdown(GpuContext& context);
+
+VkShaderModule GpuCreateShaderModuleFromFile(
+	GpuContext& context, const char *filePath);
+VkPipeline GpuGetGraphicsPipelineForRenderState(
+	GpuContext& context, const RenderState& renderState);

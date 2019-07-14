@@ -302,7 +302,7 @@ void R_Splash()
 		VK_NULL_HANDLE,
 		&nextImageIndex);
 
-	GpuSwapchain::Resources& swapchainResources =
+	GpuSwapchainResources& swapchainResources =
 		swapchain.resources[nextImageIndex];
 
 	VkCommandBuffer cmdBuffer = swapchainResources.gfxCommandBuffer;
@@ -1391,7 +1391,11 @@ void R_Init( void ) {
 	}
 	InitVulkan();
 
-#if 0
+	tr.renderModuleVert =
+		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.vert.spv");
+	tr.renderModuleFrag =
+		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.frag.spv");
+
 	R_InitImages();
 	R_InitShaders(qfalse);
 	R_InitSkins();
@@ -1399,23 +1403,18 @@ void R_Init( void ) {
 	R_InitFonts();
 
 	R_ModelInit();
-//	re.G2VertSpaceServer = &IHeapAllocator_singleton;
 	R_InitDecals ( );
+
 
 	R_InitWorldEffects();
 
-#if defined(_DEBUG)
-	int	err = qglGetError();
-	if ( err != GL_NO_ERROR )
-		ri.Printf( PRINT_ALL,  "glGetError() = 0x%x\n", err);
-#endif
-
 	RestoreGhoul2InfoArray();
 	// print info
+#ifdef STRAWB
 	GfxInfo_f();
+#endif
 
 //	ri.Printf( PRINT_ALL, "----- finished R_Init -----\n" );
-#endif
 }
 
 /*
@@ -1491,6 +1490,9 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 			}
 		}
 	}
+
+	vkDestroyShaderModule(gpuContext.device, tr.renderModuleVert, nullptr);
+	vkDestroyShaderModule(gpuContext.device, tr.renderModuleFrag, nullptr);
 
 	GpuContextShutdown(gpuContext);
 

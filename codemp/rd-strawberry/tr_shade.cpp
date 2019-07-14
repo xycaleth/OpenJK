@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.h"
 #include "tr_quicksprite.h"
+#include "tr_gpu.h"
 
 /*
 
@@ -40,63 +41,10 @@ color4ub_t	styleColors[MAX_LIGHT_STYLES];
 
 extern bool g_bRenderGlowingObjects;
 
-
-static VkCullModeFlags GetVkCullMode(cullType_t cullType)
+static VkDeviceSize GetBufferOffset(const void *base, const void *pointer)
 {
-	switch (cullType)
-	{
-		case CT_FRONT_SIDED: return VK_CULL_MODE_BACK_BIT;
-		case CT_BACK_SIDED: return VK_CULL_MODE_FRONT_BIT;
-		case CT_TWO_SIDED: return VK_CULL_MODE_NONE;
-	}
-}
-
-static VkBlendFactor GetVkSrcBlendFactor(int stateBits)
-{
-	switch (stateBits & GLS_SRCBLEND_BITS)
-	{
-		case GLS_SRCBLEND_ZERO:
-			return VK_BLEND_FACTOR_ZERO;
-		case GLS_SRCBLEND_ONE:
-			return VK_BLEND_FACTOR_ONE;
-		case GLS_SRCBLEND_DST_COLOR:
-			return VK_BLEND_FACTOR_DST_COLOR;
-		case GLS_SRCBLEND_ONE_MINUS_DST_COLOR:
-			return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-		case GLS_SRCBLEND_SRC_ALPHA:
-			return VK_BLEND_FACTOR_SRC_ALPHA;
-		case GLS_SRCBLEND_ONE_MINUS_SRC_ALPHA:
-			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		case GLS_SRCBLEND_DST_ALPHA:
-			return VK_BLEND_FACTOR_DST_ALPHA;
-		case GLS_SRCBLEND_ONE_MINUS_DST_ALPHA:
-			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-		case GLS_SRCBLEND_ALPHA_SATURATE:
-			return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-	}
-}
-
-static VkBlendFactor GetVkDstBlendFactor(int stateBits)
-{
-	switch ( stateBits & GLS_DSTBLEND_BITS )
-	{
-		case GLS_DSTBLEND_ZERO:
-			return VK_BLEND_FACTOR_ZERO;
-		case GLS_DSTBLEND_ONE:
-			return VK_BLEND_FACTOR_ONE;
-		case GLS_DSTBLEND_SRC_COLOR:
-			return VK_BLEND_FACTOR_SRC_COLOR;
-		case GLS_DSTBLEND_ONE_MINUS_SRC_COLOR:
-			return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-		case GLS_DSTBLEND_SRC_ALPHA:
-			return VK_BLEND_FACTOR_SRC_ALPHA;
-		case GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA:
-			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		case GLS_DSTBLEND_DST_ALPHA:
-			return VK_BLEND_FACTOR_DST_ALPHA;
-		case GLS_DSTBLEND_ONE_MINUS_DST_ALPHA:
-			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-	}
+	return static_cast<const char *>(pointer) -
+		static_cast<const char *>(base);
 }
 
 /*
@@ -109,66 +57,68 @@ without compiled vertex arrays.
 ==================
 */
 static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
-	// STRAWB draw everythingggg
-	//qglDrawElements(GL_TRIANGLES, numIndexes, GL_INDEX_TYPE, indexes);
-#if 0
-	const int stateBits = glState.stateBits;
+	GpuSwapchainResources *swapchainResources =
+		backEndData->swapchainResources;
 
 	//
-	// Descriptor set layout
+	// upload the vertex data
 	//
-	VkDescriptorSetLayoutBinding bindings[1] = {};
-	bindings[0].binding = 0;
-	bindings[0].descriptorType = VL_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	bindings[0].descriptorCount = 1;
-	bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
-	setLayoutCreateInfo.sType =
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	setLayoutCreateInfo.bindingCount = 1;
-	setLayoutCreateInfo.pBindings = bindings;
-
-	VkDesciptorSetLayout setLayout;
-	if (vkCreateDescriptorSetLayout(
-			gpuContext.device,
-			&setLayoutCreateInfo,
-			nullptr,
-			&setLayout) != VK_SUCCESS)
+	struct vertex
 	{
-		Com_Printf(S_COLOR_RED "Derp\n");
+		vec4_t position;
+		vec2_t texcoord;
+		uint8_t color[4];
+		uint32_t pad0;
+	};
+	static_assert(sizeof(vertex) == 32, "vertex must be 32 bytes in size");
+
+	VkDeviceSize vertexOffset = GetBufferOffset(
+		swapchainResources->vertexBufferBase,
+		swapchainResources->vertexBufferData);
+
+	auto *out = static_cast<vertex *>(swapchainResources->vertexBufferData);
+	for (int i = 0; i < tess.numVertexes; ++i)
+	{
+		vertex *v = out + i;
+		v->position[0] = tess.xyz[i][0];
+		v->position[1] = tess.xyz[i][1];
+		v->position[2] = tess.xyz[i][2];
+		v->position[3] = 1.0f;
+		
+		v->texcoord[0] = tess.svars.texcoords[0][i][0];
+		v->texcoord[1] = tess.svars.texcoords[0][i][1];
+
+		v->color[0] = tess.svars.colors[i][0];
+		v->color[1] = tess.svars.colors[i][1];
+		v->color[2] = tess.svars.colors[i][2];
+		v->color[3] = tess.svars.colors[i][3];
 	}
 
-	//
-	// Descriptor set
-	//
-	VkDescriptorPoolSize poolSizes[1] = {};
-	poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[0].descriptorCount = 4096;
+	swapchainResources->vertexBufferData = out + tess.numVertexes;
 
-	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
-	descriptorPoolCreateInfo.sType =
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	descriptorPoolCreateInfo.maxSets = 2048;
-	descriptorPoolCreateInfo.poolSizeCount = 1;
-	descriptorPoolCreateInfo.pPoolSizes = poolSizes;
+	VkDeviceSize indexOffset = GetBufferOffset(
+		swapchainResources->indexBufferBase,
+		swapchainResources->indexBufferData);
 
-	VkDescriptorPool descriptorPool;
-	if (vkCreateDescriptorPool(
-			gpuContext.device,
-			&descriptorPoolCreateInfo,
-			nullptr,
-			&descriptorPool) != VK_SUCCESS)
+	auto *outIndexes =
+		static_cast<uint16_t *>(swapchainResources->indexBufferData);
+	for (int i = 0; i < numIndexes; ++i)
 	{
-		Com_Printf(S_COLOR_RED "Failed to create descriptor pool\n");
+		outIndexes[i] = indexes[i];
 	}
+	swapchainResources->indexBufferData = outIndexes + numIndexes;
 
+	//
+	// create descriptor set
+	//
 	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
 	descriptorSetAllocateInfo.sType =
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO; 
-	descriptorSetAllocateInfo.descriptorPool = descriptorPool;
+	descriptorSetAllocateInfo.descriptorPool =
+		swapchainResources->descriptorPool;
 	descriptorSetAllocateInfo.descriptorSetCount = 1;
-	descriptorSetAllocateInfo.pSetLayouts = &setLayout;
+	descriptorSetAllocateInfo.pSetLayouts =
+		&gpuContext.descriptorSetLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
 
 	VkDescriptorSet descriptorSet;
 	if (vkAllocateDescriptorSets(
@@ -176,12 +126,14 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 			&descriptorSetAllocateInfo,
 			&descriptorSet) != VK_SUCCESS)
 	{
-		Com_Printf(S_COLOR_RED "Failed to create descriptor set\n");
+		Com_Error(ERR_FATAL, "Failed to create descriptor set");
 	}
 
+	image_t *image = glState.currenttextures[0];
+
 	VkDescriptorImageInfo descriptorImageInfo = {};
-	descriptorImageInfo.sampler = VK_NULL_HANDLE;
-	descriptorImageInfo.imageView = imageView;
+	descriptorImageInfo.sampler = image->sampler;
+	descriptorImageInfo.imageView = image->imageView;
 	descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 	VkWriteDescriptorSet descriptorWrite = {};
@@ -195,94 +147,19 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	vkUpdateDescriptorSets(gpuContext.device, 1, &descriptorWrite, 0, nullptr);
 
 	//
-	// pipeline layout
+	// start drawing
 	//
-	VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
-	pipelineLayoutCreateInfo.sType =
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO; 
-	pipelineLayoutCreateInfo.setLayoutCount = 1;
-	pipelineLayoutCreateInfo.pSetLayouts = &setLayout;
+	VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
 
-	VkPipelineLayout pipelineLayout;
-	if (vkCreatePipelineLayout(
-			gpuContext.device,
-			&pipelineLayoutCreateInfo,
-			nullptr,
-			&pipelineLayout) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to create pipeline layout\n");
-	}
+	const RenderState renderState = {
+		glState.glStateBits,
+		glState.glStateBits2
+	};
+	VkPipeline graphicsPipeline = 
+		GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
 
-	//
-	// load fake shader
-	//
-	VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
-	shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	shaderModuleCreateInfo.codeSize = 0;
-	shaderModuleCreateInfo.pCode = nullptr;
-
-	VkShaderModule renderModule;
-	if (vkCreateShaderModule(
-			gpuContext.device,
-			&shaderModuleCreateInfo,
-			nullptr,
-			&renderModule) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_WARNING "Failed to create shader module\n");
-	}
-
-	//
-	// creating the graphics pipeline 
-	//
-	VkPipelineShaderStageCreateInfo stageCreateInfos[2] = {};
-	stageCreateInfos[0].sType =
-		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	stageCreateInfos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-	stageCreateInfos[0].module = renderModule;
-	stageCreateInfos[0].pName = "vertexMain";
-	stageCreateInfos[1].sType =
-		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	stageCreateInfos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	stageCreateInfos[1].module = renderModule;
-	stageCreateInfos[1].pName = "fragmentMain";
-
-	std::array<VkVertexInputBindingDescription, 3> vertexBindings;
-	vertexBindings[0].binding = 0;
-	vertexBindings[0].stride = 0;
-	vertexBindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-	vertexBindings[1].binding = 1;
-	vertexBindings[1].stride = 0;
-	vertexBindings[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-	vertexBindings[2].binding = 2;
-	vertexBindings[2].stride = 0;
-	vertexBindings[2].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	std::array<VkVertexInputAttributeDescription, 3> vertexAttributes;
-	vertexAttributes[0].location = 0;
-	vertexAttributes[0].binding = 0;
-	vertexAttributes[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	vertexAttributes[0].offset = 0;
-	vertexAttributes[1].location = 0;
-	vertexAttributes[1].binding = 1;
-	vertexAttributes[1].format = VK_FORMAT_R32G32_SFLOAT;
-	vertexAttributes[1].offset = 0;
-	vertexAttributes[2].location = 0;
-	vertexAttributes[2].binding = 2;
-	vertexAttributes[2].format = VK_FORMAT_R8G8B8A8_UNORM;
-	vertexAttributes[2].offset = 0;
-
-	VkPipelineVertexInputStateCreateInfo viCreateInfo = {};
-	viCreateInfo.sType =
-		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	viCreateInfo.vertexBindingDescriptionCount = 3;
-	viCreateInfo.pVertexBindingDescriptions = vertexBindings.data();
-	viCreateInfo.vertexAttributeDescriptionCount = 3;
-	viCreateInfo.pVertexAttributeDescriptions = vertexAttributes.data();
-
-	VkPipelineInputAssemblyStateCreateInfo iaCreateInfo = {};
-	iaCreateInfo.sType =
-		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	iaCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	VkPipelineLayout pipelineLayout =
+		gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
 
 	VkViewport viewport = {};
 	viewport.x = glState.viewport.x;
@@ -294,89 +171,28 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 
 	VkRect2D scissor = {};
 	scissor.offset = {glState.viewport.x, glState.viewport.y};
-	scissor.extent = {glState.viewport.width, glState.viewport.height};
+	scissor.extent = {
+		static_cast<uint32_t>(glState.viewport.width),
+		static_cast<uint32_t>(glState.viewport.height)
+	};
 
-	VkPipelineViewportStateCreateInfo viewportCreateInfo = {};
-	viewportCreateInfo.sType =
-		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewportCreateInfo.viewportCount = 1;
-	viewportCreateInfo.pViewports = &viewport;
-	viewportCreateInfo.scissorCount = 1;
-	viewportCreateInfo.pScissors = &scissor;
-
-	VkPipelineRasterizationStateCreateInfo rsCreateInfo = {};
-	rsCreateInfo.sType =
-		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	rsCreateInfo.polygonMode =
-		(stateBits & GLS_POLYMODE_LINE)
-			? VK_POLYGON_MODE_LINE
-			: VK_POLYGON_MODE_FILL;
-	rsCreateInfo.cullMode = GetVkCullMode(glState.cullType);
-	rsCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-
-	VkPipelineDepthStencilStateCreateInfo dsCreateInfo = {};
-	dsCreateInfo.sType =
-		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	dsCreateInfo.depthTestEnable = !(stateBits & GLS_DEPTHTEST_DISABLE);
-	dsCreateInfo.depthWriteEnable =
-		(stateBits & GLS_DEPTHMASK_TRUE) ? VK_TRUE : VK_FALSE;
-	dsCreateInfo.depthCompareOp =
-		(stateBits & GLS_DEPTHFUNC_EQUAL)
-			? VK_COMPARE_OP_EQUAL
-			: VK_COMPARE_OP_LESS_OR_EQUAL;
-
-	VkPipelineColorBlendAttachmentState cbAttachment = {};
-	cbAttachment.blendEnable =
-		(stateBits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS)) ? VK_TRUE : VK_FALSE;
-	cbAttachment.srcColorBlendFactor = GetVkSrcBlendFactor(stateBits);
-	cbAttachment.dstColorBlendFactor = GetVkDstBlendFactor(stateBits);
-	cbAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-	cbAttachment.srcAlphaBlendFactor = GetVkSrcBlendFactor(stateBits);
-	cbAttachment.dstAlphaBlendFactor = GetVkDstBlendFactor(stateBits);
-	cbAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-	cbAttachment.colorWriteMask =
-		VK_COLOR_COMPONENT_R_BIT |
-		VK_COLOR_COMPONENT_G_BIT |
-		VK_COLOR_COMPONENT_B_BIT |
-		VK_COLOR_COMPONENT_A_BIT;
-
-	VkPipelineColorBlendStateCreateInfo cbCreateInfo = {};
-	cbCreateInfo.sType =
-		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	cbCreateInfo.attachmentCount = 1;
-	cbCreateInfo.pAttachments = cbAttachment;
-
-	VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-	pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipelineCreateInfo.flags = 0;
-	pipelineCreateInfo.stageCount = 2;
-	pipelineCreateInfo.pStages = stageCreateInfos;
-	pipelineCreateInfo.pVertexInputState = &viCreateInfo;
-	pipelineCreateInfo.pInputAssemblyState = &iaCreateInfo;
-	pipelineCreateInfo.pViewportState = &viewportCreateInfo;
-	pipelineCreateInfo.pRasterizationState = &rsCreateInfo;
-	pipelineCreateInfo.pDepthStencilState = &dsCreateInfo;
-	pipelineCreateInfo.pColorBlendState = &cbCreateInfo;
-	pipelineCreateInfo.layout = pipelineLayout;
-	pipelineCreateInfo.renderPass = renderPass;
-	pipelineCreateInfo.subPass = 0;
-
-	VkPipeline graphicsPipeline;
-	if (vkCreateGraphicsPipelines(
-			gpuContext.device,
-			VK_NULL_HANDLE,
-			1,
-			&pipelineCreateInfo,
-			nullptr,
-			&graphicsPipeline) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to create graphics pipeline\n");
-	}
+	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
 	vkCmdBindPipeline(
 		cmdBuffer,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
 		graphicsPipeline);
+
+#if 0
+	vkCmdPushConstants(
+		cmdBuffer,
+		pipelineLayout,
+		VK_SHADER_STAGE_VERTEX_BIT,
+		0,
+		sizeof(gpuMatrices_t),
+		&glState.matrices);
+#endif
 
 	vkCmdBindDescriptorSets(
 		cmdBuffer,
@@ -384,17 +200,24 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 		pipelineLayout,
 		0,
 		1,
-		descriptorSet,
+		&descriptorSet,
 		0,
 		nullptr);
 
-	vkCmdBindIndexBuffer(cmdBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+	vkCmdBindIndexBuffer(
+		cmdBuffer,
+		swapchainResources->indexBuffer,
+		indexOffset,
+		VK_INDEX_TYPE_UINT16);
 
-	const VkDeviceSize offsets[] = {0};
-	vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
+	vkCmdBindVertexBuffers(
+		cmdBuffer,
+		0,
+		1,
+		&swapchainResources->vertexBuffer,
+		&vertexOffset);
 
 	vkCmdDrawIndexed(cmdBuffer, numIndexes, 1, 0, 0, 0);
-#endif
 }
 
 /*
@@ -2057,11 +1880,6 @@ void RB_StageIteratorGeneric( void )
 	}
 
 	//
-	// lock XYZ
-	//
-	// STRAWB upload position data from tess.xyz
-
-	//
 	// call shader function
 	//
 	RB_IterateStagesGeneric( input );
@@ -2094,23 +1912,11 @@ void RB_StageIteratorGeneric( void )
 	}
 
 	//
-	// unlock arrays
-	//
-	if (qglUnlockArraysEXT)
-	{
-		qglUnlockArraysEXT();
-		GLimp_LogComment( "glUnlockArraysEXT\n" );
-	}
-
-	//
 	// reset polygon offset
 	//
 	if ( input->shader->polygonOffset )
 	{
 		GL_PolygonOffset(false);
-#if 0
-		qglDisable( GL_POLYGON_OFFSET_FILL );
-#endif
 	}
 
 #if 0
