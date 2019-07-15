@@ -2443,6 +2443,7 @@ static qboolean CollapseMultitexture( void ) {
 	int abits, bbits;
 	int i;
 	textureBundle_t tmpBundle;
+	// STRAWB: Fix multitexturing
 	if ( !qglActiveTextureARB ) {
 		return qfalse;
 	}

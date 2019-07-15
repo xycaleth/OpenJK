@@ -588,7 +588,7 @@ VkPresentModeKHR PickBestPresentMode(
 				score = 2;
 				break;
 			case VK_PRESENT_MODE_IMMEDIATE_KHR:
-				score = 5;
+				score = 1;
 				break;
 			default:
 				break;
@@ -1884,7 +1884,7 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 			? VK_POLYGON_MODE_LINE
 			: VK_POLYGON_MODE_FILL;
 	rsCreateInfo.cullMode = GetVkCullMode(renderState.stateBits2);
-	rsCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rsCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 	rsCreateInfo.lineWidth = 1.0f;
 
 	VkPipelineMultisampleStateCreateInfo msCreateInfo = {};

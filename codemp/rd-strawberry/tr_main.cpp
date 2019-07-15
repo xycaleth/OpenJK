@@ -518,14 +518,14 @@ void R_SetupProjection( void ) {
 	tr.viewParms.projectionMatrix[12] = 0;
 
 	tr.viewParms.projectionMatrix[1] = 0;
-	tr.viewParms.projectionMatrix[5] = 2 * zNear / height;
+	tr.viewParms.projectionMatrix[5] = -2 * zNear / height;
 	tr.viewParms.projectionMatrix[9] = ( ymax + ymin ) / height;	// normally 0
 	tr.viewParms.projectionMatrix[13] = 0;
 
 	tr.viewParms.projectionMatrix[2] = 0;
 	tr.viewParms.projectionMatrix[6] = 0;
-	tr.viewParms.projectionMatrix[10] = -( zFar + zNear ) / depth;
-	tr.viewParms.projectionMatrix[14] = -2 * zFar * zNear / depth;
+	tr.viewParms.projectionMatrix[10] = -zFar / depth;
+	tr.viewParms.projectionMatrix[14] = -zFar * zNear / depth;
 
 	tr.viewParms.projectionMatrix[3] = 0;
 	tr.viewParms.projectionMatrix[7] = 0;
