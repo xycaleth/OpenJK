@@ -1671,6 +1671,7 @@ void R_CreateBuiltinImages( void ) {
 	}
 
 	qglEnable(GL_TEXTURE_2D);
+#endif
 
 	// with overbright bits active, we need an image which is some fraction of full color,
 	// for default lightmaps, etc
@@ -1682,7 +1683,6 @@ void R_CreateBuiltinImages( void ) {
 			data[y][x][3] = 255;
 		}
 	}
-#endif
 
 	tr.identityLightImage = R_CreateImage("*identityLight", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT);
 
