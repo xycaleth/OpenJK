@@ -1901,14 +1901,14 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 	VkPipelineDepthStencilStateCreateInfo dsCreateInfo = {};
 	dsCreateInfo.sType =
 		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	dsCreateInfo.depthTestEnable = VK_FALSE;
-//		!(renderState.stateBits & GLS_DEPTHTEST_DISABLE);
-	dsCreateInfo.depthWriteEnable = VK_FALSE;
-//		(renderState.stateBits & GLS_DEPTHMASK_TRUE) ? VK_TRUE : VK_FALSE;
-	dsCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-		//(renderState.stateBits & GLS_DEPTHFUNC_EQUAL)
-			//? VK_COMPARE_OP_EQUAL
-			//: VK_COMPARE_OP_LESS_OR_EQUAL;
+	dsCreateInfo.depthTestEnable =
+		!(renderState.stateBits & GLS_DEPTHTEST_DISABLE);
+	dsCreateInfo.depthWriteEnable =
+		(renderState.stateBits & GLS_DEPTHMASK_TRUE) ? VK_TRUE : VK_FALSE;
+	dsCreateInfo.depthCompareOp =
+		(renderState.stateBits & GLS_DEPTHFUNC_EQUAL)
+			? VK_COMPARE_OP_EQUAL
+			: VK_COMPARE_OP_LESS_OR_EQUAL;
 	dsCreateInfo.minDepthBounds = 0.0f;
 	dsCreateInfo.maxDepthBounds = 1.0f;
 
