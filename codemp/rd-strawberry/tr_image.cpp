@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_gpu.h"
 
+#include <cmath>
 #include <map>
 
 static byte			 s_intensitytable[256];
@@ -522,10 +523,9 @@ static void R_Images_DeleteImageContents( image_t *pImage )
 	}
 }
 
-
-void TransitionImageLayout(
+void TransitionImageLayoutAllMips(
 	VkCommandBuffer cmdBuffer,
-	VkImage image,
+	image_t *image,
 	VkImageLayout oldLayout,
 	VkImageLayout newLayout,
 	VkPipelineStageFlags srcStageMask,
@@ -537,10 +537,10 @@ void TransitionImageLayout(
 	imageMemoryBarrier.newLayout = newLayout;
 	imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	imageMemoryBarrier.image = image;
+	imageMemoryBarrier.image = image->handle;
 	imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
-	imageMemoryBarrier.subresourceRange.levelCount = 1;
+	imageMemoryBarrier.subresourceRange.levelCount = image->mipmapCount;
 	imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
 	imageMemoryBarrier.subresourceRange.layerCount = 1;
 
@@ -586,28 +586,113 @@ void TransitionImageLayout(
 		&imageMemoryBarrier);
 }
 
-/*
-===============
-Upload32
-
-===============
-*/
-static void Upload32(
+void TransitionImageLayout(
+	VkCommandBuffer cmdBuffer,
 	VkImage image,
-	unsigned *data,
-	GLenum format,
-	qboolean mipmap,
-	qboolean picmip,
-	qboolean isLightmap,
-	qboolean allowTC,
-	int *pformat,
-	int *pUploadWidth,
-	int *pUploadHeight)
+	uint32_t baseMipLevel,
+	uint32_t levelCount,
+	VkImageLayout oldLayout,
+	VkImageLayout newLayout,
+	VkPipelineStageFlags srcStageMask,
+	VkPipelineStageFlags dstStageMask)
 {
-	const uint32_t width = *pUploadWidth;
-	const uint32_t height = *pUploadHeight;
+	VkImageMemoryBarrier imageMemoryBarrier = {};
+	imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	imageMemoryBarrier.oldLayout = oldLayout;
+	imageMemoryBarrier.newLayout = newLayout;
+	imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	imageMemoryBarrier.image = image;
+	imageMemoryBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageMemoryBarrier.subresourceRange.baseMipLevel = baseMipLevel;
+	imageMemoryBarrier.subresourceRange.levelCount = levelCount;
+	imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
+	imageMemoryBarrier.subresourceRange.layerCount = 1;
 
-	const uint32_t imageByteSize = width * height * 4;
+	if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+		newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+	{
+		imageMemoryBarrier.srcAccessMask = 0;
+		imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL &&
+			 newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+			 newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+		imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageMemoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+			 newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+	{
+		imageMemoryBarrier.srcAccessMask = 0;
+		imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+			 newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+	{
+		imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+			 newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+	{
+		imageMemoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		imageMemoryBarrier.dstAccessMask = 0;
+		imageMemoryBarrier.srcQueueFamilyIndex =
+			gpuContext.graphicsQueue.queueFamily;
+		imageMemoryBarrier.dstQueueFamilyIndex =
+			gpuContext.presentQueue.queueFamily;
+	}
+	else
+	{
+		assert(!"Unsupported image layout transition");
+	}
+
+	vkCmdPipelineBarrier(
+		cmdBuffer,
+		srcStageMask,
+		dstStageMask,
+		0,
+		0,
+		nullptr,
+		0,
+		nullptr,
+		1,
+		&imageMemoryBarrier);
+}
+
+void TransitionImageLayout(
+	VkCommandBuffer cmdBuffer,
+	VkImage image,
+	VkImageLayout oldLayout,
+	VkImageLayout newLayout,
+	VkPipelineStageFlags srcStageMask,
+	VkPipelineStageFlags dstStageMask)
+{
+	TransitionImageLayout(
+		cmdBuffer,
+		image,
+		0,
+		1,
+		oldLayout,
+		newLayout,
+		srcStageMask,
+		dstStageMask);
+}
+
+static void UploadTextureData(
+	image_t *image,
+	unsigned *data,
+	qboolean isLightmap,
+	qboolean allowTC)
+{
+	const uint32_t imageByteSize = image->width * image->height * 4;
 
 	//
 	// staging buffer
@@ -677,38 +762,143 @@ static void Upload32(
 		Com_Error(ERR_FATAL, "Failed to begin command buffer");
 	}
 
-	TransitionImageLayout(
-		cmdBuffer,
-		image, 
-		VK_IMAGE_LAYOUT_UNDEFINED,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		VK_PIPELINE_STAGE_TRANSFER_BIT);
+	if (image->mipmap && image->mipmapCount > 1)
+	{
+		TransitionImageLayout(
+			cmdBuffer,
+			image->handle, 
+			0,
+			image->mipmapCount,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-	VkBufferImageCopy bufferImageCopy = {};
-	bufferImageCopy.bufferOffset = 0;
-	bufferImageCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	bufferImageCopy.imageSubresource.mipLevel = 0;
-	bufferImageCopy.imageSubresource.baseArrayLayer = 0;
-	bufferImageCopy.imageSubresource.layerCount = 1;
-	bufferImageCopy.imageOffset = {0, 0, 0};
-	bufferImageCopy.imageExtent = {width, height, 1};
+		VkBufferImageCopy bufferImageCopy = {};
+		bufferImageCopy.bufferOffset = 0;
+		bufferImageCopy.imageSubresource.aspectMask =
+			VK_IMAGE_ASPECT_COLOR_BIT;
+		bufferImageCopy.imageSubresource.mipLevel = 0;
+		bufferImageCopy.imageSubresource.baseArrayLayer = 0;
+		bufferImageCopy.imageSubresource.layerCount = 1;
+		bufferImageCopy.imageOffset = {0, 0, 0};
+		bufferImageCopy.imageExtent = {
+			static_cast<uint32_t>(image->width),
+			static_cast<uint32_t>(image->height),
+			1};
 
-	vkCmdCopyBufferToImage(
-		cmdBuffer,
-		stagingBuffer,
-		image,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		1,
-		&bufferImageCopy);
+		vkCmdCopyBufferToImage(
+			cmdBuffer,
+			stagingBuffer,
+			image->handle,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&bufferImageCopy);
 
-	TransitionImageLayout(
-		cmdBuffer,
-		image, 
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		int32_t mipWidth = image->width;
+		int32_t mipHeight = image->height;
+		for (uint32_t level = 1; level < image->mipmapCount; ++level)
+		{
+			TransitionImageLayout(
+				cmdBuffer,
+				image->handle, 
+				level - 1,
+				1,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+			int32_t nextWidth = std::max(1, mipWidth / 2);
+			int32_t nextHeight = std::max(1, mipHeight / 2);
+
+			VkImageBlit imageBlit = {};
+			imageBlit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBlit.srcSubresource.mipLevel = level - 1;
+			imageBlit.srcSubresource.baseArrayLayer = 0;
+			imageBlit.srcSubresource.layerCount = 1;
+			imageBlit.srcOffsets[0] = {0, 0, 0};
+			imageBlit.srcOffsets[1] = {mipWidth, mipHeight, 1};
+			imageBlit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			imageBlit.dstSubresource.mipLevel = level;
+			imageBlit.dstSubresource.baseArrayLayer = 0;
+			imageBlit.dstSubresource.layerCount = 1;
+			imageBlit.dstOffsets[0] = {0, 0, 0};
+			imageBlit.dstOffsets[1] = {nextWidth, nextHeight, 1};
+
+			vkCmdBlitImage(
+				cmdBuffer,
+				image->handle,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				image->handle,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&imageBlit,
+				VK_FILTER_LINEAR);
+
+			mipWidth = nextWidth;
+			mipHeight = nextHeight;
+		}
+
+		TransitionImageLayout(
+			cmdBuffer,
+			image->handle, 
+			0,
+			image->mipmapCount - 1,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+		TransitionImageLayout(
+			cmdBuffer,
+			image->handle, 
+			image->mipmapCount - 1,
+			1,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	}
+	else
+	{
+		TransitionImageLayout(
+			cmdBuffer,
+			image->handle, 
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+		VkBufferImageCopy bufferImageCopy = {};
+		bufferImageCopy.bufferOffset = 0;
+		bufferImageCopy.imageSubresource.aspectMask =
+			VK_IMAGE_ASPECT_COLOR_BIT;
+		bufferImageCopy.imageSubresource.mipLevel = 0;
+		bufferImageCopy.imageSubresource.baseArrayLayer = 0;
+		bufferImageCopy.imageSubresource.layerCount = 1;
+		bufferImageCopy.imageOffset = {0, 0, 0};
+		bufferImageCopy.imageExtent = {
+			static_cast<uint32_t>(image->width),
+			static_cast<uint32_t>(image->height),
+			1};
+
+		vkCmdCopyBufferToImage(
+			cmdBuffer,
+			stagingBuffer,
+			image->handle,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&bufferImageCopy);
+
+		TransitionImageLayout(
+			cmdBuffer,
+			image->handle, 
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	}
 
 	vkEndCommandBuffer(cmdBuffer);
 
@@ -732,7 +922,7 @@ static void Upload32(
 	vkFreeCommandBuffers(
 		gpuContext.device, gpuContext.transferCommandPool, 1, &cmdBuffer);
 
-	// STRAWB TODO: Mipmaps, 16-bit textures
+	// STRAWB TODO: 16-bit textures
 
 #if 0
 	//
@@ -1133,6 +1323,7 @@ static VkImage CreateImageHandle(
 	uint32_t width,
 	uint32_t height,
 	VkFormat imageFormat,
+	uint32_t mipmapCount,
 	VmaAllocation& allocation)
 {
 	VkImageCreateInfo imageCreateInfo = {};
@@ -1143,7 +1334,7 @@ static VkImage CreateImageHandle(
 	imageCreateInfo.extent.width = width;
 	imageCreateInfo.extent.height = height;
 	imageCreateInfo.extent.depth = 1;
-	imageCreateInfo.mipLevels = 1;
+	imageCreateInfo.mipLevels = mipmapCount;
 	imageCreateInfo.arrayLayers = 1;
 	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -1172,7 +1363,10 @@ static VkImage CreateImageHandle(
 	return image;
 }
 
-VkImageView CreateImageView(VkImage image, VkFormat imageFormat)
+VkImageView CreateImageView(
+	VkImage image,
+	VkFormat imageFormat,
+	uint32_t levelCount)
 {
 	VkImageViewCreateInfo imageViewCreateInfo = {};
 	imageViewCreateInfo.sType =
@@ -1188,7 +1382,7 @@ VkImageView CreateImageView(VkImage image, VkFormat imageFormat)
 	imageViewCreateInfo.subresourceRange.aspectMask =
 		VK_IMAGE_ASPECT_COLOR_BIT;
 	imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-	imageViewCreateInfo.subresourceRange.levelCount = 1;
+	imageViewCreateInfo.subresourceRange.levelCount = levelCount;
 	imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
 	imageViewCreateInfo.subresourceRange.layerCount = 1;
 
@@ -1205,15 +1399,18 @@ VkImageView CreateImageView(VkImage image, VkFormat imageFormat)
 	return imageView;
 }
 
-static VkSampler CreateSampler(int glWrapClampMode, bool mipmap)
+static VkSampler CreateSampler(image_t *image)
 {
 	VkSamplerAddressMode addressMode =
-		GetVkSamplerAddressMode(glWrapClampMode);
+		GetVkSamplerAddressMode(image->wrapClampMode);
+	bool mipmap = image->mipmap;
 
 	VkFilter minFilter = GetVkFilter(mipmap ? gl_filter_min : GL_LINEAR);
 	VkFilter magFilter = GetVkFilter(mipmap ? gl_filter_max : GL_LINEAR);
 	VkSamplerMipmapMode mipmapMode =
-		GetVkMipmapMode(mipmap ? gl_filter_max : GL_NEAREST);
+		mipmap
+		? GetVkMipmapMode(gl_filter_max)
+		: VK_SAMPLER_MIPMAP_MODE_NEAREST;
 
 	VkSamplerCreateInfo samplerCreateInfo = {};
 	samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1223,6 +1420,8 @@ static VkSampler CreateSampler(int glWrapClampMode, bool mipmap)
 	samplerCreateInfo.addressModeU = addressMode;
 	samplerCreateInfo.addressModeV = addressMode;
 	samplerCreateInfo.addressModeW = addressMode;
+	samplerCreateInfo.minLod = 0.0f;
+	samplerCreateInfo.maxLod = static_cast<float>(image->mipmapCount);
 
 	samplerCreateInfo.anisotropyEnable = VK_FALSE;
 	if (mipmap)
@@ -1314,29 +1513,35 @@ image_t *R_CreateImage(
 
 	const VkFormat IMAGE_FORMAT = VK_FORMAT_R8G8B8A8_UNORM;
 
+	uint32_t mipmapCount = 1;
+	if (mipmap)
+	{
+		mipmapCount = 1 + static_cast<uint32_t>(
+			std::floor(std::log2(std::max(width, height))));
+	}
+
 	image->handle = CreateImageHandle(
-		gpuContext.allocator, width, height, IMAGE_FORMAT, image->memory);
+		gpuContext.allocator,
+		width,
+		height,
+		IMAGE_FORMAT,
+		mipmapCount,
+		image->memory);
 	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
 	image->mipmap = !!mipmap;
+	image->mipmapCount = mipmapCount;
 	image->allowPicmip = !!allowPicmip;
 	Q_strncpyz(image->imgName, name, sizeof(image->imgName));
 	image->width = width;
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
-	image->sampler = CreateSampler(glWrapClampMode, mipmap);
-	image->imageView = CreateImageView(image->handle, IMAGE_FORMAT);
-
-	Upload32(
+	image->sampler = CreateSampler(image);
+	image->imageView = CreateImageView(
 		image->handle,
-		(unsigned *)pic,
-		format,
-		(qboolean)image->mipmap,
-		allowPicmip,
-		isLightmap,
-		allowTC,
-		&image->internalFormat,
-		&image->width,
-		&image->height);
+		IMAGE_FORMAT,
+		image->mipmapCount);
+
+	UploadTextureData(image, (unsigned *)pic, isLightmap, allowTC);
 
 	const char *psNewName = GenerateImageMappingName(name);
 	Q_strncpyz(image->imgName, psNewName, sizeof(image->imgName));

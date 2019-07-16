@@ -1515,7 +1515,8 @@ void GpuContextInit(GpuContext& context)
 		resources.image = swapchainImages[i];
 		resources.imageView = CreateImageView(
 			swapchainImages[i], 
-			context.swapchain.surfaceFormat);
+			context.swapchain.surfaceFormat,
+			1);
 
 		// framebuffer
 		VkImageView attachments[] = {resources.imageView};

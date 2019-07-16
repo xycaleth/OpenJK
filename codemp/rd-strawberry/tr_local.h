@@ -125,6 +125,7 @@ typedef struct image_s {
 	int			internalFormat;
 	int			wrapClampMode;		// GL_CLAMP or GL_REPEAT
 
+	uint32_t	mipmapCount;
 	bool		mipmap;
 	bool		allowPicmip;
 
@@ -1391,7 +1392,10 @@ image_t		*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicm
 
 image_t		*R_CreateImage( const char *name, const byte *pic, int width, int height, GLenum format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int wrapClampMode, bool bRectangle = false );
 
-VkImageView CreateImageView(VkImage image, VkFormat imageFormat);
+VkImageView CreateImageView(
+	VkImage image,
+	VkFormat imageFormat,
+	uint32_t levelCount);
 void TransitionImageLayout(
 	VkCommandBuffer cmdBuffer,
 	VkImage image,
