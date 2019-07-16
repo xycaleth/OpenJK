@@ -1896,6 +1896,7 @@ void RB_StageIteratorGeneric( void )
 	//
 	// now do any dynamic lighting needed
 	//
+#ifdef STRAWB
 	if ( tess.dlightBits && tess.shader->sort <= SS_OPAQUE
 		&& !(tess.shader->surfaceFlags & (SURF_NODLIGHT | SURF_SKY) ) ) {
 		if (r_dlightStyle->integer>0)
@@ -1907,6 +1908,7 @@ void RB_StageIteratorGeneric( void )
 			ProjectDlightTexture();
 		}
 	}
+#endif
 
 	//
 	// now do fog
