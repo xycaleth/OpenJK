@@ -44,8 +44,6 @@ glconfigExt_t glConfigExt;
 glstate_t	glState;
 window_t	window;
 
-static void GfxInfo_f( void );
-
 cvar_t	*r_verbose;
 cvar_t	*r_ignore;
 
@@ -271,8 +269,6 @@ PFNGLISPROGRAMARBPROC qglIsProgramARB;
 
 PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
 PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
-
-bool g_bTextureRectangleHack = false;
 
 void RE_SetLightStyle(int style, int color);
 void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal );
@@ -997,8 +993,7 @@ void R_PrintLongString(const char *string)
 GfxInfo_f
 ================
 */
-extern bool g_bTextureRectangleHack;
-void GfxInfo_f( void )
+static void GfxInfo_f( void )
 {
 	const char *enablestrings[] =
 	{
@@ -1106,7 +1101,6 @@ void GfxInfo_f( void )
 			ri.Printf( PRINT_ALL, "%f)\n", glConfig.maxTextureFilterAnisotropy);
 	}
 	ri.Printf( PRINT_ALL, "Dynamic Glow: %s\n", enablestrings[r_DynamicGlow->integer ? 1 : 0] );
-	if (g_bTextureRectangleHack) ri.Printf( PRINT_ALL, "Dynamic Glow ATI BAD DRIVER HACK %s\n", enablestrings[g_bTextureRectangleHack] );
 
 	if ( r_finish->integer ) {
 		ri.Printf( PRINT_ALL, "Forcing glFinish\n" );
@@ -1120,11 +1114,6 @@ void GfxInfo_f( void )
 	{
 		ri.Printf( PRINT_ALL, "Light Grid size set to (%.2f %.2f %.2f)\n", tr.world->lightGridSize[0], tr.world->lightGridSize[1], tr.world->lightGridSize[2] );
 	}
-}
-
-void R_AtiHackToggle_f(void)
-{
-	g_bTextureRectangleHack = !g_bTextureRectangleHack;
 }
 
 typedef struct consoleCommand_s {
@@ -1141,7 +1130,6 @@ static consoleCommand_t	commands[] = {
 	{ "screenshot_png",		R_ScreenShotPNG_f },
 	{ "screenshot_tga",		R_ScreenShotTGA_f },
 	{ "gfxinfo",			GfxInfo_f },
-	{ "r_atihack",			R_AtiHackToggle_f },
 	{ "r_we",				R_WorldEffect_f },
 	{ "imagecacheinfo",		RE_RegisterImages_Info_f },
 	{ "modellist",			R_Modellist_f },

@@ -1737,10 +1737,6 @@ void EndPixelShader()
 	qglDisable( g_uiCurrentPixelShaderType );
 }
 
-// Hack variable for deciding which kind of texture rectangle thing to do (for some
-// reason it acts different on radeon! It's against the spec!).
-extern bool g_bTextureRectangleHack;
-
 static inline void RB_BlurGlowTexture()
 {
 	qglDisable (GL_CLIP_PLANE0);
@@ -1833,11 +1829,8 @@ static inline void RB_BlurGlowTexture()
 		{
 			// OK, very weird, but dependent on which texture rectangle extension we're using, the
 			// texture either needs to be always texure correct or view correct...
-			if ( !g_bTextureRectangleHack )
-			{
-				iTexWidth = backEnd.viewParms.viewportWidth;
-				iTexHeight = backEnd.viewParms.viewportHeight;
-			}
+			iTexWidth = backEnd.viewParms.viewportWidth;
+			iTexHeight = backEnd.viewParms.viewportHeight;
 
 			uiTex = tr.blurImage;
 			qglActiveTextureARB( GL_TEXTURE3_ARB );
