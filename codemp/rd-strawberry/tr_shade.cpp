@@ -440,6 +440,38 @@ static void DrawMultitextured( shaderCommands_t *input, int stage ) {
 	GL_SelectTexture( 0 );
 }
 
+static bool IsOpaqueNonLightmapBundle(const textureBundle_t *bundle)
+{
+	if (bundle->image == nullptr)
+	{
+		return false;
+	}
+	
+	if (bundle->isLightmap)
+	{
+		return false;
+	}
+	
+	if (bundle->numTexMods > 0 )
+	{
+		return false;
+	}
+	
+	if (bundle->tcGen == TCGEN_ENVIRONMENT_MAPPED ||
+		bundle->tcGen == TCGEN_FOG)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+static bool IsOpaqueNonLightmapStage(const shaderStage_t *stage)
+{
+	return IsOpaqueNonLightmapBundle(&stage->bundle[0]) ||
+			IsOpaqueNonLightmapBundle(&stage->bundle[1]);
+}
+
 /*
 ===================
 ProjectDlightTexture
@@ -673,11 +705,11 @@ static void ProjectDlightTexture2( void ) {
 			int i = 0;
 			while (i < tess.shader->numUnfoggedPasses)
 			{
-				const int blendBits = (GLS_SRCBLEND_BITS+GLS_DSTBLEND_BITS);
-				if (((tess.shader->stages[i].bundle[0].image && !tess.shader->stages[i].bundle[0].isLightmap && !tess.shader->stages[i].bundle[0].numTexMods && tess.shader->stages[i].bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED && tess.shader->stages[i].bundle[0].tcGen != TCGEN_FOG) ||
-					 (tess.shader->stages[i].bundle[1].image && !tess.shader->stages[i].bundle[1].isLightmap && !tess.shader->stages[i].bundle[1].numTexMods && tess.shader->stages[i].bundle[1].tcGen != TCGEN_ENVIRONMENT_MAPPED && tess.shader->stages[i].bundle[1].tcGen != TCGEN_FOG)) &&
-					(tess.shader->stages[i].stateBits & blendBits) == 0 )
-				{ //only use non-lightmap opaque stages
+				const int blendBits = (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS);
+				if (IsOpaqueNonLightmapStage(&tess.shader->stages[i]) &&
+					(tess.shader->stages[i].stateBits & blendBits) == 0)
+				{
+					//only use non-lightmap opaque stages
                     dStage = &tess.shader->stages[i];
 					break;
 				}
@@ -700,7 +732,7 @@ static void ProjectDlightTexture2( void ) {
 			GL_SelectTexture( 0 );
 			GL_State(0);
 			qglTexCoordPointer( 2, GL_FLOAT, 0, oldTexCoordsArray[0] );
-			if (dStage->bundle[0].image && !dStage->bundle[0].isLightmap && !dStage->bundle[0].numTexMods && dStage->bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED && dStage->bundle[0].tcGen != TCGEN_FOG)
+			if (IsOpaqueNonLightmapBundle(&dStage->bundle[0]))
 			{
 				R_BindAnimatedImage( &dStage->bundle[0] );
 			}
@@ -717,7 +749,6 @@ static void ProjectDlightTexture2( void ) {
 			qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, colorArray );
 			GL_Bind( tr.dlightImage );
 			GL_TexEnv( GL_MODULATE );
-
 
 			GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE | GLS_DEPTHFUNC_EQUAL);// | GLS_ATEST_GT_0);
 
