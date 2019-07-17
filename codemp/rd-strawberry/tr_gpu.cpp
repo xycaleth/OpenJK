@@ -571,38 +571,45 @@ VkBool32 VKAPI_PTR VulkanDebugMessageCallback(
 VkPresentModeKHR PickBestPresentMode(
 	const std::vector<VkPresentModeKHR>& presentModes)
 {
-	VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
-	int bestScore = -1;
+	bool mailboxAvailable = false;
+	bool fifoRelaxedAvailable = false;
 	for (auto mode : presentModes)
 	{
-		int score = 0;
 		switch (mode)
 		{
-			case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
-				score = 4;
-				break;
-			case VK_PRESENT_MODE_FIFO_KHR:
-				score = 3;
-				break;
 			case VK_PRESENT_MODE_MAILBOX_KHR:
-				score = 2;
+				mailboxAvailable = true;
 				break;
-			case VK_PRESENT_MODE_IMMEDIATE_KHR:
-				score = 1;
+			case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+				fifoRelaxedAvailable = true;
 				break;
 			default:
 				break;
-
-		}
-
-		if (bestScore == -1 || score > bestScore)
-		{
-			bestScore = score;
-			bestMode = mode;
 		}
 	}
 
-	return bestMode;
+	// Immediate and FIFO are most similar to the non-vsync and vsync settings
+	// in the original renderer. We also give the option to choose from FIFO
+	// Relaxed and Mailbox modes too.
+	switch (ri.Cvar_VariableIntegerValue("r_swapInterval"))
+	{
+		case 1:
+			return VK_PRESENT_MODE_FIFO_KHR;
+		case 2:
+			if (fifoRelaxedAvailable)
+			{
+				return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+			}
+		// fall-through
+		case 3:
+			if (mailboxAvailable)
+			{
+				return VK_PRESENT_MODE_MAILBOX_KHR;
+			}
+		// fall-through
+		default:
+			return VK_PRESENT_MODE_IMMEDIATE_KHR;
+	}
 }
 
 void ConfigureRenderer(
