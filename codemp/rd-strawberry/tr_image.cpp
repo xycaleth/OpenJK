@@ -141,59 +141,16 @@ static char *GenerateImageMappingName( const char *name )
 	return &sName[0];
 }
 
-static float R_BytesPerTex (int format)
+static float R_BytesPerTex(imageFormat_t format)
 {
-	switch ( format ) {
-	case 1:
-		//"I    "
-		return 1;
-		break;
-	case 2:
-		//"IA   "
-		return 2;
-		break;
-	case 3:
-		//"RGB  "
-		return glConfig.colorBits/8.0f;
-		break;
-	case 4:
-		//"RGBA "
-		return glConfig.colorBits/8.0f;
-		break;
-
-	case GL_RGBA4:
-		//"RGBA4"
-		return 2;
-		break;
-	case GL_RGB5:
-		//"RGB5 "
-		return 2;
-		break;
-
-	case GL_RGBA8:
-		//"RGBA8"
-		return 4;
-		break;
-	case GL_RGB8:
-		//"RGB8"
-		return 4;
-		break;
-
-	case GL_RGB4_S3TC:
-		//"S3TC "
-		return 0.33333f;
-		break;
-	case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
-		//"DXT1 "
-		return 0.33333f;
-		break;
-	case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-		//"DXT5 "
-		return 1;
-		break;
-	default:
-		//"???? "
-		return 4;
+	switch (format) {
+		case IMG_FORMAT_R8G8B8A8_UNORM:
+			return 4;
+		case IMG_FORMAT_D24_UNORM_S8_UINT:
+			return 4;
+		default:
+			assert(!"Invalid image format");
+			return 4;
 	}
 }
 
@@ -213,7 +170,7 @@ float R_SumOfUsedImages( qboolean bUseFormat )
 		if ( pImage->frameUsed == tr.frameCount- 1 ) {//it has already been advanced for the next frame, so...
 			if (bUseFormat)
 			{
-				float  bytePerTex = R_BytesPerTex (pImage->internalFormat);
+				float  bytePerTex = R_BytesPerTex (pImage->format);
 				total += bytePerTex * (pImage->width * pImage->height);
 			}
 			else
@@ -244,45 +201,19 @@ void R_ImageList_f( void ) {
 	while ( (image = R_Images_GetNextIteration()) != NULL)
 	{
 		texels   += image->width*image->height;
-		texBytes += image->width*image->height * R_BytesPerTex (image->internalFormat);
+		texBytes += image->width*image->height * R_BytesPerTex (image->format);
 		ri.Printf( PRINT_ALL,   "%4i: %4i %4i  %s ",
 			i, image->width, image->height, yesno[image->mipmap] );
-		switch ( image->internalFormat ) {
-		case 1:
-			ri.Printf( PRINT_ALL, "I    " );
-			break;
-		case 2:
-			ri.Printf( PRINT_ALL, "IA   " );
-			break;
-		case 3:
-			ri.Printf( PRINT_ALL, "RGB  " );
-			break;
-		case 4:
-			ri.Printf( PRINT_ALL, "RGBA " );
-			break;
-		case GL_RGBA8:
-			ri.Printf( PRINT_ALL, "RGBA8" );
-			break;
-		case GL_RGB8:
-			ri.Printf( PRINT_ALL, "RGB8" );
-			break;
-		case GL_RGB4_S3TC:
-			ri.Printf( PRINT_ALL, "S3TC " );
-			break;
-		case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
-			ri.Printf( PRINT_ALL, "DXT1 " );
-			break;
-		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-			ri.Printf( PRINT_ALL, "DXT5 " );
-			break;
-		case GL_RGBA4:
-			ri.Printf( PRINT_ALL, "RGBA4" );
-			break;
-		case GL_RGB5:
-			ri.Printf( PRINT_ALL, "RGB5 " );
-			break;
-		default:
-			ri.Printf( PRINT_ALL, "???? " );
+		switch ( image->format ) {
+			case IMG_FORMAT_R8G8B8A8_UNORM:
+				ri.Printf( PRINT_ALL, "R8G8B8A8_UNORM    " );
+				break;
+			case IMG_FORMAT_D24_UNORM_S8_UINT:
+				ri.Printf( PRINT_ALL, "D24_UNORM_S8_UINT " );
+				break;
+			default:
+				assert(!"Invalid image format");
+				break;
 		}
 
 		switch ( image->wrapClampMode ) {
@@ -1318,12 +1249,13 @@ static VkSamplerMipmapMode GetVkMipmapMode(int filter)
 	}
 }
 
-static VkImage CreateImageHandle(
+VkImage CreateImageHandle(
 	VmaAllocator& allocator,
 	uint32_t width,
 	uint32_t height,
 	VkFormat imageFormat,
 	uint32_t mipmapCount,
+	VkImageUsageFlags usage,
 	VmaAllocation& allocation)
 {
 	VkImageCreateInfo imageCreateInfo = {};
@@ -1338,10 +1270,7 @@ static VkImage CreateImageHandle(
 	imageCreateInfo.arrayLayers = 1;
 	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-	imageCreateInfo.usage =
-		VK_IMAGE_USAGE_SAMPLED_BIT |
-		VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
-		VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	imageCreateInfo.usage = usage;
 	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -1366,6 +1295,7 @@ static VkImage CreateImageHandle(
 VkImageView CreateImageView(
 	VkImage image,
 	VkFormat imageFormat,
+	VkImageAspectFlags aspectMask,
 	uint32_t levelCount)
 {
 	VkImageViewCreateInfo imageViewCreateInfo = {};
@@ -1379,8 +1309,7 @@ VkImageView CreateImageView(
 	imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_G;
 	imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_B;
 	imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_A;
-	imageViewCreateInfo.subresourceRange.aspectMask =
-		VK_IMAGE_ASPECT_COLOR_BIT;
+	imageViewCreateInfo.subresourceRange.aspectMask = aspectMask;
 	imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
 	imageViewCreateInfo.subresourceRange.levelCount = levelCount;
 	imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
@@ -1399,6 +1328,8 @@ VkImageView CreateImageView(
 	return imageView;
 }
 
+// STRAWB TODO: Can optimise this. Can share samplers between multiple images
+// I think? There's a "max sampler" count that we need to worry about
 static VkSampler CreateSampler(image_t *image)
 {
 	VkSamplerAddressMode addressMode =
@@ -1448,6 +1379,19 @@ static VkSampler CreateSampler(image_t *image)
 	return sampler;
 }
 
+static VkFormat GetVkFormat(imageFormat_t format)
+{
+	switch (format)
+	{
+		case IMG_FORMAT_R8G8B8A8_UNORM:
+			return VK_FORMAT_R8G8B8A8_UNORM;
+		case IMG_FORMAT_D24_UNORM_S8_UINT:
+			return VK_FORMAT_D24_UNORM_S8_UINT;
+		default:
+			assert(!"Invalid image format");
+	}
+}
+
 /*
 ================
 R_CreateImage
@@ -1460,7 +1404,7 @@ image_t *R_CreateImage(
 	const byte *pic,
 	int width,
 	int height,
-	GLenum format,
+	imageFormat_t format,
 	qboolean mipmap,
 	qboolean allowPicmip,
 	qboolean allowTC,
@@ -1486,6 +1430,7 @@ image_t *R_CreateImage(
 			!strncmp(psLightMapNameSearchPos + 1, "lightmap", 8));
 	}
 
+#ifdef STRAWB
 	if ((width & (width - 1)) || (height & (height - 1)))
 	{
 		Com_Error(
@@ -1495,6 +1440,7 @@ image_t *R_CreateImage(
 			width,
 			height);
 	}
+#endif
 
 	// STRAWB: Can optimise this. The sampler defines the mipmap/picmip/clamp
 	// etc so we can avoid loading the image multiple times and just use a
@@ -1511,7 +1457,7 @@ image_t *R_CreateImage(
 
 	image = (image_t*)Z_Malloc(sizeof(image_t), TAG_IMAGE_T, qtrue);
 
-	const VkFormat IMAGE_FORMAT = VK_FORMAT_R8G8B8A8_UNORM;
+	const VkFormat imageFormat = GetVkFormat(format);
 
 	uint32_t mipmapCount = 1;
 	if (mipmap)
@@ -1524,10 +1470,14 @@ image_t *R_CreateImage(
 		gpuContext.allocator,
 		width,
 		height,
-		IMAGE_FORMAT,
+		imageFormat,
 		mipmapCount,
+		VK_IMAGE_USAGE_SAMPLED_BIT |
+			VK_IMAGE_USAGE_TRANSFER_SRC_BIT | 
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		image->memory);
 	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
+	image->format = format;
 	image->mipmap = !!mipmap;
 	image->mipmapCount = mipmapCount;
 	image->allowPicmip = !!allowPicmip;
@@ -1538,10 +1488,14 @@ image_t *R_CreateImage(
 	image->sampler = CreateSampler(image);
 	image->imageView = CreateImageView(
 		image->handle,
-		IMAGE_FORMAT,
+		imageFormat,
+		VK_IMAGE_ASPECT_COLOR_BIT,
 		image->mipmapCount);
 
-	UploadTextureData(image, (unsigned *)pic, isLightmap, allowTC);
+	if (pic != nullptr)
+	{
+		UploadTextureData(image, (unsigned *)pic, isLightmap, allowTC);
+	}
 
 	const char *psNewName = GenerateImageMappingName(name);
 	Q_strncpyz(image->imgName, psNewName, sizeof(image->imgName));
@@ -1614,7 +1568,7 @@ image_t	*R_FindImageFile(
 		pic,
 		width,
 		height,
-		GL_RGBA,
+		IMG_FORMAT_R8G8B8A8_UNORM,
 		mipmap,
 		allowPicmip,
 		allowTC,
@@ -1640,7 +1594,16 @@ static void R_CreateDlightImage( void )
 	R_LoadImage("gfx/2d/dlight", &pic, &width, &height);
 	if (pic)
 	{
-		tr.dlightImage = R_CreateImage("*dlight", pic, width, height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+		tr.dlightImage = R_CreateImage(
+			"*dlight",
+			pic,
+			width,
+			height,
+			IMG_FORMAT_R8G8B8A8_UNORM,
+			qfalse,
+			qfalse,
+			qfalse,
+			GL_CLAMP);
 		Z_Free(pic);
 	}
 	else
@@ -1668,7 +1631,16 @@ static void R_CreateDlightImage( void )
 				data[y][x][3] = 255;
 			}
 		}
-		tr.dlightImage = R_CreateImage("*dlight", (byte *)data, DLIGHT_SIZE, DLIGHT_SIZE, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+		tr.dlightImage = R_CreateImage(
+			"*dlight",
+			(byte *)data,
+			DLIGHT_SIZE,
+			DLIGHT_SIZE,
+			IMG_FORMAT_R8G8B8A8_UNORM,
+			qfalse,
+			qfalse,
+			qfalse,
+			GL_CLAMP );
 	}
 }
 
@@ -1756,7 +1728,16 @@ static void R_CreateFogImage( void ) {
 	// standard openGL clamping doesn't really do what we want -- it includes
 	// the border color at the edges.  OpenGL 1.2 has clamp-to-edge, which does
 	// what we want.
-	tr.fogImage = R_CreateImage("*fog", (byte *)data, FOG_S, FOG_T, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	tr.fogImage = R_CreateImage(
+		"*fog",
+		(byte *)data,
+		FOG_S,
+		FOG_T,
+		IMG_FORMAT_R8G8B8A8_UNORM,
+		qfalse,
+		qfalse,
+		qfalse,
+		GL_CLAMP);
 	Hunk_FreeTempMemory( data );
 
 	borderColor[0] = 1.0;
@@ -1802,7 +1783,16 @@ static void R_CreateDefaultImage( void ) {
 		data[x][DEFAULT_SIZE-1][2] =
 		data[x][DEFAULT_SIZE-1][3] = 255;
 	}
-	tr.defaultImage = R_CreateImage("*default", (byte *)data, DEFAULT_SIZE, DEFAULT_SIZE, GL_RGBA, qtrue, qfalse, qfalse, GL_REPEAT );
+	tr.defaultImage = R_CreateImage(
+		"*default",
+		(byte *)data,
+		DEFAULT_SIZE,
+		DEFAULT_SIZE,
+		IMG_FORMAT_R8G8B8A8_UNORM,
+		qtrue,
+		qfalse,
+		qfalse,
+		GL_REPEAT);
 }
 
 /*
@@ -1818,9 +1808,27 @@ void R_CreateBuiltinImages( void ) {
 
 	// we use a solid white image instead of disabling texturing
 	memset( data, 255, sizeof( data ) );
-	tr.whiteImage = R_CreateImage("*white", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT);
+	tr.whiteImage = R_CreateImage(
+		"*white",
+		(byte *)data,
+		8,
+		8,
+		IMG_FORMAT_R8G8B8A8_UNORM,
+		qfalse,
+		qfalse,
+		qfalse,
+		GL_REPEAT);
 
-	tr.screenImage = R_CreateImage("*screen", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT );
+	tr.screenImage = R_CreateImage(
+		"*screen",
+		(byte *)data,
+		8,
+		8,
+		IMG_FORMAT_R8G8B8A8_UNORM,
+		qfalse,
+		qfalse,
+		qfalse,
+		GL_REPEAT);
 
 #ifdef STRAWB
 	// Create the scene glow image. - AReis
@@ -1889,11 +1897,29 @@ void R_CreateBuiltinImages( void ) {
 		}
 	}
 
-	tr.identityLightImage = R_CreateImage("*identityLight", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT);
+	tr.identityLightImage = R_CreateImage(
+		"*identityLight",
+		(byte *)data,
+		8,
+		8,
+		IMG_FORMAT_R8G8B8A8_UNORM,
+		qfalse,
+		qfalse,
+		qfalse,
+		GL_REPEAT);
 
 	for(x=0;x<NUM_SCRATCH_IMAGES;x++) {
 		// scratchimage is usually used for cinematic drawing
-		tr.scratchImage[x] = R_CreateImage(va("*scratch%d",x), (byte *)data, DEFAULT_SIZE, DEFAULT_SIZE, GL_RGBA, qfalse, qtrue, qfalse, GL_CLAMP);
+		tr.scratchImage[x] = R_CreateImage(
+			va("*scratch%d",x),
+			(byte *)data,
+			DEFAULT_SIZE,
+			DEFAULT_SIZE,
+			IMG_FORMAT_R8G8B8A8_UNORM,
+			qfalse,
+			qtrue,
+			qfalse,
+			GL_CLAMP);
 	}
 
 	R_CreateDlightImage();

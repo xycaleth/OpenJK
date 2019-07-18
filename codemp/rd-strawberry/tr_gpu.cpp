@@ -930,6 +930,31 @@ VkBlendFactor GetVkDstBlendFactor(uint32_t stateBits)
 	}
 }
 
+VkFormat PickDepthStencilFormat()
+{
+	const std::array<VkFormat, 2> depthStencilFormatCandidates = {
+		VK_FORMAT_D24_UNORM_S8_UINT,
+		VK_FORMAT_D32_SFLOAT_S8_UINT
+	};
+
+	for (auto format : depthStencilFormatCandidates)
+	{
+		VkFormatProperties formatProperties = {};
+		vkGetPhysicalDeviceFormatProperties(
+			context.physicalDevice,
+			format,
+			&formatProperties);
+
+		if (formatProperties.optimalTilingFeatures &
+			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+		{
+			return format;
+		}
+	}
+
+	return VK_FORMAT_UNDEFINED;
+}
+
 }
 
 bool operator<(const RenderState& lhs, const RenderState& rhs)
@@ -1381,8 +1406,7 @@ void GpuContextInit(GpuContext& context)
 		swapchainCreateInfo.pQueueFamilyIndices =
 			swapchainQueueFamilyIndices.data();
 	}
-	swapchainCreateInfo.preTransform =
-		surfaceCapabilities.currentTransform;
+	swapchainCreateInfo.preTransform = surfaceCapabilities.currentTransform;
 	swapchainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	swapchainCreateInfo.presentMode = PickBestPresentMode(presentModes);
 	swapchainCreateInfo.clipped = VK_TRUE;
@@ -1401,28 +1425,55 @@ void GpuContextInit(GpuContext& context)
 	context.swapchain.width = surfaceCapabilities.currentExtent.width;
 	context.swapchain.height = surfaceCapabilities.currentExtent.height;
 
+	context.depthStencilFormat = PickDepthStencilFormat();
+	if (context.depthStencilFormat == VK_FORMAT_UNDEFINED)
+	{
+		Com_Error(ERR_FATAL, "Failed to find valid depth/stencil format");
+	}
+	else
+	{
+		Com_Printf(
+			"Using %s for depth-stencil format\n",
+			VkFormatToString(context.depthStencilFormat));
+	}
+
 	//
 	// Render pass
 	//
-	VkAttachmentDescription passAttachment = {};
-	passAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	passAttachment.format = context.swapchain.surfaceFormat;
-	passAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	passAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	passAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	passAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	passAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	passAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	std::array<VkAttachmentDescription, 2> attachments = {};
+	attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+	attachments[0].format = context.swapchain.surfaceFormat;
+	attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+	attachments[1].format = context.depthStencilFormat;
+	attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	attachments[1].finalLayout =
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentReference colorAttachment = {};
-	colorAttachment.attachment = 0;
-	colorAttachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	VkAttachmentReference colorAttachmentRef = {};
+	colorAttachmentRef.attachment = 0;
+	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference depthStencilAttachmentRef = {};
+	depthStencilAttachmentRef.attachment = 1;
+	depthStencilAttachmentRef.layout =
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	VkSubpassDescription subpassDescription = {};
 	subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpassDescription.inputAttachmentCount = 0;
 	subpassDescription.colorAttachmentCount = 1;
-	subpassDescription.pColorAttachments = &colorAttachment;
+	subpassDescription.pColorAttachments = &colorAttachmentRef;
+	subpassDescription.pDepthStencilAttachment = &depthStencilAttachmentRef;
 
 	VkSubpassDependency subpassDependency = {};
 	subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -1438,8 +1489,8 @@ void GpuContextInit(GpuContext& context)
 
 	VkRenderPassCreateInfo renderPassCreateInfo = {};
 	renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	renderPassCreateInfo.attachmentCount = 1;
-	renderPassCreateInfo.pAttachments = &passAttachment;
+	renderPassCreateInfo.attachmentCount = attachments.size();
+	renderPassCreateInfo.pAttachments = attachments.data();
 	renderPassCreateInfo.subpassCount = 1;
 	renderPassCreateInfo.pSubpasses = &subpassDescription;
 	renderPassCreateInfo.dependencyCount = 1;
@@ -1512,6 +1563,23 @@ void GpuContextInit(GpuContext& context)
 		&swapchainImageCount,
 		swapchainImages.data());
 
+	// STRAWB: Organise this better? Each render pass should maybe have its own
+	// struct containing the images it contains and not be initialized in
+	// here...
+	context.depthImage = CreateImageHandle(
+		context.allocator,
+		surfaceCapabilities.currentExtent.width,
+		surfaceCapabilities.currentExtent.height,
+		context.depthStencilFormat,
+		1,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		context.depthImageAllocation);
+	context.depthImageView = CreateImageView(
+		context.depthImage,
+		context.depthStencilFormat,
+		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+		1);
+
 	auto& swapchainResources = context.swapchain.resources;
 	swapchainResources.resize(swapchainImageCount);
 
@@ -1523,17 +1591,21 @@ void GpuContextInit(GpuContext& context)
 		resources.imageView = CreateImageView(
 			swapchainImages[i], 
 			context.swapchain.surfaceFormat,
+			VK_IMAGE_ASPECT_COLOR_BIT,
 			1);
 
 		// framebuffer
-		VkImageView attachments[] = {resources.imageView};
+		std::array<VkImageView, 2> attachments = {
+			resources.imageView,
+			context.depthImageView
+		};
 
 		VkFramebufferCreateInfo framebufferCreateInfo = {};
 		framebufferCreateInfo.sType =
 			VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO; 
 		framebufferCreateInfo.renderPass = context.renderPass;
-		framebufferCreateInfo.attachmentCount = 1;
-		framebufferCreateInfo.pAttachments = attachments;
+		framebufferCreateInfo.attachmentCount = attachments.size();
+		framebufferCreateInfo.pAttachments = attachments.data();
 		framebufferCreateInfo.width =
 			surfaceCapabilities.currentExtent.width;
 		framebufferCreateInfo.height =
@@ -1753,6 +1825,10 @@ void GpuContextShutdown(GpuContext& context)
 			nullptr);
 	}
 
+	vkDestroyImageView(context.device, context.depthImageView, nullptr);
+	vkDestroyImage(context.device, context.depthImage, nullptr);
+	vmaFreeMemory(context.allocator, context.depthImageAllocation);
+
 	for (auto& frameResources : context.frameResources)
 	{
 		vkDestroySemaphore(
@@ -1818,6 +1894,11 @@ VkShaderModule GpuCreateShaderModuleFromFile(
 	ri.FS_FreeFile(code);
 
 	return module;
+}
+
+void GpuDestroyShaderModule(GpuContext& context, VkShaderModule shaderModule)
+{
+	vkDestroyShaderModule(context.device, shaderModule, nullptr);
 }
 
 VkPipeline GpuGetGraphicsPipelineForRenderState(
@@ -1924,11 +2005,15 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 		(renderState.stateBits & (GLS_SRCBLEND_BITS | GLS_DSTBLEND_BITS))
 		? VK_TRUE
 		: VK_FALSE;
-	cbAttachment.srcColorBlendFactor = GetVkSrcBlendFactor(renderState.stateBits);
-	cbAttachment.dstColorBlendFactor = GetVkDstBlendFactor(renderState.stateBits);
+	cbAttachment.srcColorBlendFactor =
+		GetVkSrcBlendFactor(renderState.stateBits);
+	cbAttachment.dstColorBlendFactor =
+		GetVkDstBlendFactor(renderState.stateBits);
 	cbAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-	cbAttachment.srcAlphaBlendFactor = GetVkSrcBlendFactor(renderState.stateBits);
-	cbAttachment.dstAlphaBlendFactor = GetVkDstBlendFactor(renderState.stateBits);
+	cbAttachment.srcAlphaBlendFactor =
+		GetVkSrcBlendFactor(renderState.stateBits);
+	cbAttachment.dstAlphaBlendFactor =
+		GetVkDstBlendFactor(renderState.stateBits);
 	cbAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 	cbAttachment.colorWriteMask =
 		VK_COLOR_COMPONENT_R_BIT |

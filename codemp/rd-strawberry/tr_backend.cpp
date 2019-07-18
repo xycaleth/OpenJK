@@ -1389,15 +1389,16 @@ const void	*RB_DrawBuffer( const void *data ) {
 		Com_Printf(S_COLOR_RED "Failed to begin command buffer recording\n");
 	}
 
-	VkClearValue clearValue = {};
-	clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+	std::array<VkClearValue, 2> clearValues = {};
+	clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+	clearValues[1].depthStencil = {1.0f, 0};
 
 	// clear screen for debugging
 	if (tr.world && tr.world->globalFog != -1)
 	{
 		const fog_t		*fog = &tr.world->fogs[tr.world->globalFog];
 
-		clearValue.color = {{
+		clearValues[0].color = {{
 			fog->parms.color[0],
 			fog->parms.color[1],
 			fog->parms.color[2],
@@ -1413,31 +1414,31 @@ const void	*RB_DrawBuffer( const void *data ) {
 		switch (i)
 		{
 		default:
-			clearValue.color = {{1.0f, 0.0f, 0.5f, 1.0f}}; // default q3 pink
+			clearValues[0].color = {{1.0f, 0.0f, 0.5f, 1.0f}}; // default q3 pink
 			break;
 		case 1:
-			clearValue.color = {{1.0f, 0.0f, 0.0f, 1.0f}}; //red
+			clearValues[0].color = {{1.0f, 0.0f, 0.0f, 1.0f}}; //red
 			break;
 		case 2:
-			clearValue.color = {{0.0f, 1.0f, 0.0f, 1.0f}}; //green
+			clearValues[0].color = {{0.0f, 1.0f, 0.0f, 1.0f}}; //green
 			break;
 		case 3:
-			clearValue.color = {{1.0f, 1.0f, 0.0f, 1.0f}}; //yellow
+			clearValues[0].color = {{1.0f, 1.0f, 0.0f, 1.0f}}; //yellow
 			break;
 		case 4:
-			clearValue.color = {{0.0f, 0.0f, 1.0f, 1.0f}}; //blue
+			clearValues[0].color = {{0.0f, 0.0f, 1.0f, 1.0f}}; //blue
 			break;
 		case 5:
-			clearValue.color = {{0.0f, 1.0f, 1.0f, 1.0f}}; //cyan
+			clearValues[0].color = {{0.0f, 1.0f, 1.0f, 1.0f}}; //cyan
 			break;
 		case 6:
-			clearValue.color = {{1.0f, 0.0f, 1.0f, 1.0f}}; //magenta
+			clearValues[0].color = {{1.0f, 0.0f, 1.0f, 1.0f}}; //magenta
 			break;
 		case 7:
-			clearValue.color = {{1.0f, 1.0f, 1.0f, 1.0f}}; //white
+			clearValues[0].color = {{1.0f, 1.0f, 1.0f, 1.0f}}; //white
 			break;
 		case 8:
-			clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}}; //black
+			clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; //black
 			break;
 		}
 	}
@@ -1451,8 +1452,8 @@ const void	*RB_DrawBuffer( const void *data ) {
 		gpuContext.swapchain.width,
 		gpuContext.swapchain.height
 	};
-	passBeginInfo.clearValueCount = 1;
-	passBeginInfo.pClearValues = &clearValue;
+	passBeginInfo.clearValueCount = clearValues.size();
+	passBeginInfo.pClearValues = clearValues.data();
 
 	vkCmdBeginRenderPass(
 		cmdBuffer,

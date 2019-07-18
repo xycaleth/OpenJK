@@ -1382,6 +1382,7 @@ void R_Init( void ) {
 		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.frag.spv");
 
 	R_InitImages();
+
 	R_InitShaders(qfalse);
 	R_InitSkins();
 
@@ -1462,18 +1463,19 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 	R_ShutdownFonts();
 	if ( tr.registered ) {
 		R_IssuePendingRenderCommands();
+
+		GpuContextPreShutdown(gpuContext);
+
+		GpuDestroyShaderModule(gpuContext, tr.renderModuleVert);
+		GpuDestroyShaderModule(gpuContext, tr.renderModuleFrag);
+
 		if (destroyWindow)
 		{
-			GpuContextPreShutdown(gpuContext);
-
 			R_DeleteTextures();		// only do this for vid_restart now, not during things like map load
-
-			vkDestroyShaderModule(gpuContext.device, tr.renderModuleVert, nullptr);
-			vkDestroyShaderModule(gpuContext.device, tr.renderModuleFrag, nullptr);
 
 			GpuContextShutdown(gpuContext);
 
-			if ( restarting )
+			if (restarting)
 			{
 				SaveGhoul2InfoArray();
 			}

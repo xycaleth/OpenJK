@@ -111,6 +111,11 @@ typedef struct orientationr_s {
 	float		modelMatrix[16];
 } orientationr_t;
 
+enum imageFormat_t
+{
+	IMG_FORMAT_R8G8B8A8_UNORM,
+	IMG_FORMAT_D24_UNORM_S8_UINT,
+};
 
 typedef struct image_s {
 	char		imgName[MAX_QPATH];		// game path, including extension
@@ -122,7 +127,7 @@ typedef struct image_s {
 
 	int			frameUsed;			// for texture usage in frame statistics
 
-	int			internalFormat;
+	imageFormat_t format;
 	int			wrapClampMode;		// GL_CLAMP or GL_REPEAT
 
 	uint32_t	mipmapCount;
@@ -1389,11 +1394,20 @@ void    	R_Init( void );
 
 image_t		*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int glWrapClampMode );
 
-image_t		*R_CreateImage( const char *name, const byte *pic, int width, int height, GLenum format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int wrapClampMode, bool bRectangle = false );
+image_t		*R_CreateImage( const char *name, const byte *pic, int width, int height, imageFormat_t format, qboolean mipmap, qboolean allowPicmip, qboolean allowTC, int wrapClampMode, bool bRectangle = false );
+VkImage CreateImageHandle(
+	VmaAllocator& allocator,
+	uint32_t width,
+	uint32_t height,
+	VkFormat imageFormat,
+	uint32_t mipmapCount,
+	VkImageUsageFlags usage,
+	VmaAllocation& allocation);
 
 VkImageView CreateImageView(
 	VkImage image,
 	VkFormat imageFormat,
+	VkImageAspectFlags aspectMask,
 	uint32_t levelCount);
 void TransitionImageLayout(
 	VkCommandBuffer cmdBuffer,

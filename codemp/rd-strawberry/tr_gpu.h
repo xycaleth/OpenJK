@@ -98,11 +98,16 @@ struct GpuContext
 
 	GpuSwapchain swapchain;
 	std::array<FrameResources, MAX_FRAMES_IN_FLIGHT> frameResources;
+	VkFormat depthStencilFormat;
 
 	GpuQueue graphicsQueue;
 	GpuQueue computeQueue;
 	GpuQueue transferQueue;
 	GpuQueue presentQueue;
+
+	VkImage depthImage;
+	VkImageView depthImageView;
+	VmaAllocation depthImageAllocation;
 
 	VkCommandPool transferCommandPool;
 	VkCommandPool gfxCommandPool;
@@ -120,5 +125,6 @@ void GpuContextShutdown(GpuContext& context);
 
 VkShaderModule GpuCreateShaderModuleFromFile(
 	GpuContext& context, const char *filePath);
+void GpuDestroyShaderModule(GpuContext& context, VkShaderModule shaderModule);
 VkPipeline GpuGetGraphicsPipelineForRenderState(
 	GpuContext& context, const RenderState& renderState);
