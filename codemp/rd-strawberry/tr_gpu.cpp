@@ -930,7 +930,7 @@ VkBlendFactor GetVkDstBlendFactor(uint32_t stateBits)
 	}
 }
 
-VkFormat PickDepthStencilFormat()
+VkFormat PickDepthStencilFormat(VkPhysicalDevice physicalDevice)
 {
 	const std::array<VkFormat, 2> depthStencilFormatCandidates = {
 		VK_FORMAT_D24_UNORM_S8_UINT,
@@ -941,7 +941,7 @@ VkFormat PickDepthStencilFormat()
 	{
 		VkFormatProperties formatProperties = {};
 		vkGetPhysicalDeviceFormatProperties(
-			context.physicalDevice,
+			physicalDevice,
 			format,
 			&formatProperties);
 
@@ -1425,7 +1425,8 @@ void GpuContextInit(GpuContext& context)
 	context.swapchain.width = surfaceCapabilities.currentExtent.width;
 	context.swapchain.height = surfaceCapabilities.currentExtent.height;
 
-	context.depthStencilFormat = PickDepthStencilFormat();
+	context.depthStencilFormat =
+		PickDepthStencilFormat(context.physicalDevice);
 	if (context.depthStencilFormat == VK_FORMAT_UNDEFINED)
 	{
 		Com_Error(ERR_FATAL, "Failed to find valid depth/stencil format");
