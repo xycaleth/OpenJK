@@ -158,11 +158,11 @@ void GL_PolygonOffset(bool enable)
 {
 	if (enable)
 	{
-		glState.glStateBits2 &= ~GLS2_POLYGONOFFSET;
+		glState.glStateBits2 |= GLS2_POLYGONOFFSET;
 	}
 	else
 	{
-		glState.glStateBits2 |= GLS2_POLYGONOFFSET;
+		glState.glStateBits2 &= ~GLS2_POLYGONOFFSET;
 	}
 }
 

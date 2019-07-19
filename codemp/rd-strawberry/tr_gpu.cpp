@@ -57,7 +57,6 @@ bool AllExtensionsSupported(
 
 	return requiredExtensionSet.empty();
 }
-	
 
 int PickPhysicalDeviceIndex(
 	const std::vector<VkPhysicalDevice>& physicalDevices,
@@ -1975,6 +1974,11 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 			: VK_POLYGON_MODE_FILL;
 	rsCreateInfo.cullMode = GetVkCullMode(renderState.stateBits2);
 	rsCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+	rsCreateInfo.depthBiasEnable =
+		(renderState.stateBits2 & GLS2_POLYGONOFFSET) ? VK_TRUE : VK_FALSE;
+	rsCreateInfo.depthBiasConstantFactor = r_offsetUnits->value;
+	rsCreateInfo.depthBiasClamp = 0.0f;
+	rsCreateInfo.depthBiasSlopeFactor = r_offsetFactor->value;
 	rsCreateInfo.lineWidth = 1.0f;
 
 	VkPipelineMultisampleStateCreateInfo msCreateInfo = {};

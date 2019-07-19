@@ -2443,7 +2443,11 @@ static qboolean CollapseMultitexture( void ) {
 	int abits, bbits;
 	int i;
 	textureBundle_t tmpBundle;
-	// STRAWB: Fix multitexturing
+	// STRAWB: Fix multitexturing. Can we do better? This function only
+	// collapses the first two stages. Potentially we can do better by
+	// going through all of the stages. We also have the added benefit of
+	// choosing the blend function which wasn't available at the time of
+	// writing this.
 	if ( !qglActiveTextureARB ) {
 		return qfalse;
 	}
@@ -2467,8 +2471,7 @@ static qboolean CollapseMultitexture( void ) {
 
 	// search for a valid multitexture blend function
 	for ( i = 0; collapse[i].blendA != -1 ; i++ ) {
-		if ( abits == collapse[i].blendA
-			&& bbits == collapse[i].blendB ) {
+		if ( abits == collapse[i].blendA && bbits == collapse[i].blendB ) {
 			break;
 		}
 	}
@@ -2512,7 +2515,6 @@ static qboolean CollapseMultitexture( void ) {
 			return qfalse;
 		}
 	}
-
 
 	// make sure that lightmaps are in bundle 1 for 3dfx
 	if ( stages[0].bundle[0].isLightmap )
