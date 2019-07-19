@@ -366,26 +366,49 @@ static float	s_skyTexCoords[SKY_SUBDIVISIONS+1][SKY_SUBDIVISIONS+1][2];
 
 static void DrawSkySide( struct image_s *image, const int mins[2], const int maxs[2] )
 {
-	int s, t;
+	tess.numVertexes = 0;
+	tess.numIndexes = 0;
 
-	GL_Bind( image );
+	GL_Bind(image);
 
-
-	for ( t = mins[1]+HALF_SKY_SUBDIVISIONS; t < maxs[1]+HALF_SKY_SUBDIVISIONS; t++ )
+	for (int t = mins[1]+HALF_SKY_SUBDIVISIONS; t <= maxs[1]+HALF_SKY_SUBDIVISIONS; t++)
 	{
-		qglBegin( GL_TRIANGLE_STRIP );
-
-		for ( s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++ )
+		for (int s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++)
 		{
-			qglTexCoord2fv( s_skyTexCoords[t][s] );
-			qglVertex3fv( s_skyPoints[t][s] );
+			VectorAdd(s_skyPoints[t][s], backEnd.viewParms.ori.origin, tess.xyz[tess.numVertexes]);
+			tess.svars.texcoords[0][tess.numVertexes][0] = s_skyTexCoords[t][s][0];
+			tess.svars.texcoords[0][tess.numVertexes][1] = s_skyTexCoords[t][s][1];
+			memset(
+				tess.svars.colors[tess.numVertexes],
+				tr.identityLightByte,
+				sizeof(tess.svars.colors[0]));
 
-			qglTexCoord2fv( s_skyTexCoords[t+1][s] );
-			qglVertex3fv( s_skyPoints[t+1][s] );
+			tess.numVertexes++;
+
+			if (tess.numVertexes >= SHADER_MAX_VERTEXES)
+			{
+				Com_Error(ERR_DROP, "SHADER_MAX_VERTEXES hit in DrawSkySide()");
+			}
 		}
-
-		qglEnd();
 	}
+
+	const int tHeight = maxs[1] - mins[1] + 1;
+	const int sWidth = maxs[0] - mins[0] + 1;
+	for (int t = 0; t < tHeight-1; t++)
+	{
+		for (int s = 0; s < sWidth-1; s++)
+		{
+			tess.indexes[tess.numIndexes++] = s + t * sWidth;
+			tess.indexes[tess.numIndexes++] = s + ((t + 1) * sWidth);
+			tess.indexes[tess.numIndexes++] = (s + 1) + (t * sWidth);
+
+			tess.indexes[tess.numIndexes++] = s + (t + 1) * sWidth;
+			tess.indexes[tess.numIndexes++] = (s + 1) + ((t + 1) * sWidth);
+			tess.indexes[tess.numIndexes++] = (s + 1) + (t * sWidth);
+		}
+	}
+
+	R_DrawElements(tess.numIndexes, tess.indexes);
 }
 
 static void DrawSkyBox( shader_t *shader )
@@ -394,6 +417,8 @@ static void DrawSkyBox( shader_t *shader )
 
 	sky_min = 0;
 	sky_max = 1;
+
+	GL_State(0);
 
 	memset( s_skyTexCoords, 0, sizeof( s_skyTexCoords ) );
 
@@ -471,7 +496,7 @@ static void FillCloudySkySide( const int mins[2], const int maxs[2], qboolean ad
 	{
 		for ( s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++ )
 		{
-			VectorAdd( s_skyPoints[t][s], backEnd.viewParms.ori.origin, tess.xyz[tess.numVertexes] );
+			VectorAdd(s_skyPoints[t][s], backEnd.viewParms.ori.origin, tess.xyz[tess.numVertexes] );
 			tess.texCoords[tess.numVertexes][0][0] = s_skyTexCoords[t][s][0];
 			tess.texCoords[tess.numVertexes][0][1] = s_skyTexCoords[t][s][1];
 
@@ -819,20 +844,10 @@ void RB_StageIteratorSky( void )
 		glState.depthRangeMax = 1.0f;
 	}
 
-#ifdef STRAWB
 	// draw the outer skybox
 	if ( tess.shader->sky->outerbox[0] && tess.shader->sky->outerbox[0] != tr.defaultImage ) {
-		qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
-
-		qglPushMatrix ();
-		GL_State( 0 );
-		qglTranslatef (backEnd.viewParms.ori.origin[0], backEnd.viewParms.ori.origin[1], backEnd.viewParms.ori.origin[2]);
-
-		DrawSkyBox( tess.shader );
-
-		qglPopMatrix();
+		DrawSkyBox(tess.shader);
 	}
-#endif
 
 	// generate the vertexes for all the clouds, which will be drawn
 	// by the generic shader routine

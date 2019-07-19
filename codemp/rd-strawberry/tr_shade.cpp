@@ -141,16 +141,7 @@ static VkDescriptorSet CreateDescriptorSet(
 	return descriptorSet;
 }
 
-/*
-==================
-R_DrawElements
-
-Optionally performs our own glDrawElements that looks for strip conditions
-instead of using the single glDrawElements call that may be inefficient
-without compiled vertex arrays.
-==================
-*/
-static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
+void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	GpuSwapchainResources *swapchainResources =
 		backEndData->swapchainResources;
 
