@@ -1667,6 +1667,7 @@ static bool RB_TestZFlare( vec3_t point) {
 	int				i;
 	vec4_t			eye, clip, normalized, window;
 
+#ifdef STRAWB
 	// if the point is off the screen, don't bother adding it
 	// calculate screen coordinates and depth
 	R_TransformModelToClip( point, backEnd.ori.modelMatrix,
@@ -1704,6 +1705,9 @@ static bool RB_TestZFlare( vec3_t point) {
 
 	visible = ( -eye[2] - -screenZ ) < 24;
 	return visible;
+#else
+	return qfalse;
+#endif
 }
 
 void RB_SurfaceFlare( srfFlare_t *surf ) {

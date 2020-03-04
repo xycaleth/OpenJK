@@ -141,6 +141,74 @@ static VkDescriptorSet CreateDescriptorSet(
 	return descriptorSet;
 }
 
+void R_DrawElementsWithShader(
+    int numIndexes, const glIndex_t* indexes, const shaderStage_t* stage)
+{
+    GpuSwapchainResources* swapchainResources = backEndData->swapchainResources;
+
+    VkDeviceSize vertexOffset = 0;
+    VkDeviceSize indexOffset = 0;
+    UploadVertexAndIndexData(swapchainResources, &vertexOffset, &indexOffset);
+
+    VkDescriptorSet descriptorSet = stage->descriptorSet;
+
+    VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
+
+    const RenderState renderState = {glState.glStateBits, glState.glStateBits2};
+    VkPipeline graphicsPipeline =
+        GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+
+    VkPipelineLayout pipelineLayout =
+        gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+
+    VkViewport viewport = {};
+    viewport.x = glState.viewport.x;
+    viewport.y = glState.viewport.y;
+    viewport.width = glState.viewport.width;
+    viewport.height = glState.viewport.height;
+    viewport.minDepth = glState.depthRangeMin;
+    viewport.maxDepth = glState.depthRangeMax;
+
+    VkRect2D scissor = {};
+    scissor.offset = {glState.viewport.x, glState.viewport.y};
+    scissor.extent = {static_cast<uint32_t>(glState.viewport.width),
+                      static_cast<uint32_t>(glState.viewport.height)};
+
+    vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+    vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+
+    vkCmdBindPipeline(
+        cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+    vkCmdPushConstants(
+        cmdBuffer,
+        pipelineLayout,
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(gpuMatrices_t),
+        &glState.matrices);
+
+    vkCmdBindDescriptorSets(
+        cmdBuffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipelineLayout,
+        0,
+        1,
+        &descriptorSet,
+        0,
+        nullptr);
+
+    vkCmdBindIndexBuffer(
+        cmdBuffer,
+        swapchainResources->indexBuffer,
+        indexOffset,
+        VK_INDEX_TYPE_UINT16);
+
+    vkCmdBindVertexBuffers(
+        cmdBuffer, 0, 1, &swapchainResources->vertexBuffer, &vertexOffset);
+
+    vkCmdDrawIndexed(cmdBuffer, numIndexes, 1, 0, 0, 0);
+}
 void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	GpuSwapchainResources *swapchainResources =
 		backEndData->swapchainResources;
@@ -1832,7 +1900,14 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			//
 			// draw
 			//
-			R_DrawElements( input->numIndexes, input->indexes );
+			if (pStage->bundle[0].image == nullptr)
+			{
+				R_DrawElements(input->numIndexes, input->indexes);
+			}
+			else
+			{
+				R_DrawElementsWithShader( input->numIndexes, input->indexes, pStage );
+			}
 
 			if (lStencilled)
 			{
@@ -1926,7 +2001,6 @@ void RB_StageIteratorGeneric( void )
 			ProjectDlightTexture();
 		}
 	}
-#endif
 
 	//
 	// now do fog
@@ -1939,6 +2013,7 @@ void RB_StageIteratorGeneric( void )
 	{
 		RB_FogPass();
 	}
+#endif
 
 	//
 	// reset polygon offset

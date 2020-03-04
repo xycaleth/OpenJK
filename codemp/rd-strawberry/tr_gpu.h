@@ -109,6 +109,7 @@ struct GpuContext
 	VkImageView depthImageView;
 	VmaAllocation depthImageAllocation;
 
+	VkDescriptorPool globalDescriptorPool;
 	VkCommandPool transferCommandPool;
 	VkCommandPool gfxCommandPool;
 	VkRenderPass renderPass;
@@ -117,6 +118,7 @@ struct GpuContext
 	std::array<VkPipelineLayout, DESCRIPTOR_SET_COUNT> pipelineLayouts;
 
 	std::map<RenderState, VkPipeline> graphicsPipelines;
+	std::vector<VkDescriptorSet> descriptorSets;
 };
 
 void GpuContextInit(GpuContext& context);
@@ -128,3 +130,6 @@ VkShaderModule GpuCreateShaderModuleFromFile(
 void GpuDestroyShaderModule(GpuContext& context, VkShaderModule shaderModule);
 VkPipeline GpuGetGraphicsPipelineForRenderState(
 	GpuContext& context, const RenderState& renderState);
+
+typedef struct shaderStage_s shaderStage_t;
+VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t* stage);

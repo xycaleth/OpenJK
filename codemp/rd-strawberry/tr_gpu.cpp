@@ -1506,6 +1506,31 @@ void GpuContextInit(GpuContext& context)
 	}
 
 	//
+	// global descriptor pool
+	//
+	{
+		VkDescriptorPoolSize poolSizes[1] = {};
+		poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[0].descriptorCount = 4096;
+
+		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
+		descriptorPoolCreateInfo.sType =
+			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolCreateInfo.maxSets = 4096;
+		descriptorPoolCreateInfo.poolSizeCount = 1;
+		descriptorPoolCreateInfo.pPoolSizes = poolSizes;
+
+		if (vkCreateDescriptorPool(
+				gpuContext.device,
+				&descriptorPoolCreateInfo,
+				nullptr,
+				&gpuContext.globalDescriptorPool) != VK_SUCCESS)
+		{
+			Com_Error(ERR_FATAL, "Failed to create global descriptor pool");
+		}
+	}
+
+	//
 	// command buffer pool
 	//
 	{
@@ -1641,7 +1666,7 @@ void GpuContextInit(GpuContext& context)
 		// Descriptor pool
 		VkDescriptorPoolSize poolSizes[1] = {};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[0].descriptorCount = 4096;
+		poolSizes[0].descriptorCount = 2048;
 
 		VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
 		descriptorPoolCreateInfo.sType =
@@ -1825,6 +1850,8 @@ void GpuContextShutdown(GpuContext& context)
 			nullptr);
 	}
 
+	vkDestroyDescriptorPool(
+		context.device, context.globalDescriptorPool, nullptr);
 	vkDestroyImageView(context.device, context.depthImageView, nullptr);
 	vkDestroyImage(context.device, context.depthImage, nullptr);
 	vmaFreeMemory(context.allocator, context.depthImageAllocation);
@@ -2078,4 +2105,55 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 		std::make_pair(renderState, graphicsPipeline));
 
 	return graphicsPipeline;
+}
+
+VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t *stage)
+{
+	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
+	descriptorSetAllocateInfo.sType =
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO; 
+	descriptorSetAllocateInfo.descriptorPool =
+		context.globalDescriptorPool;
+	descriptorSetAllocateInfo.descriptorSetCount = 1;
+	descriptorSetAllocateInfo.pSetLayouts =
+		&gpuContext.descriptorSetLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+
+	VkDescriptorSet descriptorSet;
+	if (vkAllocateDescriptorSets(
+			gpuContext.device,
+			&descriptorSetAllocateInfo,
+			&descriptorSet) != VK_SUCCESS)
+	{
+		Com_Error(ERR_FATAL, "Failed to create descriptor set");
+	}
+
+	const image_t *image = stage->bundle[0].image;
+	if (stage->bundle[0].numImageAnimations > 1)
+	{
+		image = ((image_t**)(stage->bundle[0].image))[0];
+	}
+
+	if (image == nullptr)
+	{
+		return VK_NULL_HANDLE;
+	}
+
+	VkDescriptorImageInfo descriptorImageInfo = {};
+	descriptorImageInfo.sampler = image->sampler;
+	descriptorImageInfo.imageView = image->imageView;
+	descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet descriptorWrite = {};
+	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.dstSet = descriptorSet;
+	descriptorWrite.dstBinding = 0;
+	descriptorWrite.dstArrayElement = 0;
+	descriptorWrite.descriptorCount = 1;
+	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrite.pImageInfo = &descriptorImageInfo;
+	vkUpdateDescriptorSets(gpuContext.device, 1, &descriptorWrite, 0, nullptr);
+
+	context.descriptorSets.push_back(descriptorSet);
+
+	return descriptorSet;
 }

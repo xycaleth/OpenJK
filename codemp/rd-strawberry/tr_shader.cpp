@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // tr_shader.c -- this file deals with the parsing and definition of shaders
 
 #include "tr_local.h"
+#include "tr_gpu.h"
 
 static char *s_shaderText;
 
@@ -3137,6 +3138,8 @@ static shader_t *FinishShader( void ) {
 			pStage->mGLFogColorOverride = GLFOGOVERRIDE_NONE;
 		}
 		//rww - end hw fog
+
+		pStage->descriptorSet = GpuCreateDescriptorSet(gpuContext, pStage);
 
 		stageIndex++; //rwwRMG - needed for AGEN_BLEND
 		stage++;

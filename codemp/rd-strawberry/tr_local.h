@@ -405,6 +405,8 @@ typedef struct shaderStage_s {
 
 	// Whether this object emits a glow or not.
 	bool			glow;
+
+	VkDescriptorSet	descriptorSet;
 } shaderStage_t;
 
 struct shaderCommands_s;
