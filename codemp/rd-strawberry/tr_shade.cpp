@@ -1733,8 +1733,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 	for (int stage = 0; stage < input->shader->numUnfoggedPasses; stage++)
 	{
 		shaderStage_t *pStage = &tess.xstages[stage];
-		int forceRGBGen = 0;
-		int stateBits = 0;
 
 		if (!pStage->active)
 		{
@@ -1756,33 +1754,13 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			break;
 		}
 
-		stateBits = pStage->stateBits;
-
-		assert(backEnd.currentEntity->e.renderfx >= 0);
-
-		if (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1)
-		{
-			// we want to be able to rip a hole in the thing being
-			// disintegrated, and by doing the depth-testing it avoids some
-			// kinds of artefacts, but will probably introduce others?
-			stateBits =
-				GLS_SRCBLEND_SRC_ALPHA |
-				GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
-				GLS_DEPTHMASK_TRUE |
-				GLS_ATEST_GE_C0;
-		}
-
-		if (backEnd.currentEntity->e.renderfx & RF_RGB_TINT)
-		{
-			//want to use RGBGen from ent
-			forceRGBGen = CGEN_ENTITY;
-		}
-
 		if (pStage->ss && pStage->ss->surfaceSpriteType)
 		{
 			// We check for surfacesprites AFTER drawing everything else
 			continue;
 		}
+
+		assert(backEnd.currentEntity->e.renderfx >= 0);
 
 #ifdef STRAWB
 		if (UseGLFog)
@@ -1801,6 +1779,13 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			}
 		}
 #endif
+
+		int forceRGBGen = 0;
+		if (backEnd.currentEntity->e.renderfx & RF_RGB_TINT)
+		{
+			//want to use RGBGen from ent
+			forceRGBGen = CGEN_ENTITY;
+		}
 
 		if (!input->fading)
 		{
@@ -1824,8 +1809,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		}
 		else
 		{
-			bool lStencilled = false;
-
 			if (!setArraysOnce)
 			{
 				// STRAWB upload texcoord arrays
@@ -1834,9 +1817,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			//
 			// set state
 			//
-			if ((tess.shader == tr.distortionShader) ||
-				 (backEnd.currentEntity &&
-				  (backEnd.currentEntity->e.renderfx & RF_DISTORTION)))
+			if (tess.shader == tr.distortionShader ||
+				  (backEnd.currentEntity->e.renderfx & RF_DISTORTION))
 			{
 				GL_Bind(tr.screenImage);
 				GL_Cull(CT_TWO_SIDED);
@@ -1846,6 +1828,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				R_BindAnimatedImage( &pStage->bundle[0] );
 			}
 
+			bool lStencilled = false;
+			int stateBits = 0;
 			if (tess.shader == tr.distortionShader &&
 				glConfig.stencilBits >= 4)
 			{
@@ -1857,9 +1841,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				qglStencilFunc(GL_ALWAYS, 1, 0xFFFFFFFF);
 				qglStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
 				qglColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-				//don't depthmask, don't blend.. don't do anything
-				GL_State(0);
 #endif
 			}
 			else if (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA)
@@ -1867,28 +1848,35 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				ForceAlpha(
 					(unsigned char *)tess.svars.colors,
 					backEnd.currentEntity->e.shaderRGBA[3]);
+				stateBits =
+						GLS_SRCBLEND_SRC_ALPHA |
+						GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 				if (backEnd.currentEntity->e.renderfx & RF_ALPHA_DEPTH)
 				{
 					// depth write, so faces through the model will be
 					// stomped over by nearer ones. this works because we
 					// draw RF_FORCE_ENT_ALPHA stuff after everything else,
 					// including standard alpha surfs.
-					GL_State(
-						GLS_SRCBLEND_SRC_ALPHA |
-						GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
-						GLS_DEPTHMASK_TRUE);
+					stateBits |= GLS_DEPTHMASK_TRUE;
 				}
-				else
-				{
-					GL_State(
-						GLS_SRCBLEND_SRC_ALPHA |
-						GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
-				}
+			}
+			else if (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1)
+			{
+				// we want to be able to rip a hole in the thing being
+				// disintegrated, and by doing the depth-testing it avoids some
+				// kinds of artefacts, but will probably introduce others?
+				stateBits =
+					GLS_SRCBLEND_SRC_ALPHA |
+					GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
+					GLS_DEPTHMASK_TRUE |
+					GLS_ATEST_GE_C0;
 			}
 			else
 			{
-				GL_State( stateBits );
+				stateBits = pStage->stateBits;
 			}
+
+			GL_State( stateBits );
 
 			//
 			// draw
