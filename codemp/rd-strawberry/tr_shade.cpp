@@ -1751,8 +1751,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		if (stage &&
 			r_lightmap->integer &&
 			!(pStage->bundle[0].isLightmap ||
-				pStage->bundle[1].isLightmap ||
-				pStage->bundle[0].vertexLightmap))
+				pStage->bundle[1].isLightmap))
 		{
 			break;
 		}
@@ -1841,12 +1840,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			{
 				GL_Bind(tr.screenImage);
 				GL_Cull(CT_TWO_SIDED);
-			}
-			else if (pStage->bundle[0].vertexLightmap &&
-					 (r_vertexLight->integer && !r_uiFullScreen->integer) &&
-					 r_lightmap->integer)
-			{
-				GL_Bind(tr.whiteImage);
 			}
 			else
 			{

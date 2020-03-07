@@ -2863,10 +2863,8 @@ from the current global working shader
 static shader_t *FinishShader( void ) {
 	int				stage, lmStage, stageIndex; //rwwRMG - stageIndex for AGEN_BLEND
 	qboolean		hasLightmapStage;
-	qboolean		vertexLightmap;
 
 	hasLightmapStage = qfalse;
-	vertexLightmap = qfalse;
 
 	//
 	// set sky stuff appropriate
@@ -3015,15 +3013,6 @@ static shader_t *FinishShader( void ) {
 			}
 		}
 
-
-    // not a true lightmap but we want to leave existing
-    // behaviour in place and not print out a warning
-    //if (pStage->rgbGen == CGEN_VERTEX) {
-    //  vertexLightmap = qtrue;
-    //}
-
-
-
 		//
 		// determine sort order and fog color adjustment
 		//
@@ -3169,16 +3158,9 @@ static shader_t *FinishShader( void ) {
 
 	if ( shader.lightmapIndex[0] >= 0 && !hasLightmapStage )
 	{
-		if (vertexLightmap)
-		{
-//			ri.DPrintf( "WARNING: shader '%s' has VERTEX forced lightmap!\n", shader.name );
-		}
-		else
-		{
-			ri.Printf( PRINT_DEVELOPER, "WARNING: shader '%s' has lightmap but no lightmap stage!\n", shader.name );
-			memcpy(shader.lightmapIndex, lightmapsNone, sizeof(shader.lightmapIndex));
-			memcpy(shader.styles, stylesDefault, sizeof(shader.styles));
-		}
+		ri.Printf( PRINT_DEVELOPER, "WARNING: shader '%s' has lightmap but no lightmap stage!\n", shader.name );
+		memcpy(shader.lightmapIndex, lightmapsNone, sizeof(shader.lightmapIndex));
+		memcpy(shader.styles, stylesDefault, sizeof(shader.styles));
 	}
 
 

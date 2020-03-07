@@ -369,7 +369,6 @@ typedef struct textureBundle_s {
 
 	bool			isLightmap;
 	bool			oneShotAnimMap;
-	bool			vertexLightmap;
 	bool			isVideoMap;
 
 	int				videoMapHandle;
