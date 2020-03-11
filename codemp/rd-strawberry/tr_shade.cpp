@@ -1816,33 +1816,17 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			//
 			// set state
 			//
-			if (tess.shader == tr.distortionShader ||
-				  (backEnd.currentEntity->e.renderfx & RF_DISTORTION))
+			if (backEnd.currentEntity->e.renderfx & RF_DISTORTION)
 			{
 				GL_Bind(tr.screenImage);
-				GL_Cull(CT_TWO_SIDED);
 			}
 			else
 			{
-				R_BindAnimatedImage( &pStage->bundle[0] );
+				R_BindAnimatedImage(&pStage->bundle[0]);
 			}
 
-			bool lStencilled = false;
 			int stateBits = 0;
-			if (tess.shader == tr.distortionShader &&
-				glConfig.stencilBits >= 4)
-			{
-#ifdef STRAWB
-				// draw it to the stencil buffer!
-				tr_stencilled = true;
-				lStencilled = true;
-				qglEnable(GL_STENCIL_TEST);
-				qglStencilFunc(GL_ALWAYS, 1, 0xFFFFFFFF);
-				qglStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
-				qglColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-#endif
-			}
-			else if (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA)
+			if (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA)
 			{
 				ForceAlpha(
 					(unsigned char *)tess.svars.colors,
@@ -1876,6 +1860,10 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			}
 
 			GL_State( stateBits );
+			if (backEnd.currentEntity->e.renderfx & RF_DISTORTION)
+			{
+				GL_Cull(CT_TWO_SIDED);
+			}
 
 			//
 			// draw
@@ -1887,16 +1875,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			else
 			{
 				R_DrawElementsWithShader( input->numIndexes, input->indexes, pStage );
-			}
-
-			if (lStencilled)
-			{
-#ifdef STRAWB
-				// re-enable the color buffer, disable stencil test
-				lStencilled = false;
-				qglDisable(GL_STENCIL_TEST);
-				qglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-#endif
 			}
 		}
 	}

@@ -4150,11 +4150,6 @@ static void CreateInternalShaders( void ) {
 	shader.sort = SS_BANNER; //SS_STENCIL_SHADOW;
 	tr.shadowShader = FinishShader();
 
-	// distortion shader is just a marker
-	Q_strncpyz( shader.name, "internal_distortion", sizeof( shader.name ) );
-	shader.sort = SS_BLEND0;
-	shader.defaultShader = qfalse;
-	tr.distortionShader = FinishShader();
 	shader.defaultShader = qtrue;
 
 #ifdef STRAWB
