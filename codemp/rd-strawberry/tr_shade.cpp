@@ -1760,8 +1760,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			continue;
 		}
 
-		assert(backEnd.currentEntity->e.renderfx >= 0);
-
 #ifdef STRAWB
 		if (UseGLFog)
 		{
@@ -1781,6 +1779,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 #endif
 
 		int forceRGBGen = 0;
+		assert(backEnd.currentEntity->e.renderfx >= 0);
 		if (backEnd.currentEntity->e.renderfx & RF_RGB_TINT)
 		{
 			//want to use RGBGen from ent
