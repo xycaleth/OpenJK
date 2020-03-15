@@ -649,11 +649,12 @@ typedef struct srfFlare_s {
 	vec3_t			color;
 } srfFlare_t;
 
-#define	VERTEXSIZE			(6+(MAXLIGHTMAPS*3))
-#define VERTEX_LM			5
-#define	VERTEX_COLOR		(5+(MAXLIGHTMAPS*2))
-
-#define	VERTEX_FINAL_COLOR	(5+(MAXLIGHTMAPS*3))
+struct bspDrawVert_t
+{
+    vec3_t xyz;
+    vec2_t texcoords[1 + MAXLIGHTMAPS];
+    byte colors[MAXLIGHTMAPS][4];
+};
 
 typedef struct srfGridMesh_s {
 	surfaceType_t	surfaceType;
@@ -692,8 +693,8 @@ typedef struct srfSurfaceFace_s {
 	int			numPoints;
 	int			numIndices;
 	int			ofsIndices;
-	float		points[1][VERTEXSIZE];	// variable sized
-										// there is a variable length list of indices here also
+	bspDrawVert_t points[1];	// variable sized
+								// there is a variable length list of indices here also
 } srfSurfaceFace_t;
 
 // misc_models in maps are turned into direct geometry by q3map
@@ -705,8 +706,6 @@ typedef struct srfTriangles_s {
 
 	// culling information (FIXME: use this!)
 	vec3_t			bounds[2];
-//	vec3_t			localOrigin;
-//	float			radius;
 
 	// triangle definitions
 	int				numIndexes;
@@ -714,7 +713,6 @@ typedef struct srfTriangles_s {
 
 	int				numVerts;
 	drawVert_t		*verts;
-//	vec3_t			*tangents;
 } srfTriangles_t;
 
 
@@ -835,6 +833,9 @@ typedef struct world_s {
 
 	char		*entityString;
 	char		*entityParsePoint;
+
+	VkBuffer	vertexBuffer;
+	VmaAllocation vertexBufferAllocation;
 } world_t;
 
 //======================================================================
@@ -1368,6 +1369,7 @@ void		RE_BeginFrame( stereoFrame_t stereoFrame );
 void		RE_BeginRegistration( glconfig_t *glconfig );
 void		R_ColorShiftLightingBytes( byte in[4], byte out[4] ); //rwwRMG - added
 void		RE_LoadWorldMap( const char *mapname );
+void		R_UnloadWorldMap();
 
 void		RE_SetWorldVisData( const byte *vis );
 

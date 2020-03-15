@@ -162,9 +162,9 @@ static qboolean	R_CullSurface( surfaceType_t *surface, shader_t *shader ) {
 
 			//The fact that this point is in the middle of the array has no relation to the
 			//orientation in the surface outline.
-			basePoint[0] = sface->points[sface->numPoints/2][0];
-			basePoint[1] = sface->points[sface->numPoints/2][1];
-			basePoint[2] = sface->points[sface->numPoints/2][2];
+			basePoint[0] = sface->points[sface->numPoints/2].xyz[0];
+			basePoint[1] = sface->points[sface->numPoints/2].xyz[1];
+			basePoint[2] = sface->points[sface->numPoints/2].xyz[2];
 			basePoint[2] += 2.0f;
 
 			//the endpoint will be 8192 units from the chosen point
@@ -612,7 +612,11 @@ void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal )
 		face = ( srfSurfaceFace_t *)surfs->data;
 
 		// It seems that the safest way to handle this is by finding the area of the faces
-		dist = GetQuadArea( face->points[0], face->points[1], face->points[2], face->points[3] );
+		dist = GetQuadArea(
+			face->points[0].xyz,
+			face->points[1].xyz,
+			face->points[2].xyz,
+			face->points[3].xyz );
 
 		// Check against the highest max
 		if ( dist > maxDist[0] )
@@ -661,7 +665,7 @@ void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal )
 
 	for ( int t = 0; t < 4; t++ )
 	{
-		VectorCopy(	face->points[t], verts[t] );
+		VectorCopy(	face->points[t].xyz, verts[t] );
 	}
 }
 
@@ -733,7 +737,7 @@ static inline void R_EvaluateWireframeSurf(msurface_t *surf)
 	if (*surf->data == SF_FACE)
 	{
 		srfSurfaceFace_t *face = (srfSurfaceFace_t *)surf->data;
-		float *points = &face->points[0][0];
+		float *points = face->points[0].xyz;
 		int numPoints = face->numIndices;
 		int *indices = (int *)((byte *)face + face->ofsIndices);
 		//byte *indices = (byte *)(face + face->ofsIndices);
@@ -772,7 +776,7 @@ static inline void R_EvaluateWireframeSurf(msurface_t *surf)
 			nextSurf->numPoints = face->numIndices;
 			while (i < face->numIndices)
 			{
-				points = &face->points[indices[i]][0];
+				points = face->points[indices[i]].xyz;
 				VectorCopy(points, nextSurf->points[i].xyz);
 
 				i++;

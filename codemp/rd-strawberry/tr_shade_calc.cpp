@@ -1263,93 +1263,66 @@ void RB_CalcDiffuseEntityColor( unsigned char *colors )
 //---------------------------------------------------------
 void RB_CalcDisintegrateColors( unsigned char *colors )
 {
-	int			i, numVertexes;
-	float		dis, threshold;
-	float		*v;
-	vec3_t		temp;
-	refEntity_t	*ent;
-
-	ent = &backEnd.currentEntity->e;
-	v = tess.xyz[0];
+	refEntity_t	*ent = &backEnd.currentEntity->e;
 
 	// calculate the burn threshold at the given time, anything that passes the threshold will get burnt
-	threshold = (backEnd.refdef.time - ent->endTime) * 0.045f; // endTime is really the start time, maybe I should just use a completely meaningless substitute?
+	// endTime is really the start time, maybe I should just use a completely meaningless substitute?
+	float threshold = (backEnd.refdef.time - ent->endTime) * 0.045f; 
+	threshold *= threshold;
 
-	numVertexes = tess.numVertexes;
-
+	float *v = tess.xyz[0];
+	int numVertexes = tess.numVertexes;
 	if ( ent->renderfx & RF_DISINTEGRATE1 )
 	{
 		// this handles the blacken and fading out of the regular player model
-		for ( i = 0 ; i < numVertexes ; i++, v += 4 )
+		for ( int i = 0 ; i < numVertexes ; i++, v += 4 )
 		{
+			vec3_t temp;
 			VectorSubtract( backEnd.currentEntity->e.oldorigin, v, temp );
 
-			dis = VectorLengthSquared( temp );
+			float dis = VectorLengthSquared( temp );
 
-			if ( dis < threshold * threshold )
-			{
+			byte grey = 0x00;
+			byte alpha = 0xff;
+
+			if ( dis < threshold ) {
 				// completely disintegrated
-				colors[i*4+3] = 0x00;
-			}
-			else if ( dis < threshold * threshold + 60 )
-			{
+				alpha = 0x00;
+			} else if ( dis < threshold + 60 ) {
 				// blacken before fading out
-				colors[i*4+0] = 0x0;
-				colors[i*4+1] = 0x0;
-				colors[i*4+2] = 0x0;
-				colors[i*4+3] = 0xff;
-			}
-			else if ( dis < threshold * threshold + 150 )
-			{
+				grey = 0x00;
+			} else if ( dis < threshold + 150 ) {
 				// darken more
-				colors[i*4+0] = 0x6f;
-				colors[i*4+1] = 0x6f;
-				colors[i*4+2] = 0x6f;
-				colors[i*4+3] = 0xff;
-			}
-			else if ( dis < threshold * threshold + 180 )
-			{
+				grey = 0x6f;
+			} else if ( dis < threshold + 180 ) {
 				// darken at edge of burn
-				colors[i*4+0] = 0xaf;
-				colors[i*4+1] = 0xaf;
-				colors[i*4+2] = 0xaf;
-				colors[i*4+3] = 0xff;
-			}
-			else
-			{
+				grey = 0xaf;
+			} else {
 				// not burning at all yet
-				colors[i*4+0] = 0xff;
-				colors[i*4+1] = 0xff;
-				colors[i*4+2] = 0xff;
-				colors[i*4+3] = 0xff;
+				grey = 0xff;
 			}
+
+			colors[i*4+0] = grey;
+			colors[i*4+1] = grey;
+			colors[i*4+2] = grey;
+			colors[i*4+3] = alpha;
 		}
 	}
 	else if ( ent->renderfx & RF_DISINTEGRATE2 )
 	{
 		// this handles the glowing, burning bit that scales away from the model
-		for ( i = 0 ; i < numVertexes ; i++, v += 4 )
+		for ( int i = 0 ; i < numVertexes ; i++, v += 4 )
 		{
+			vec3_t temp;
 			VectorSubtract( backEnd.currentEntity->e.oldorigin, v, temp );
 
-			dis = VectorLengthSquared( temp );
+			float dis = VectorLengthSquared( temp );
+			byte rgba = ( dis < threshold ) ? 0 : 0xff;
 
-			if ( dis < threshold * threshold )
-			{
-				// done burning
-				colors[i*4+0] = 0x00;
-				colors[i*4+1] = 0x00;
-				colors[i*4+2] = 0x00;
-				colors[i*4+3] = 0x00;
-			}
-			else
-			{
-				// still full burn
-				colors[i*4+0] = 0xff;
-				colors[i*4+1] = 0xff;
-				colors[i*4+2] = 0xff;
-				colors[i*4+3] = 0xff;
-			}
+			colors[i*4+0] = rgba;
+			colors[i*4+1] = rgba;
+			colors[i*4+2] = rgba;
+			colors[i*4+3] = rgba;
 		}
 	}
 }

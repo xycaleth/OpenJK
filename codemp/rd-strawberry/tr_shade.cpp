@@ -52,24 +52,17 @@ static void UploadVertexAndIndexData(
 	VkDeviceSize *vertexOffset,
 	VkDeviceSize *indexOffset)
 {
-	struct vertex
-	{
-		vec4_t position;
-		vec2_t texcoord;
-		uint8_t color[4];
-		uint32_t pad0;
-	};
-	static_assert(sizeof(vertex) == 32, "vertex must be 32 bytes in size");
+	static_assert(sizeof(BspVertex) == 32, "vertex must be 32 bytes in size");
 
 	// Vertex data
 	*vertexOffset = GetBufferOffset(
 		swapchainResources->vertexBufferBase,
 		swapchainResources->vertexBufferData);
 
-	auto *out = static_cast<vertex *>(swapchainResources->vertexBufferData);
+	auto *out = static_cast<BspVertex *>(swapchainResources->vertexBufferData);
 	for (int i = 0; i < tess.numVertexes; ++i)
 	{
-		vertex *v = out + i;
+		BspVertex *v = out + i;
 		v->position[0] = tess.xyz[i][0];
 		v->position[1] = tess.xyz[i][1];
 		v->position[2] = tess.xyz[i][2];
@@ -1598,13 +1591,13 @@ static void ComputeTexCoords( shaderStage_t *pStage ) {
 	}
 }
 
-void ForceAlpha(unsigned char *dstColors, int TR_ForceEntAlpha)
+void ForceAlpha(byte *dstColors, byte alpha)
 {
 	dstColors += 3;
 
 	for ( int i = 0; i < tess.numVertexes; i++, dstColors += 4 )
 	{
-		*dstColors = TR_ForceEntAlpha;
+		*dstColors = alpha;
 	}
 }
 
@@ -1736,17 +1729,17 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		}
 #endif
 
-		int forceRGBGen = 0;
-		assert(backEnd.currentEntity->e.renderfx >= 0);
-		if (backEnd.currentEntity->e.renderfx & RF_RGB_TINT)
-		{
-			//want to use RGBGen from ent
-			forceRGBGen = CGEN_ENTITY;
-		}
-
 		if (!input->fading)
 		{
 			//this means ignore this, while we do a fade-out
+			int forceRGBGen = 0;
+			assert(backEnd.currentEntity->e.renderfx >= 0);
+			if (backEnd.currentEntity->e.renderfx & RF_RGB_TINT)
+			{
+				//want to use RGBGen from ent
+				forceRGBGen = CGEN_ENTITY;
+			}
+
 			ComputeColors(pStage, forceRGBGen);
 		}
 

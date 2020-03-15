@@ -23,6 +23,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // tr_map.c
 #include "tr_local.h"
+#include "tr_gpu.h"
+
+#include <cassert>
 
 /*
 
@@ -309,6 +312,293 @@ static	void R_LoadVisibility( lump_t *l, world_t &worldData ) {
 	}
 }
 
+static int R_GetBSPTotalVertexCount(const world_t& worldData)
+{
+    int totalVertexCount = 0;
+    for (int i = 0, surfaceCount = worldData.numsurfaces; i < surfaceCount; ++i)
+    {
+        const msurface_t& surface = worldData.surfaces[i];
+        switch (*surface.data)
+        {
+        case SF_FACE: {
+            const auto* face =
+                reinterpret_cast<const srfSurfaceFace_t*>(surface.data);
+			totalVertexCount += face->numPoints;
+            break;
+        }
+
+        case SF_TRIANGLES: {
+            const auto* triangles =
+                reinterpret_cast<const srfTriangles_t*>(surface.data);
+            totalVertexCount += triangles->numVerts;
+			break;
+        }
+
+        case SF_GRID: {
+            const auto* grid =
+                reinterpret_cast<const srfGridMesh_t*>(surface.data);
+            totalVertexCount += grid->width * grid->height;
+            break;
+        }
+
+        default:
+            break;
+        }
+    }
+	return totalVertexCount;
+}
+
+static int R_WriteBSPVertexBufferData(const world_t& worldData, BspVertex* stagingVertices)
+{
+	int stagingVertexIndex = 0;
+
+    for (int i = 0, surfaceCount = worldData.numsurfaces; i < surfaceCount; ++i)
+    {
+        const msurface_t& surface = worldData.surfaces[i];
+		BspVertex* stagingVertex = stagingVertices + stagingVertexIndex;
+
+        switch (*surface.data)
+        {
+        case SF_FACE: {
+            const auto* face =
+                reinterpret_cast<const srfSurfaceFace_t*>(surface.data);
+
+            for (int vertexIndex = 0; vertexIndex < face->numPoints;
+                 ++vertexIndex)
+            {
+                const bspDrawVert_t& v = face->points[vertexIndex];
+                stagingVertex->position[0] = v.xyz[0];
+                stagingVertex->position[1] = v.xyz[1];
+                stagingVertex->position[2] = v.xyz[2];
+                stagingVertex->position[3] = 1.0f;
+
+                stagingVertex->texcoord[0] = v.texcoords[0][0];
+                stagingVertex->texcoord[1] = v.texcoords[0][1];
+
+                stagingVertex->color[0] = v.colors[0][0];
+                stagingVertex->color[1] = v.colors[0][1];
+                stagingVertex->color[2] = v.colors[0][2];
+                stagingVertex->color[3] = v.colors[0][3];
+            }
+            break;
+        }
+
+        case SF_TRIANGLES: {
+            const auto* triangles =
+                reinterpret_cast<const srfTriangles_t*>(surface.data);
+
+            for (int vertexIndex = 0; vertexIndex < triangles->numVerts;
+                 ++vertexIndex)
+            {
+                const drawVert_t& v = triangles->verts[vertexIndex];
+                stagingVertex->position[0] = v.xyz[0];
+                stagingVertex->position[1] = v.xyz[1];
+                stagingVertex->position[2] = v.xyz[2];
+                stagingVertex->position[3] = 1.0f;
+
+                stagingVertex->texcoord[0] = v.st[0];
+                stagingVertex->texcoord[1] = v.st[1];
+
+                stagingVertex->color[0] = v.color[0][0];
+                stagingVertex->color[1] = v.color[0][1];
+                stagingVertex->color[2] = v.color[0][2];
+                stagingVertex->color[3] = v.color[0][3];
+            }
+			break;
+        }
+
+        case SF_GRID: {
+            const auto* grid =
+                reinterpret_cast<const srfGridMesh_t*>(surface.data);
+
+            for (int vertexIndex = 0, vertexCount = grid->width * grid->height;
+                 vertexIndex < vertexCount;
+                 ++vertexIndex)
+            {
+                const drawVert_t& v = grid->verts[vertexIndex];
+                stagingVertex->position[0] = v.xyz[0];
+                stagingVertex->position[1] = v.xyz[1];
+                stagingVertex->position[2] = v.xyz[2];
+                stagingVertex->position[3] = 1.0f;
+
+                stagingVertex->texcoord[0] = v.st[0];
+                stagingVertex->texcoord[1] = v.st[1];
+
+                stagingVertex->color[0] = v.color[0][0];
+                stagingVertex->color[1] = v.color[0][1];
+                stagingVertex->color[2] = v.color[0][2];
+                stagingVertex->color[3] = v.color[0][3];
+            }
+            break;
+        }
+
+        default:
+            break;
+        }
+    }
+
+	return stagingVertexIndex;
+}
+
+static void R_UploadBSPToVertexBuffer(world_t& worldData)
+{
+    const int totalVertexCount = R_GetBSPTotalVertexCount(worldData);
+    const int vertexBufferSize = totalVertexCount * 32;
+
+    //
+    // gpu buffer
+    //
+    VkBufferCreateInfo vertexBufferCreateInfo = {};
+    vertexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    vertexBufferCreateInfo.size = vertexBufferSize;
+    vertexBufferCreateInfo.usage =
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    VmaAllocationCreateInfo bufferAllocCreateInfo = {};
+    bufferAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+    if (vmaCreateBuffer(
+            gpuContext.allocator,
+            &vertexBufferCreateInfo,
+            &bufferAllocCreateInfo,
+            &worldData.vertexBuffer,
+            &worldData.vertexBufferAllocation,
+            nullptr) != VK_SUCCESS)
+    {
+        ri.Printf(
+            PRINT_ALL,
+            S_COLOR_YELLOW "Failed to create vertex buffer for map data. "
+                           "Vertex data will be uploaded every frame\n");
+        return;
+    }
+
+    //
+    // staging buffer
+    //
+    VkBufferCreateInfo bufferCreateInfo = {};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.size = vertexBufferSize;
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+
+    VmaAllocation stagingBufferMemory;
+    VkBuffer stagingBuffer;
+    if (vmaCreateBuffer(
+            gpuContext.allocator,
+            &bufferCreateInfo,
+            &allocCreateInfo,
+            &stagingBuffer,
+            &stagingBufferMemory,
+            nullptr) != VK_SUCCESS)
+    {
+        ri.Printf(
+            PRINT_ALL,
+            S_COLOR_YELLOW "Failed to create vertex buffer for map data. "
+                           "Vertex data will be uploaded every frame\n");
+        return;
+    }
+
+    void* stagingBufferData = nullptr;
+    if (vmaMapMemory(
+            gpuContext.allocator, stagingBufferMemory, &stagingBufferData) !=
+        VK_SUCCESS)
+    {
+        ri.Printf(
+            PRINT_ALL,
+            S_COLOR_YELLOW "Failed to map vertex buffer for map data. "
+                           "Vertex data will be uploaded every frame\n");
+
+        vmaFreeMemory(gpuContext.allocator, stagingBufferMemory);
+        vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
+
+        return;
+    }
+
+    BspVertex* stagingVertices = static_cast<BspVertex*>(stagingBufferData);
+    const int verticesWritten =
+        R_WriteBSPVertexBufferData(worldData, stagingVertices);
+    assert(verticesWritten == totalVertexCount);
+
+    vmaUnmapMemory(gpuContext.allocator, stagingBufferMemory);
+
+    //
+    // do the buffer copy
+    //
+    VkCommandBufferAllocateInfo cmdBufferAllocateInfo = {};
+    cmdBufferAllocateInfo.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdBufferAllocateInfo.commandPool = gpuContext.transferCommandPool;
+    cmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdBufferAllocateInfo.commandBufferCount = 1;
+
+    VkCommandBuffer cmdBuffer;
+    if (vkAllocateCommandBuffers(
+            gpuContext.device, &cmdBufferAllocateInfo, &cmdBuffer) !=
+        VK_SUCCESS)
+    {
+        ri.Printf(
+            PRINT_ALL,
+            S_COLOR_YELLOW
+            "Failed to allocate command buffer to transfer map data. "
+            "Vertex data will be uploaded every frame\n");
+
+        vmaFreeMemory(gpuContext.allocator, stagingBufferMemory);
+        vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
+        return;
+    }
+
+    VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
+    cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmdBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
+    {
+        ri.Printf(
+            PRINT_ALL,
+            S_COLOR_YELLOW "Failed to transfer map data to GPU. "
+                           "Vertex data will be uploaded every frame\n");
+
+        vmaFreeMemory(gpuContext.allocator, stagingBufferMemory);
+        vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
+        return;
+    }
+
+    VkBufferCopy bufferCopy = {};
+    bufferCopy.size = vertexBufferSize;
+
+    vkCmdCopyBuffer(
+        cmdBuffer, stagingBuffer, worldData.vertexBuffer, 1, &bufferCopy);
+
+    vkEndCommandBuffer(cmdBuffer);
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuffer;
+
+    if (vkQueueSubmit(
+            gpuContext.transferQueue.queue, 1, &submitInfo, VK_NULL_HANDLE) !=
+        VK_SUCCESS)
+    {
+        Com_Error(ERR_FATAL, "Failed to submit command buffers to queue");
+    }
+
+    vkDeviceWaitIdle(gpuContext.device);
+    vkFreeCommandBuffers(
+        gpuContext.device, gpuContext.transferCommandPool, 1, &cmdBuffer);
+
+    vmaFreeMemory(gpuContext.allocator, stagingBufferMemory);
+    vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
+
+    ri.Printf(
+        PRINT_ALL,
+        "BSP vertex data uploaded (%.3fMB)\n",
+        vertexBufferSize / (1024.0f * 1024.0f));
+}
+
 //===============================================================================
 
 /*
@@ -403,19 +693,20 @@ static void ParseFace( dsurface_t *ds, mapVert_t *verts, msurface_t *surf, int *
 
 	verts += LittleLong( ds->firstVert );
 	for ( i = 0 ; i < numPoints ; i++ ) {
+
 		for ( j = 0 ; j < 3 ; j++ ) {
-			cv->points[i][j] = LittleFloat( verts[i].xyz[j] );
+			cv->points[i].xyz[j] = LittleFloat( verts[i].xyz[j] );
 		}
 		for ( j = 0 ; j < 2 ; j++ ) {
-			cv->points[i][3+j] = LittleFloat( verts[i].st[j] );
+			cv->points[i].texcoords[0][j] = LittleFloat( verts[i].st[j] );
 			for(k=0;k<MAXLIGHTMAPS;k++)
 			{
-				cv->points[i][VERTEX_LM+j+(k*2)] = LittleFloat( verts[i].lightmap[k][j] );
+				cv->points[i].texcoords[1 + k][j] = LittleFloat( verts[i].lightmap[k][j] );
 			}
 		}
 		for(k=0;k<MAXLIGHTMAPS;k++)
 		{
-			R_ColorShiftLightingBytes( verts[i].color[k], (byte *)&cv->points[i][VERTEX_COLOR+k] );
+			R_ColorShiftLightingBytes(verts[i].color[k], cv->points[i].colors[k]);
 		}
 	}
 
@@ -428,7 +719,7 @@ static void ParseFace( dsurface_t *ds, mapVert_t *verts, msurface_t *surf, int *
 	for ( i = 0 ; i < 3 ; i++ ) {
 		cv->plane.normal[i] = LittleFloat( ds->lightmapVecs[2][i] );
 	}
-	cv->plane.dist = DotProduct( cv->points[0], cv->plane.normal );
+	cv->plane.dist = DotProduct( cv->points[0].xyz, cv->plane.normal );
 	SetPlaneSignbits( &cv->plane );
 	cv->plane.type = PlaneTypeForNormal( cv->plane.normal );
 
@@ -791,7 +1082,7 @@ This function assumes that all patches in one group are nicely stitched together
 If this is not the case this function will still do its job but won't fix the highest LoD cracks.
 =================
 */
-void R_FixSharedVertexLodError( world_t &worldData ) {
+static void R_FixSharedVertexLodError( world_t &worldData ) {
 	int i;
 	srfGridMesh_t *grid1;
 
@@ -1279,7 +1570,7 @@ int R_TryStitchingPatch( int grid1num, world_t &worldData ) {
 R_StitchAllPatches
 ===============
 */
-void R_StitchAllPatches( world_t &worldData ) {
+static void R_StitchAllPatches( world_t &worldData ) {
 	int i, stitched, numstitches;
 	srfGridMesh_t *grid1;
 
@@ -1312,7 +1603,7 @@ void R_StitchAllPatches( world_t &worldData ) {
 R_MovePatchSurfacesToHunk
 ===============
 */
-void R_MovePatchSurfacesToHunk(world_t &worldData) {
+static void R_MovePatchSurfacesToHunk(world_t &worldData) {
 	int i, size;
 	srfGridMesh_t *grid, *hunkgrid;
 
@@ -1379,7 +1670,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 	for ( i = 0 ; i < count ; i++, in++, out++ ) {
 		switch ( LittleLong( in->surfaceType ) ) {
 		case MST_PATCH:
-			ParseMesh ( in, dv, out, worldData, index );
+                        ParseMesh ( in, dv, out, worldData, index );
 			numMeshes++;
 			break;
 		case MST_TRIANGLE_SOUP:
@@ -1396,8 +1687,8 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 			break;
 		default:
 			Com_Error( ERR_DROP, "Bad surfaceType" );
-		}
-	}
+                }
+        }
 
 #ifdef PATCH_STITCHING
 	R_StitchAllPatches(worldData);
@@ -1408,6 +1699,8 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 #ifdef PATCH_STITCHING
 	R_MovePatchSurfacesToHunk(worldData);
 #endif
+
+	R_UploadBSPToVertexBuffer(worldData);
 
 	ri.Printf( PRINT_ALL, "...loaded %d faces, %i meshes, %i trisurfs, %i flares\n", numFaces, numMeshes, numTriSurfs, numFlares );
 }
@@ -2125,4 +2418,18 @@ void RE_LoadWorldMap( const char *name )
 	ri.CM_SetUsingCache( qtrue );
 	RE_LoadWorldMap_Actual( name, s_worldData, 0 );
 	ri.CM_SetUsingCache( qfalse );
+}
+
+void R_UnloadWorldMap()
+{
+    if (s_worldData.vertexBufferAllocation != VK_NULL_HANDLE)
+    {
+        vmaFreeMemory(gpuContext.allocator, s_worldData.vertexBufferAllocation);
+        s_worldData.vertexBufferAllocation = VK_NULL_HANDLE;
+    }
+
+    if (s_worldData.vertexBuffer != VK_NULL_HANDLE)
+    {
+        vkDestroyBuffer(gpuContext.device, s_worldData.vertexBuffer, nullptr);
+    }
 }

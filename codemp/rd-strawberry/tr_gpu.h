@@ -7,6 +7,16 @@
 #include <map>
 #include <vector>
 
+#include "qcommon/q_math.h"
+
+struct BspVertex
+{
+	vec4_t position;
+	vec2_t texcoord;
+	byte color[4];
+	uint32_t pad0;
+};
+
 enum DescriptorSetId
 {
 	DESCRIPTOR_SET_SINGLE_TEXTURE,

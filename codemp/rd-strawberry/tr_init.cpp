@@ -1466,6 +1466,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 
 		GpuContextPreShutdown(gpuContext);
 
+		R_UnloadWorldMap();
 		GpuDestroyShaderModule(gpuContext, tr.renderModuleVert);
 		GpuDestroyShaderModule(gpuContext, tr.renderModuleFrag);
 
