@@ -1285,6 +1285,22 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 
 }
 
+static bool RB_IsVertexDeformRequired(
+    const trRefEntity_t* refEntity, const shader_t* shader)
+{
+	return true;
+	if ((refEntity->e.renderfx & RF_DISINTEGRATE2) != 0)
+	{
+		return true;
+	}
+
+    if (tess.shader->numDeforms > 0)
+    {
+        return true;
+    }
+
+    return false;
+}
 
 /*
 ==============
@@ -1292,68 +1308,95 @@ RB_SurfaceFace
 ==============
 */
 void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
-	int			i, j, k;
-	unsigned int *indices;
-	glIndex_t	*tessIndexes;
-	bspDrawVert_t *v;
-	float		*normal;
-	int			ndx;
-	int			Bob;
-	int			numPoints;
-	int			dlightBits;
-	byteAlias_t	ba;
+    RB_CHECKOVERFLOW(surf->numPoints, surf->numIndices);
 
-	RB_CHECKOVERFLOW( surf->numPoints, surf->numIndices );
+    if (!RB_IsVertexDeformRequired(backEnd.currentEntity, tess.shader))
+    {
+		RB_EndSurface();
+		RB_BeginSurface(tess.shader, tess.fogNum);
+        assert(
+            tess.vertexBuffer == VK_NULL_HANDLE ||
+            tess.vertexBuffer == surf->vertexBuffer);
+        tess.vertexBuffer = surf->vertexBuffer;
 
-	dlightBits = surf->dlightBits;
-	tess.dlightBits |= dlightBits;
+        glIndex_t* outIndices = tess.indexes + tess.numIndexes;
+        auto* indices = reinterpret_cast<unsigned*>(
+            reinterpret_cast<char*>(surf) + surf->ofsIndices);
 
-	indices = ( unsigned * ) ( ( ( char  * ) surf ) + surf->ofsIndices );
+        for (int i = surf->numIndices - 1; i >= 0; i--)
+        {
+            outIndices[i] = surf->baseVertex + indices[i];
+        }
 
-	Bob = tess.numVertexes;
-	tessIndexes = tess.indexes + tess.numIndexes;
-	for ( i = surf->numIndices-1 ; i >= 0  ; i-- ) {
-		tessIndexes[i] = indices[i] + Bob;
+        tess.numIndexes += surf->numIndices;
+        tess.dlightBits |= surf->dlightBits;
+
+		RB_EndSurface();
+		RB_BeginSurface(tess.shader, tess.fogNum);
 	}
-
-	tess.numIndexes += surf->numIndices;
-
-	ndx = tess.numVertexes;
-
-	numPoints = surf->numPoints;
-
-	//if ( tess.shader->needsNormal )
+	else
 	{
-		normal = surf->plane.normal;
-		for ( i = 0, ndx = tess.numVertexes; i < numPoints; i++, ndx++ ) {
-			VectorCopy( normal, tess.normal[ndx] );
+		int			i, j, k;
+		unsigned int *indices;
+		glIndex_t	*tessIndexes;
+		bspDrawVert_t *v;
+		float		*normal;
+		int			ndx;
+		int			Bob;
+		int			numPoints;
+		int			dlightBits;
+		byteAlias_t	ba;
+
+		dlightBits = surf->dlightBits;
+		tess.dlightBits |= dlightBits;
+
+		indices = ( unsigned * ) ( ( ( char  * ) surf ) + surf->ofsIndices );
+
+		Bob = tess.numVertexes;
+		tessIndexes = tess.indexes + tess.numIndexes;
+		for ( i = surf->numIndices-1 ; i >= 0  ; i-- ) {
+			tessIndexes[i] = indices[i] + Bob;
 		}
-	}
 
-	for ( i = 0, v = surf->points, ndx = tess.numVertexes; i < numPoints; i++, v++, ndx++ )
-	{
-		VectorCopy( v->xyz, tess.xyz[ndx]);
-		tess.texCoords[ndx][0][0] = v->texcoords[0][0];
-		tess.texCoords[ndx][0][1] = v->texcoords[0][1];
-		for(k=0;k<MAXLIGHTMAPS;k++)
+		tess.numIndexes += surf->numIndices;
+
+		ndx = tess.numVertexes;
+
+		numPoints = surf->numPoints;
+
+		//if ( tess.shader->needsNormal )
 		{
-			if (tess.shader->lightmapIndex[k] >= 0)
-			{
-				tess.texCoords[ndx][k+1][0] = v->texcoords[1 + k][0];
-				tess.texCoords[ndx][k+1][1] = v->texcoords[1 + k][1];
-			}
-			else
-			{
-				break;
+			normal = surf->plane.normal;
+			for ( i = 0, ndx = tess.numVertexes; i < numPoints; i++, ndx++ ) {
+				VectorCopy( normal, tess.normal[ndx] );
 			}
 		}
-		ba.ui = ComputeFinalVertexColor(v->colors[0]);
-		for ( j=0; j<4; j++ )
-			tess.vertexColors[ndx][j] = ba.b[j];
-		tess.vertexDlightBits[ndx] = dlightBits;
-	}
 
-	tess.numVertexes += surf->numPoints;
+		for ( i = 0, v = surf->points, ndx = tess.numVertexes; i < numPoints; i++, v++, ndx++ )
+		{
+			VectorCopy( v->xyz, tess.xyz[ndx]);
+			tess.texCoords[ndx][0][0] = v->texcoords[0][0];
+			tess.texCoords[ndx][0][1] = v->texcoords[0][1];
+			for(k=0;k<MAXLIGHTMAPS;k++)
+			{
+				if (tess.shader->lightmapIndex[k] >= 0)
+				{
+					tess.texCoords[ndx][k+1][0] = v->texcoords[1 + k][0];
+					tess.texCoords[ndx][k+1][1] = v->texcoords[1 + k][1];
+				}
+				else
+				{
+					break;
+				}
+			}
+			ba.ui = ComputeFinalVertexColor(v->colors[0]);
+			for ( j=0; j<4; j++ )
+				tess.vertexColors[ndx][j] = ba.b[j];
+			tess.vertexDlightBits[ndx] = dlightBits;
+		}
+
+		tess.numVertexes += surf->numPoints;
+	}
 }
 
 

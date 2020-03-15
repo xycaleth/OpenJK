@@ -675,6 +675,9 @@ typedef struct srfGridMesh_s {
 	int				lodFixed;
 	int				lodStitched;
 
+	VkBuffer		vertexBuffer;
+	int				baseVertex;
+
 	// vertexes
 	int				width, height;
 	float			*widthLodError;
@@ -688,6 +691,9 @@ typedef struct srfSurfaceFace_s {
 
 	// dynamic lighting information
 	int			dlightBits;
+
+	VkBuffer		vertexBuffer;
+	int				baseVertex;
 
 	// triangle definitions (no normals at points)
 	int			numPoints;
@@ -706,6 +712,9 @@ typedef struct srfTriangles_s {
 
 	// culling information (FIXME: use this!)
 	vec3_t			bounds[2];
+
+	VkBuffer		vertexBuffer;
+	int				baseVertex;
 
 	// triangle definitions
 	int				numIndexes;
@@ -1510,13 +1519,14 @@ struct shaderCommands_s
 	stageVars_t	svars QALIGN(16);
 
 	shader_t	*shader;
-  float   shaderTime;
+	float   	shaderTime;
 	int			fogNum;
 
 	int			dlightBits;	// or together of all vertexDlightBits
 
 	int			numIndexes;
 	int			numVertexes;
+	VkBuffer	vertexBuffer;
 
 	// info extracted from current shader
 	int			numPasses;

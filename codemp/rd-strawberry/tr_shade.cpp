@@ -54,30 +54,33 @@ static void UploadVertexAndIndexData(
 {
 	static_assert(sizeof(BspVertex) == 32, "vertex must be 32 bytes in size");
 
-	// Vertex data
-	*vertexOffset = GetBufferOffset(
-		swapchainResources->vertexBufferBase,
-		swapchainResources->vertexBufferData);
-
-	auto *out = static_cast<BspVertex *>(swapchainResources->vertexBufferData);
-	for (int i = 0; i < tess.numVertexes; ++i)
+	if (vertexOffset != nullptr)
 	{
-		BspVertex *v = out + i;
-		v->position[0] = tess.xyz[i][0];
-		v->position[1] = tess.xyz[i][1];
-		v->position[2] = tess.xyz[i][2];
-		v->position[3] = 1.0f;
-		
-		v->texcoord[0] = tess.svars.texcoords[0][i][0];
-		v->texcoord[1] = tess.svars.texcoords[0][i][1];
+		// Vertex data
+		*vertexOffset = GetBufferOffset(
+			swapchainResources->vertexBufferBase,
+			swapchainResources->vertexBufferData);
 
-		v->color[0] = tess.svars.colors[i][0];
-		v->color[1] = tess.svars.colors[i][1];
-		v->color[2] = tess.svars.colors[i][2];
-		v->color[3] = tess.svars.colors[i][3];
+		auto *out = static_cast<BspVertex *>(swapchainResources->vertexBufferData);
+		for (int i = 0; i < tess.numVertexes; ++i)
+		{
+			BspVertex *v = out + i;
+			v->position[0] = tess.xyz[i][0];
+			v->position[1] = tess.xyz[i][1];
+			v->position[2] = tess.xyz[i][2];
+			v->position[3] = 1.0f;
+			
+			v->texcoord[0] = tess.svars.texcoords[0][i][0];
+			v->texcoord[1] = tess.svars.texcoords[0][i][1];
+
+			v->color[0] = tess.svars.colors[i][0];
+			v->color[1] = tess.svars.colors[i][1];
+			v->color[2] = tess.svars.colors[i][2];
+			v->color[3] = tess.svars.colors[i][3];
+		}
+
+		swapchainResources->vertexBufferData = out + tess.numVertexes;
 	}
-
-	swapchainResources->vertexBufferData = out + tess.numVertexes;
 
 	// Index data
 	*indexOffset = GetBufferOffset(
@@ -85,7 +88,7 @@ static void UploadVertexAndIndexData(
 		swapchainResources->indexBufferData);
 
 	auto *outIndexes =
-		static_cast<uint16_t *>(swapchainResources->indexBufferData);
+		static_cast<uint32_t *>(swapchainResources->indexBufferData);
 	for (int i = 0; i < tess.numIndexes; ++i)
 	{
 		outIndexes[i] = tess.indexes[i];
@@ -141,10 +144,18 @@ void R_DrawElementsWithShader(
 
     VkDeviceSize vertexOffset = 0;
     VkDeviceSize indexOffset = 0;
-    UploadVertexAndIndexData(swapchainResources, &vertexOffset, &indexOffset);
+
+    VkDeviceSize* vertexBufferOffset = &vertexOffset;
+    VkBuffer vertexBuffer = swapchainResources->vertexBuffer;
+	if (tess.vertexBuffer != VK_NULL_HANDLE)
+	{
+		vertexBuffer = tess.vertexBuffer;
+        vertexBufferOffset = nullptr;
+	}
+
+    UploadVertexAndIndexData(swapchainResources, vertexBufferOffset, &indexOffset);
 
     VkDescriptorSet descriptorSet = stage->descriptorSet;
-
     VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
 
     const RenderState renderState = {glState.glStateBits, glState.glStateBits2};
@@ -195,90 +206,87 @@ void R_DrawElementsWithShader(
         cmdBuffer,
         swapchainResources->indexBuffer,
         indexOffset,
-        VK_INDEX_TYPE_UINT16);
+        VK_INDEX_TYPE_UINT32);
 
-    vkCmdBindVertexBuffers(
-        cmdBuffer, 0, 1, &swapchainResources->vertexBuffer, &vertexOffset);
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &vertexOffset);
 
     vkCmdDrawIndexed(cmdBuffer, numIndexes, 1, 0, 0, 0);
 }
-void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
-	GpuSwapchainResources *swapchainResources =
-		backEndData->swapchainResources;
 
-	VkDeviceSize vertexOffset = 0;
-	VkDeviceSize indexOffset = 0;
-	UploadVertexAndIndexData(swapchainResources, &vertexOffset, &indexOffset);
+void R_DrawElements(int numIndexes, const glIndex_t* indexes)
+{
+    GpuSwapchainResources* swapchainResources = backEndData->swapchainResources;
 
-	VkDescriptorSet descriptorSet = CreateDescriptorSet(swapchainResources);
+    VkDeviceSize vertexOffset = 0;
+    VkDeviceSize indexOffset = 0;
 
-	VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
+    VkDeviceSize* vertexBufferOffset = &vertexOffset;
+    VkBuffer vertexBuffer = swapchainResources->vertexBuffer;
+    if (tess.vertexBuffer != VK_NULL_HANDLE)
+    {
+        vertexBuffer = tess.vertexBuffer;
+        vertexBufferOffset = nullptr;
+    }
 
-	const RenderState renderState = {
-		glState.glStateBits,
-		glState.glStateBits2
-	};
-	VkPipeline graphicsPipeline = 
-		GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+    UploadVertexAndIndexData(
+        swapchainResources, vertexBufferOffset, &indexOffset);
 
-	VkPipelineLayout pipelineLayout =
-		gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+    VkDescriptorSet descriptorSet = CreateDescriptorSet(swapchainResources);
+    VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
 
-	VkViewport viewport = {};
-	viewport.x = glState.viewport.x;
-	viewport.y = glState.viewport.y;
-	viewport.width = glState.viewport.width;
-	viewport.height = glState.viewport.height;
-	viewport.minDepth = glState.depthRangeMin;
-	viewport.maxDepth = glState.depthRangeMax;
+    const RenderState renderState = {glState.glStateBits, glState.glStateBits2};
+    VkPipeline graphicsPipeline =
+        GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
 
-	VkRect2D scissor = {};
-	scissor.offset = {glState.viewport.x, glState.viewport.y};
-	scissor.extent = {
-		static_cast<uint32_t>(glState.viewport.width),
-		static_cast<uint32_t>(glState.viewport.height)
-	};
+    VkPipelineLayout pipelineLayout =
+        gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
 
-	vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-	vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
+    VkViewport viewport = {};
+    viewport.x = glState.viewport.x;
+    viewport.y = glState.viewport.y;
+    viewport.width = glState.viewport.width;
+    viewport.height = glState.viewport.height;
+    viewport.minDepth = glState.depthRangeMin;
+    viewport.maxDepth = glState.depthRangeMax;
 
-	vkCmdBindPipeline(
-		cmdBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		graphicsPipeline);
+    VkRect2D scissor = {};
+    scissor.offset = {glState.viewport.x, glState.viewport.y};
+    scissor.extent = {static_cast<uint32_t>(glState.viewport.width),
+                      static_cast<uint32_t>(glState.viewport.height)};
 
-	vkCmdPushConstants(
-		cmdBuffer,
-		pipelineLayout,
-		VK_SHADER_STAGE_VERTEX_BIT,
-		0,
-		sizeof(gpuMatrices_t),
-		&glState.matrices);
+    vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+    vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
-	vkCmdBindDescriptorSets(
-		cmdBuffer,
-		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pipelineLayout,
-		0,
-		1,
-		&descriptorSet,
-		0,
-		nullptr);
+    vkCmdBindPipeline(
+        cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-	vkCmdBindIndexBuffer(
-		cmdBuffer,
-		swapchainResources->indexBuffer,
-		indexOffset,
-		VK_INDEX_TYPE_UINT16);
+    vkCmdPushConstants(
+        cmdBuffer,
+        pipelineLayout,
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(gpuMatrices_t),
+        &glState.matrices);
 
-	vkCmdBindVertexBuffers(
-		cmdBuffer,
-		0,
-		1,
-		&swapchainResources->vertexBuffer,
-		&vertexOffset);
+    vkCmdBindDescriptorSets(
+        cmdBuffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipelineLayout,
+        0,
+        1,
+        &descriptorSet,
+        0,
+        nullptr);
 
-	vkCmdDrawIndexed(cmdBuffer, numIndexes, 1, 0, 0, 0);
+    vkCmdBindIndexBuffer(
+        cmdBuffer,
+        swapchainResources->indexBuffer,
+        indexOffset,
+        VK_INDEX_TYPE_UINT32);
+
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &vertexOffset);
+
+    vkCmdDrawIndexed(cmdBuffer, numIndexes, 1, 0, 0, 0);
 }
 
 /*
@@ -430,6 +438,7 @@ void RB_BeginSurface(shader_t *shader, int fogNum)
 
 	tess.numIndexes = 0;
 	tess.numVertexes = 0;
+	tess.vertexBuffer = VK_NULL_HANDLE;
 	tess.shader = state;
 	tess.fogNum = fogNum;
 	tess.dlightBits = 0;		// will be OR'd in by surface functions
@@ -1819,14 +1828,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			//
 			// draw
 			//
-			if (pStage->bundle[0].image == nullptr)
-			{
-				R_DrawElements(input->numIndexes, input->indexes);
-			}
-			else
-			{
-				R_DrawElementsWithShader( input->numIndexes, input->indexes, pStage );
-			}
+			assert(pStage->bundle[0].image != nullptr);
+			R_DrawElementsWithShader( input->numIndexes, input->indexes, pStage );
 		}
 	}
 
@@ -2029,6 +2032,7 @@ void RB_EndSurface( void ) {
 	//
 	tess.currentStageIteratorFunc();
 
+#ifdef STRAWB
 	//
 	// draw debugging stuff
 	//
@@ -2038,6 +2042,7 @@ void RB_EndSurface( void ) {
 	if ( r_shownormals->integer ) {
 		DrawNormals (input);
 	}
+#endif
 	// clear shader so we can tell we don't have any unclosed surfaces
 	tess.numIndexes = 0;
 

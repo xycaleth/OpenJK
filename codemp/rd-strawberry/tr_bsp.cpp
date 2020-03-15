@@ -348,24 +348,26 @@ static int R_GetBSPTotalVertexCount(const world_t& worldData)
 	return totalVertexCount;
 }
 
-static int R_WriteBSPVertexBufferData(const world_t& worldData, BspVertex* stagingVertices)
+static int R_WriteBSPVertexBufferDataAndUpdateSurfaces(
+    world_t& worldData, BspVertex* stagingVertices, VkBuffer vertexBuffer)
 {
 	int stagingVertexIndex = 0;
 
     for (int i = 0, surfaceCount = worldData.numsurfaces; i < surfaceCount; ++i)
     {
         const msurface_t& surface = worldData.surfaces[i];
-		BspVertex* stagingVertex = stagingVertices + stagingVertexIndex;
 
         switch (*surface.data)
         {
         case SF_FACE: {
-            const auto* face =
-                reinterpret_cast<const srfSurfaceFace_t*>(surface.data);
+            auto* face = reinterpret_cast<srfSurfaceFace_t*>(surface.data);
+			face->baseVertex = stagingVertexIndex;
+			face->vertexBuffer = vertexBuffer;
 
             for (int vertexIndex = 0; vertexIndex < face->numPoints;
-                 ++vertexIndex)
+                 ++vertexIndex, ++stagingVertexIndex)
             {
+                BspVertex* stagingVertex = stagingVertices + stagingVertexIndex;
                 const bspDrawVert_t& v = face->points[vertexIndex];
                 stagingVertex->position[0] = v.xyz[0];
                 stagingVertex->position[1] = v.xyz[1];
@@ -384,12 +386,14 @@ static int R_WriteBSPVertexBufferData(const world_t& worldData, BspVertex* stagi
         }
 
         case SF_TRIANGLES: {
-            const auto* triangles =
-                reinterpret_cast<const srfTriangles_t*>(surface.data);
+            auto* triangles = reinterpret_cast<srfTriangles_t*>(surface.data);
+			triangles->baseVertex = stagingVertexIndex;
+			triangles->vertexBuffer = vertexBuffer;
 
             for (int vertexIndex = 0; vertexIndex < triangles->numVerts;
-                 ++vertexIndex)
+                 ++vertexIndex, ++stagingVertexIndex)
             {
+                BspVertex* stagingVertex = stagingVertices + stagingVertexIndex;
                 const drawVert_t& v = triangles->verts[vertexIndex];
                 stagingVertex->position[0] = v.xyz[0];
                 stagingVertex->position[1] = v.xyz[1];
@@ -408,13 +412,15 @@ static int R_WriteBSPVertexBufferData(const world_t& worldData, BspVertex* stagi
         }
 
         case SF_GRID: {
-            const auto* grid =
-                reinterpret_cast<const srfGridMesh_t*>(surface.data);
+            auto* grid = reinterpret_cast<srfGridMesh_t*>(surface.data);
+			grid->baseVertex = stagingVertexIndex;
+			grid->vertexBuffer = vertexBuffer;
 
             for (int vertexIndex = 0, vertexCount = grid->width * grid->height;
                  vertexIndex < vertexCount;
-                 ++vertexIndex)
+                 ++vertexIndex, ++stagingVertexIndex)
             {
+                BspVertex* stagingVertex = stagingVertices + stagingVertexIndex;
                 const drawVert_t& v = grid->verts[vertexIndex];
                 stagingVertex->position[0] = v.xyz[0];
                 stagingVertex->position[1] = v.xyz[1];
@@ -518,8 +524,8 @@ static void R_UploadBSPToVertexBuffer(world_t& worldData)
     }
 
     BspVertex* stagingVertices = static_cast<BspVertex*>(stagingBufferData);
-    const int verticesWritten =
-        R_WriteBSPVertexBufferData(worldData, stagingVertices);
+    const int verticesWritten = R_WriteBSPVertexBufferDataAndUpdateSurfaces(
+        worldData, stagingVertices, s_worldData.vertexBuffer);
     assert(verticesWritten == totalVertexCount);
 
     vmaUnmapMemory(gpuContext.allocator, stagingBufferMemory);
@@ -595,7 +601,7 @@ static void R_UploadBSPToVertexBuffer(world_t& worldData)
 
     ri.Printf(
         PRINT_ALL,
-        "BSP vertex data uploaded (%.3fMB)\n",
+        "...uploaded %.3fMB of data to GPU\n",
         vertexBufferSize / (1024.0f * 1024.0f));
 }
 
@@ -1700,9 +1706,9 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 	R_MovePatchSurfacesToHunk(worldData);
 #endif
 
-	R_UploadBSPToVertexBuffer(worldData);
-
 	ri.Printf( PRINT_ALL, "...loaded %d faces, %i meshes, %i trisurfs, %i flares\n", numFaces, numMeshes, numTriSurfs, numFlares );
+
+	R_UploadBSPToVertexBuffer(worldData);
 }
 
 
