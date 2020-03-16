@@ -42,7 +42,7 @@ float ProjectRadius( float r, vec3_t location )
 
 	p[0] = 0;
 	p[1] = Q_fabs( r );
-	p[2] = -dist;
+	p[2] = dist;
 
 	width = p[0] * tr.viewParms.projectionMatrix[1] +
 		           p[1] * tr.viewParms.projectionMatrix[5] +
