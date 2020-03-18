@@ -143,3 +143,4 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 
 typedef struct shaderStage_s shaderStage_t;
 VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t* stage);
+VkDescriptorSet GpuCreateMultitextureDescriptorSet(GpuContext& context, const shaderStage_t *stage);

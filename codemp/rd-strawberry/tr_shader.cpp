@@ -2394,41 +2394,88 @@ SHADER OPTIMIZATION AND FOGGING
 ========================================================================================
 */
 
+enum class StageOperator
+{
+	Add,
+	Multiply,
+};
+
 typedef struct collapse_s {
 	int		blendA;
 	int		blendB;
 
-	int		multitextureEnv;
+	StageOperator multitextureEnv;
 	int		multitextureBlend;
 } collapse_t;
 
-static collapse_t	collapse[] = {
-	{ 0, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		GL_MODULATE, 0 },
-
-	{ 0, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		GL_MODULATE, 0 },
-
-	{ GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		GL_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		GL_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		GL_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO, GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		GL_MODULATE, GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR },
-
-	{ 0, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		GL_ADD, 0 },
-
-	{ GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		GL_ADD, GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE },
+// c0 = existing color buffer
+// c1 = stage 0 color
+// c2 = stage 1 color
+static collapse_t collapse[] = {
+	// c1*c2 + c2*0 => (c1*c2)
+	{
+		0,
+		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
+		StageOperator::Multiply,
+		0
+	},
+	// c1*0 + c2*c1 => (c1*c2)
+	{
+		0,
+		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
+		StageOperator::Multiply,
+		0
+	},
+	// c1*0 + c2*(c0*0 + c1*c0) => (c2*c1)*c0
+	{
+		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
+		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
+		StageOperator::Multiply,
+		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR
+	},
+	// c1*0 + c2*(c0*c1 + c1*0) => (c2*c1)*c0
+	{
+		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
+		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
+		StageOperator::Multiply,
+		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR
+	},
+	// (c0*0 + c1*c0)*c2 + 0 => c0*(c1*c2)
+	{
+		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
+		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
+		StageOperator::Multiply,
+		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR
+	},
+	// (c0*0 + c1*c0)*c2 + 0 => c0*(c1*c2)
+	{
+		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
+		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
+		StageOperator::Multiply,
+		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR
+	},
+	// c1 + c2 => c1 + c2
+	{
+		0,
+		GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
+		StageOperator::Add,
+		0
+	},
+	// (c0 + c1) + c2 => c0 + (c1 + c2)
+	{
+		GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
+		GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
+		StageOperator::Add,
+		GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE
+	},
 #if 0
-	{ 0, GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_SRCBLEND_SRC_ALPHA,
-		GL_DECAL, 0 },
+	// c1 * (1 - c2.a) + (c2 * c2.a)
+	{
+		0,
+		GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_SRCBLEND_SRC_ALPHA,
+		GL_DECAL,
+		0
+	},
 #endif
 	{ -1 }
 };
@@ -2444,14 +2491,6 @@ static qboolean CollapseMultitexture( void ) {
 	int abits, bbits;
 	int i;
 	textureBundle_t tmpBundle;
-	// STRAWB: Fix multitexturing. Can we do better? This function only
-	// collapses the first two stages. Potentially we can do better by
-	// going through all of the stages. We also have the added benefit of
-	// choosing the blend function which wasn't available at the time of
-	// writing this.
-	if ( !qglActiveTextureARB ) {
-		return qfalse;
-	}
 
 	// make sure both stages are active
 	if ( !stages[0].active || !stages[1].active ) {
@@ -2482,11 +2521,6 @@ static qboolean CollapseMultitexture( void ) {
 		return qfalse;
 	}
 
-	// GL_ADD is a separate extension
-	if ( collapse[i].multitextureEnv == GL_ADD && !glConfig.textureEnvAddAvailable ) {
-		return qfalse;
-	}
-
 	// make sure waveforms have identical parameters
 	if ( ( stages[0].rgbGen != stages[1].rgbGen ) ||
 		( stages[0].alphaGen != stages[1].alphaGen ) )  {
@@ -2494,7 +2528,7 @@ static qboolean CollapseMultitexture( void ) {
 	}
 
 	// an add collapse can only have identity colors
-	if ( collapse[i].multitextureEnv == GL_ADD && stages[0].rgbGen != CGEN_IDENTITY ) {
+	if ( collapse[i].multitextureEnv == StageOperator::Add && stages[0].rgbGen != CGEN_IDENTITY ) {
 		return qfalse;
 	}
 
@@ -2517,20 +2551,9 @@ static qboolean CollapseMultitexture( void ) {
 		}
 	}
 
-	// make sure that lightmaps are in bundle 1 for 3dfx
-	if ( stages[0].bundle[0].isLightmap )
-	{
-		tmpBundle = stages[0].bundle[0];
-		stages[0].bundle[0] = stages[1].bundle[0];
-		stages[0].bundle[1] = tmpBundle;
-	}
-	else
-	{
-		stages[0].bundle[1] = stages[1].bundle[0];
-	}
+	stages[0].bundle[1] = stages[1].bundle[0];
 
 	// set the new blend state bits
-	shader.multitextureEnv = collapse[i].multitextureEnv;
 	stages[0].stateBits &= ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
 	stages[0].stateBits |= collapse[i].multitextureBlend;
 
@@ -2539,6 +2562,7 @@ static qboolean CollapseMultitexture( void ) {
 	//
 	memmove( &stages[1], &stages[2], sizeof( stages[0] ) * ( MAX_SHADER_STAGES - 2 ) );
 	memset( &stages[MAX_SHADER_STAGES-1], 0, sizeof( stages[0] ) );
+
 	return qtrue;
 }
 
@@ -2852,6 +2876,28 @@ static int VertexLightingCollapse( void ) {
 }
 #endif
 
+static void CreateShaderStageDescriptorSets()
+{
+	for (int stageIndex = 0; stageIndex < shader.numUnfoggedPasses; ++stageIndex)
+	{
+		shaderStage_t *stage = &stages[stageIndex];
+
+		switch (stage->descriptorSetId)
+		{
+			case DESCRIPTOR_SET_SINGLE_TEXTURE:
+				stage->descriptorSet = GpuCreateDescriptorSet(gpuContext, stage);
+				break;
+
+			case DESCRIPTOR_SET_MULTI_TEXTURE:
+				stage->descriptorSet = GpuCreateMultitextureDescriptorSet(gpuContext, stage);
+				break;
+
+			default:
+				break;
+		}
+	}
+}
+
 /*
 =========================
 FinishShader
@@ -3128,7 +3174,7 @@ static shader_t *FinishShader( void ) {
 		}
 		//rww - end hw fog
 
-		pStage->descriptorSet = GpuCreateDescriptorSet(gpuContext, pStage);
+		pStage->descriptorSetId = DESCRIPTOR_SET_SINGLE_TEXTURE;
 
 		stageIndex++; //rwwRMG - needed for AGEN_BLEND
 		stage++;
@@ -3156,13 +3202,13 @@ static shader_t *FinishShader( void ) {
 		stage--;
 	}
 
+
 	if ( shader.lightmapIndex[0] >= 0 && !hasLightmapStage )
 	{
 		ri.Printf( PRINT_DEVELOPER, "WARNING: shader '%s' has lightmap but no lightmap stage!\n", shader.name );
 		memcpy(shader.lightmapIndex, lightmapsNone, sizeof(shader.lightmapIndex));
 		memcpy(shader.styles, stylesDefault, sizeof(shader.styles));
 	}
-
 
 	//
 	// compute number of passes
@@ -3174,19 +3220,7 @@ static shader_t *FinishShader( void ) {
 		shader.sort = SS_FOG;
 	}
 
-	for ( stage = 1; stage < shader.numUnfoggedPasses; stage++ )
-	{
-		// Make sure stage is non detail and active
-		if(stages[stage].isDetail || !stages[stage].active)
-		{
-			break;
-		}
-		// MT lightmaps are always in bundle 1
-		if(stages[stage].bundle[0].isLightmap)
-		{
-			continue;
-		}
-	}
+	CreateShaderStageDescriptorSets();
 
 	return GeneratePermanentShader();
 }
@@ -3809,15 +3843,9 @@ void	R_ShaderList_f (void) {
 		} else {
 			ri.Printf( PRINT_ALL,  "  ");
 		}
-		if ( shader->multitextureEnv == GL_ADD ) {
-			ri.Printf( PRINT_ALL, "MT(a) " );
-		} else if ( shader->multitextureEnv == GL_MODULATE ) {
-			ri.Printf( PRINT_ALL, "MT(m) " );
-		} else if ( shader->multitextureEnv == GL_DECAL ) {
-			ri.Printf( PRINT_ALL, "MT(d) " );
-		} else {
-			ri.Printf( PRINT_ALL, "      " );
-		}
+
+		ri.Printf( PRINT_ALL, "      " );
+
 		if ( shader->explicitlyDefined ) {
 			ri.Printf( PRINT_ALL, "E " );
 		} else {

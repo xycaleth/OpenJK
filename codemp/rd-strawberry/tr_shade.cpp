@@ -458,49 +458,6 @@ void RB_BeginSurface(shader_t *shader, int fogNum)
 	tess.registration++;
 }
 
-/*
-===================
-DrawMultitextured
-
-output = t0 * t1 or t0 + t1
-
-t0 = most upstream according to spec
-t1 = most downstream according to spec
-===================
-*/
-static void DrawMultitextured( shaderCommands_t *input, int stage ) {
-	shaderStage_t	*pStage;
-
-	pStage = &tess.xstages[stage];
-
-	GL_State(pStage->stateBits);
-
-	//
-	// base
-	//
-	GL_SelectTexture( 0 );
-	// STRAWB upload texture arrays input->svars.texcoords[0] to tex0
-	R_BindAnimatedImage( &pStage->bundle[0] );
-
-	//
-	// lightmap/secondary pass
-	//
-	GL_SelectTexture( 1 );
-
-	if ( r_lightmap->integer ) {
-		GL_TexEnv( GL_REPLACE );
-	} else {
-		GL_TexEnv( tess.shader->multitextureEnv );
-	}
-
-	// STRAWB upload texture arrays input->svars.texcoords1 to tex1
-	R_BindAnimatedImage( &pStage->bundle[1] );
-
-	R_DrawElements( input->numIndexes, input->indexes );
-
-	GL_SelectTexture( 0 );
-}
-
 static bool IsOpaqueNonLightmapBundle(const textureBundle_t *bundle)
 {
 	if (bundle->image == nullptr)
@@ -1764,7 +1721,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		//
 		if (pStage->bundle[1].image != 0)
 		{
-			DrawMultitextured(input, stage);
+			GL_State(pStage->stateBits);
+			R_DrawElementsWithShader(input->numIndexes, input->indexes, pStage);
 		}
 		else
 		{
@@ -1847,10 +1805,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 */
 void RB_StageIteratorGeneric( void )
 {
-	shaderCommands_t *input;
-	int stage;
-
-	input = &tess;
+	shaderCommands_t *input = &tess;
 
 	RB_DeformTessGeometry();
 
@@ -1864,16 +1819,8 @@ void RB_StageIteratorGeneric( void )
 		GLimp_LogComment( va("--- RB_StageIteratorGeneric( %s ) ---\n", tess.shader->name) );
 	}
 
-	//
-	// set face culling appropriately
-	//
 	GL_Cull( input->shader->cullType );
-
-	// set polygon offset if necessary
-	if ( input->shader->polygonOffset )
-	{
-		GL_PolygonOffset(true);
-	}
+	GL_PolygonOffset(input->shader->polygonOffset);
 
 	//
 	// if there is only a single pass then we can enable color
@@ -1881,7 +1828,7 @@ void RB_StageIteratorGeneric( void )
 	// to avoid compiling those arrays since they will change
 	// during multipass rendering
 	//
-	if ( tess.numPasses > 1 || input->shader->multitextureEnv )
+	if ( tess.numPasses > 1 )
 	{
 		setArraysOnce = qfalse;
 	}
@@ -1935,11 +1882,11 @@ void RB_StageIteratorGeneric( void )
 		GL_PolygonOffset(false);
 	}
 
-#if 0
+#ifdef STRAWB
 	// Now check for surfacesprites.
 	if (r_surfaceSprites->integer)
 	{
-		for ( stage = 1; stage < tess.shader->numUnfoggedPasses; stage++ )
+		for ( int stage = 1; stage < tess.shader->numUnfoggedPasses; stage++ )
 		{
 			if (tess.xstages[stage].ss && tess.xstages[stage].ss->surfaceSpriteType)
 			{	// Draw the surfacesprite

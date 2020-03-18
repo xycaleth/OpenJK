@@ -621,6 +621,9 @@ void ConfigureRenderer(
 
 	Com_Printf("Configuring physical device features\n");
 
+	// Extensions from original renderer that we have by default in Vulkan
+	config.textureEnvAddAvailable = qtrue;
+
 	const VkPhysicalDeviceLimits& limits = properties.limits;
 	config.maxTextureSize = limits.maxImageDimension2D;
 
@@ -2107,7 +2110,7 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 	return graphicsPipeline;
 }
 
-VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t *stage)
+VkDescriptorSet GpuAllocateDescriptorSet(GpuContext& context, DescriptorSetId descriptorSetLayoutId)
 {
 	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
 	descriptorSetAllocateInfo.sType =
@@ -2116,7 +2119,7 @@ VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t 
 		context.globalDescriptorPool;
 	descriptorSetAllocateInfo.descriptorSetCount = 1;
 	descriptorSetAllocateInfo.pSetLayouts =
-		&gpuContext.descriptorSetLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+		&gpuContext.descriptorSetLayouts[descriptorSetLayoutId];
 
 	VkDescriptorSet descriptorSet;
 	if (vkAllocateDescriptorSets(
@@ -2126,6 +2129,14 @@ VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t 
 	{
 		Com_Error(ERR_FATAL, "Failed to create descriptor set");
 	}
+
+}
+
+VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t *stage)
+{
+	VkDescriptorSet descriptorSet = GpuAllocateDescriptorSet(
+		context,
+		DESCRIPTOR_SET_SINGLE_TEXTURE);
 
 	const image_t *image = stage->bundle[0].image;
 	if (stage->bundle[0].numImageAnimations > 1)
@@ -2151,6 +2162,53 @@ VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t 
 	descriptorWrite.descriptorCount = 1;
 	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	descriptorWrite.pImageInfo = &descriptorImageInfo;
+	vkUpdateDescriptorSets(gpuContext.device, 1, &descriptorWrite, 0, nullptr);
+
+	context.descriptorSets.push_back(descriptorSet);
+
+	return descriptorSet;
+}
+
+VkDescriptorSet GpuCreateMultitextureDescriptorSet(GpuContext& context, const shaderStage_t *stage)
+{
+	VkDescriptorSet descriptorSet = GpuAllocateDescriptorSet(
+		context,
+		DESCRIPTOR_SET_MULTI_TEXTURE);
+
+	const image_t *image0 = stage->bundle[0].image;
+	if (stage->bundle[0].numImageAnimations > 1)
+	{
+		image0 = ((image_t**)(stage->bundle[0].image))[0];
+	}
+
+	const image_t *image1 = stage->bundle[0].image;
+	if (stage->bundle[1].numImageAnimations > 1)
+	{
+		image1 = ((image_t**)(stage->bundle[1].image))[0];
+	}
+
+	if (image0 == nullptr || image1 == nullptr)
+	{
+		return VK_NULL_HANDLE;
+	}
+
+	std::array<VkDescriptorImageInfo, 2> descriptorImageInfos = {};
+	descriptorImageInfos[0].sampler = image0->sampler;
+	descriptorImageInfos[0].imageView = image0->imageView;
+	descriptorImageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	descriptorImageInfos[1].sampler = image1->sampler;
+	descriptorImageInfos[1].imageView = image1->imageView;
+	descriptorImageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet descriptorWrite = {};
+	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.dstSet = descriptorSet;
+	descriptorWrite.dstBinding = 0;
+	descriptorWrite.dstArrayElement = 0;
+	descriptorWrite.descriptorCount = descriptorImageInfos.size();
+	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptorWrite.pImageInfo = descriptorImageInfos.data();
+
 	vkUpdateDescriptorSets(gpuContext.device, 1, &descriptorWrite, 0, nullptr);
 
 	context.descriptorSets.push_back(descriptorSet);

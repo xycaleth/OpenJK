@@ -1676,7 +1676,7 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 	for ( i = 0 ; i < count ; i++, in++, out++ ) {
 		switch ( LittleLong( in->surfaceType ) ) {
 		case MST_PATCH:
-                        ParseMesh ( in, dv, out, worldData, index );
+			ParseMesh ( in, dv, out, worldData, index );
 			numMeshes++;
 			break;
 		case MST_TRIANGLE_SOUP:
@@ -1693,8 +1693,8 @@ static	void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, wor
 			break;
 		default:
 			Com_Error( ERR_DROP, "Bad surfaceType" );
-                }
-        }
+			}
+	}
 
 #ifdef PATCH_STITCHING
 	R_StitchAllPatches(worldData);

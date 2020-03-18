@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "ghoul2/ghoul2_shared.h" //rwwRMG - added
 #include "qgl.h"
 #include <vulkan/vulkan.h>
+#include "tr_gpu.h"
 #include "vk_mem_alloc.h"
 
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
@@ -406,6 +407,7 @@ typedef struct shaderStage_s {
 	bool			glow;
 
 	VkDescriptorSet	descriptorSet;
+	DescriptorSetId descriptorSetId;
 } shaderStage_t;
 
 struct shaderCommands_s;
@@ -463,8 +465,6 @@ typedef struct shader_s {
 	fogParms_t	*fogParms;
 
 	float		portalRange;			// distance to fog out at
-
-	int			multitextureEnv;		// 0, GL_MODULATE, GL_ADD (FIXME: put in stage)
 
 	cullType_t	cullType;				// CT_FRONT_SIDED, CT_BACK_SIDED, or CT_TWO_SIDED
 	bool		polygonOffset;			// set for decals and other items that must be offset
