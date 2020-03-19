@@ -2129,7 +2129,7 @@ VkDescriptorSet GpuAllocateDescriptorSet(GpuContext& context, DescriptorSetId de
 	{
 		Com_Error(ERR_FATAL, "Failed to create descriptor set");
 	}
-
+	return descriptorSet;
 }
 
 VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t *stage)

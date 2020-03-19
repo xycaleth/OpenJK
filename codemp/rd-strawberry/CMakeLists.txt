@@ -134,9 +134,19 @@ set(MPStrawberryRendererIncludeDirectories ${MPStrawberryRendererIncludeDirector
 set(MPStrawberryRendererLibraries ${MPStrawberryRendererLibraries} ${OPENGL_LIBRARIES})
 
 set(MPStrawberryRendererIncludeDirectories ${MPStrawberryRendererIncludeDirectories} ${OpenJKLibDir})
+ 
+add_custom_command(
+    OUTPUT render.spv.vert
+    COMMAND ${CMAKE_SOURCE_DIR}/shared/vulkansdk-macos-1.2.131.2/macOS/bin/glslc ${CMAKE_CURRENT_SOURCE_DIR}/glsl/render.vert -o render.spv.vert
+    DEPENDS glsl/render.vert)
+
+add_custom_command(
+    OUTPUT render.spv.frag
+    COMMAND ${CMAKE_SOURCE_DIR}/shared/vulkansdk-macos-1.2.131.2/macOS/bin/glslc ${CMAKE_CURRENT_SOURCE_DIR}/glsl/render.frag -o render.spv.frag
+    DEPENDS glsl/render.frag)
 
 find_package(Vulkan REQUIRED)
-add_library(${MPStrawberryRenderer} SHARED ${MPStrawberryRendererFiles})
+add_library(${MPStrawberryRenderer} SHARED ${MPStrawberryRendererFiles} render.spv.vert render.spv.frag)
 
 if(NOT MSVC)
 	# remove "lib" prefix for .so/.dylib files
@@ -149,6 +159,7 @@ target_compile_definitions(${MPStrawberryRenderer} PRIVATE ${SharedDefines})
 target_include_directories(${MPStrawberryRenderer} PRIVATE ${MPStrawberryRendererIncludeDirectories})
 
 set_target_properties(${MPStrawberryRenderer} PROPERTIES PROJECT_LABEL "MP Strawberry Renderer")
+
 
 if(WIN32)
 	install(TARGETS ${MPStrawberryRenderer}

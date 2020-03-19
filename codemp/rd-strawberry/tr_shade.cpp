@@ -35,7 +35,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 shaderCommands_t	tess;
-static qboolean	setArraysOnce;
 
 color4ub_t	styleColors[MAX_LIGHT_STYLES];
 
@@ -1711,29 +1710,21 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 		ComputeTexCoords(pStage);
 
-		if (!setArraysOnce)
-		{
-			// STRAWB upload color arrays
-		}
+		// STRAWB upload color arrays HERE
+		// STRAWB upload texcoord arrays HERE
 
 		//
-		// do multitexture
+		// multitexture stages are treated differently
 		//
-		if (pStage->bundle[1].image != 0)
+		int stateBits = pStage->stateBits;
+		if (pStage->bundle[1].image == 0)
 		{
-			GL_State(pStage->stateBits);
-			R_DrawElementsWithShader(input->numIndexes, input->indexes, pStage);
-		}
-		else
-		{
-			if (!setArraysOnce)
-			{
-				// STRAWB upload texcoord arrays
-			}
-
 			//
 			// set state
 			//
+#ifdef STRAWB
+			// This doesn't do anything right now since the textures are coming from the
+			// descriptor sets
 			if (backEnd.currentEntity->e.renderfx & RF_DISTORTION)
 			{
 				GL_Bind(tr.screenImage);
@@ -1742,8 +1733,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			{
 				R_BindAnimatedImage(&pStage->bundle[0]);
 			}
+#endif
 
-			int stateBits = 0;
 			if (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA)
 			{
 				ForceAlpha(
@@ -1772,23 +1763,16 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 					GLS_DEPTHMASK_TRUE |
 					GLS_ATEST_GE_C0;
 			}
-			else
-			{
-				stateBits = pStage->stateBits;
-			}
 
-			GL_State( stateBits );
 			if (backEnd.currentEntity->e.renderfx & RF_DISTORTION)
 			{
 				GL_Cull(CT_TWO_SIDED);
 			}
-
-			//
-			// draw
-			//
-			assert(pStage->bundle[0].image != nullptr);
-			R_DrawElementsWithShader( input->numIndexes, input->indexes, pStage );
 		}
+
+		GL_State(stateBits);
+
+		R_DrawElementsWithShader(input->numIndexes, input->indexes, pStage);
 	}
 
 #ifdef STRAWB
@@ -1822,23 +1806,7 @@ void RB_StageIteratorGeneric( void )
 	GL_Cull( input->shader->cullType );
 	GL_PolygonOffset(input->shader->polygonOffset);
 
-	//
-	// if there is only a single pass then we can enable color
-	// and texture arrays before we compile, otherwise we need
-	// to avoid compiling those arrays since they will change
-	// during multipass rendering
-	//
-	if ( tess.numPasses > 1 )
-	{
-		setArraysOnce = qfalse;
-	}
-	else
-	{
-		setArraysOnce = qtrue;
-		// STRAWB upload color and texcoords here
-		// tess.svars.colors
-		// tess.svars.texcoords[0]
-	}
+	// STRAWB: positions can be uploaded at this time
 
 	//
 	// call shader function

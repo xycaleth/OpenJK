@@ -2492,6 +2492,9 @@ static qboolean CollapseMultitexture( void ) {
 	int i;
 	textureBundle_t tmpBundle;
 
+	// STRAWB: Let's disable this for now
+	return qfalse;
+
 	// make sure both stages are active
 	if ( !stages[0].active || !stages[1].active ) {
 		return qfalse;
@@ -2908,9 +2911,7 @@ from the current global working shader
 */
 static shader_t *FinishShader( void ) {
 	int				stage, lmStage, stageIndex; //rwwRMG - stageIndex for AGEN_BLEND
-	qboolean		hasLightmapStage;
-
-	hasLightmapStage = qfalse;
+	qboolean		hasLightmapStage = qfalse;
 
 	//
 	// set sky stuff appropriate
@@ -3012,7 +3013,7 @@ static shader_t *FinishShader( void ) {
 			break;
 		}
 
-    // check for a missing texture
+		// check for a missing texture
 		if ( !pStage->bundle[0].image ) {
 			ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "Shader %s has a stage with no image\n", shader.name );
 			pStage->active = qfalse;
@@ -3074,17 +3075,17 @@ static shader_t *FinishShader( void ) {
 			// GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
 
 			// modulate, additive
-			if ( ( ( blendSrcBits == GLS_SRCBLEND_ONE ) && ( blendDstBits == GLS_DSTBLEND_ONE ) ) ||
-				( ( blendSrcBits == GLS_SRCBLEND_ZERO ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR ) ) ) {
+			if ((blendSrcBits == GLS_SRCBLEND_ONE && blendDstBits == GLS_DSTBLEND_ONE) ||
+				(blendSrcBits == GLS_SRCBLEND_ZERO && blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_COLOR)) {
 				pStage->adjustColorsForFog = ACFF_MODULATE_RGB;
 			}
 			// strict blend
-			else if ( ( blendSrcBits == GLS_SRCBLEND_SRC_ALPHA ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
+			else if (blendSrcBits == GLS_SRCBLEND_SRC_ALPHA && blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA)
 			{
 				pStage->adjustColorsForFog = ACFF_MODULATE_ALPHA;
 			}
 			// premultiplied alpha
-			else if ( ( blendSrcBits == GLS_SRCBLEND_ONE ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ) )
+			else if (blendSrcBits == GLS_SRCBLEND_ONE && blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA)
 			{
 				pStage->adjustColorsForFog = ACFF_MODULATE_RGBA;
 			} else {
@@ -3100,23 +3101,7 @@ static shader_t *FinishShader( void ) {
 				}
 				else
 				{
-					/*
-					if (( blendSrcBits == GLS_SRCBLEND_ONE ) && ( blendDstBits == GLS_DSTBLEND_ONE ))
-					{
-						// GL_ONE GL_ONE needs to come a bit later
-						shader.sort = SS_BLEND2;
-					}
-					else if (( blendSrcBits == GLS_SRCBLEND_SRC_ALPHA ) && ( blendDstBits == GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA ))
-					{ //rww - Pushed SS_BLEND1 up to SS_BLEND2, inserting this so that saber glow will render above water and things.
-					  //Unfortunately it still affects other shaders with the same blend settings, but it seems more or less alright.
-						shader.sort = SS_BLEND1;
-					}
-					else
-					{
-						shader.sort = SS_BLEND0;
-					}
-					*/
-					if (( blendSrcBits == GLS_SRCBLEND_ONE ) && ( blendDstBits == GLS_DSTBLEND_ONE ))
+					if (blendSrcBits == GLS_SRCBLEND_ONE && blendDstBits == GLS_DSTBLEND_ONE)
 					{
 						// GL_ONE GL_ONE needs to come a bit later
 						shader.sort = SS_BLEND1;
@@ -3201,7 +3186,6 @@ static shader_t *FinishShader( void ) {
 	if ( stage > 1 && CollapseMultitexture() ) {
 		stage--;
 	}
-
 
 	if ( shader.lightmapIndex[0] >= 0 && !hasLightmapStage )
 	{
