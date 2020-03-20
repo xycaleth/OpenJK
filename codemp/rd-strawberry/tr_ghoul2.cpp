@@ -3469,16 +3469,6 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 	G2PerformanceTimer_RB_SurfaceGhoul.Start();
 #endif
 
-	static int				j, k;
-	static int				baseIndex, baseVertex;
-	static int				numVerts;
-	static mdxmVertex_t 	*v;
-	static int				*triangles;
-	static int				indexes;
-	static glIndex_t		*tessIndexes;
-	static mdxmVertexTexCoord_t *pTexCoords;
-	static int				*piBoneReferences;
-
 #ifdef _G2_GORE
 	if (surf->alternateTex)
 	{
@@ -3495,21 +3485,24 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 		*/
 
 		int *data=(int *)surf->alternateTex;
-		numVerts=*data++;
-		indexes=(*data++);
+		int numVerts=*data++;
+		int indexes=(*data++);
+
 		// first up, sanity check our numbers
 		RB_CheckOverflow(numVerts,indexes);
 		indexes*=3;
 
 		data+=numVerts;
 
-		baseIndex = tess.numIndexes;
-		baseVertex = tess.numVertexes;
+		int baseIndex = tess.numIndexes;
+		int baseVertex = tess.numVertexes;
 
 		memcpy(&tess.xyz[baseVertex][0],data,sizeof(float)*4*numVerts);
 		data+=4*numVerts;
+
 		memcpy(&tess.normal[baseVertex][0],data,sizeof(float)*4*numVerts);
 		data+=4*numVerts;
+
 		assert(numVerts>0);
 
 		//float *texCoords = tess.texCoords[0][baseVertex];
@@ -3522,20 +3515,23 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 		//Or can you += array[.][x]+2?
 		if (surf->scale>1.0f)
 		{
-			for ( j = 0; j < numVerts; j++)
+			for (int j = 0; j < numVerts; j++)
 			{
 				texCoords[0]=((*(float *)data)-0.5f)*surf->scale+0.5f;
 				data++;
+
 				texCoords[1]=((*(float *)data)-0.5f)*surf->scale+0.5f;
 				data++;
+
 				//texCoords+=2;// Size of gore (s,t).
 				hack++;
+
 				texCoords = tess.texCoords[hack][0];
 			}
 		}
 		else
 		{
-			for (j=0;j<numVerts;j++)
+			for (int j=0;j<numVerts;j++)
 			{
 				texCoords[0]=*(float *)(data++);
 				texCoords[1]=*(float *)(data++);
@@ -3548,15 +3544,12 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 		//now check for fade overrides -rww
 		if (surf->fade)
 		{
-			static int lFade;
-			static int j;
-
 			if (surf->fade<1.0)
 			{
 				tess.fading = true;
-				lFade = Q_ftol(254.4f*surf->fade);
+				int lFade = Q_ftol(254.4f*surf->fade);
 
-				for (j=0;j<numVerts;j++)
+				for (int j=0;j<numVerts;j++)
 				{
 					tess.svars.colors[j+baseVertex][3] = lFade;
 				}
@@ -3564,9 +3557,9 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 			else if (surf->fade > 2.0f && surf->fade < 3.0f)
 			{ //hack to fade out on RGB if desired (don't want to add more to CRenderableSurface) -rww
 				tess.fading = true;
-				lFade = Q_ftol(254.4f*(surf->fade-2.0f));
+				int lFade = Q_ftol(254.4f*(surf->fade-2.0f));
 
-				for (j=0;j<numVerts;j++)
+				for (int j=0;j<numVerts;j++)
 				{
 					if (lFade < tess.svars.colors[j+baseVertex][0])
 					{ //don't set it unless the fade is less than the current r value (to avoid brightening suddenly before we start fading)
@@ -3580,8 +3573,8 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 		}
 
 		glIndex_t *indexPtr = &tess.indexes[baseIndex];
-		triangles = data;
-		for (j = indexes ; j ; j--)
+		int *triangles = data;
+		for (int j = indexes ; j ; j--)
 		{
 			*indexPtr++ = baseVertex + (*triangles++);
 		}
@@ -3593,7 +3586,6 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 
 	// grab the pointer to the surface info within the loaded mesh file
 	mdxmSurface_t	*surface = surf->surfaceData;
-
 	CBoneCache *bones = surf->boneCache;
 
 #ifndef _G2_GORE //we use this later, for gore
@@ -3608,157 +3600,89 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 	//
 
 	// first up, sanity check our numbers
-	baseVertex = tess.numVertexes;
-	triangles = (int *) ((byte *)surface + surface->ofsTriangles);
-	baseIndex = tess.numIndexes;
-#if 0
-	indexes = surface->numTriangles * 3;
-	for (j = 0 ; j < indexes ; j++) {
-		tess.indexes[baseIndex + j] = baseVertex + triangles[j];
-	}
-	tess.numIndexes += indexes;
-#else
-	indexes = surface->numTriangles; //*3;	//unrolled 3 times, don't multiply
-	tessIndexes = &tess.indexes[baseIndex];
-	for (j = 0 ; j < indexes ; j++) {
+	int baseVertex = tess.numVertexes;
+	int *triangles = (int *) ((byte *)surface + surface->ofsTriangles);
+	int baseIndex = tess.numIndexes;
+	int indexes = surface->numTriangles; //*3;	//unrolled 3 times, don't multiply
+
+	glIndex_t *tessIndexes = &tess.indexes[baseIndex];
+	for (int j = 0 ; j < indexes ; j++) {
 		*tessIndexes++ = baseVertex + *triangles++;
 		*tessIndexes++ = baseVertex + *triangles++;
 		*tessIndexes++ = baseVertex + *triangles++;
 	}
 	tess.numIndexes += indexes*3;
-#endif
 
-	numVerts = surface->numVerts;
+	int numVerts = surface->numVerts;
+	int *piBoneReferences = (int*) ((byte*)surface + surface->ofsBoneReferences);
+	mdxmVertex_t *v = (mdxmVertex_t *) ((byte *)surface + surface->ofsVerts);
+	mdxmVertexTexCoord_t *pTexCoords = (mdxmVertexTexCoord_t *) &v[numVerts];
 
-	piBoneReferences = (int*) ((byte*)surface + surface->ofsBoneReferences);
-	baseVertex = tess.numVertexes;
-	v = (mdxmVertex_t *) ((byte *)surface + surface->ofsVerts);
-	pTexCoords = (mdxmVertexTexCoord_t *) &v[numVerts];
-
-//	if (r_ghoul2fastnormals&&r_ghoul2fastnormals->integer==0)
-#if 0
-	if (0)
+	for ( int j = 0; j < numVerts; j++, baseVertex++,v++ )
 	{
-		for ( j = 0; j < numVerts; j++, baseVertex++,v++ )
+		const mdxaBone_t *bone = &bones->EvalRender(piBoneReferences[G2_GetVertBoneIndex( v, 0 )]);
+		int iNumWeights = G2_GetVertWeights( v );
+		tess.normal[baseVertex][0] = DotProduct( bone->matrix[0], v->normal );
+		tess.normal[baseVertex][1] = DotProduct( bone->matrix[1], v->normal );
+		tess.normal[baseVertex][2] = DotProduct( bone->matrix[2], v->normal );
+
+		if (iNumWeights==1)
 		{
-			const int iNumWeights = G2_GetVertWeights( v );
-
-			float fTotalWeight = 0.0f;
-
-			k=0;
-			int		iBoneIndex = G2_GetVertBoneIndex( v, k );
-			float	fBoneWeight = G2_GetVertBoneWeight( v, k, fTotalWeight, iNumWeights );
-			const mdxaBone_t *bone = &bones->EvalRender(piBoneReferences[iBoneIndex]);
-
-			tess.xyz[baseVertex][0] = fBoneWeight * ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
-			tess.xyz[baseVertex][1] = fBoneWeight * ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
-			tess.xyz[baseVertex][2] = fBoneWeight * ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
-
-			tess.normal[baseVertex][0] = fBoneWeight * DotProduct( bone->matrix[0], v->normal );
-			tess.normal[baseVertex][1] = fBoneWeight * DotProduct( bone->matrix[1], v->normal );
-			tess.normal[baseVertex][2] = fBoneWeight * DotProduct( bone->matrix[2], v->normal );
-
-			for ( k++ ; k < iNumWeights ; k++)
-			{
-				iBoneIndex	= G2_GetVertBoneIndex( v, k );
-				fBoneWeight	= G2_GetVertBoneWeight( v, k, fTotalWeight, iNumWeights );
-
-				bone = &bones->EvalRender(piBoneReferences[iBoneIndex]);
-
-				tess.xyz[baseVertex][0] += fBoneWeight * ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
-				tess.xyz[baseVertex][1] += fBoneWeight * ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
-				tess.xyz[baseVertex][2] += fBoneWeight * ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
-
-				tess.normal[baseVertex][0] += fBoneWeight * DotProduct( bone->matrix[0], v->normal );
-				tess.normal[baseVertex][1] += fBoneWeight * DotProduct( bone->matrix[1], v->normal );
-				tess.normal[baseVertex][2] += fBoneWeight * DotProduct( bone->matrix[2], v->normal );
-			}
-
-			tess.texCoords[baseVertex][0][0] = pTexCoords[j].texCoords[0];
-			tess.texCoords[baseVertex][0][1] = pTexCoords[j].texCoords[1];
+			tess.xyz[baseVertex][0] = ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
+			tess.xyz[baseVertex][1] = ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
+			tess.xyz[baseVertex][2] = ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
 		}
-	}
-	else
-	{
-#endif
-		float fTotalWeight;
-		float fBoneWeight;
-		float t1;
-		float t2;
-		const mdxaBone_t *bone;
-		const mdxaBone_t *bone2;
-		for ( j = 0; j < numVerts; j++, baseVertex++,v++ )
+		else
 		{
-
-			bone = &bones->EvalRender(piBoneReferences[G2_GetVertBoneIndex( v, 0 )]);
-			int iNumWeights = G2_GetVertWeights( v );
-			tess.normal[baseVertex][0] = DotProduct( bone->matrix[0], v->normal );
-			tess.normal[baseVertex][1] = DotProduct( bone->matrix[1], v->normal );
-			tess.normal[baseVertex][2] = DotProduct( bone->matrix[2], v->normal );
-
-			if (iNumWeights==1)
+			float fBoneWeight = G2_GetVertBoneWeightNotSlow( v, 0);
+			if (iNumWeights==2)
 			{
-				tess.xyz[baseVertex][0] = ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
-				tess.xyz[baseVertex][1] = ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
-				tess.xyz[baseVertex][2] = ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
+				const mdxaBone_t *bone2 = &bones->EvalRender(piBoneReferences[G2_GetVertBoneIndex( v, 1 )]);
+				float t1 = 0.0f;
+				float t2 = 0.0f;
+
+				t1 = ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
+				t2 = ( DotProduct( bone2->matrix[0], v->vertCoords ) + bone2->matrix[0][3] );
+				tess.xyz[baseVertex][0] = fBoneWeight * (t1-t2) + t2;
+
+				t1 = ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
+				t2 = ( DotProduct( bone2->matrix[1], v->vertCoords ) + bone2->matrix[1][3] );
+				tess.xyz[baseVertex][1] = fBoneWeight * (t1-t2) + t2;
+
+				t1 = ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
+				t2 = ( DotProduct( bone2->matrix[2], v->vertCoords ) + bone2->matrix[2][3] );
+				tess.xyz[baseVertex][2] = fBoneWeight * (t1-t2) + t2;
 			}
 			else
 			{
-				fBoneWeight = G2_GetVertBoneWeightNotSlow( v, 0);
-				if (iNumWeights==2)
+
+				tess.xyz[baseVertex][0] = fBoneWeight * ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
+				tess.xyz[baseVertex][1] = fBoneWeight * ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
+				tess.xyz[baseVertex][2] = fBoneWeight * ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
+
+				float fTotalWeight = fBoneWeight;
+				for (int k=1; k < iNumWeights-1 ; k++)
 				{
-					bone2 = &bones->EvalRender(piBoneReferences[G2_GetVertBoneIndex( v, 1 )]);
-					/*
-					useless transposition
-					tess.xyz[baseVertex][0] =
-					v[0]*(w*(bone->matrix[0][0]-bone2->matrix[0][0])+bone2->matrix[0][0])+
-					v[1]*(w*(bone->matrix[0][1]-bone2->matrix[0][1])+bone2->matrix[0][1])+
-					v[2]*(w*(bone->matrix[0][2]-bone2->matrix[0][2])+bone2->matrix[0][2])+
-					w*(bone->matrix[0][3]-bone2->matrix[0][3]) + bone2->matrix[0][3];
-					*/
-					t1 = ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
-					t2 = ( DotProduct( bone2->matrix[0], v->vertCoords ) + bone2->matrix[0][3] );
-					tess.xyz[baseVertex][0] = fBoneWeight * (t1-t2) + t2;
-					t1 = ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
-					t2 = ( DotProduct( bone2->matrix[1], v->vertCoords ) + bone2->matrix[1][3] );
-					tess.xyz[baseVertex][1] = fBoneWeight * (t1-t2) + t2;
-					t1 = ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
-					t2 = ( DotProduct( bone2->matrix[2], v->vertCoords ) + bone2->matrix[2][3] );
-					tess.xyz[baseVertex][2] = fBoneWeight * (t1-t2) + t2;
-				}
-				else
-				{
-
-					tess.xyz[baseVertex][0] = fBoneWeight * ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
-					tess.xyz[baseVertex][1] = fBoneWeight * ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
-					tess.xyz[baseVertex][2] = fBoneWeight * ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
-
-					fTotalWeight=fBoneWeight;
-					for (k=1; k < iNumWeights-1 ; k++)
-					{
-						bone = &bones->EvalRender(piBoneReferences[G2_GetVertBoneIndex( v, k )]);
-						fBoneWeight = G2_GetVertBoneWeightNotSlow( v, k);
-						fTotalWeight += fBoneWeight;
-
-						tess.xyz[baseVertex][0] += fBoneWeight * ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
-						tess.xyz[baseVertex][1] += fBoneWeight * ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
-						tess.xyz[baseVertex][2] += fBoneWeight * ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
-					}
 					bone = &bones->EvalRender(piBoneReferences[G2_GetVertBoneIndex( v, k )]);
-					fBoneWeight	= 1.0f-fTotalWeight;
+					fBoneWeight = G2_GetVertBoneWeightNotSlow( v, k);
+					fTotalWeight += fBoneWeight;
 
 					tess.xyz[baseVertex][0] += fBoneWeight * ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
 					tess.xyz[baseVertex][1] += fBoneWeight * ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
 					tess.xyz[baseVertex][2] += fBoneWeight * ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
 				}
-			}
+				bone = &bones->EvalRender(piBoneReferences[G2_GetVertBoneIndex( v, iNumWeights - 1 )]);
+				fBoneWeight	= 1.0f-fTotalWeight;
 
-			tess.texCoords[baseVertex][0][0] = pTexCoords[j].texCoords[0];
-			tess.texCoords[baseVertex][0][1] = pTexCoords[j].texCoords[1];
+				tess.xyz[baseVertex][0] += fBoneWeight * ( DotProduct( bone->matrix[0], v->vertCoords ) + bone->matrix[0][3] );
+				tess.xyz[baseVertex][1] += fBoneWeight * ( DotProduct( bone->matrix[1], v->vertCoords ) + bone->matrix[1][3] );
+				tess.xyz[baseVertex][2] += fBoneWeight * ( DotProduct( bone->matrix[2], v->vertCoords ) + bone->matrix[2][3] );
+			}
 		}
-#if 0
+
+		tess.texCoords[baseVertex][0][0] = pTexCoords[j].texCoords[0];
+		tess.texCoords[baseVertex][0][1] = pTexCoords[j].texCoords[1];
 	}
-#endif
 
 #ifdef _G2_GORE
 	CRenderableSurface *storeSurf = surf;
@@ -3786,13 +3710,13 @@ void RB_SurfaceGhoul( CRenderableSurface *surf )
 
 			float *fdata=(float *)data;
 			fdata+=gnumVerts;
-			for (j=0;j<gnumVerts;j++)
+			for (int j=0;j<gnumVerts;j++)
 			{
 				assert(data[j]>=0&&data[j]<numVerts);
 				memcpy(fdata,&tess.xyz[tess.numVertexes+data[j]][0],sizeof(float)*3);
 				fdata+=4;
 			}
-			for (j=0;j<gnumVerts;j++)
+			for (int j=0;j<gnumVerts;j++)
 			{
 				assert(data[j]>=0&&data[j]<numVerts);
 				memcpy(fdata,&tess.normal[tess.numVertexes+data[j]][0],sizeof(float)*3);
