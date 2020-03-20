@@ -137,7 +137,7 @@ static VkDescriptorSet CreateDescriptorSet(
 }
 
 void R_DrawElementsWithShader(
-    int numIndexes, const glIndex_t* indexes, const shaderStage_t* stage)
+    int numIndexes, const glIndex_t* indexes, const shaderStage_t* stage, PipelineStateId stateId)
 {
     GpuSwapchainResources* swapchainResources = backEndData->swapchainResources;
 
@@ -157,12 +157,8 @@ void R_DrawElementsWithShader(
     VkDescriptorSet descriptorSet = stage->descriptorSet;
     VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
 
-    const RenderState renderState = {glState.glStateBits, glState.glStateBits2};
-    VkPipeline graphicsPipeline =
-        GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-
     VkPipelineLayout pipelineLayout =
-        gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+        gpuContext.pipelineLayouts[stage->descriptorSetId];
 
     VkViewport viewport = {};
     viewport.x = glState.viewport.x;
@@ -181,7 +177,7 @@ void R_DrawElementsWithShader(
     vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
     vkCmdBindPipeline(
-        cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+        cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, stage->stateBundle.pipelines[stateId]);
 
     vkCmdPushConstants(
         cmdBuffer,
@@ -1716,8 +1712,12 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		//
 		// multitexture stages are treated differently
 		//
-		int stateBits = pStage->stateBits;
-		if (pStage->bundle[1].image == 0)
+		PipelineStateId stateId = PIPELINE_STATE_DEFAULT;
+		if (backEnd.projection2D)
+		{
+			stateId = PIPELINE_STATE_NO_CULL;
+		}
+		else if (pStage->bundle[1].image == nullptr)
 		{
 			//
 			// set state
@@ -1740,16 +1740,16 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				ForceAlpha(
 					(unsigned char *)tess.svars.colors,
 					backEnd.currentEntity->e.shaderRGBA[3]);
-				stateBits =
-						GLS_SRCBLEND_SRC_ALPHA |
-						GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+
+				stateId = PIPELINE_STATE_FORCE_ENT_ALPHA;
+
 				if (backEnd.currentEntity->e.renderfx & RF_ALPHA_DEPTH)
 				{
 					// depth write, so faces through the model will be
 					// stomped over by nearer ones. this works because we
 					// draw RF_FORCE_ENT_ALPHA stuff after everything else,
 					// including standard alpha surfs.
-					stateBits |= GLS_DEPTHMASK_TRUE;
+					stateId = PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE;
 				}
 			}
 			else if (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1)
@@ -1757,22 +1757,16 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				// we want to be able to rip a hole in the thing being
 				// disintegrated, and by doing the depth-testing it avoids some
 				// kinds of artefacts, but will probably introduce others?
-				stateBits =
-					GLS_SRCBLEND_SRC_ALPHA |
-					GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
-					GLS_DEPTHMASK_TRUE |
-					GLS_ATEST_GE_C0;
+				stateId = PIPELINE_STATE_DISINTEGRATE;
 			}
 
 			if (backEnd.currentEntity->e.renderfx & RF_DISTORTION)
 			{
-				GL_Cull(CT_TWO_SIDED);
+				stateId = PIPELINE_STATE_NO_CULL;
 			}
 		}
 
-		GL_State(stateBits);
-
-		R_DrawElementsWithShader(input->numIndexes, input->indexes, pStage);
+		R_DrawElementsWithShader(input->numIndexes, input->indexes, pStage, stateId);
 	}
 
 #ifdef STRAWB

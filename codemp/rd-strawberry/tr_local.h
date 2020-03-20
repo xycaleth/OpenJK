@@ -378,6 +378,22 @@ typedef struct textureBundle_s {
 
 #define NUM_TEXTURE_BUNDLES 2
 
+enum PipelineStateId
+{
+	PIPELINE_STATE_DEFAULT,
+	PIPELINE_STATE_NO_CULL,
+	PIPELINE_STATE_FORCE_ENT_ALPHA,
+	PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE,
+	PIPELINE_STATE_DISINTEGRATE,
+
+	PIPELINE_STATE_COUNT
+};
+
+struct StateBundle
+{
+	VkPipeline pipelines[PIPELINE_STATE_COUNT];
+};
+
 typedef struct shaderStage_s {
 	bool			active;
 	bool			isDetail;
@@ -408,6 +424,7 @@ typedef struct shaderStage_s {
 
 	VkDescriptorSet	descriptorSet;
 	DescriptorSetId descriptorSetId;
+	StateBundle stateBundle;
 } shaderStage_t;
 
 struct shaderCommands_s;
