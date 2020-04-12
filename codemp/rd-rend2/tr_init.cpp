@@ -1201,6 +1201,10 @@ void GL_SetDefaultState( void )
 	qglDisable( GL_BLEND );
 
 	qglEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+	qglStencilFunc(GL_ALWAYS, 0, 0xff);
+	qglStencilOpSeparate(GL_FRONT, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+	qglStencilOpSeparate(GL_BACK, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
 }
 
 /*
@@ -2191,6 +2195,8 @@ Q_EXPORT refexport_t* QDECL GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 	/*
 	Ghoul2 Insert End
 	*/
+
+	re.ext.Font_StrLenPixels = RE_Font_StrLenPixelsNew;
 
 	return &re;
 }

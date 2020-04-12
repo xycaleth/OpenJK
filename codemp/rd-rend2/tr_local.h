@@ -58,8 +58,8 @@ typedef unsigned int glIndex_t;
 #define MAX_IBOS      4096
 
 #define MAX_CALC_PSHADOWS    64
-#define MAX_DRAWN_PSHADOWS    16 // do not increase past 32, because bit flags are used on surfaces
-#define PSHADOW_MAP_SIZE      512
+#define MAX_DRAWN_PSHADOWS    32 // do not increase past 32, because bit flags are used on surfaces
+#define PSHADOW_MAP_SIZE      1024
 #define CUBE_MAP_MIPS      8
 #define CUBE_MAP_SIZE      (1 << CUBE_MAP_MIPS)
 
@@ -506,6 +506,7 @@ typedef enum {
 	DEFORM_WAVE,
 	DEFORM_NORMALS,
 	DEFORM_BULGE,
+	DEFORM_BULGE_UNIFORM,
 	DEFORM_MOVE,
 	DEFORM_PROJECTION_SHADOW,
 	DEFORM_AUTOSPRITE,
@@ -517,7 +518,8 @@ typedef enum {
 	DEFORM_TEXT4,
 	DEFORM_TEXT5,
 	DEFORM_TEXT6,
-	DEFORM_TEXT7
+	DEFORM_TEXT7,
+	DEFORM_DISINTEGRATION
 } deform_t;
 
 // deformVertexes types that can be handled by the GPU
@@ -570,6 +572,8 @@ typedef enum {
 	CGEN_FOG,				// standard fog
 	CGEN_CONST,				// fixed color
 	CGEN_LIGHTMAPSTYLE,		// lightmap style
+	CGEN_DISINTEGRATION_1,
+	CGEN_DISINTEGRATION_2
 } colorGen_t;
 
 typedef enum {
@@ -1224,6 +1228,7 @@ typedef enum
 	UNIFORM_LIGHTRADIUS,
 	UNIFORM_AMBIENTLIGHT,
 	UNIFORM_DIRECTEDLIGHT,
+	UNIFORM_DISINTEGRATION,
 
 	UNIFORM_PORTALRANGE,
 
@@ -1800,7 +1805,7 @@ typedef struct {
 	int			numGridArrayElements;
 
 
-
+	int			skyboxportal;
 	int			numClusters;
 	int			clusterBytes;
 	const byte	*vis;			// may be passed in by CM_LoadMap to save space
@@ -2284,6 +2289,7 @@ typedef struct trGlobals_s {
 	shaderProgram_t lightallShader[LIGHTDEF_COUNT];
 	shaderProgram_t shadowmapShader;
 	shaderProgram_t pshadowShader;
+	shaderProgram_t volumeShadowShader;
 	shaderProgram_t down4xShader;
 	shaderProgram_t bokehShader;
 	shaderProgram_t tonemapShader;
@@ -2874,19 +2880,6 @@ int R_LightForPoint( vec3_t point, vec3_t ambientLight, vec3_t directedLight, ve
 int R_LightDirForPoint( vec3_t point, vec3_t lightDir, vec3_t normal, world_t *world );
 int R_CubemapForPoint( const vec3_t point );
 
-
-/*
-============================================================
-
-SHADOWS
-
-============================================================
-*/
-
-void RB_ShadowTessEnd( void );
-void RB_ShadowFinish( void );
-void RB_ProjectionShadowDeform( void );
-
 /*
 ============================================================
 
@@ -2975,6 +2968,17 @@ void			RB_BindAndUpdateUniformBlock(uniformBlock_t block, void *data);
 void			CalculateVertexArraysProperties(uint32_t attributes, VertexArraysProperties *properties);
 void			CalculateVertexArraysFromVBO(uint32_t attributes, const VBO_t *vbo, VertexArraysProperties *properties);
 
+/*
+============================================================
+
+SHADOWS
+
+============================================================
+*/
+
+void RB_ShadowTessEnd(shaderCommands_t *input, const VertexArraysProperties *vertexArrays);
+void RB_ShadowFinish(void);
+void RB_ProjectionShadowDeform(void);
 
 /*
 ============================================================

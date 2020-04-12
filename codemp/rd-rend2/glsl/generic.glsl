@@ -54,6 +54,10 @@ uniform vec3 u_ModelLightDir;
 uniform float u_PortalRange;
 #endif
 
+#if defined(USE_RGBAGEN) || defined(USE_DEFORM_VERTEXES)
+uniform vec4 u_Disintegration; // origin, threshhold
+#endif
+
 #if defined(USE_VERTEX_ANIMATION)
 uniform float u_VertexLerp;
 #elif defined(USE_SKELETAL_ANIMATION)
@@ -118,6 +122,13 @@ vec3 DeformPosition(const vec3 pos, const vec3 normal, const vec2 st)
 			return pos + normal * scale * bulgeHeight;
 		}
 
+		case DEFORM_BULGE_UNIFORM:
+		{
+			float bulgeHeight = u_DeformParams[1]; // amplitude
+
+			return pos + normal * bulgeHeight;
+		}
+
 		case DEFORM_WAVE:
 		{
 			float base = u_DeformParams[0];
@@ -157,14 +168,25 @@ vec3 DeformPosition(const vec3 pos, const vec3 normal, const vec2 st)
 				u_DeformParams[5],
 				u_DeformParams[6]);
 
-			float d = dot( lightDir, ground );
-
-			lightDir = lightDir * max( 0.5 - d, 0.0 ) + ground;
-			d = 1.0 / dot( lightDir, ground );
-
+			float d = 1.0 / dot( lightDir, ground );
 			vec3 lightPos = lightDir * d;
+			return pos - lightPos * (dot( pos, ground ) + groundDist);
+		}
 
-			return pos - lightPos * dot( pos, ground ) + groundDist;
+		case DEFORM_DISINTEGRATION:
+		{
+			vec3 delta = u_Disintegration.xyz - pos;
+			float sqrDistance = dot(delta, delta);
+			vec3 normalScale = vec3(-0.01);
+			if ( sqrDistance < u_Disintegration.w )
+			{
+				normalScale = vec3(2.0, 2.0, 0.5);
+			}
+			else if ( sqrDistance < u_Disintegration.w + 50 )
+			{
+				normalScale = vec3(1.0, 1.0, 0.0);
+			}
+			return pos + normal * normalScale;
 		}
 	}
 }
@@ -257,7 +279,39 @@ vec4 CalcColor(vec3 position, vec3 normal)
 
 		color.rgb = clamp(u_DirectedLight * incoming + u_AmbientLight, 0.0, 1.0);
 	}
-	
+	else if (u_ColorGen == CGEN_DISINTEGRATION_1)
+	{
+		vec3 delta = u_Disintegration.xyz - position;
+		float sqrDistance = dot(delta, delta);
+		if (sqrDistance < u_Disintegration.w)
+		{
+			color *= 0.0;
+		}
+		else if (sqrDistance < u_Disintegration.w + 60.0)
+		{
+			color *= vec4(0.0, 0.0, 0.0, 1.0);
+		}
+		else if (sqrDistance < u_Disintegration.w + 150.0)
+		{
+			color *= vec4(0.435295, 0.435295, 0.435295, 1.0);
+		}
+		else if (sqrDistance < u_Disintegration.w + 180.0)
+		{
+			color *= vec4(0.6862745, 0.6862745, 0.6862745, 1.0);
+		}
+		return color;
+	}
+	else if (u_ColorGen == CGEN_DISINTEGRATION_2)
+	{
+		vec3 delta = u_Disintegration.xyz - position;
+		float sqrDistance = dot(delta, delta);
+		if (sqrDistance < u_Disintegration.w)
+		{
+			return vec4(0.0);
+		}
+		return color;
+	}
+
 	vec3 viewer = u_LocalViewOrigin - position;
 
 	if (u_AlphaGen == AGEN_LIGHTING_SPECULAR)
@@ -285,28 +339,14 @@ void main()
 	vec3 normal    = mix(attr_Normal,   attr_Normal2,   u_VertexLerp);
 	normal = normalize(normal - vec3(0.5));
 #elif defined(USE_SKELETAL_ANIMATION)
-	vec4 position4 = vec4(0.0);
-	vec4 normal4 = vec4(0.0);
-	vec4 originalPosition = vec4(attr_Position, 1.0);
-	vec4 originalNormal = vec4(attr_Normal - vec3 (0.5), 0.0);
+	mat4x3 influence =
+		u_BoneMatrices[attr_BoneIndexes[0]] * attr_BoneWeights[0] +
+        u_BoneMatrices[attr_BoneIndexes[1]] * attr_BoneWeights[1] +
+        u_BoneMatrices[attr_BoneIndexes[2]] * attr_BoneWeights[2] +
+        u_BoneMatrices[attr_BoneIndexes[3]] * attr_BoneWeights[3];
 
-	for (int i = 0; i < 4; i++)
-	{
-		uint boneIndex = attr_BoneIndexes[i];
-
-		mat4 boneMatrix = mat4(
-			vec4(u_BoneMatrices[boneIndex][0], 0.0),
-			vec4(u_BoneMatrices[boneIndex][1], 0.0),
-			vec4(u_BoneMatrices[boneIndex][2], 0.0),
-			vec4(u_BoneMatrices[boneIndex][3], 1.0)
-		);
-
-		position4 += (boneMatrix * originalPosition) * attr_BoneWeights[i];
-		normal4 += (boneMatrix * originalNormal) * attr_BoneWeights[i];
-	}
-
-	vec3 position = position4.xyz;
-	vec3 normal = normalize(normal4.xyz);
+    vec3 position = influence * vec4(attr_Position, 1.0);
+    vec3 normal = normalize(influence * vec4(attr_Normal - vec3(0.5), 0.0));
 #else
 	vec3 position  = attr_Position;
 	vec3 normal    = attr_Normal * 2.0 - vec3(1.0);
@@ -415,7 +455,7 @@ float CalcFog(in vec3 viewOrigin, in vec3 position, in vec4 fogPlane, in float d
 void main()
 {
 	vec4 color  = texture(u_DiffuseMap, var_DiffuseTex);
-
+	color.a *= var_Color.a;
 #if defined(USE_ALPHA_TEST)
 	if (u_AlphaTestType == ALPHA_TEST_GT0)
 	{
@@ -444,7 +484,7 @@ void main()
 	color *= vec4(1.0) - u_FogColorMask * fog;
 #endif
 
-	out_Color = color * var_Color;
+	out_Color = vec4(color.rgb * var_Color.rgb, color.a);
 
 #if defined(USE_GLOW_BUFFER)
 	out_Glow = out_Color;

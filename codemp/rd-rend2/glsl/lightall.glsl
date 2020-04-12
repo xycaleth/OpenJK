@@ -52,7 +52,9 @@ uniform vec4 u_DiffuseTexOffTurb;
 uniform mat4 u_ModelViewProjectionMatrix;
 uniform vec4 u_BaseColor;
 uniform vec4 u_VertColor;
+uniform vec4 u_Disintegration;
 uniform mat4 u_ModelMatrix;
+uniform int u_ColorGen;
 
 #if defined(USE_VERTEX_ANIMATION)
 uniform float u_VertexLerp;
@@ -94,6 +96,44 @@ out vec4 var_LightDir;
 #if defined(USE_PRIMARY_LIGHT) || defined(USE_SHADOWMAP)
 out vec4 var_PrimaryLightDir;
 #endif
+
+vec4 CalcColor(vec3 position)
+{
+	vec4 color = vec4(1.0);
+	if (u_ColorGen == CGEN_DISINTEGRATION_1)
+	{
+		vec3 delta = u_Disintegration.xyz - position;
+		float sqrDistance = dot(delta, delta);
+		if (sqrDistance < u_Disintegration.w)
+		{
+			color = vec4(0.0);
+		}
+		else if (sqrDistance < u_Disintegration.w + 60.0)
+		{
+			color = vec4(0.0, 0.0, 0.0, 1.0);
+		}
+		else if (sqrDistance < u_Disintegration.w + 150.0)
+		{
+			color = vec4(0.435295, 0.435295, 0.435295, 1.0);
+		}
+		else if (sqrDistance < u_Disintegration.w + 180.0)
+		{
+			color = vec4(0.6862745, 0.6862745, 0.6862745, 1.0);
+		}
+		return color;
+	}
+	else if (u_ColorGen == CGEN_DISINTEGRATION_2)
+	{
+		vec3 delta = u_Disintegration.xyz - position;
+		float sqrDistance = dot(delta, delta);
+		if (sqrDistance < u_Disintegration.w)
+		{
+			return vec4(0.0);
+		}
+		return color;
+	}
+	return color;
+}
 
 #if defined(USE_TCGEN) || defined(USE_LIGHTMAP)
 vec2 GenTexCoords(int TCGen, vec3 position, vec3 normal, vec3 TCGenVector0, vec3 TCGenVector1)
@@ -164,7 +204,6 @@ float CalcLightAttenuation(in bool isPoint, float normDist)
 	return clamp(attenuation, 0.0, 1.0);
 }
 
-
 void main()
 {
 #if defined(USE_VERTEX_ANIMATION)
@@ -172,38 +211,17 @@ void main()
 	vec3 normal    = mix(attr_Normal,      attr_Normal2,      u_VertexLerp);
 	vec3 tangent   = mix(attr_Tangent.xyz, attr_Tangent2.xyz, u_VertexLerp);
 #elif defined(USE_SKELETAL_ANIMATION)
-	vec4 position4 = vec4(0.0);
-	vec4 normal4 = vec4(0.0);
-	vec4 originalPosition = vec4(attr_Position, 1.0);
-	vec4 originalNormal = vec4(attr_Normal - vec3 (0.5), 0.0);
-#if defined(PER_PIXEL_LIGHTING)
-	vec4 tangent4 = vec4(0.0);
-	vec4 originalTangent = vec4(attr_Tangent.xyz - vec3(0.5), 0.0);
-#endif
+	mat4x3 influence =
+		u_BoneMatrices[attr_BoneIndexes[0]] * attr_BoneWeights[0] +
+        u_BoneMatrices[attr_BoneIndexes[1]] * attr_BoneWeights[1] +
+        u_BoneMatrices[attr_BoneIndexes[2]] * attr_BoneWeights[2] +
+        u_BoneMatrices[attr_BoneIndexes[3]] * attr_BoneWeights[3];
 
-	for (int i = 0; i < 4; i++)
-	{
-		uint boneIndex = attr_BoneIndexes[i];
-
-		mat4 boneMatrix = mat4(
-			vec4(u_BoneMatrices[boneIndex][0], 0.0),
-			vec4(u_BoneMatrices[boneIndex][1], 0.0),
-			vec4(u_BoneMatrices[boneIndex][2], 0.0),
-			vec4(u_BoneMatrices[boneIndex][3], 1.0)
-		);
-
-		position4 += (boneMatrix * originalPosition) * attr_BoneWeights[i];
-		normal4 += (boneMatrix * originalNormal) * attr_BoneWeights[i];
-#if defined(PER_PIXEL_LIGHTING)
-		tangent4 += (boneMatrix * originalTangent) * attr_BoneWeights[i];
-#endif
-	}
-
-	vec3 position = position4.xyz;
-	vec3 normal = normalize (normal4.xyz);
-#if defined(PER_PIXEL_LIGHTING)
-	vec3 tangent = normalize (tangent4.xyz);
-#endif
+    vec3 position = influence * vec4(attr_Position, 1.0);
+    vec3 normal = normalize(influence * vec4(attr_Normal - vec3(0.5), 0.0));
+	#if defined(PER_PIXEL_LIGHTING)
+		vec3 tangent = normalize(influence * vec4(attr_Tangent.xyz - vec3(0.5), 0.0));
+	#endif
 #else
 	vec3 position  = attr_Position;
 	vec3 normal    = attr_Normal;
@@ -230,6 +248,8 @@ void main()
 #else
 	var_TexCoords.xy = texCoords;
 #endif
+
+	vec4 disintegration = CalcColor(position);
 
 	gl_Position = u_ModelViewProjectionMatrix * vec4(position, 1.0);
 
@@ -276,6 +296,7 @@ void main()
 		var_Color.rgb *= u_DirectedLight * (attenuation * NL) + u_AmbientLight;
 #endif
 	}
+	var_Color *= disintegration;
 
 #if defined(USE_PRIMARY_LIGHT) || defined(USE_SHADOWMAP)
 	var_PrimaryLightDir.xyz = u_PrimaryLightOrigin.xyz - (position * u_PrimaryLightOrigin.w);
@@ -638,6 +659,7 @@ void main()
 #endif
 
 	vec4 diffuse = texture(u_DiffuseMap, texCoords);
+	diffuse.a *= var_Color.a;
 #if defined(USE_ALPHA_TEST)
 	if (u_AlphaTestType == ALPHA_TEST_GT0)
 	{
@@ -781,7 +803,7 @@ void main()
     out_Color.rgb = diffuse.rgb * lightColor;
 #endif
 	
-	out_Color.a = diffuse.a * var_Color.a;
+	out_Color.a = diffuse.a;
 
 #if defined(USE_GLOW_BUFFER)
 	out_Glow = out_Color;

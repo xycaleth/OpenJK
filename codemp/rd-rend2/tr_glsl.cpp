@@ -64,6 +64,7 @@ static uniformInfo_t uniformsInfo[] =
 	{ "u_ShadowMvp3", GLSL_MAT4x4, 1 },
 
 	{ "u_EnableTextures", GLSL_VEC4, 1 },
+
 	{ "u_DiffuseTexMatrix",  GLSL_VEC4, 1 },
 	{ "u_DiffuseTexOffTurb", GLSL_VEC4, 1 },
 
@@ -82,15 +83,16 @@ static uniformInfo_t uniformsInfo[] =
 	{ "u_BaseColor", GLSL_VEC4, 1 },
 	{ "u_VertColor", GLSL_VEC4, 1 },
 
-	{ "u_DlightInfo",    GLSL_VEC4, 1 },
-	{ "u_LightForward",  GLSL_VEC3, 1 },
-	{ "u_LightUp",       GLSL_VEC3, 1 },
-	{ "u_LightRight",    GLSL_VEC3, 1 },
-	{ "u_LightOrigin",   GLSL_VEC4, 1 },
-	{ "u_ModelLightDir", GLSL_VEC3, 1 },
-	{ "u_LightRadius",   GLSL_FLOAT, 1 },
-	{ "u_AmbientLight",  GLSL_VEC3, 1 },
-	{ "u_DirectedLight", GLSL_VEC3, 1 },
+	{ "u_DlightInfo",     GLSL_VEC4, 1 },
+	{ "u_LightForward",   GLSL_VEC3, 1 },
+	{ "u_LightUp",        GLSL_VEC3, 1 },
+	{ "u_LightRight",     GLSL_VEC3, 1 },
+	{ "u_LightOrigin",    GLSL_VEC4, 1 },
+	{ "u_ModelLightDir",  GLSL_VEC3, 1 },
+	{ "u_LightRadius",    GLSL_FLOAT, 1 },
+	{ "u_AmbientLight",   GLSL_VEC3, 1 },
+	{ "u_DirectedLight",  GLSL_VEC3, 1 },
+	{ "u_Disintegration", GLSL_VEC4, 1 },
 
 	{ "u_PortalRange", GLSL_FLOAT, 1 },
 
@@ -269,8 +271,10 @@ static size_t GLSL_GetShaderHeader(
 						"#define DEFORM_WAVE %i\n"
 						"#define DEFORM_NORMALS %i\n"
 						"#define DEFORM_BULGE %i\n"
+						"#define DEFORM_BULGE_UNIFORM %i\n"
 						"#define DEFORM_MOVE %i\n"
 						"#define DEFORM_PROJECTION_SHADOW %i\n"
+						"#define DEFORM_DISINTEGRATION %i\n"
 						"#define WF_NONE %i\n"
 						"#define WF_SIN %i\n"
 						"#define WF_SQUARE %i\n"
@@ -282,8 +286,10 @@ static size_t GLSL_GetShaderHeader(
 						DEFORM_WAVE,
 						DEFORM_NORMALS,
 						DEFORM_BULGE,
+						DEFORM_BULGE_UNIFORM,
 						DEFORM_MOVE,
 						DEFORM_PROJECTION_SHADOW,
+						DEFORM_DISINTEGRATION,
 						GF_NONE,
 						GF_SIN,
 						GF_SQUARE,
@@ -316,8 +322,12 @@ static size_t GLSL_GetShaderHeader(
 					 va("#ifndef colorGen_t\n"
 						"#define colorGen_t\n"
 						"#define CGEN_LIGHTING_DIFFUSE %i\n"
+						"#define CGEN_DISINTEGRATION_1 %i\n"
+						"#define CGEN_DISINTEGRATION_2 %i\n"
 						"#endif\n",
-						CGEN_LIGHTING_DIFFUSE));
+						CGEN_LIGHTING_DIFFUSE,
+						CGEN_DISINTEGRATION_1,
+						CGEN_DISINTEGRATION_2));
 
 	Q_strcat(dest, size,
 					 va("#ifndef alphaGen_t\n"
@@ -1722,6 +1732,32 @@ static int GLSL_LoadGPUProgramPShadow(
 	return 1;
 }
 
+static int GLSL_LoadGPUProgramVShadow(
+	ShaderProgramBuilder& builder,
+	Allocator& scratchAlloc)
+{
+	Allocator allocator(scratchAlloc.Base(), scratchAlloc.GetSize());
+
+	char extradefines[1200];
+	const GPUProgramDesc *programDesc =
+		LoadProgramSource("shadowvolume", allocator, fallback_shadowvolumeProgram);
+	const uint32_t attribs = ATTR_POSITION | ATTR_BONE_INDEXES | ATTR_BONE_WEIGHTS;
+
+	extradefines[0] = '\0';
+	Q_strcat(extradefines, sizeof(extradefines), "#define USE_SKELETAL_ANIMATION\n");
+
+	if (!GLSL_LoadGPUShader(builder, &tr.volumeShadowShader, "shadowvolume", attribs, NO_XFB_VARS,
+		extradefines, *programDesc))
+	{
+		ri.Error(ERR_FATAL, "Could not load shadowvolume shader!");
+	}
+
+	GLSL_InitUniforms(&tr.volumeShadowShader);
+	GLSL_FinishGPUShader(&tr.volumeShadowShader);
+
+	return 1;
+}
+
 static int GLSL_LoadGPUProgramDownscale4x(
 	ShaderProgramBuilder& builder,
 	Allocator& scratchAlloc )
@@ -2009,8 +2045,8 @@ static int GLSL_LoadGPUProgramDynamicGlowUpsample(
 		fallback_dglow_upsampleProgram,
 		0);
 
-	GLSL_InitUniforms(&tr.dglowDownsample);
-	GLSL_FinishGPUShader(&tr.dglowDownsample);
+	GLSL_InitUniforms(&tr.dglowUpsample);
+	GLSL_FinishGPUShader(&tr.dglowUpsample);
 	return 1;
 }
 
@@ -2026,8 +2062,8 @@ static int GLSL_LoadGPUProgramDynamicGlowDownsample(
 		fallback_dglow_downsampleProgram,
 		0);
 
-	GLSL_InitUniforms(&tr.dglowUpsample);
-	GLSL_FinishGPUShader(&tr.dglowUpsample);
+	GLSL_InitUniforms(&tr.dglowDownsample);
+	GLSL_FinishGPUShader(&tr.dglowDownsample);
 	return 1;
 }
 
@@ -2178,6 +2214,7 @@ void GLSL_LoadGPUShaders()
 	numEtcShaders += GLSL_LoadGPUProgramTextureColor(builder, allocator);
 	numEtcShaders += GLSL_LoadGPUProgramDepthFill(builder, allocator);
 	numEtcShaders += GLSL_LoadGPUProgramPShadow(builder, allocator);
+	numEtcShaders += GLSL_LoadGPUProgramVShadow(builder, allocator);
 	numEtcShaders += GLSL_LoadGPUProgramDownscale4x(builder, allocator);
 	numEtcShaders += GLSL_LoadGPUProgramBokeh(builder, allocator);
 	numEtcShaders += GLSL_LoadGPUProgramTonemap(builder, allocator);
@@ -2226,6 +2263,7 @@ void GLSL_ShutdownGPUShaders(void)
 
 	GLSL_DeleteGPUShader(&tr.shadowmapShader);
 	GLSL_DeleteGPUShader(&tr.pshadowShader);
+	GLSL_DeleteGPUShader(&tr.volumeShadowShader);
 	GLSL_DeleteGPUShader(&tr.down4xShader);
 	GLSL_DeleteGPUShader(&tr.bokehShader);
 	GLSL_DeleteGPUShader(&tr.tonemapShader);
@@ -2397,6 +2435,12 @@ shaderProgram_t *GLSL_GetGenericShaderProgram(int stage)
 
 	if ( pStage->alphaTestType != ALPHA_TEST_NONE )
 		shaderAttribs |= GENERICDEF_USE_ALPHA_TEST;
+
+	if (backEnd.currentEntity->e.renderfx & (RF_DISINTEGRATE1 | RF_DISINTEGRATE2))
+		shaderAttribs |= GENERICDEF_USE_RGBAGEN;
+
+	if (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE2)
+		shaderAttribs |= GENERICDEF_USE_DEFORM_VERTEXES;
 
 	switch (pStage->rgbGen)
 	{

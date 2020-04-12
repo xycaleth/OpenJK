@@ -177,9 +177,13 @@ void GL_State( uint32_t stateBits )
 		{
 			qglDepthFunc( GL_EQUAL );
 		}
-		else if ( stateBits & GLS_DEPTHFUNC_GREATER)
+		else if ( stateBits & GLS_DEPTHFUNC_GREATER )
 		{
 			qglDepthFunc( GL_GREATER );
+		}
+		else if ( stateBits & GLS_DEPTHFUNC_LESS )
+		{
+			qglDepthFunc( GL_LESS );
 		}
 		else
 		{
@@ -267,6 +271,36 @@ void GL_State( uint32_t stateBits )
 		else
 		{
 			qglDisable( GL_BLEND );
+		}
+	}
+
+	//
+	// check colormask
+	//
+	if ( diff & GLS_COLORMASK_BITS )
+	{
+		if ( stateBits & GLS_COLORMASK_BITS )
+		{
+			qglColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
+		}
+		else
+		{
+			qglColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
+		}
+	}
+
+	//
+	// check stenciltest
+	//
+	if (diff & GLS_STENCILTEST_ENABLE)
+	{
+		if (stateBits & GLS_STENCILTEST_ENABLE)
+		{
+			qglEnable(GL_STENCIL_TEST);
+		}
+		else
+		{
+			qglDisable(GL_STENCIL_TEST);
 		}
 	}
 
@@ -554,6 +588,17 @@ void RB_BeginDrawingView (void) {
 #else
 		qglClearColor( 0.0f, 0.0f, 0.0f, 1.0f );	// FIXME: get color of sky
 #endif
+	}
+
+	if (tr.refdef.rdflags & RDF_AUTOMAP || (!(backEnd.refdef.rdflags & RDF_NOWORLDMODEL)))
+	{
+		if (tr.world && tr.world->globalFog)
+		{ 
+			const fog_t		*fog = tr.world->globalFog;
+
+			clearBits |= GL_COLOR_BUFFER_BIT;
+			qglClearColor(fog->parms.color[0], fog->parms.color[1], fog->parms.color[2], 1.0f);
+		}
 	}
 
 	// clear to white for shadow maps
@@ -2142,7 +2187,7 @@ static void RB_RenderMainPass( drawSurf_t *drawSurfs, int numDrawSurfs )
 	}
 
 	// darken down any stencil shadows
-	RB_ShadowFinish();		
+	RB_ShadowFinish();
 }
 
 static void RB_RenderAllDepthRelatedPasses( drawSurf_t *drawSurfs, int numDrawSurfs )

@@ -177,28 +177,14 @@ void main()
 	vec3 normal   = mix(attr_Normal,   attr_Normal2,   u_VertexLerp);
 	normal = normalize(normal - vec3(0.5));
 #elif defined(USE_SKELETAL_ANIMATION)
-	vec4 position4 = vec4(0.0);
-	vec4 normal4 = vec4(0.0);
-	vec4 originalPosition = vec4(attr_Position, 1.0);
-	vec4 originalNormal = vec4(attr_Normal - vec3 (0.5), 0.0);
+	mat4x3 influence =
+		u_BoneMatrices[attr_BoneIndexes[0]] * attr_BoneWeights[0] +
+        u_BoneMatrices[attr_BoneIndexes[1]] * attr_BoneWeights[1] +
+        u_BoneMatrices[attr_BoneIndexes[2]] * attr_BoneWeights[2] +
+        u_BoneMatrices[attr_BoneIndexes[3]] * attr_BoneWeights[3];
 
-	for (int i = 0; i < 4; i++)
-	{
-		uint boneIndex = attr_BoneIndexes[i];
-
-		mat4 boneMatrix = mat4(
-			vec4(u_BoneMatrices[boneIndex][0], 0.0),
-			vec4(u_BoneMatrices[boneIndex][1], 0.0),
-			vec4(u_BoneMatrices[boneIndex][2], 0.0),
-			vec4(u_BoneMatrices[boneIndex][3], 1.0)
-		);
-
-		position4 += (boneMatrix * originalPosition) * attr_BoneWeights[i];
-		normal4 += (boneMatrix * originalNormal) * attr_BoneWeights[i];
-	}
-
-	vec3 position = position4.xyz;
-	vec3 normal = normalize(normal4.xyz);
+    vec3 position = influence * vec4(attr_Position, 1.0);
+    vec3 normal = normalize(influence * vec4(attr_Normal - vec3(0.5), 0.0));
 #else
 	vec3 position = attr_Position;
 	vec3 normal   = attr_Normal * 2.0 - vec3(1.0);
@@ -231,6 +217,8 @@ out vec4 out_Glow;
 
 float CalcFog(in vec3 viewOrigin, in vec3 position, in vec4 fogPlane, in float depthToOpaque, in bool hasPlane)
 {
+	bool inFog = dot(viewOrigin, fogPlane.xyz) - fogPlane.w >= 0.0 || !hasPlane;
+
 	// line: x = o + tv
 	// plane: (x . n) + d = 0
 	// intersects: dot(o + tv, n) + d = 0
@@ -242,22 +230,13 @@ float CalcFog(in vec3 viewOrigin, in vec3 position, in vec4 fogPlane, in float d
 	// fogPlane is inverted in tr_bsp for some reason.
 	float t = -(fogPlane.w + dot(viewOrigin, -fogPlane.xyz)) / dot(V, -fogPlane.xyz);
 
-	bool inFog = ((dot(viewOrigin, fogPlane.xyz) - fogPlane.w) >= 0.0) || !hasPlane;
-	bool intersects = (t > 0.0 && t <= 1.0);
+	float distToVertexFromViewOrigin = length(V);
+	float distToIntersectionFromViewOrigin = max(t, 0.0) * distToVertexFromViewOrigin;
 
-	// this is valid only when t > 0.0. When t < 0.0, then intersection point is behind
-	// the camera, meaning we're facing away from the fog plane, which probably means
-	// we're inside the fog volume.
-	vec3 intersectsAt = viewOrigin + t*V;
+	float distOutsideFog = max(distToVertexFromViewOrigin - distToIntersectionFromViewOrigin, 0.0);
+	float distThroughFog = mix(distToVertexFromViewOrigin, distOutsideFog, !inFog);
 
-	float distToVertexFromIntersection = distance(intersectsAt, position);
-	float distToVertexFromViewOrigin = distance(viewOrigin, position);
-
-	float distToVertex = mix(distToVertexFromViewOrigin,
-							 distToVertexFromIntersection,
-							 !inFog && intersects);
-
-	float z = depthToOpaque * distToVertex;
+	float z = depthToOpaque * distThroughFog;
 	return 1.0 - clamp(exp(-(z * z)), 0.0, 1.0);
 }
 
@@ -265,7 +244,7 @@ void main()
 {
 	float fog = CalcFog(u_ViewOrigin, var_WSPosition, u_FogPlane, u_FogDepthToOpaque, u_FogHasPlane);
 	out_Color.rgb = u_Color.rgb;
-	out_Color.a = sqrt(clamp(fog, 0.0, 1.0));
+	out_Color.a = fog;
 
 #if defined(USE_ALPHA_TEST)
 	if (u_AlphaTestType == ALPHA_TEST_GT0)
@@ -293,6 +272,6 @@ void main()
 #if defined(USE_GLOW_BUFFER)
 	out_Glow = out_Color;
 #else
-	out_Glow = vec4(0.0);
+	out_Glow = vec4(0.0, 0.0, 0.0, out_Color.a);
 #endif
 }
