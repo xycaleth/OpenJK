@@ -2881,14 +2881,29 @@ static int VertexLightingCollapse( void ) {
 
 static void CreateShaderStageDescriptorSets()
 {
+    if (shader.sky != nullptr)
+    {
+        for (int i = 0; i < 6; ++i)
+        {
+            shader.sky->descriptorSets[i] =
+                GpuCreateDescriptorSet(gpuContext, shader.sky->outerbox[i]);
+        }
+    }
+
 	for (int stageIndex = 0; stageIndex < shader.numUnfoggedPasses; ++stageIndex)
 	{
 		shaderStage_t *stage = &stages[stageIndex];
 
+        const image_t *image = stage->bundle[0].image;
+        if (stage->bundle[0].numImageAnimations > 1)
+        {
+            image = ((image_t**)(stage->bundle[0].image))[0];
+        }
+
 		switch (stage->descriptorSetId)
 		{
 			case DESCRIPTOR_SET_SINGLE_TEXTURE:
-				stage->descriptorSet = GpuCreateDescriptorSet(gpuContext, stage);
+				stage->descriptorSet = GpuCreateDescriptorSet(gpuContext, image);
 				break;
 
 			case DESCRIPTOR_SET_MULTI_TEXTURE:
@@ -2903,6 +2918,12 @@ static void CreateShaderStageDescriptorSets()
 
 static void CreateShaderGraphicsPipelines()
 {
+    if (shader.sky != nullptr)
+    {
+        shader.sky->graphicsPipeline =
+            GpuGetGraphicsPipelineForRenderState(gpuContext, {0, 0});
+    }
+
 	for (int stageIndex = 0; stageIndex < shader.numUnfoggedPasses; ++stageIndex)
 	{
 		shaderStage_t *stage = &stages[stageIndex];

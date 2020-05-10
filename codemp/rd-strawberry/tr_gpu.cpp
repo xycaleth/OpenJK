@@ -2135,22 +2135,16 @@ VkDescriptorSet GpuAllocateDescriptorSet(GpuContext& context, DescriptorSetId de
 	return descriptorSet;
 }
 
-VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const shaderStage_t *stage)
+VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const image_t* image)
 {
-	VkDescriptorSet descriptorSet = GpuAllocateDescriptorSet(
-		context,
-		DESCRIPTOR_SET_SINGLE_TEXTURE);
-
-	const image_t *image = stage->bundle[0].image;
-	if (stage->bundle[0].numImageAnimations > 1)
-	{
-		image = ((image_t**)(stage->bundle[0].image))[0];
-	}
-
 	if (image == nullptr)
 	{
 		return VK_NULL_HANDLE;
 	}
+
+	VkDescriptorSet descriptorSet = GpuAllocateDescriptorSet(
+		context,
+		DESCRIPTOR_SET_SINGLE_TEXTURE);
 
 	VkDescriptorImageInfo descriptorImageInfo = {};
 	descriptorImageInfo.sampler = image->sampler;

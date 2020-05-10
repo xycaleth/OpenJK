@@ -46,7 +46,7 @@ static VkDeviceSize GetBufferOffset(const void *base, const void *pointer)
 		static_cast<const char *>(base);
 }
 
-static VkDeviceSize R_UploadVertexData(
+VkDeviceSize R_UploadVertexData(
 	GpuSwapchainResources *swapchainResources,
     int numVertexes)
 {
@@ -79,10 +79,10 @@ static VkDeviceSize R_UploadVertexData(
 	return vertexOffset;
 }
 
-static VkDeviceSize R_UploadIndexData(
+VkDeviceSize R_UploadIndexData(
     GpuSwapchainResources* swapchainResources,
     int numIndexes,
-    glIndex_t* indexes)
+    const glIndex_t* indexes)
 {
     const VkDeviceSize indexOffset = GetBufferOffset(
 		swapchainResources->indexBufferBase,
@@ -1527,7 +1527,7 @@ void ForceAlpha(byte *dstColors, byte alpha)
 	}
 }
 
-static void GL_BindVertexBuffers(
+void GL_BindVertexBuffers(
     GpuSwapchainResources* swapchainResources,
     size_t vertexBufferCount,
     VkBuffer* vertexBuffers,
@@ -1538,7 +1538,7 @@ static void GL_BindVertexBuffers(
         cmdBuffer, 0, vertexBufferCount, vertexBuffers, vertexBufferOffsets);
 }
 
-static void GL_BindGraphicsPipeline(
+void GL_BindGraphicsPipeline(
     GpuSwapchainResources* swapchainResources,
     VkPipeline graphicsPipeline)
 {
@@ -1547,7 +1547,7 @@ static void GL_BindGraphicsPipeline(
         cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 }
 
-static void GL_BindDescriptorSets(
+void GL_BindDescriptorSets(
     GpuSwapchainResources* swapchainResources,
     VkPipelineLayout pipelineLayout,
     size_t descriptorSetCount,
@@ -1565,7 +1565,7 @@ static void GL_BindDescriptorSets(
         nullptr);
 }
 
-static void GL_UploadPushConstants(
+void GL_UploadPushConstants(
     GpuSwapchainResources* swapchainResources,
     VkPipelineLayout pipelineLayout,
     size_t constantDataSize,

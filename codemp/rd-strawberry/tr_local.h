@@ -450,6 +450,8 @@ typedef enum {
 typedef struct skyParms_s {
 	float		cloudHeight;
 	image_t		*outerbox[6];
+    VkDescriptorSet descriptorSets[6];
+    VkPipeline graphicsPipeline;
 } skyParms_t;
 
 typedef struct fogParms_s {
@@ -1575,6 +1577,43 @@ void RB_CheckOverflow( int verts, int indexes );
 void RB_StageIteratorGeneric( void );
 void RB_StageIteratorSky( void );
 void R_DrawElements( int numIndexes, const glIndex_t *indexes );
+
+void R_DrawElementsWithShader(
+    GpuSwapchainResources* swapchainResources,
+    int numIndexes,
+    VkDeviceSize indexBufferOffset,
+    VkBuffer indexBuffer);
+
+VkDeviceSize R_UploadIndexData(
+    GpuSwapchainResources* swapchainResources,
+    int numIndexes,
+    const glIndex_t* indexes);
+
+VkDeviceSize R_UploadVertexData(
+	GpuSwapchainResources *swapchainResources,
+    int numVertexes);
+
+void GL_BindVertexBuffers(
+    GpuSwapchainResources* swapchainResources,
+    size_t vertexBufferCount,
+    const VkBuffer* vertexBuffers,
+    const VkDeviceSize* vertexBufferOffsets);
+
+void GL_BindGraphicsPipeline(
+    GpuSwapchainResources* swapchainResources,
+    VkPipeline graphicsPipeline);
+
+void GL_BindDescriptorSets(
+    GpuSwapchainResources* swapchainResources,
+    VkPipelineLayout pipelineLayout,
+    size_t descriptorSetCount,
+    const VkDescriptorSet* descriptorSets);
+
+void GL_UploadPushConstants(
+    GpuSwapchainResources* swapchainResources,
+    VkPipelineLayout pipelineLayout,
+    size_t constantDataSize,
+    const void* constantData);
 
 void RB_AddQuadStamp( vec3_t origin, vec3_t left, vec3_t up, byte *color );
 void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, float s1, float t1, float s2, float t2 );

@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // tr_sky.c
+#include "rd-strawberry/tr_gpu.h"
 #include "tr_local.h"
 
 #define SKY_SUBDIVISIONS		8
@@ -364,50 +365,93 @@ static void MakeSkyVec( float s, float t, int axis, float outSt[2], vec3_t outXY
 static vec3_t	s_skyPoints[SKY_SUBDIVISIONS+1][SKY_SUBDIVISIONS+1];
 static float	s_skyTexCoords[SKY_SUBDIVISIONS+1][SKY_SUBDIVISIONS+1][2];
 
-static void DrawSkySide( struct image_s *image, const int mins[2], const int maxs[2] )
+static void DrawSkySide( const skyParms_t* skyParms, int sideIndex, const int mins[2], const int maxs[2] )
 {
-	tess.numVertexes = 0;
-	tess.numIndexes = 0;
+    tess.numVertexes = 0;
+    tess.numIndexes = 0;
 
-	for (int t = mins[1]+HALF_SKY_SUBDIVISIONS; t <= maxs[1]+HALF_SKY_SUBDIVISIONS; t++)
-	{
-		for (int s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++)
-		{
-			VectorAdd(s_skyPoints[t][s], backEnd.viewParms.ori.origin, tess.xyz[tess.numVertexes]);
-			tess.svars.texcoords[0][tess.numVertexes][0] = s_skyTexCoords[t][s][0];
-			tess.svars.texcoords[0][tess.numVertexes][1] = s_skyTexCoords[t][s][1];
-			memset(
-				tess.svars.colors[tess.numVertexes],
-				tr.identityLightByte,
-				sizeof(tess.svars.colors[0]));
+    for (int t = mins[1] + HALF_SKY_SUBDIVISIONS;
+         t <= maxs[1] + HALF_SKY_SUBDIVISIONS;
+         t++)
+    {
+        for (int s = mins[0] + HALF_SKY_SUBDIVISIONS;
+             s <= maxs[0] + HALF_SKY_SUBDIVISIONS;
+             s++)
+        {
+            VectorAdd(
+                s_skyPoints[t][s],
+                backEnd.viewParms.ori.origin,
+                tess.xyz[tess.numVertexes]);
+            tess.svars.texcoords[0][tess.numVertexes][0] =
+                s_skyTexCoords[t][s][0];
+            tess.svars.texcoords[0][tess.numVertexes][1] =
+                s_skyTexCoords[t][s][1];
+            memset(
+                tess.svars.colors[tess.numVertexes],
+                tr.identityLightByte,
+                sizeof(tess.svars.colors[0]));
 
-			tess.numVertexes++;
+            tess.numVertexes++;
 
-			if (tess.numVertexes >= SHADER_MAX_VERTEXES)
-			{
-				Com_Error(ERR_DROP, "SHADER_MAX_VERTEXES hit in DrawSkySide()");
-			}
-		}
-	}
+            if (tess.numVertexes >= SHADER_MAX_VERTEXES)
+            {
+                Com_Error(ERR_DROP, "SHADER_MAX_VERTEXES hit in DrawSkySide()");
+            }
+        }
+    }
 
-	const int tHeight = maxs[1] - mins[1] + 1;
-	const int sWidth = maxs[0] - mins[0] + 1;
-	for (int t = 0; t < tHeight-1; t++)
-	{
-		for (int s = 0; s < sWidth-1; s++)
-		{
-			tess.indexes[tess.numIndexes++] = s + t * sWidth;
-			tess.indexes[tess.numIndexes++] = s + ((t + 1) * sWidth);
-			tess.indexes[tess.numIndexes++] = (s + 1) + (t * sWidth);
+    const int tHeight = maxs[1] - mins[1] + 1;
+    const int sWidth = maxs[0] - mins[0] + 1;
+    for (int t = 0; t < tHeight - 1; t++)
+    {
+        for (int s = 0; s < sWidth - 1; s++)
+        {
+            tess.indexes[tess.numIndexes++] = s + t * sWidth;
+            tess.indexes[tess.numIndexes++] = s + ((t + 1) * sWidth);
+            tess.indexes[tess.numIndexes++] = (s + 1) + (t * sWidth);
 
-			tess.indexes[tess.numIndexes++] = s + (t + 1) * sWidth;
-			tess.indexes[tess.numIndexes++] = (s + 1) + ((t + 1) * sWidth);
-			tess.indexes[tess.numIndexes++] = (s + 1) + (t * sWidth);
-		}
-	}
+            tess.indexes[tess.numIndexes++] = s + (t + 1) * sWidth;
+            tess.indexes[tess.numIndexes++] = (s + 1) + ((t + 1) * sWidth);
+            tess.indexes[tess.numIndexes++] = (s + 1) + (t * sWidth);
+        }
+    }
 
-	GL_Bind(image);
-	R_DrawElements(tess.numIndexes, tess.indexes);
+    //
+    // Upload data
+    //
+    GpuSwapchainResources* swapchainResources = backEndData->swapchainResources;
+
+    const VkDeviceSize indexBufferOffset =
+        R_UploadIndexData(swapchainResources, tess.numIndexes, tess.indexes);
+    const VkDeviceSize vertexBufferOffset =
+        R_UploadVertexData(swapchainResources, tess.numVertexes);
+
+    //
+    // render
+    //
+    const VkDescriptorSet descriptorSet = skyParms->descriptorSets[sideIndex];
+    const VkPipelineLayout pipelineLayout =
+        gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+
+    GL_UploadPushConstants(
+        swapchainResources,
+        pipelineLayout,
+        sizeof(gpuMatrices_t),
+        &glState.matrices);
+    GL_BindGraphicsPipeline(swapchainResources, skyParms->graphicsPipeline);
+    GL_BindDescriptorSets(
+        swapchainResources, pipelineLayout, 1, &descriptorSet);
+    GL_BindVertexBuffers(
+        swapchainResources,
+        1,
+        &swapchainResources->vertexBuffer,
+        &vertexBufferOffset);
+
+    R_DrawElementsWithShader(
+        swapchainResources,
+        tess.numIndexes,
+        indexBufferOffset,
+        swapchainResources->indexBuffer);
 }
 
 static void DrawSkyBox( shader_t *shader )
@@ -475,10 +519,8 @@ static void DrawSkyBox( shader_t *shader )
 			}
 		}
 
-		DrawSkySide( shader->sky->outerbox[i],
-			         sky_mins_subd,
-					 sky_maxs_subd );
-	}
+        DrawSkySide(shader->sky, i, sky_mins_subd, sky_maxs_subd);
+    }
 }
 
 static void FillCloudySkySide( const int mins[2], const int maxs[2], qboolean addIndexes )
