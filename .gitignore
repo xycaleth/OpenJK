@@ -173,3 +173,8 @@ pip-log.txt
 #############
 *.o
 *.so
+
+# Various IDEs/tools
+.clangd
+.vscode
+.idea
