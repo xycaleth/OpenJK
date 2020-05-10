@@ -19,8 +19,11 @@ The Vulkan API only accepts shaders in the *SPIR-V format*, which is a binary sh
 
 ```
 $ mkdir -p spv
-$ glslc glsl/render.vert -o spv/render.spv.vert
-$ glslc glsl/render.frag -o spv/render.spv.frag
+$ glslc -O -o spv/render.vert.spv glsl/render.vert
+$ glslc -O -o spv/render.frag.spv glsl/render.frag
+$ glslc -O -DUSE_MULTITEXTURE -o spv/render.multitexture.vert.spv glsl/render.vert
+$ glslc -O -DUSE_MULTITEXTURE=1 -o spv/render.multitexture.add.frag.spv glsl/render.frag
+$ glslc -O -DUSE_MULTITEXTURE=2 -o spv/render.multitexture.multiply.frag.spv glsl/render.frag
 ```
 
 The `spv` directory should be compressed into a `.pk3` file and copied into the game's `base/` folder. Alternatively, if the game is started with `sv_pure 0` then the directory can be copied directory in the game's `base/` folder.

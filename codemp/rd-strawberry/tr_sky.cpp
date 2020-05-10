@@ -369,8 +369,6 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 	tess.numVertexes = 0;
 	tess.numIndexes = 0;
 
-	GL_Bind(image);
-
 	for (int t = mins[1]+HALF_SKY_SUBDIVISIONS; t <= maxs[1]+HALF_SKY_SUBDIVISIONS; t++)
 	{
 		for (int s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++)
@@ -408,6 +406,7 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 		}
 	}
 
+	GL_Bind(image);
 	R_DrawElements(tess.numIndexes, tess.indexes);
 }
 
@@ -480,7 +479,6 @@ static void DrawSkyBox( shader_t *shader )
 			         sky_mins_subd,
 					 sky_maxs_subd );
 	}
-
 }
 
 static void FillCloudySkySide( const int mins[2], const int maxs[2], qboolean addIndexes )

@@ -46,43 +46,45 @@ static VkDeviceSize GetBufferOffset(const void *base, const void *pointer)
 		static_cast<const char *>(base);
 }
 
-static void UploadVertexAndIndexData(
+static VkDeviceSize R_UploadVertexData(
 	GpuSwapchainResources *swapchainResources,
-	VkDeviceSize *vertexOffset,
-	VkDeviceSize *indexOffset)
+    int numVertexes)
 {
 	static_assert(sizeof(BspVertex) == 32, "vertex must be 32 bytes in size");
 
-	if (vertexOffset != nullptr)
-	{
-		// Vertex data
-		*vertexOffset = GetBufferOffset(
-			swapchainResources->vertexBufferBase,
-			swapchainResources->vertexBufferData);
+    const VkDeviceSize vertexOffset = GetBufferOffset(
+        swapchainResources->vertexBufferBase,
+        swapchainResources->vertexBufferData);
 
-		auto *out = static_cast<BspVertex *>(swapchainResources->vertexBufferData);
-		for (int i = 0; i < tess.numVertexes; ++i)
-		{
-			BspVertex *v = out + i;
-			v->position[0] = tess.xyz[i][0];
-			v->position[1] = tess.xyz[i][1];
-			v->position[2] = tess.xyz[i][2];
-			v->position[3] = 1.0f;
-			
-			v->texcoord[0] = tess.svars.texcoords[0][i][0];
-			v->texcoord[1] = tess.svars.texcoords[0][i][1];
+    auto *out = static_cast<BspVertex *>(swapchainResources->vertexBufferData);
+    for (int i = 0; i < numVertexes; ++i)
+    {
+        BspVertex *v = out + i;
+        v->position[0] = tess.xyz[i][0];
+        v->position[1] = tess.xyz[i][1];
+        v->position[2] = tess.xyz[i][2];
+        v->position[3] = 1.0f;
+        
+        v->texcoord[0] = tess.svars.texcoords[0][i][0];
+        v->texcoord[1] = tess.svars.texcoords[0][i][1];
 
-			v->color[0] = tess.svars.colors[i][0];
-			v->color[1] = tess.svars.colors[i][1];
-			v->color[2] = tess.svars.colors[i][2];
-			v->color[3] = tess.svars.colors[i][3];
-		}
+        v->color[0] = tess.svars.colors[i][0];
+        v->color[1] = tess.svars.colors[i][1];
+        v->color[2] = tess.svars.colors[i][2];
+        v->color[3] = tess.svars.colors[i][3];
+    }
 
-		swapchainResources->vertexBufferData = out + tess.numVertexes;
-	}
+    swapchainResources->vertexBufferData = out + numVertexes;
 
-	// Index data
-	*indexOffset = GetBufferOffset(
+	return vertexOffset;
+}
+
+static VkDeviceSize R_UploadIndexData(
+    GpuSwapchainResources* swapchainResources,
+    int numIndexes,
+    glIndex_t* indexes)
+{
+    const VkDeviceSize indexOffset = GetBufferOffset(
 		swapchainResources->indexBufferBase,
 		swapchainResources->indexBufferData);
 
@@ -90,9 +92,11 @@ static void UploadVertexAndIndexData(
 		static_cast<uint32_t *>(swapchainResources->indexBufferData);
 	for (int i = 0; i < tess.numIndexes; ++i)
 	{
-		outIndexes[i] = tess.indexes[i];
+		outIndexes[i] = indexes[i];
 	}
-	swapchainResources->indexBufferData = outIndexes + tess.numIndexes;
+	swapchainResources->indexBufferData = outIndexes + numIndexes;
+
+    return indexOffset;
 }
 
 static VkDescriptorSet CreateDescriptorSet(
@@ -137,28 +141,12 @@ static VkDescriptorSet CreateDescriptorSet(
 }
 
 void R_DrawElementsWithShader(
-    int numIndexes, const glIndex_t* indexes, const shaderStage_t* stage, PipelineStateId stateId)
+    GpuSwapchainResources* swapchainResources,
+    int numIndexes,
+    VkDeviceSize indexBufferOffset,
+    VkBuffer indexBuffer)
 {
-    GpuSwapchainResources* swapchainResources = backEndData->swapchainResources;
-
-    VkDeviceSize vertexOffset = 0;
-    VkDeviceSize indexOffset = 0;
-
-    VkDeviceSize* vertexBufferOffset = &vertexOffset;
-    VkBuffer vertexBuffer = swapchainResources->vertexBuffer;
-	if (tess.vertexBuffer != VK_NULL_HANDLE)
-	{
-		vertexBuffer = tess.vertexBuffer;
-        vertexBufferOffset = nullptr;
-	}
-
-    UploadVertexAndIndexData(swapchainResources, vertexBufferOffset, &indexOffset);
-
-    VkDescriptorSet descriptorSet = stage->descriptorSet;
     VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
-
-    VkPipelineLayout pipelineLayout =
-        gpuContext.pipelineLayouts[stage->descriptorSetId];
 
     VkViewport viewport = {};
     viewport.x = glState.viewport.x;
@@ -176,34 +164,11 @@ void R_DrawElementsWithShader(
     vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
     vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
 
-    vkCmdBindPipeline(
-        cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, stage->stateBundle.pipelines[stateId]);
-
-    vkCmdPushConstants(
-        cmdBuffer,
-        pipelineLayout,
-        VK_SHADER_STAGE_VERTEX_BIT,
-        0,
-        sizeof(gpuMatrices_t),
-        &glState.matrices);
-
-    vkCmdBindDescriptorSets(
-        cmdBuffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipelineLayout,
-        0,
-        1,
-        &descriptorSet,
-        0,
-        nullptr);
-
     vkCmdBindIndexBuffer(
         cmdBuffer,
-        swapchainResources->indexBuffer,
-        indexOffset,
+        indexBuffer,
+        indexBufferOffset,
         VK_INDEX_TYPE_UINT32);
-
-    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &vertexOffset);
 
     vkCmdDrawIndexed(cmdBuffer, numIndexes, 1, 0, 0, 0);
 }
@@ -1562,6 +1527,60 @@ void ForceAlpha(byte *dstColors, byte alpha)
 	}
 }
 
+static void GL_BindVertexBuffers(
+    GpuSwapchainResources* swapchainResources,
+    size_t vertexBufferCount,
+    VkBuffer* vertexBuffers,
+    VkDeviceSize* vertexBufferOffsets)
+{
+    VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
+    vkCmdBindVertexBuffers(
+        cmdBuffer, 0, vertexBufferCount, vertexBuffers, vertexBufferOffsets);
+}
+
+static void GL_BindGraphicsPipeline(
+    GpuSwapchainResources* swapchainResources,
+    VkPipeline graphicsPipeline)
+{
+    VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
+    vkCmdBindPipeline(
+        cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+}
+
+static void GL_BindDescriptorSets(
+    GpuSwapchainResources* swapchainResources,
+    VkPipelineLayout pipelineLayout,
+    size_t descriptorSetCount,
+    VkDescriptorSet* descriptorSets)
+{
+    VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
+    vkCmdBindDescriptorSets(
+        cmdBuffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipelineLayout,
+        0,
+        descriptorSetCount,
+        descriptorSets,
+        0,
+        nullptr);
+}
+
+static void GL_UploadPushConstants(
+    GpuSwapchainResources* swapchainResources,
+    VkPipelineLayout pipelineLayout,
+    size_t constantDataSize,
+    const void* constantData)
+{
+    VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
+    vkCmdPushConstants(
+        cmdBuffer,
+        pipelineLayout,
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        constantDataSize,
+        constantData);
+}
+
 /*
 ** RB_IterateStagesGeneric
 */
@@ -1642,6 +1661,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 	}
 #endif
 
+    GpuSwapchainResources* swapchainResources = backEndData->swapchainResources;
 	for (int stage = 0; stage < input->shader->numUnfoggedPasses; stage++)
 	{
 		shaderStage_t *pStage = &tess.xstages[stage];
@@ -1706,16 +1726,29 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 		ComputeTexCoords(pStage);
 
-		// STRAWB upload color arrays HERE
-		// STRAWB upload texcoord arrays HERE
+        //
+        // Upload vertex data
+        //
+        VkDeviceSize vertexBufferOffset = 0;
+        VkBuffer vertexBuffer = input->vertexBuffer;
+        if (input->vertexBuffer == VK_NULL_HANDLE)
+        {
+            vertexBufferOffset =
+                R_UploadVertexData(swapchainResources, input->numVertexes);
+            vertexBuffer = swapchainResources->vertexBuffer;
+        }
 
-		//
-		// multitexture stages are treated differently
-		//
-		PipelineStateId stateId = PIPELINE_STATE_DEFAULT;
-		if (backEnd.projection2D)
-		{
-			stateId = PIPELINE_STATE_NO_CULL;
+        const VkBuffer indexBuffer = swapchainResources->indexBuffer;
+        const VkDeviceSize indexBufferOffset = R_UploadIndexData(
+            swapchainResources, input->numIndexes, input->indexes);
+
+        //
+        // multitexture stages are treated differently
+        //
+        PipelineStateId stateId = PIPELINE_STATE_DEFAULT;
+        if (backEnd.projection2D)
+        {
+            stateId = PIPELINE_STATE_NO_CULL;
 		}
 		else if (pStage->bundle[1].image == nullptr)
 		{
@@ -1766,8 +1799,30 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			}
 		}
 
-		R_DrawElementsWithShader(input->numIndexes, input->indexes, pStage, stateId);
-	}
+        //
+        // Render
+        //
+        VkDescriptorSet descriptorSet = pStage->descriptorSet;
+        VkPipelineLayout pipelineLayout =
+            gpuContext.pipelineLayouts[pStage->descriptorSetId];
+
+        GL_UploadPushConstants(
+            swapchainResources,
+            pipelineLayout,
+            sizeof(gpuMatrices_t),
+            &glState.matrices);
+        GL_BindGraphicsPipeline(
+            swapchainResources, pStage->stateBundle.pipelines[stateId]);
+        GL_BindDescriptorSets(
+            swapchainResources, pipelineLayout, 1, &descriptorSet);
+        GL_BindVertexBuffers(
+            swapchainResources, 1, &vertexBuffer, &vertexBufferOffset);
+        R_DrawElementsWithShader(
+            swapchainResources,
+            input->numIndexes,
+            indexBufferOffset,
+            indexBuffer);
+    }
 
 #ifdef STRAWB
 	if (FogColorChange)
