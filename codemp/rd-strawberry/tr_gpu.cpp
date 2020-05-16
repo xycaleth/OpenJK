@@ -877,9 +877,7 @@ VkCullModeFlags GetVkCullMode(uint32_t stateBits2)
 		case GLS2_CULLMODE_FRONT: return VK_CULL_MODE_BACK_BIT;
 		case GLS2_CULLMODE_BACK: return VK_CULL_MODE_FRONT_BIT;
 		case GLS2_CULLMODE_NONE: return VK_CULL_MODE_NONE;
-        default:
-            assert(!"Invalid cull mode");
-            return VK_CULL_MODE_FRONT_BIT;
+        default: return VK_CULL_MODE_FRONT_BIT;
     }
 }
 

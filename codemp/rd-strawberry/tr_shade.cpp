@@ -175,78 +175,7 @@ void R_DrawElementsWithShader(
 
 void R_DrawElements(int numIndexes, const glIndex_t* indexes)
 {
-    GpuSwapchainResources* swapchainResources = backEndData->swapchainResources;
-
-    VkDeviceSize vertexOffset = 0;
-    VkDeviceSize indexOffset = 0;
-
-    VkDeviceSize* vertexBufferOffset = &vertexOffset;
-    VkBuffer vertexBuffer = swapchainResources->vertexBuffer;
-    if (tess.vertexBuffer != VK_NULL_HANDLE)
-    {
-        vertexBuffer = tess.vertexBuffer;
-        vertexBufferOffset = nullptr;
-    }
-
-    UploadVertexAndIndexData(
-        swapchainResources, vertexBufferOffset, &indexOffset);
-
-    VkDescriptorSet descriptorSet = CreateDescriptorSet(swapchainResources);
-    VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
-
-    const RenderState renderState = {glState.glStateBits, glState.glStateBits2};
-    VkPipeline graphicsPipeline =
-        GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-
-    VkPipelineLayout pipelineLayout =
-        gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
-
-    VkViewport viewport = {};
-    viewport.x = glState.viewport.x;
-    viewport.y = glState.viewport.y;
-    viewport.width = glState.viewport.width;
-    viewport.height = glState.viewport.height;
-    viewport.minDepth = glState.depthRangeMin;
-    viewport.maxDepth = glState.depthRangeMax;
-
-    VkRect2D scissor = {};
-    scissor.offset = {glState.viewport.x, glState.viewport.y};
-    scissor.extent = {static_cast<uint32_t>(glState.viewport.width),
-                      static_cast<uint32_t>(glState.viewport.height)};
-
-    vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-    vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
-
-    vkCmdBindPipeline(
-        cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
-    vkCmdPushConstants(
-        cmdBuffer,
-        pipelineLayout,
-        VK_SHADER_STAGE_VERTEX_BIT,
-        0,
-        sizeof(gpuMatrices_t),
-        &glState.matrices);
-
-    vkCmdBindDescriptorSets(
-        cmdBuffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipelineLayout,
-        0,
-        1,
-        &descriptorSet,
-        0,
-        nullptr);
-
-    vkCmdBindIndexBuffer(
-        cmdBuffer,
-        swapchainResources->indexBuffer,
-        indexOffset,
-        VK_INDEX_TYPE_UINT32);
-
-    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer, &vertexOffset);
-
-    vkCmdDrawIndexed(cmdBuffer, numIndexes, 1, 0, 0, 0);
+    // do nothing for now
 }
 
 /*
@@ -1530,8 +1459,8 @@ void ForceAlpha(byte *dstColors, byte alpha)
 void GL_BindVertexBuffers(
     GpuSwapchainResources* swapchainResources,
     size_t vertexBufferCount,
-    VkBuffer* vertexBuffers,
-    VkDeviceSize* vertexBufferOffsets)
+    const VkBuffer* vertexBuffers,
+    const VkDeviceSize* vertexBufferOffsets)
 {
     VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
     vkCmdBindVertexBuffers(
@@ -1551,7 +1480,7 @@ void GL_BindDescriptorSets(
     GpuSwapchainResources* swapchainResources,
     VkPipelineLayout pipelineLayout,
     size_t descriptorSetCount,
-    VkDescriptorSet* descriptorSets)
+    const VkDescriptorSet* descriptorSets)
 {
     VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
     vkCmdBindDescriptorSets(
