@@ -6,9 +6,9 @@
 #include <array>
 #include <unordered_map>
 #include <vector>
-#include <vulkan/vulkan_core.h>
 
 #include "qcommon/q_math.h"
+#include "tr_vertex_formats.h"
 
 struct BspVertex
 {
@@ -26,23 +26,13 @@ enum DescriptorSetId
 	DESCRIPTOR_SET_COUNT
 };
 
-#define BIT(n) (1u << (n))
-enum VertexAttributeBit
-{
-	VERTEX_ATTRIBUTE_POSITION_BIT = BIT(0),
-	VERTEX_ATTRIBUTE_TEXCOORD0_BIT = BIT(1),
-	VERTEX_ATTRIBUTE_TEXCOORD1_BIT = BIT(2),
-	VERTEX_ATTRIBUTE_COLOR_BIT = BIT(3),
-};
-using VertexAttributeBits = uint32_t;
-
-#undef BIT
-
 struct RenderState
 {
     VkShaderModule vertexShader = VK_NULL_HANDLE;
     VkShaderModule fragmentShader = VK_NULL_HANDLE;
-    VertexAttributeBits attributes = 0;
+    const VkVertexInputAttributeDescription* vertexAttributes = nullptr;
+    uint32_t vertexAttributeCount = 0;
+    uint32_t vertexSize = 0;
     uint32_t stateBits = 0;
     uint32_t stateBits2 = 0;
 };

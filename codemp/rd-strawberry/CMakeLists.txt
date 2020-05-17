@@ -70,6 +70,8 @@ set(MPStrawberryRendererFiles
 	tr_subs.cpp
 	tr_surface.cpp
 	tr_surfacesprites.cpp
+    tr_vertex_formats.cpp
+    tr_vertex_formats.h
 	tr_world.cpp
 	tr_WorldEffects.cpp
 	tr_WorldEffects.h)

@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.h"
 #include "tr_gpu.h"
+#include "tr_vertex_formats.h"
 
 static char *s_shaderText;
 
@@ -2950,9 +2951,11 @@ static void CreateShaderGraphicsPipelines()
         RenderState renderState;
         renderState.vertexShader = tr.renderModuleVert;
         renderState.fragmentShader = tr.renderModuleFrag;
-        renderState.attributes = VERTEX_ATTRIBUTE_COLOR_BIT |
-                                 VERTEX_ATTRIBUTE_TEXCOORD0_BIT |
-                                 VERTEX_ATTRIBUTE_COLOR_BIT;
+        renderState.vertexAttributes =
+            SingleTextureVertexFormat::vertexAttributes.data();
+        renderState.vertexAttributeCount =
+            SingleTextureVertexFormat::vertexAttributes.size();
+        renderState.vertexSize = SingleTextureVertexFormat::vertexSize;
         shader.sky->graphicsPipeline =
             GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
     }
@@ -2968,9 +2971,11 @@ static void CreateShaderGraphicsPipelines()
             RenderState renderState;
             renderState.vertexShader = tr.renderModuleVert;
             renderState.fragmentShader = tr.renderModuleFrag;
-            renderState.attributes = VERTEX_ATTRIBUTE_POSITION_BIT |
-                                     VERTEX_ATTRIBUTE_TEXCOORD0_BIT |
-                                     VERTEX_ATTRIBUTE_COLOR_BIT;
+            renderState.vertexAttributes =
+                SingleTextureVertexFormat::vertexAttributes.data();
+            renderState.vertexAttributeCount =
+                SingleTextureVertexFormat::vertexAttributes.size();
+            renderState.vertexSize = SingleTextureVertexFormat::vertexSize;
             renderState.stateBits = stateBits;
             renderState.stateBits2 = stateBits2;
 

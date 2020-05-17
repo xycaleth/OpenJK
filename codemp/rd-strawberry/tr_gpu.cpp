@@ -961,32 +961,14 @@ VkFormat PickDepthStencilFormat(VkPhysicalDevice physicalDevice)
 
 bool operator==(const RenderState& lhs, const RenderState& rhs)
 {
-    if (lhs.vertexShader != rhs.vertexShader)
-    {
-        return false;
-    }
-
-    if (lhs.fragmentShader != rhs.fragmentShader)
-    {
-        return false;
-    }
-
-	if (lhs.attributes != rhs.attributes)
-	{
-		return false;
-	}
-
-	if (lhs.stateBits != rhs.stateBits)
-	{
-		return false;
-	}
-
-	if (lhs.stateBits2 != rhs.stateBits2)
-	{
-		return false;
-	}
-
-	return true;
+    return (
+        (lhs.vertexShader == rhs.vertexShader) &&
+        (lhs.fragmentShader == rhs.fragmentShader) &&
+        (lhs.vertexAttributes == rhs.vertexAttributes) &&
+        (lhs.vertexAttributeCount == rhs.vertexAttributeCount) &&
+        (lhs.stateBits == rhs.stateBits) &&
+        (lhs.stateBits2 == rhs.stateBits2)
+    );
 }
 
 void GpuContextInit(GpuContext& context)
@@ -1944,32 +1926,16 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 
 	std::array<VkVertexInputBindingDescription, 1> vertexBindings = {};
 	vertexBindings[0].binding = 0;
-	vertexBindings[0].stride = 32;
+	vertexBindings[0].stride = renderState.vertexSize;
 	vertexBindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	std::array<VkVertexInputAttributeDescription, 3> vertexAttributes = {};
-	vertexAttributes[0].location = 0;
-	vertexAttributes[0].binding = 0;
-	vertexAttributes[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-	vertexAttributes[0].offset = 0;
-
-	vertexAttributes[1].location = 1;
-	vertexAttributes[1].binding = 0;
-	vertexAttributes[1].format = VK_FORMAT_R32G32_SFLOAT;
-	vertexAttributes[1].offset = sizeof(float) * 4;
-
-	vertexAttributes[2].location = 2;
-	vertexAttributes[2].binding = 0;
-	vertexAttributes[2].format = VK_FORMAT_R8G8B8A8_UNORM;
-	vertexAttributes[2].offset = sizeof(float) * 2 + sizeof(float) * 4;
 
 	VkPipelineVertexInputStateCreateInfo viCreateInfo = {};
 	viCreateInfo.sType =
 		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	viCreateInfo.vertexBindingDescriptionCount = vertexBindings.size();
 	viCreateInfo.pVertexBindingDescriptions = vertexBindings.data();
-	viCreateInfo.vertexAttributeDescriptionCount = vertexAttributes.size();
-	viCreateInfo.pVertexAttributeDescriptions = vertexAttributes.data();
+	viCreateInfo.vertexAttributeDescriptionCount = renderState.vertexAttributeCount;
+	viCreateInfo.pVertexAttributeDescriptions = renderState.vertexAttributes;
 
 	VkPipelineInputAssemblyStateCreateInfo iaCreateInfo = {};
 	iaCreateInfo.sType =
