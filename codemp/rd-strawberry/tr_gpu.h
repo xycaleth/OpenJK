@@ -6,6 +6,7 @@
 #include <array>
 #include <unordered_map>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 #include "qcommon/q_math.h"
 
@@ -39,16 +40,11 @@ using VertexAttributeBits = uint32_t;
 
 struct RenderState
 {
-    RenderState() = default;
-    RenderState(uint32_t stateBits, uint32_t stateBits2)
-        : stateBits(stateBits), stateBits2(stateBits2), attributes(0)
-    {
-    }
-
+    VkShaderModule vertexShader = VK_NULL_HANDLE;
+    VkShaderModule fragmentShader = VK_NULL_HANDLE;
+    VertexAttributeBits attributes = 0;
     uint32_t stateBits = 0;
     uint32_t stateBits2 = 0;
-    VertexAttributeBits attributes = 0;
-    bool multitexture = false;
 };
 bool operator==(const RenderState& lhs, const RenderState& rhs);
 

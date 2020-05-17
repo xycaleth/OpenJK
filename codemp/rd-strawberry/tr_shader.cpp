@@ -2916,88 +2916,109 @@ static void CreateShaderStageDescriptorSets()
 	}
 }
 
+static uint32_t CalculateStateBits2(const shader_t& shader)
+{
+    uint32_t stateBits2 = 0;
+
+    if (shader.polygonOffset)
+    {
+        stateBits2 |= GLS2_POLYGONOFFSET;
+    }
+
+    switch (shader.cullType)
+    {
+        case CT_TWO_SIDED:
+            stateBits2 |= GLS2_CULLMODE_NONE;
+            break;
+
+        case CT_FRONT_SIDED:
+            stateBits2 |= GLS2_CULLMODE_FRONT;
+            break;
+
+        case CT_BACK_SIDED:
+            stateBits2 |= GLS2_CULLMODE_BACK;
+            break;
+    }
+
+    return stateBits2;
+}
+
 static void CreateShaderGraphicsPipelines()
 {
     if (shader.sky != nullptr)
     {
+        RenderState renderState;
+        renderState.vertexShader = tr.renderModuleVert;
+        renderState.fragmentShader = tr.renderModuleFrag;
+        renderState.attributes = VERTEX_ATTRIBUTE_COLOR_BIT |
+                                 VERTEX_ATTRIBUTE_TEXCOORD0_BIT |
+                                 VERTEX_ATTRIBUTE_COLOR_BIT;
         shader.sky->graphicsPipeline =
-            GpuGetGraphicsPipelineForRenderState(gpuContext, {0, 0});
+            GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
     }
 
-	for (int stageIndex = 0; stageIndex < shader.numUnfoggedPasses; ++stageIndex)
-	{
-		shaderStage_t *stage = &stages[stageIndex];
-		uint32_t stateBits2 = 0;
+    if (shader.numUnfoggedPasses > 0)
+    {
+        const uint32_t stateBits2 = CalculateStateBits2(shader);
+        for (int stageIndex = 0; stageIndex < shader.numUnfoggedPasses; ++stageIndex)
+        {
+            shaderStage_t *stage = &stages[stageIndex];
 
-		if (shader.polygonOffset)
-		{
-			stateBits2 |= GLS2_POLYGONOFFSET;
-		}
+            const uint32_t stateBits = stage->stateBits;
+            RenderState renderState;
+            renderState.vertexShader = tr.renderModuleVert;
+            renderState.fragmentShader = tr.renderModuleFrag;
+            renderState.attributes = VERTEX_ATTRIBUTE_POSITION_BIT |
+                                     VERTEX_ATTRIBUTE_TEXCOORD0_BIT |
+                                     VERTEX_ATTRIBUTE_COLOR_BIT;
+            renderState.stateBits = stateBits;
+            renderState.stateBits2 = stateBits2;
 
-		switch (shader.cullType)
-		{
-			case CT_TWO_SIDED:
-				stateBits2 |= GLS2_CULLMODE_NONE;
-				break;
+            stage->stateBundle.pipelines[PIPELINE_STATE_DEFAULT] =
+                GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
 
-			case CT_FRONT_SIDED:
-				stateBits2 |= GLS2_CULLMODE_FRONT;
-				break;
+            // No cull
+            {
+                uint32_t noCullStateBits2 = stateBits2;
+                noCullStateBits2 &= ~GLS2_CULLMODE_BITS;
+                noCullStateBits2 |= GLS2_CULLMODE_NONE;
 
-			case CT_BACK_SIDED:
-				stateBits2 |= GLS2_CULLMODE_BACK;
-				break;
-		}
+                renderState.stateBits = stateBits;
+                renderState.stateBits2 = noCullStateBits2;
+                stage->stateBundle.pipelines[PIPELINE_STATE_NO_CULL] =
+                    GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+            }
 
-		uint32_t stateBits = stage->stateBits;
-		const RenderState renderState = {stateBits, stateBits2};
-		stage->stateBundle.pipelines[PIPELINE_STATE_DEFAULT] =
-			GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+            // Force ent alpha
+            {
+                renderState.stateBits =
+                    GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+                renderState.stateBits2 = stateBits2;
+                stage->stateBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA] =
+                    GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+            }
 
-		// No cull
-		{
-			uint32_t noCullStateBits2 = stateBits2;
-			noCullStateBits2 &= ~GLS2_CULLMODE_BITS;
-			noCullStateBits2 |= GLS2_CULLMODE_NONE;
+            // Force ent alpha with depth write
+            {
+                renderState.stateBits = GLS_SRCBLEND_SRC_ALPHA |
+                                        GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
+                                        GLS_DEPTHMASK_TRUE;
+                renderState.stateBits2 = stateBits2;
+                stage->stateBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE] =
+                    GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+            }
 
-			const RenderState renderState = {stateBits, noCullStateBits2};
-			stage->stateBundle.pipelines[PIPELINE_STATE_NO_CULL] =
-				GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-		}
-
-		// Force ent alpha
-		{
-			const uint32_t forceEntAlphaStateBits =
-				GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
-
-			const RenderState renderState = {forceEntAlphaStateBits, stateBits2};
-			stage->stateBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA] =
-				GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-		}
-
-		// Force ent alpha with depth write
-		{
-			const uint32_t forceEntAlphaStateBits =
-				GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE;
-
-			const RenderState renderState = {forceEntAlphaStateBits, stateBits2};
-			stage->stateBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE] =
-				GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-		}
-
-		// Disintegrate
-		{
-			const uint32_t disintegrateStateBits =
-				GLS_SRCBLEND_SRC_ALPHA |
-				GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
-				GLS_DEPTHMASK_TRUE |
-				GLS_ATEST_GE_C0;
-
-			const RenderState renderState = {disintegrateStateBits, stateBits2};
-			stage->stateBundle.pipelines[PIPELINE_STATE_DISINTEGRATE] =
-				GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-		}
-	}
+            // Disintegrate
+            {
+                renderState.stateBits = GLS_SRCBLEND_SRC_ALPHA |
+                                        GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
+                                        GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
+                renderState.stateBits2 = stateBits2;
+                stage->stateBundle.pipelines[PIPELINE_STATE_DISINTEGRATE] =
+                    GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+            }
+        }
+    }
 }
 
 /*

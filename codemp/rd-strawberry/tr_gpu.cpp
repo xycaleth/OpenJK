@@ -961,22 +961,27 @@ VkFormat PickDepthStencilFormat(VkPhysicalDevice physicalDevice)
 
 bool operator==(const RenderState& lhs, const RenderState& rhs)
 {
-	if (lhs.stateBits != rhs.stateBits)
-	{
-		return false;
-	}
+    if (lhs.vertexShader != rhs.vertexShader)
+    {
+        return false;
+    }
 
-	if (lhs.stateBits2 != rhs.stateBits2)
-	{
-		return false;
-	}
+    if (lhs.fragmentShader != rhs.fragmentShader)
+    {
+        return false;
+    }
 
 	if (lhs.attributes != rhs.attributes)
 	{
 		return false;
 	}
 
-	if (lhs.multitexture != rhs.multitexture)
+	if (lhs.stateBits != rhs.stateBits)
+	{
+		return false;
+	}
+
+	if (lhs.stateBits2 != rhs.stateBits2)
 	{
 		return false;
 	}
@@ -1788,12 +1793,9 @@ void GpuContextShutdown(GpuContext& context)
 	vkDestroyCommandPool(context.device, context.transferCommandPool, nullptr);
 	vkDestroyRenderPass(context.device, context.renderPass, nullptr); 
 
-    int pipelines = 0;
 	for (auto iter : context.graphicsPipelines)
 	{
 		vkDestroyPipeline(context.device, iter.second, nullptr);
-        ri.Printf(PRINT_ALL, "Deleting pipeline %d\n", pipelines);
-        ++pipelines;
 	}
 
 	for (auto& swapchainResources : context.swapchain.resources)
@@ -1922,27 +1924,22 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 	GpuContext& context,
 	const RenderState& renderState)
 {
-    static int pipelines = 0;
 	const auto iter = context.graphicsPipelines.find(renderState);
 	if (iter != std::end(context.graphicsPipelines))
 	{
-        ri.Printf(PRINT_ALL, "Pipeline already exists\n");
 		return iter->second;
 	}
-
-    ri.Printf(PRINT_ALL, "Creating new pipeline. Num pipelines=%d\n", pipelines);
-    ++pipelines;
 
 	std::array<VkPipelineShaderStageCreateInfo, 2> stageCreateInfos = {};
 	stageCreateInfos[0].sType =
 		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	stageCreateInfos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-	stageCreateInfos[0].module = tr.renderModuleVert;
+	stageCreateInfos[0].module = renderState.vertexShader;
 	stageCreateInfos[0].pName = "main";
 	stageCreateInfos[1].sType =
 		VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	stageCreateInfos[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	stageCreateInfos[1].module = tr.renderModuleFrag;
+	stageCreateInfos[1].module = renderState.fragmentShader;
 	stageCreateInfos[1].pName = "main";
 
 	std::array<VkVertexInputBindingDescription, 1> vertexBindings = {};
