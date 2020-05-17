@@ -2027,9 +2027,6 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 	dynamicStateCreateInfo.dynamicStateCount = states.size();
 	dynamicStateCreateInfo.pDynamicStates = states.data();
 
-	VkPipelineLayout pipelineLayout =
-		context.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
-
 	VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
 	pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineCreateInfo.flags = 0;
@@ -2043,7 +2040,7 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 	pipelineCreateInfo.pDepthStencilState = &dsCreateInfo;
 	pipelineCreateInfo.pColorBlendState = &cbCreateInfo;
 	pipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
-	pipelineCreateInfo.layout = pipelineLayout;
+	pipelineCreateInfo.layout = renderState.pipelineLayout;
 	pipelineCreateInfo.renderPass = context.renderPass;
 	pipelineCreateInfo.subpass = 0;
 

@@ -2891,30 +2891,28 @@ static void CreateShaderStageDescriptorSets()
         }
     }
 
-	for (int stageIndex = 0; stageIndex < shader.numUnfoggedPasses; ++stageIndex)
-	{
-		shaderStage_t *stage = &stages[stageIndex];
+    for (int stageIndex = 0; stageIndex < shader.numUnfoggedPasses;
+         ++stageIndex)
+    {
+        shaderStage_t* stage = &stages[stageIndex];
+        const image_t* image = stage->bundle[0].image;
 
-        const image_t *image = stage->bundle[0].image;
         if (stage->bundle[0].numImageAnimations > 1)
         {
             image = ((image_t**)(stage->bundle[0].image))[0];
         }
 
-		switch (stage->descriptorSetId)
-		{
-			case DESCRIPTOR_SET_SINGLE_TEXTURE:
-				stage->descriptorSet = GpuCreateDescriptorSet(gpuContext, image);
-				break;
-
-			case DESCRIPTOR_SET_MULTI_TEXTURE:
-				stage->descriptorSet = GpuCreateMultitextureDescriptorSet(gpuContext, stage);
-				break;
-
-			default:
-				break;
-		}
-	}
+        if (stage->bundle[1].image == nullptr)
+        {
+            stage->drawBundle.descriptorSet =
+                GpuCreateDescriptorSet(gpuContext, image);
+        }
+        else
+        {
+            stage->drawBundle.descriptorSet =
+                GpuCreateMultitextureDescriptorSet(gpuContext, stage);
+        }
+    }
 }
 
 static uint32_t CalculateStateBits2(const shader_t& shader)
@@ -2956,6 +2954,10 @@ static void CreateShaderGraphicsPipelines()
         renderState.vertexAttributeCount =
             SingleTextureVertexFormat::vertexAttributes.size();
         renderState.vertexSize = SingleTextureVertexFormat::vertexSize;
+        renderState.pipelineLayout =
+            gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+        
+        shader.sky->pipelineLayout = renderState.pipelineLayout;
         shader.sky->graphicsPipeline =
             GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
     }
@@ -2976,10 +2978,13 @@ static void CreateShaderGraphicsPipelines()
             renderState.vertexAttributeCount =
                 SingleTextureVertexFormat::vertexAttributes.size();
             renderState.vertexSize = SingleTextureVertexFormat::vertexSize;
+            renderState.pipelineLayout =
+                gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
             renderState.stateBits = stateBits;
             renderState.stateBits2 = stateBits2;
 
-            stage->stateBundle.pipelines[PIPELINE_STATE_DEFAULT] =
+            stage->drawBundle.pipelineLayout = renderState.pipelineLayout;
+            stage->drawBundle.pipelines[PIPELINE_STATE_DEFAULT] =
                 GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
 
             // No cull
@@ -2990,7 +2995,7 @@ static void CreateShaderGraphicsPipelines()
 
                 renderState.stateBits = stateBits;
                 renderState.stateBits2 = noCullStateBits2;
-                stage->stateBundle.pipelines[PIPELINE_STATE_NO_CULL] =
+                stage->drawBundle.pipelines[PIPELINE_STATE_NO_CULL] =
                     GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
             }
 
@@ -2999,7 +3004,7 @@ static void CreateShaderGraphicsPipelines()
                 renderState.stateBits =
                     GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
                 renderState.stateBits2 = stateBits2;
-                stage->stateBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA] =
+                stage->drawBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA] =
                     GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
             }
 
@@ -3009,7 +3014,7 @@ static void CreateShaderGraphicsPipelines()
                                         GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
                                         GLS_DEPTHMASK_TRUE;
                 renderState.stateBits2 = stateBits2;
-                stage->stateBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE] =
+                stage->drawBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE] =
                     GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
             }
 
@@ -3019,7 +3024,7 @@ static void CreateShaderGraphicsPipelines()
                                         GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
                                         GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
                 renderState.stateBits2 = stateBits2;
-                stage->stateBundle.pipelines[PIPELINE_STATE_DISINTEGRATE] =
+                stage->drawBundle.pipelines[PIPELINE_STATE_DISINTEGRATE] =
                     GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
             }
         }
@@ -3283,8 +3288,6 @@ static shader_t *FinishShader( void ) {
 			pStage->mGLFogColorOverride = GLFOGOVERRIDE_NONE;
 		}
 		//rww - end hw fog
-
-		pStage->descriptorSetId = DESCRIPTOR_SET_SINGLE_TEXTURE;
 
 		stageIndex++; //rwwRMG - needed for AGEN_BLEND
 		stage++;

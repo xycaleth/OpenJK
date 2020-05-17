@@ -33,6 +33,7 @@ struct RenderState
     const VkVertexInputAttributeDescription* vertexAttributes = nullptr;
     uint32_t vertexAttributeCount = 0;
     uint32_t vertexSize = 0;
+    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     uint32_t stateBits = 0;
     uint32_t stateBits2 = 0;
 };

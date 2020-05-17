@@ -1731,9 +1731,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
         //
         // Render
         //
-        VkDescriptorSet descriptorSet = pStage->descriptorSet;
-        VkPipelineLayout pipelineLayout =
-            gpuContext.pipelineLayouts[pStage->descriptorSetId];
+        const VkDescriptorSet descriptorSets[] = {pStage->drawBundle.descriptorSet};
+        const VkPipelineLayout pipelineLayout = pStage->drawBundle.pipelineLayout;
 
         GL_UploadPushConstants(
             swapchainResources,
@@ -1741,9 +1740,9 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
             sizeof(gpuMatrices_t),
             &glState.matrices);
         GL_BindGraphicsPipeline(
-            swapchainResources, pStage->stateBundle.pipelines[stateId]);
+            swapchainResources, pStage->drawBundle.pipelines[stateId]);
         GL_BindDescriptorSets(
-            swapchainResources, pipelineLayout, 1, &descriptorSet);
+            swapchainResources, pipelineLayout, 1, descriptorSets);
         GL_BindVertexBuffers(
             swapchainResources, 1, &vertexBuffer, &vertexBufferOffset);
         R_DrawElementsWithShader(

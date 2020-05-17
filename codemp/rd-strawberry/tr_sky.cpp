@@ -429,9 +429,8 @@ static void DrawSkySide( const skyParms_t* skyParms, int sideIndex, const int mi
     //
     // render
     //
-    const VkDescriptorSet descriptorSet = skyParms->descriptorSets[sideIndex];
-    const VkPipelineLayout pipelineLayout =
-        gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+    const VkDescriptorSet descriptorSets[] = {skyParms->descriptorSets[sideIndex]};
+    const VkPipelineLayout pipelineLayout = skyParms->pipelineLayout;
 
     GL_UploadPushConstants(
         swapchainResources,
@@ -440,7 +439,7 @@ static void DrawSkySide( const skyParms_t* skyParms, int sideIndex, const int mi
         &glState.matrices);
     GL_BindGraphicsPipeline(swapchainResources, skyParms->graphicsPipeline);
     GL_BindDescriptorSets(
-        swapchainResources, pipelineLayout, 1, &descriptorSet);
+        swapchainResources, pipelineLayout, 1, descriptorSets);
     GL_BindVertexBuffers(
         swapchainResources,
         1,

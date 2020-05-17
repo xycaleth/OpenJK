@@ -389,8 +389,10 @@ enum PipelineStateId
 	PIPELINE_STATE_COUNT
 };
 
-struct StateBundle
+struct DrawBundle
 {
+    VkDescriptorSet descriptorSet;
+    VkPipelineLayout pipelineLayout;
 	VkPipeline pipelines[PIPELINE_STATE_COUNT];
 };
 
@@ -422,9 +424,7 @@ typedef struct shaderStage_s {
 	// Whether this object emits a glow or not.
 	bool			glow;
 
-	VkDescriptorSet	descriptorSet;
-	DescriptorSetId descriptorSetId;
-	StateBundle stateBundle;
+	DrawBundle      drawBundle;
 } shaderStage_t;
 
 struct shaderCommands_s;
@@ -450,8 +450,10 @@ typedef enum {
 typedef struct skyParms_s {
 	float		cloudHeight;
 	image_t		*outerbox[6];
+
     VkDescriptorSet descriptorSets[6];
     VkPipeline graphicsPipeline;
+    VkPipelineLayout pipelineLayout;
 } skyParms_t;
 
 typedef struct fogParms_s {
