@@ -4,7 +4,7 @@
 #include "vk_mem_alloc.h"
 
 #include <array>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 #include "qcommon/q_math.h"
@@ -39,12 +39,68 @@ using VertexAttributeBits = uint32_t;
 
 struct RenderState
 {
-	uint32_t stateBits;
-	uint32_t stateBits2;
-	VertexAttributeBits attributes;
-	bool multitexture;
+    RenderState() = default;
+    RenderState(uint32_t stateBits, uint32_t stateBits2)
+        : stateBits(stateBits), stateBits2(stateBits2), attributes(0)
+    {
+    }
+
+    uint32_t stateBits = 0;
+    uint32_t stateBits2 = 0;
+    VertexAttributeBits attributes = 0;
+    bool multitexture = false;
 };
-bool operator<(const RenderState& lhs, const RenderState& rhs);
+bool operator==(const RenderState& lhs, const RenderState& rhs);
+
+namespace std {
+template <> struct hash<RenderState>
+{
+    std::size_t operator()(const RenderState& renderState) const
+    {
+        // MurmurHash 3 32-bit implementation
+
+        // Supposed to be a seed but we don't care about randomness
+        uint32_t h = 0xdeadbeef;
+        uint32_t k = 0;
+
+        const size_t len = sizeof(renderState);
+        const uint8_t* key = reinterpret_cast<const uint8_t*>(&renderState);
+        for (size_t i = len >> 2; i; i--)
+        {
+            memcpy(&k, key, sizeof(uint32_t));
+            key += sizeof(uint32_t);
+            h ^= scramble(k);
+            h = (h << 13) | (h >> 19);
+            h = h * 5 + 0xe6546b64;
+        }
+
+        k = 0;
+        for (size_t i = len & 3; i; i--)
+        {
+            k <<= 8;
+            k |= key[i - 1];
+        }
+
+        h ^= scramble(k);
+        h ^= len;
+        h ^= h >> 16;
+        h *= 0x85ebca6b;
+        h ^= h >> 13;
+        h *= 0xc2b2ae35;
+        h ^= h >> 16;
+        return h;
+    }
+
+  private:
+    uint32_t scramble(uint32_t k) const
+    {
+        k *= 0xcc9e2d51;
+        k = (k << 15) | (k >> 17);
+        k *= 0x1b873593;
+        return k;
+    }
+};
+} // namespace std
 
 struct GpuQueue
 {
@@ -127,7 +183,7 @@ struct GpuContext
 	std::array<VkDescriptorSetLayout, DESCRIPTOR_SET_COUNT> descriptorSetLayouts;
 	std::array<VkPipelineLayout, DESCRIPTOR_SET_COUNT> pipelineLayouts;
 
-	std::map<RenderState, VkPipeline> graphicsPipelines;
+	std::unordered_map<RenderState, VkPipeline> graphicsPipelines;
 	std::vector<VkDescriptorSet> descriptorSets;
 };
 

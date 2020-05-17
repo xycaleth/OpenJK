@@ -957,48 +957,31 @@ VkFormat PickDepthStencilFormat(VkPhysicalDevice physicalDevice)
 
 	return VK_FORMAT_UNDEFINED;
 }
-
 }
 
-bool operator<(const RenderState& lhs, const RenderState& rhs)
+bool operator==(const RenderState& lhs, const RenderState& rhs)
 {
-	if (lhs.stateBits < rhs.stateBits)
-	{
-		return true;
-	}
-	else if (lhs.stateBits > rhs.stateBits)
+	if (lhs.stateBits != rhs.stateBits)
 	{
 		return false;
 	}
 
-	if (lhs.stateBits2 < rhs.stateBits2)
-	{
-		return true;
-	}
-	else if (lhs.stateBits2 > rhs.stateBits2)
+	if (lhs.stateBits2 != rhs.stateBits2)
 	{
 		return false;
 	}
 
-	if (lhs.attributes < rhs.attributes)
-	{
-		return true;
-	}
-	else
+	if (lhs.attributes != rhs.attributes)
 	{
 		return false;
 	}
 
-	if (!lhs.multitexture && rhs.multitexture)
-	{
-		return true;
-	}
-	else if (lhs.multitexture && !rhs.multitexture)
+	if (lhs.multitexture != rhs.multitexture)
 	{
 		return false;
 	}
 
-	return false;
+	return true;
 }
 
 void GpuContextInit(GpuContext& context)
@@ -1791,11 +1774,6 @@ void GpuContextPreShutdown(GpuContext& context)
 
 void GpuContextShutdown(GpuContext& context)
 {
-	for (auto iter : context.graphicsPipelines)
-	{
-		vkDestroyPipeline(context.device, iter.second, nullptr);
-	}
-
 	for (auto pipelineLayout : context.pipelineLayouts)
 	{
 		vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
@@ -1809,6 +1787,14 @@ void GpuContextShutdown(GpuContext& context)
 	vkDestroyCommandPool(context.device, context.gfxCommandPool, nullptr);
 	vkDestroyCommandPool(context.device, context.transferCommandPool, nullptr);
 	vkDestroyRenderPass(context.device, context.renderPass, nullptr); 
+
+    int pipelines = 0;
+	for (auto iter : context.graphicsPipelines)
+	{
+		vkDestroyPipeline(context.device, iter.second, nullptr);
+        ri.Printf(PRINT_ALL, "Deleting pipeline %d\n", pipelines);
+        ++pipelines;
+	}
 
 	for (auto& swapchainResources : context.swapchain.resources)
 	{
@@ -1936,11 +1922,16 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 	GpuContext& context,
 	const RenderState& renderState)
 {
+    static int pipelines = 0;
 	const auto iter = context.graphicsPipelines.find(renderState);
 	if (iter != std::end(context.graphicsPipelines))
 	{
+        ri.Printf(PRINT_ALL, "Pipeline already exists\n");
 		return iter->second;
 	}
+
+    ri.Printf(PRINT_ALL, "Creating new pipeline. Num pipelines=%d\n", pipelines);
+    ++pipelines;
 
 	std::array<VkPipelineShaderStageCreateInfo, 2> stageCreateInfos = {};
 	stageCreateInfos[0].sType =
