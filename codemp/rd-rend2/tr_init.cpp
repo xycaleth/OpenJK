@@ -133,6 +133,12 @@ cvar_t  *r_srgb;
 cvar_t  *r_depthPrepass;
 cvar_t  *r_ssao;
 
+cvar_t  *r_ssao_aocap;
+cvar_t  *r_ssao_aoMultiplier;
+cvar_t  *r_ssao_lightmap;
+cvar_t  *r_ssao_aorange;
+cvar_t  *r_ssao_depthTolerance;
+
 cvar_t  *r_normalMapping;
 cvar_t  *r_specularMapping;
 cvar_t  *r_deluxeMapping;
@@ -1483,6 +1489,13 @@ void R_Register( void )
 
 	r_depthPrepass = ri.Cvar_Get( "r_depthPrepass", "1", CVAR_ARCHIVE, "" );
 	r_ssao = ri.Cvar_Get( "r_ssao", "0", CVAR_LATCH | CVAR_ARCHIVE, "" );
+
+	r_ssao_aocap = ri.Cvar_Get( "r_ssao_aocap", "1.0", CVAR_ARCHIVE, "" );
+	r_ssao_aoMultiplier = ri.Cvar_Get( "r_ssao_aoMultiplier", "20000.0", CVAR_ARCHIVE, "" );
+	char val[32]; sprintf(val, "%f", std::sqrt(10));
+	r_ssao_lightmap = ri.Cvar_Get( "r_ssao_lightmap", val, CVAR_ARCHIVE, "" );
+	r_ssao_aorange = ri.Cvar_Get( "r_ssao_aorange", "128.0", CVAR_ARCHIVE, "" ); 
+	r_ssao_depthTolerance = ri.Cvar_Get( "r_ssao_depthTolerance", "0.0", CVAR_ARCHIVE, "" ); 
 
 	r_normalMapping = ri.Cvar_Get( "r_normalMapping", "1", CVAR_ARCHIVE | CVAR_LATCH, "" );
 	r_specularMapping = ri.Cvar_Get( "r_specularMapping", "1", CVAR_ARCHIVE | CVAR_LATCH, "" );

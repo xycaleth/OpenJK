@@ -2046,7 +2046,7 @@ static void RB_RenderSSAO()
 {
 	const float zmax = backEnd.viewParms.zFar;
 	const float zmin = r_znear->value;
-	const vec4_t viewInfo = { zmax / zmin, zmax, 0.0f, 0.0f };
+	const vec4_t viewInfo = { zmin, zmax, 0.0f, 0.0f };
 
 
 	FBO_Bind(tr.quarterFbo[0]);
@@ -2073,6 +2073,19 @@ static void RB_RenderSSAO()
 
 	GL_BindToTMU(tr.hdrDepthImage, TB_COLORMAP);
 	GLSL_SetUniformVec4(&tr.ssaoShader, UNIFORM_VIEWINFO, viewInfo);
+
+	const vec2_t screenInfo = { (float)glConfig.vidWidth, (float)glConfig.vidHeight };
+	GLSL_SetUniformVec2(&tr.ssaoShader, UNIFORM_SCREENINFO, screenInfo);
+
+	const vec4_t ssaoSettings = { std::fabs(r_ssao_aocap->value), 
+								  0 /* unused */,  
+								  std::fabs(r_ssao_aoMultiplier->value), 
+								  std::fabs(r_ssao_lightmap->value) };
+	GLSL_SetUniformVec4(&tr.ssaoShader, UNIFORM_SSAOSETTINGS, ssaoSettings);
+	const vec4_t ssaoSettings2 = { 0 /* unused */, 
+								   std::fabs(r_ssao_aorange->value), 
+								   std::fabs(r_ssao_depthTolerance->value), 0 };
+	GLSL_SetUniformVec4(&tr.ssaoShader, UNIFORM_SSAOSETTINGS2, ssaoSettings2);
 
 	RB_InstantQuad2(quadVerts, texCoords);
 

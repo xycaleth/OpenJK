@@ -8,95 +8,116 @@ void main()
 {
 	gl_Position = attr_Position;
 	var_ScreenTex = attr_TexCoord0.xy;
-	//vec2 screenCoords = gl_Position.xy / gl_Position.w;
-	//var_ScreenTex = screenCoords * 0.5 + 0.5;
 }
 
 /*[Fragment]*/
-uniform sampler2D u_ScreenDepthMap;
-uniform vec4 u_ViewInfo; // zfar / znear, zfar
+uniform sampler2D u_ScreenDepthMap; // colormap
+uniform vec4 u_ViewInfo; // znear, zfar, 0, 0
+uniform vec2 u_ScreenInfo; // width, height
+
+uniform vec4 u_SSAOSettings; // aocap, 0, aoMultiplier, lightmap
+uniform vec4 u_SSAOSettings2; // 0, aorange, depthTolerance, 0
 
 in vec2 var_ScreenTex;
 
 out vec4 out_Color;
 
-vec2 poissonDisc[9] = vec2[9](
-vec2(-0.7055767, 0.196515),    vec2(0.3524343, -0.7791386),
-vec2(0.2391056, 0.9189604),    vec2(-0.07580382, -0.09224417),
-vec2(0.5784913, -0.002528916), vec2(0.192888, 0.4064181),
-vec2(-0.6335801, -0.5247476),  vec2(-0.5579782, 0.7491854),
-vec2(0.7320465, 0.6317794)
-);
+//
+// AO Shader by Monsterovich :D
+//
 
-// Input: It uses texture coords as the random number seed.
-// Output: Random number: [0,1), that is between 0.0 and 0.999999... inclusive.
-// Author: Michael Pohoreski
-// Copyright: Copyleft 2012 :-)
-// Source: http://stackoverflow.com/questions/5149544/can-i-generate-a-random-number-inside-a-pixel-shader
-
-float random( const vec2 p )
-{
-  // We need irrationals for pseudo randomness.
-  // Most (all?) known transcendental numbers will (generally) work.
-  const vec2 r = vec2(
-    23.1406926327792690,  // e^pi (Gelfond's constant)
-     2.6651441426902251); // 2^sqrt(2) (Gelfond-Schneider constant)
-  //return fract( cos( mod( 123456789., 1e-7 + 256. * dot(p,r) ) ) );
-  return mod( 123456789., 1e-7 + 256. * dot(p,r) );  
+float readDepth( in vec2 coord, in float znear, in float zfar ) {
+	return (2.0 * znear) / (zfar + znear - texture( u_ScreenDepthMap, coord ).x * (zfar - znear));	
 }
 
-mat2 randomRotation( const vec2 p )
-{
-	float r = random(p);
-	float sinr = sin(r);
-	float cosr = cos(r);
-	return mat2(cosr, sinr, -sinr, cosr);
+float compareDepths( in float depth1, in float depth2, in float znear, in float zfar  ) {
+	float diff = sqrt( clamp(1.0-(depth1-depth2) / ( u_SSAOSettings2.y /* aorange */ / (zfar - znear)),0.0,1.0) );
+	float ao = min(u_SSAOSettings.x /* aocap */,max(0.0,depth1-depth2-u_SSAOSettings2.z /* depthTolerance */) * u_SSAOSettings.z /* aoMultiplier */) * diff;
+	return ao;
 }
 
-float getLinearDepth(sampler2D depthMap, const vec2 tex, const float zFarDivZNear)
+const float P1 = 0.70710678118; // sin,cos(pi/4)
+const float P2x = 0.92387953251; // cos(pi/8)
+const float P2y = 0.38268343236; // sin(pi/8)
+const float P3x = P2y; // cos(3*pi/8)
+const float P3y = P2x; // sin(3*pi/8)
+
+
+void main(void)
 {
-		float sampleZDivW = texture(depthMap, tex).r;
-		return 1.0 / mix(zFarDivZNear, 1.0, sampleZDivW);
-}
+	float depth = readDepth( var_ScreenTex, u_ViewInfo.x, u_ViewInfo.y );
 
-float ambientOcclusion(sampler2D depthMap, const vec2 tex, const float zFarDivZNear, const float zFar)
-{
-	float result = 0;
+	float d;
+ 
+	float pw = 1.0 / u_ScreenInfo.x;
+	float ph = 1.0 / u_ScreenInfo.y;
+ 
+	float ao = 0.0;
+	float aoScale = 1.0;
 
-	float sampleZ = zFar * getLinearDepth(depthMap, tex, zFarDivZNear);
-
-	vec2 expectedSlope = vec2(dFdx(sampleZ), dFdy(sampleZ)) / vec2(dFdx(tex.x), dFdy(tex.y));
-	
-	if (length(expectedSlope) > 5000.0)
-		return 1.0;
-	
-	vec2 offsetScale = vec2(3.0 / sampleZ);
-	
-	mat2 rmat = randomRotation(tex);
-		
 	int i;
-	for (i = 0; i < 3; i++)
+	for (i = 0; i < 4; i++)
 	{
-		vec2 offset = rmat * poissonDisc[i] * offsetScale;
-		float sampleZ2 = zFar * getLinearDepth(depthMap, tex + offset, zFarDivZNear);
+		// This creates a circle, using precalculated sin/cos for performance reasons
+		// pi / 8 (4 points)
+		d = readDepth( vec2(var_ScreenTex.x+pw*P2x,var_ScreenTex.y+ph*P2y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
 
-		if (abs(sampleZ - sampleZ2) > 20.0)
-			result += 1.0;
-		else
-		{
-			float expectedZ = sampleZ + dot(expectedSlope, offset);
-			result += step(expectedZ - 1.0, sampleZ2);
-		}
+		d = readDepth( vec2(var_ScreenTex.x-pw*P2x,var_ScreenTex.y+ph*P2y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x+pw*P2x,var_ScreenTex.y-ph*P2y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x-pw*P2x,var_ScreenTex.y-ph*P2y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		// 3*pi / 8 (4 points)
+		d = readDepth( vec2(var_ScreenTex.x+pw*P3x,var_ScreenTex.y+ph*P3y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x-pw*P3x,var_ScreenTex.y+ph*P3y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x+pw*P3x,var_ScreenTex.y-ph*P3y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x-pw*P3x,var_ScreenTex.y-ph*P3y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		// pi / 4 (4 points)
+		d = readDepth( vec2(var_ScreenTex.x+pw*P1,var_ScreenTex.y+ph*P1), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x-pw*P1,var_ScreenTex.y+ph*P1), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x+pw*P1,var_ScreenTex.y-ph*P1), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x-pw*P1,var_ScreenTex.y-ph*P1), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		// up/down/left/right
+		d = readDepth( vec2(var_ScreenTex.x+pw,var_ScreenTex.y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x-pw,var_ScreenTex.y), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x,var_ScreenTex.y-ph), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		d = readDepth( vec2(var_ScreenTex.x,var_ScreenTex.y+ph), u_ViewInfo.x, u_ViewInfo.y);
+		ao += compareDepths(depth,d,u_ViewInfo.x,u_ViewInfo.y) * aoScale;
+
+		pw *= 2.0;
+		ph *= 2.0;
+		aoScale *= 0.8;
 	}
-	
-	result *= 0.33333;
-	
-	return result;
-}
 
-void main()
-{
-	float result = ambientOcclusion(u_ScreenDepthMap, var_ScreenTex, u_ViewInfo.x, u_ViewInfo.y);
-			
-	out_Color = vec4(vec3(result), 1.0);
+	ao /= 32.0;
+ 
+	float done = (1.0 - ao) * u_SSAOSettings.w;
+	out_Color = vec4(done, done, done, 0.0); 
 }

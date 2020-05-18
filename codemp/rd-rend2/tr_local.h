@@ -1248,7 +1248,10 @@ typedef enum
 	UNIFORM_NORMALSCALE,
 	UNIFORM_SPECULARSCALE,
 
-	UNIFORM_VIEWINFO, // znear, zfar, width/2, height/2
+	UNIFORM_VIEWINFO,
+	UNIFORM_SCREENINFO,
+	UNIFORM_SSAOSETTINGS,
+	UNIFORM_SSAOSETTINGS2,
 	UNIFORM_VIEWORIGIN,
 	UNIFORM_LOCALVIEWORIGIN,
 	UNIFORM_VIEWFORWARD,
@@ -2514,6 +2517,11 @@ extern  cvar_t  *r_srgb;
 
 extern  cvar_t  *r_depthPrepass;
 extern  cvar_t  *r_ssao;
+extern  cvar_t  *r_ssao_aocap;
+extern  cvar_t  *r_ssao_aoMultiplier;
+extern  cvar_t  *r_ssao_lightmap;
+extern  cvar_t  *r_ssao_aorange;
+extern  cvar_t  *r_ssao_depthTolerance;
 
 extern  cvar_t  *r_normalMapping;
 extern  cvar_t  *r_specularMapping;
