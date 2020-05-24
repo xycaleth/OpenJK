@@ -40,45 +40,6 @@ color4ub_t	styleColors[MAX_LIGHT_STYLES];
 
 extern bool g_bRenderGlowingObjects;
 
-static VkDeviceSize GetBufferOffset(const void *base, const void *pointer)
-{
-	return static_cast<const char *>(pointer) -
-		static_cast<const char *>(base);
-}
-
-VkDeviceSize R_UploadVertexData(
-	GpuSwapchainResources *swapchainResources,
-    int numVertexes)
-{
-	static_assert(sizeof(BspVertex) == 32, "vertex must be 32 bytes in size");
-
-    const VkDeviceSize vertexOffset = GetBufferOffset(
-        swapchainResources->vertexBufferBase,
-        swapchainResources->vertexBufferData);
-
-    auto *out = static_cast<BspVertex *>(swapchainResources->vertexBufferData);
-    for (int i = 0; i < numVertexes; ++i)
-    {
-        BspVertex *v = out + i;
-        v->position[0] = tess.xyz[i][0];
-        v->position[1] = tess.xyz[i][1];
-        v->position[2] = tess.xyz[i][2];
-        v->position[3] = 1.0f;
-        
-        v->texcoord[0] = tess.svars.texcoords[0][i][0];
-        v->texcoord[1] = tess.svars.texcoords[0][i][1];
-
-        v->color[0] = tess.svars.colors[i][0];
-        v->color[1] = tess.svars.colors[i][1];
-        v->color[2] = tess.svars.colors[i][2];
-        v->color[3] = tess.svars.colors[i][3];
-    }
-
-    swapchainResources->vertexBufferData = out + numVertexes;
-
-	return vertexOffset;
-}
-
 VkDeviceSize R_UploadIndexData(
     GpuSwapchainResources* swapchainResources,
     int numIndexes,
@@ -1663,7 +1624,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
         if (input->vertexBuffer == VK_NULL_HANDLE)
         {
             vertexBufferOffset =
-                R_UploadVertexData(swapchainResources, input->numVertexes);
+                pStage->writeVertexData(swapchainResources, input->numVertexes);
             vertexBuffer = swapchainResources->vertexBuffer;
         }
 

@@ -2161,3 +2161,8 @@ VkDescriptorSet GpuCreateMultitextureDescriptorSet(GpuContext& context, const sh
 
 	return descriptorSet;
 }
+
+VkDeviceSize GetBufferOffset(const void* base, const void* pointer)
+{
+    return static_cast<const char*>(pointer) - static_cast<const char*>(base);
+}

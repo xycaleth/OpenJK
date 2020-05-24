@@ -41,3 +41,9 @@ struct MultiTextureVertexFormat
 
     static constexpr size_t vertexSize = 36;
 };
+
+struct GpuSwapchainResources;
+VkDeviceSize UploadSingleTextureVertexData(
+    GpuSwapchainResources* swapchainResources, int numVertexes);
+VkDeviceSize UploadMultiTextureVertexData(
+    GpuSwapchainResources* swapchainResources, int numVertexes);

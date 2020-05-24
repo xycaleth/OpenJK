@@ -188,3 +188,5 @@ typedef struct image_s image_t;
 typedef struct shaderStage_s shaderStage_t;
 VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const image_t* image);
 VkDescriptorSet GpuCreateMultitextureDescriptorSet(GpuContext& context, const shaderStage_t *stage);
+
+VkDeviceSize GetBufferOffset(const void* base, const void* pointer);

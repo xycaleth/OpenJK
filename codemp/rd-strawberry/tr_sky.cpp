@@ -22,8 +22,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 // tr_sky.c
-#include "rd-strawberry/tr_gpu.h"
+#include "tr_gpu.h"
 #include "tr_local.h"
+#include "tr_vertex_formats.h"
 
 #define SKY_SUBDIVISIONS		8
 #define HALF_SKY_SUBDIVISIONS	(SKY_SUBDIVISIONS/2)
@@ -424,7 +425,7 @@ static void DrawSkySide( const skyParms_t* skyParms, int sideIndex, const int mi
     const VkDeviceSize indexBufferOffset =
         R_UploadIndexData(swapchainResources, tess.numIndexes, tess.indexes);
     const VkDeviceSize vertexBufferOffset =
-        R_UploadVertexData(swapchainResources, tess.numVertexes);
+        UploadSingleTextureVertexData(swapchainResources, tess.numVertexes);
 
     //
     // render

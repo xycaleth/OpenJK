@@ -2980,6 +2980,7 @@ static void CreateShaderGraphicsPipelines()
                 renderState.stateBits = stateBits;
                 renderState.stateBits2 = stateBits2;
 
+                stage->writeVertexData = UploadSingleTextureVertexData;
                 stage->drawBundle.pipelineLayout = renderState.pipelineLayout;
                 stage->drawBundle.pipelines[PIPELINE_STATE_DEFAULT] =
                     GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
@@ -3051,6 +3052,7 @@ static void CreateShaderGraphicsPipelines()
                 renderState.stateBits = stateBits;
                 renderState.stateBits2 = stateBits2;
 
+                stage->writeVertexData = UploadMultiTextureVertexData;
                 stage->drawBundle.pipelineLayout = renderState.pipelineLayout;
                 stage->drawBundle.pipelines[PIPELINE_STATE_DEFAULT] =
                     GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);

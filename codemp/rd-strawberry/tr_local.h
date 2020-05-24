@@ -431,7 +431,8 @@ typedef struct shaderStage_s {
 	// Whether this object emits a glow or not.
 	bool			glow;
 
-	DrawBundle      drawBundle;
+	DrawBundle		drawBundle;
+	VkDeviceSize	(*writeVertexData)(GpuSwapchainResources* swapChainResources, int numVertexes);
 } shaderStage_t;
 
 struct shaderCommands_s;
@@ -1600,10 +1601,6 @@ VkDeviceSize R_UploadIndexData(
     GpuSwapchainResources* swapchainResources,
     int numIndexes,
     const glIndex_t* indexes);
-
-VkDeviceSize R_UploadVertexData(
-	GpuSwapchainResources *swapchainResources,
-    int numVertexes);
 
 void GL_BindVertexBuffers(
     GpuSwapchainResources* swapchainResources,
