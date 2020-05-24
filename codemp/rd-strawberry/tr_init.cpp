@@ -1380,6 +1380,12 @@ void R_Init( void ) {
 		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.vert.spv");
 	tr.renderModuleFrag =
 		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.frag.spv");
+	tr.renderModuleVertMultitexture =
+		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.multitexture.vert.spv");
+	tr.renderModuleFragMultitextureAdditive =
+		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.multitexture.add.frag.spv");
+	tr.renderModuleFragMultitextureMultiplicative =
+		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.multitexture.multiply.frag.spv");
 
 	R_InitImages();
 
@@ -1467,6 +1473,9 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 		GpuContextPreShutdown(gpuContext);
 
 		R_UnloadWorldMap();
+		GpuDestroyShaderModule(gpuContext, tr.renderModuleVertMultitexture);
+		GpuDestroyShaderModule(gpuContext, tr.renderModuleFragMultitextureAdditive);
+		GpuDestroyShaderModule(gpuContext, tr.renderModuleFragMultitextureMultiplicative);
 		GpuDestroyShaderModule(gpuContext, tr.renderModuleVert);
 		GpuDestroyShaderModule(gpuContext, tr.renderModuleFrag);
 
@@ -1481,7 +1490,6 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 				SaveGhoul2InfoArray();
 			}
 		}
-
 	}
 
 	// shut down platform specific OpenGL stuff

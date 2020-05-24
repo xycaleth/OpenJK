@@ -396,6 +396,12 @@ struct DrawBundle
 	VkPipeline pipelines[PIPELINE_STATE_COUNT];
 };
 
+enum class BlendOperator
+{
+	Add,
+	Multiply,
+};
+
 typedef struct shaderStage_s {
 	bool			active;
 	bool			isDetail;
@@ -413,6 +419,7 @@ typedef struct shaderStage_s {
 
 	byte			constantColor[4];			// for CGEN_CONST and AGEN_CONST
 
+    BlendOperator   blendOperator;
 	uint32_t		stateBits;					// GLS_xxxx mask
 
 	acff_t			adjustColorsForFog;
@@ -1033,6 +1040,9 @@ typedef struct trGlobals_s {
 
 	VkShaderModule			renderModuleVert;
 	VkShaderModule			renderModuleFrag;
+    VkShaderModule          renderModuleVertMultitexture;
+    VkShaderModule          renderModuleFragMultitextureAdditive;
+    VkShaderModule          renderModuleFragMultitextureMultiplicative;
 
 	// Handle to the Glow Effect Vertex Shader. - AReis
 	GLuint					glowVShader;

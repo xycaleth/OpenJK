@@ -2395,17 +2395,11 @@ SHADER OPTIMIZATION AND FOGGING
 ========================================================================================
 */
 
-enum class StageOperator
-{
-	Add,
-	Multiply,
-};
-
 typedef struct collapse_s {
 	int		blendA;
 	int		blendB;
 
-	StageOperator multitextureEnv;
+	BlendOperator blendOperator;
 	int		multitextureBlend;
 } collapse_t;
 
@@ -2417,56 +2411,56 @@ static collapse_t collapse[] = {
 	{
 		0,
 		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		StageOperator::Multiply,
+		BlendOperator::Multiply,
 		0
 	},
 	// c1*0 + c2*c1 => (c1*c2)
 	{
 		0,
 		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		StageOperator::Multiply,
+		BlendOperator::Multiply,
 		0
 	},
 	// c1*0 + c2*(c0*0 + c1*c0) => (c2*c1)*c0
 	{
 		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
 		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		StageOperator::Multiply,
+		BlendOperator::Multiply,
 		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR
 	},
 	// c1*0 + c2*(c0*c1 + c1*0) => (c2*c1)*c0
 	{
 		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
 		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
-		StageOperator::Multiply,
+		BlendOperator::Multiply,
 		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR
 	},
 	// (c0*0 + c1*c0)*c2 + 0 => c0*(c1*c2)
 	{
 		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR,
 		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		StageOperator::Multiply,
+		BlendOperator::Multiply,
 		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR
 	},
 	// (c0*0 + c1*c0)*c2 + 0 => c0*(c1*c2)
 	{
 		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
 		GLS_DSTBLEND_SRC_COLOR | GLS_SRCBLEND_ZERO,
-		StageOperator::Multiply,
+		BlendOperator::Multiply,
 		GLS_DSTBLEND_ZERO | GLS_SRCBLEND_DST_COLOR
 	},
 	// c1 + c2 => c1 + c2
 	{
 		0,
 		GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		StageOperator::Add,
+		BlendOperator::Add,
 		0
 	},
 	// (c0 + c1) + c2 => c0 + (c1 + c2)
 	{
 		GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
 		GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE,
-		StageOperator::Add,
+		BlendOperator::Add,
 		GLS_DSTBLEND_ONE | GLS_SRCBLEND_ONE
 	},
 #if 0
@@ -2489,12 +2483,12 @@ FIXME: I think modulated add + modulated add collapses incorrectly
 =================
 */
 static qboolean CollapseMultitexture( void ) {
+	// STRAWB: Let's disable this for now
+	return qfalse;
+
 	int abits, bbits;
 	int i;
 	textureBundle_t tmpBundle;
-
-	// STRAWB: Let's disable this for now
-	return qfalse;
 
 	// make sure both stages are active
 	if ( !stages[0].active || !stages[1].active ) {
@@ -2532,7 +2526,7 @@ static qboolean CollapseMultitexture( void ) {
 	}
 
 	// an add collapse can only have identity colors
-	if ( collapse[i].multitextureEnv == StageOperator::Add && stages[0].rgbGen != CGEN_IDENTITY ) {
+	if ( collapse[i].blendOperator == BlendOperator::Add && stages[0].rgbGen != CGEN_IDENTITY ) {
 		return qfalse;
 	}
 
@@ -2558,6 +2552,7 @@ static qboolean CollapseMultitexture( void ) {
 	stages[0].bundle[1] = stages[1].bundle[0];
 
 	// set the new blend state bits
+    stages[0].blendOperator = collapse[i].blendOperator;
 	stages[0].stateBits &= ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
 	stages[0].stateBits |= collapse[i].multitextureBlend;
 
@@ -2968,63 +2963,96 @@ static void CreateShaderGraphicsPipelines()
         for (int stageIndex = 0; stageIndex < shader.numUnfoggedPasses; ++stageIndex)
         {
             shaderStage_t *stage = &stages[stageIndex];
-
             const uint32_t stateBits = stage->stateBits;
-            RenderState renderState;
-            renderState.vertexShader = tr.renderModuleVert;
-            renderState.fragmentShader = tr.renderModuleFrag;
-            renderState.vertexAttributes =
-                SingleTextureVertexFormat::vertexAttributes.data();
-            renderState.vertexAttributeCount =
-                SingleTextureVertexFormat::vertexAttributes.size();
-            renderState.vertexSize = SingleTextureVertexFormat::vertexSize;
-            renderState.pipelineLayout =
-                gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
-            renderState.stateBits = stateBits;
-            renderState.stateBits2 = stateBits2;
 
-            stage->drawBundle.pipelineLayout = renderState.pipelineLayout;
-            stage->drawBundle.pipelines[PIPELINE_STATE_DEFAULT] =
-                GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-
-            // No cull
+            if (stage->bundle[1].image == nullptr)
             {
-                uint32_t noCullStateBits2 = stateBits2;
-                noCullStateBits2 &= ~GLS2_CULLMODE_BITS;
-                noCullStateBits2 |= GLS2_CULLMODE_NONE;
-
+                RenderState renderState;
+                renderState.vertexShader = tr.renderModuleVert;
+                renderState.fragmentShader = tr.renderModuleFrag;
+                renderState.vertexAttributes =
+                    SingleTextureVertexFormat::vertexAttributes.data();
+                renderState.vertexAttributeCount =
+                    SingleTextureVertexFormat::vertexAttributes.size();
+                renderState.vertexSize = SingleTextureVertexFormat::vertexSize;
+                renderState.pipelineLayout =
+                    gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
                 renderState.stateBits = stateBits;
-                renderState.stateBits2 = noCullStateBits2;
-                stage->drawBundle.pipelines[PIPELINE_STATE_NO_CULL] =
-                    GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-            }
-
-            // Force ent alpha
-            {
-                renderState.stateBits =
-                    GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
                 renderState.stateBits2 = stateBits2;
-                stage->drawBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA] =
-                    GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-            }
 
-            // Force ent alpha with depth write
-            {
-                renderState.stateBits = GLS_SRCBLEND_SRC_ALPHA |
-                                        GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
-                                        GLS_DEPTHMASK_TRUE;
-                renderState.stateBits2 = stateBits2;
-                stage->drawBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE] =
+                stage->drawBundle.pipelineLayout = renderState.pipelineLayout;
+                stage->drawBundle.pipelines[PIPELINE_STATE_DEFAULT] =
                     GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
-            }
 
-            // Disintegrate
+                // No cull
+                {
+                    uint32_t noCullStateBits2 = stateBits2;
+                    noCullStateBits2 &= ~GLS2_CULLMODE_BITS;
+                    noCullStateBits2 |= GLS2_CULLMODE_NONE;
+
+                    renderState.stateBits = stateBits;
+                    renderState.stateBits2 = noCullStateBits2;
+                    stage->drawBundle.pipelines[PIPELINE_STATE_NO_CULL] =
+                        GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+                }
+
+                // Force ent alpha
+                {
+                    renderState.stateBits =
+                        GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+                    renderState.stateBits2 = stateBits2;
+                    stage->drawBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA] =
+                        GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+                }
+
+                // Force ent alpha with depth write
+                {
+                    renderState.stateBits = GLS_SRCBLEND_SRC_ALPHA |
+                                            GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
+                                            GLS_DEPTHMASK_TRUE;
+                    renderState.stateBits2 = stateBits2;
+                    stage->drawBundle.pipelines[PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE] =
+                        GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+                }
+
+                // Disintegrate
+                {
+                    renderState.stateBits = GLS_SRCBLEND_SRC_ALPHA |
+                                            GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
+                                            GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
+                    renderState.stateBits2 = stateBits2;
+                    stage->drawBundle.pipelines[PIPELINE_STATE_DISINTEGRATE] =
+                        GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
+                }
+            }
+            else
             {
-                renderState.stateBits = GLS_SRCBLEND_SRC_ALPHA |
-                                        GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA |
-                                        GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
+                RenderState renderState;
+                renderState.vertexShader = tr.renderModuleVertMultitexture;
+                switch (stage->blendOperator)
+                {
+                case BlendOperator::Add:
+                    renderState.fragmentShader =
+                        tr.renderModuleFragMultitextureAdditive;
+                    break;
+
+                case BlendOperator::Multiply:
+                    renderState.fragmentShader =
+                        tr.renderModuleFragMultitextureMultiplicative;
+                    break;
+                }
+                renderState.vertexAttributes =
+                    MultiTextureVertexFormat::vertexAttributes.data();
+                renderState.vertexAttributeCount =
+                    MultiTextureVertexFormat::vertexAttributes.size();
+                renderState.vertexSize = MultiTextureVertexFormat::vertexSize;
+                renderState.pipelineLayout =
+                    gpuContext.pipelineLayouts[DESCRIPTOR_SET_MULTI_TEXTURE];
+                renderState.stateBits = stateBits;
                 renderState.stateBits2 = stateBits2;
-                stage->drawBundle.pipelines[PIPELINE_STATE_DISINTEGRATE] =
+
+                stage->drawBundle.pipelineLayout = renderState.pipelineLayout;
+                stage->drawBundle.pipelines[PIPELINE_STATE_DEFAULT] =
                     GpuGetGraphicsPipelineForRenderState(gpuContext, renderState);
             }
         }
