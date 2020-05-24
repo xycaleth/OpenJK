@@ -2086,80 +2086,54 @@ VkDescriptorSet GpuAllocateDescriptorSet(GpuContext& context, DescriptorSetId de
 
 VkDescriptorSet GpuCreateDescriptorSet(GpuContext& context, const image_t* image)
 {
-	if (image == nullptr)
-	{
-		return VK_NULL_HANDLE;
-	}
-
-	VkDescriptorSet descriptorSet = GpuAllocateDescriptorSet(
-		context,
-		DESCRIPTOR_SET_SINGLE_TEXTURE);
-
-	VkDescriptorImageInfo descriptorImageInfo = {};
-	descriptorImageInfo.sampler = image->sampler;
-	descriptorImageInfo.imageView = image->imageView;
-	descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	VkWriteDescriptorSet descriptorWrite = {};
-	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrite.dstSet = descriptorSet;
-	descriptorWrite.dstBinding = 0;
-	descriptorWrite.dstArrayElement = 0;
-	descriptorWrite.descriptorCount = 1;
-	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrite.pImageInfo = &descriptorImageInfo;
-	vkUpdateDescriptorSets(gpuContext.device, 1, &descriptorWrite, 0, nullptr);
-
-	context.descriptorSets.push_back(descriptorSet);
-
-	return descriptorSet;
+    return GpuCreateDescriptorSet(context, &image, 1);
 }
 
-VkDescriptorSet GpuCreateMultitextureDescriptorSet(GpuContext& context, const shaderStage_t *stage)
+VkDescriptorSet GpuCreateDescriptorSet(
+    GpuContext& context, const image_t* const* images, size_t imageCount)
 {
-	VkDescriptorSet descriptorSet = GpuAllocateDescriptorSet(
-		context,
-		DESCRIPTOR_SET_MULTI_TEXTURE);
+    VkDescriptorSet descriptorSet = GpuAllocateDescriptorSet(
+        context,
+        imageCount > 1 ? DESCRIPTOR_SET_MULTI_TEXTURE
+                       : DESCRIPTOR_SET_SINGLE_TEXTURE);
 
-	const image_t *image0 = stage->bundle[0].image;
-	if (stage->bundle[0].numImageAnimations > 1)
-	{
-		image0 = ((image_t**)(stage->bundle[0].image))[0];
-	}
+    for (size_t i = 0; i < imageCount; ++i)
+    {
+        if (images[i] == nullptr)
+        {
+            return VK_NULL_HANDLE;
+        }
+    }
 
-	const image_t *image1 = stage->bundle[0].image;
-	if (stage->bundle[1].numImageAnimations > 1)
-	{
-		image1 = ((image_t**)(stage->bundle[1].image))[0];
-	}
+    std::vector<VkDescriptorImageInfo> descriptorImageInfos(imageCount);
+    std::vector<VkWriteDescriptorSet> descriptorWrites(imageCount);
+    for (size_t i = 0; i < imageCount; ++i)
+    {
+        descriptorImageInfos[i].sampler = images[i]->sampler;
+        descriptorImageInfos[i].imageView = images[i]->imageView;
+        descriptorImageInfos[i].imageLayout =
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-	if (image0 == nullptr || image1 == nullptr)
-	{
-		return VK_NULL_HANDLE;
-	}
+        descriptorWrites[i] = {};
+        descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[i].dstSet = descriptorSet;
+        descriptorWrites[i].dstBinding = i;
+        descriptorWrites[i].dstArrayElement = 0;
+        descriptorWrites[i].descriptorCount = 1;
+        descriptorWrites[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[i].pImageInfo = &descriptorImageInfos[i];
+    }
 
-	std::array<VkDescriptorImageInfo, 2> descriptorImageInfos = {};
-	descriptorImageInfos[0].sampler = image0->sampler;
-	descriptorImageInfos[0].imageView = image0->imageView;
-	descriptorImageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	descriptorImageInfos[1].sampler = image1->sampler;
-	descriptorImageInfos[1].imageView = image1->imageView;
-	descriptorImageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    vkUpdateDescriptorSets(
+        gpuContext.device,
+        descriptorWrites.size(),
+        descriptorWrites.data(),
+        0,
+        nullptr);
 
-	VkWriteDescriptorSet descriptorWrite = {};
-	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrite.dstSet = descriptorSet;
-	descriptorWrite.dstBinding = 0;
-	descriptorWrite.dstArrayElement = 0;
-	descriptorWrite.descriptorCount = descriptorImageInfos.size();
-	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrite.pImageInfo = descriptorImageInfos.data();
+    context.descriptorSets.push_back(descriptorSet);
 
-	vkUpdateDescriptorSets(gpuContext.device, 1, &descriptorWrite, 0, nullptr);
-
-	context.descriptorSets.push_back(descriptorSet);
-
-	return descriptorSet;
+    return descriptorSet;
 }
 
 VkDeviceSize GetBufferOffset(const void* base, const void* pointer)

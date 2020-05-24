@@ -60,47 +60,6 @@ VkDeviceSize R_UploadIndexData(
     return indexOffset;
 }
 
-static VkDescriptorSet CreateDescriptorSet(
-	GpuSwapchainResources *swapchainResources)
-{
-	VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
-	descriptorSetAllocateInfo.sType =
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO; 
-	descriptorSetAllocateInfo.descriptorPool =
-		swapchainResources->descriptorPool;
-	descriptorSetAllocateInfo.descriptorSetCount = 1;
-	descriptorSetAllocateInfo.pSetLayouts =
-		&gpuContext.descriptorSetLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
-
-	VkDescriptorSet descriptorSet;
-	if (vkAllocateDescriptorSets(
-			gpuContext.device,
-			&descriptorSetAllocateInfo,
-			&descriptorSet) != VK_SUCCESS)
-	{
-		Com_Error(ERR_FATAL, "Failed to create descriptor set");
-	}
-
-	image_t *image = glState.currenttextures[0];
-
-	VkDescriptorImageInfo descriptorImageInfo = {};
-	descriptorImageInfo.sampler = image->sampler;
-	descriptorImageInfo.imageView = image->imageView;
-	descriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-	VkWriteDescriptorSet descriptorWrite = {};
-	descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWrite.dstSet = descriptorSet;
-	descriptorWrite.dstBinding = 0;
-	descriptorWrite.dstArrayElement = 0;
-	descriptorWrite.descriptorCount = 1;
-	descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptorWrite.pImageInfo = &descriptorImageInfo;
-	vkUpdateDescriptorSets(gpuContext.device, 1, &descriptorWrite, 0, nullptr);
-
-	return descriptorSet;
-}
-
 void R_DrawElementsWithShader(
     GpuSwapchainResources* swapchainResources,
     int numIndexes,

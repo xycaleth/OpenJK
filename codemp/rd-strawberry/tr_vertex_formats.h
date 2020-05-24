@@ -32,10 +32,10 @@ struct MultiTextureVertexFormat
             {1, 0, VK_FORMAT_R32G32_SFLOAT, 16},
 
             // texcoord1
-            {2, 0, VK_FORMAT_R32G32_SFLOAT, 24},
+            {3, 0, VK_FORMAT_R32G32_SFLOAT, 24},
 
             // color
-            {3, 0, VK_FORMAT_R8G8B8A8_UNORM, 32},
+            {2, 0, VK_FORMAT_R8G8B8A8_UNORM, 32},
         }
     };
 

@@ -2483,20 +2483,13 @@ FIXME: I think modulated add + modulated add collapses incorrectly
 =================
 */
 static qboolean CollapseMultitexture( void ) {
-	// STRAWB: Let's disable this for now
-	return qfalse;
-
-	int abits, bbits;
-	int i;
-	textureBundle_t tmpBundle;
-
 	// make sure both stages are active
 	if ( !stages[0].active || !stages[1].active ) {
 		return qfalse;
 	}
 
-	abits = stages[0].stateBits;
-	bbits = stages[1].stateBits;
+	int abits = stages[0].stateBits;
+	int bbits = stages[1].stateBits;
 
 	// make sure that both stages have identical state other than blend modes
 	if ( ( abits & ~( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS | GLS_DEPTHMASK_TRUE ) ) !=
@@ -2508,6 +2501,7 @@ static qboolean CollapseMultitexture( void ) {
 	bbits &= ( GLS_DSTBLEND_BITS | GLS_SRCBLEND_BITS );
 
 	// search for a valid multitexture blend function
+	int i;
 	for ( i = 0; collapse[i].blendA != -1 ; i++ ) {
 		if ( abits == collapse[i].blendA && bbits == collapse[i].blendB ) {
 			break;
@@ -2904,8 +2898,15 @@ static void CreateShaderStageDescriptorSets()
         }
         else
         {
+            const image_t* image1 = stage->bundle[1].image;
+            if (stage->bundle[1].numImageAnimations > 1)
+            {
+                image1 = ((image_t**)(stage->bundle[1].image))[0];
+            }
+
+            const image_t* images[] = {image, image1};
             stage->drawBundle.descriptorSet =
-                GpuCreateMultitextureDescriptorSet(gpuContext, stage);
+                GpuCreateDescriptorSet(gpuContext, images, 2);
         }
     }
 }
