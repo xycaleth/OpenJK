@@ -1686,88 +1686,74 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 */
 void RB_StageIteratorGeneric( void )
 {
-	shaderCommands_t *input = &tess;
+    if (r_logFile->integer)
+    {
+        // don't just call LogComment, or we will get
+        // a call to va() every frame!
+        GLimp_LogComment(
+            va("--- RB_StageIteratorGeneric( %s ) ---\n", tess.shader->name));
+    }
 
-	RB_DeformTessGeometry();
+    shaderCommands_t* input = &tess;
 
-	//
-	// log this call
-	//
-	if ( r_logFile->integer )
-	{
-		// don't just call LogComment, or we will get
-		// a call to va() every frame!
-		GLimp_LogComment( va("--- RB_StageIteratorGeneric( %s ) ---\n", tess.shader->name) );
-	}
+    RB_DeformTessGeometry();
 
-	GL_Cull( input->shader->cullType );
-	GL_PolygonOffset(input->shader->polygonOffset);
+    //
+    // call shader function
+    //
+    RB_IterateStagesGeneric(input);
 
-	//
-	// call shader function
-	//
-	RB_IterateStagesGeneric( input );
-
-	//
-	// now do any dynamic lighting needed
-	//
+    //
+    // now do any dynamic lighting needed
+    //
 #ifdef STRAWB
-	if ( tess.dlightBits && tess.shader->sort <= SS_OPAQUE
-		&& !(tess.shader->surfaceFlags & (SURF_NODLIGHT | SURF_SKY) ) ) {
-		if (r_dlightStyle->integer>0)
-		{
-			ProjectDlightTexture2();
-		}
-		else
-		{
-			ProjectDlightTexture();
-		}
-	}
+    if (tess.dlightBits && tess.shader->sort <= SS_OPAQUE &&
+        !(tess.shader->surfaceFlags & (SURF_NODLIGHT | SURF_SKY)))
+    {
+        if (r_dlightStyle->integer > 0)
+        {
+            ProjectDlightTexture2();
+        }
+        else
+        {
+            ProjectDlightTexture();
+        }
+    }
 
-	//
-	// now do fog
-	//
-	if (tr.world &&
-		(tess.fogNum != tr.world->globalFog || r_drawfog->value != 2) &&
-		r_drawfog->value &&
-		tess.fogNum &&
-		tess.shader->fogPass)
-	{
-		RB_FogPass();
-	}
+    //
+    // now do fog
+    //
+    if (tr.world &&
+        (tess.fogNum != tr.world->globalFog || r_drawfog->value != 2) &&
+        r_drawfog->value && tess.fogNum && tess.shader->fogPass)
+    {
+        RB_FogPass();
+    }
 #endif
 
-	//
-	// reset polygon offset
-	//
-	if ( input->shader->polygonOffset )
-	{
-		GL_PolygonOffset(false);
-	}
-
 #ifdef STRAWB
-	// Now check for surfacesprites.
-	if (r_surfaceSprites->integer)
-	{
-		for ( int stage = 1; stage < tess.shader->numUnfoggedPasses; stage++ )
-		{
-			if (tess.xstages[stage].ss && tess.xstages[stage].ss->surfaceSpriteType)
-			{	// Draw the surfacesprite
-				RB_DrawSurfaceSprites(&tess.xstages[stage], input);
-			}
-		}
-	}
+    // Now check for surfacesprites.
+    if (r_surfaceSprites->integer)
+    {
+        for (int stage = 1; stage < tess.shader->numUnfoggedPasses; stage++)
+        {
+            if (tess.xstages[stage].ss &&
+                tess.xstages[stage].ss->surfaceSpriteType)
+            { // Draw the surfacesprite
+                RB_DrawSurfaceSprites(&tess.xstages[stage], input);
+            }
+        }
+    }
 
-	//don't disable the hardware fog til after we do surface sprites
-	if (r_drawfog->value == 2 &&
-		tess.fogNum && tess.shader->fogPass &&
-		(tess.fogNum == tr.world->globalFog || tess.fogNum == tr.world->numfogs))
-	{
-		qglDisable(GL_FOG);
-	}
+    // don't disable the hardware fog til after we do surface sprites
+    if (r_drawfog->value == 2 && tess.fogNum && tess.shader->fogPass &&
+        (tess.fogNum == tr.world->globalFog ||
+         tess.fogNum == tr.world->numfogs))
+    {
+        qglDisable(GL_FOG);
+    }
 #endif
 }
-
 
 /*
 ** RB_EndSurface
