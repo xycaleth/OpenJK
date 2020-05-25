@@ -753,10 +753,6 @@ void RB_SetGL2D (void) {
 	glState.depthRangeMin = 0.0f;
 	glState.depthRangeMax = 1.0f;
 
-	GL_State(GLS_DEPTHTEST_DISABLE |
-			 GLS_SRCBLEND_SRC_ALPHA |
-			 GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
-
 	const float orthoProjection[16] = {
 		2.0f / 640.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 2.0f / 480.0f, 0.0f, 0.0f,
