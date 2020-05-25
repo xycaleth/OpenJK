@@ -461,8 +461,6 @@ static void DrawSkyBox( shader_t *shader )
 	sky_min = 0;
 	sky_max = 1;
 
-	GL_State(0);
-
 	memset( s_skyTexCoords, 0, sizeof( s_skyTexCoords ) );
 
 	for (i=0 ; i<6 ; i++)

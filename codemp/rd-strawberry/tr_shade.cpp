@@ -1703,8 +1703,6 @@ void RB_StageIteratorGeneric( void )
 	GL_Cull( input->shader->cullType );
 	GL_PolygonOffset(input->shader->polygonOffset);
 
-	// STRAWB: positions can be uploaded at this time
-
 	//
 	// call shader function
 	//
