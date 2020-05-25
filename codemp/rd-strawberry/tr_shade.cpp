@@ -77,9 +77,9 @@ void R_DrawElementsWithShader(
     viewport.maxDepth = glState.depthRangeMax;
 
     VkRect2D scissor = {};
-    scissor.offset = {glState.viewport.x, glState.viewport.y};
-    scissor.extent = {static_cast<uint32_t>(glState.viewport.width),
-                      static_cast<uint32_t>(glState.viewport.height)};
+    scissor.offset = {glState.scissorRect.x, glState.scissorRect.y};
+    scissor.extent = {static_cast<uint32_t>(glState.scissorRect.width),
+                      static_cast<uint32_t>(glState.scissorRect.height)};
 
     vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
     vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);

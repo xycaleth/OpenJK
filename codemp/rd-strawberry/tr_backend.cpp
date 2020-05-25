@@ -748,10 +748,8 @@ RB_SetGL2D
 void RB_SetGL2D (void) {
 	backEnd.projection2D = qtrue;
 
-	glState.viewport.x = 0;
-	glState.viewport.y = 0;
-	glState.viewport.width = glConfig.vidWidth;
-	glState.viewport.height = glConfig.vidHeight;
+	glState.viewport = {0, 0, glConfig.vidWidth, glConfig.vidHeight};
+	glState.scissorRect = {0, 0, glConfig.vidWidth, glConfig.vidHeight};
 	glState.depthRangeMin = 0.0f;
 	glState.depthRangeMax = 1.0f;
 
