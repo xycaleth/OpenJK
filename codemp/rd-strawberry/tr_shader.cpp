@@ -2942,7 +2942,8 @@ static void CreateShaderGraphicsPipelines()
 {
     if (shader.sky != nullptr)
     {
-        RenderState renderState;
+        RenderState renderState = {};
+        renderState.stateBits2 = GLS2_CULLMODE_NONE;
         renderState.vertexShader = tr.renderModuleVert;
         renderState.fragmentShader = tr.renderModuleFrag;
         renderState.vertexAttributes =
