@@ -955,8 +955,6 @@ typedef struct glstate_s {
 	image_t		*currenttextures[2];
 	int			currenttmu;
 	int			texEnv[2];
-	uint32_t	glStateBits;
-	uint32_t	glStateBits2;
 	gpuMatrices_t matrices;
 	rect_t		viewport;
 	rect_t		scissorRect;

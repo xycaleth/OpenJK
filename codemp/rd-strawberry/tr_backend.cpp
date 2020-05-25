@@ -91,48 +91,6 @@ void GL_SelectTexture( int unit )
 ** GL_Cull
 */
 void GL_Cull( int cullType ) {
-	glState.glStateBits2 &= ~GLS2_CULLMODE_BITS;
-	if (backEnd.projection2D) {
-		//don't care, we're in 2d when it's always disabled
-		glState.glStateBits2 |= GLS2_CULLMODE_NONE;
-	}
-	else
-	{
-		switch (cullType)
-		{
-			case CT_TWO_SIDED:
-			{
-				glState.glStateBits2 |= GLS2_CULLMODE_NONE;
-				break;
-			}
-
-			case CT_BACK_SIDED:
-			{
-				if (backEnd.viewParms.isMirror)
-				{
-					glState.glStateBits2 |= GLS2_CULLMODE_FRONT;
-				}
-				else
-				{
-					glState.glStateBits2 |= GLS2_CULLMODE_BACK;
-				}
-				break;
-			}
-
-			case CT_FRONT_SIDED:
-			{
-				if (backEnd.viewParms.isMirror)
-				{
-					glState.glStateBits2 |= GLS2_CULLMODE_BACK;
-				}
-				else
-				{
-					glState.glStateBits2 |= GLS2_CULLMODE_FRONT;
-				}
-				break;
-			}
-		}
-	}
 }
 
 /*
@@ -151,19 +109,10 @@ void GL_TexEnv( int env )
 */
 void GL_State( uint32_t stateBits )
 {
-	glState.glStateBits = stateBits;
 }
 
 void GL_PolygonOffset(bool enable)
 {
-	if (enable)
-	{
-		glState.glStateBits2 |= GLS2_POLYGONOFFSET;
-	}
-	else
-	{
-		glState.glStateBits2 &= ~GLS2_POLYGONOFFSET;
-	}
 }
 
 void GL_ProjectionMatrix(const float *projectionMatrix)
@@ -228,8 +177,6 @@ to actually render the visible surfaces for this view
 =================
 */
 void RB_BeginDrawingView (void) {
-	int clearBits = GL_DEPTH_BUFFER_BIT;
-
 	// we will need to change the projection matrix before drawing
 	// 2D images again
 	backEnd.projection2D = qfalse;
@@ -241,6 +188,8 @@ void RB_BeginDrawingView (void) {
 
 	// ensures that depth writes are enabled for the depth clear
 	GL_State(GLS_DEFAULT);
+
+	int clearBits = GL_DEPTH_BUFFER_BIT;
 
 	// clear relevant buffers
 	if (r_measureOverdraw->integer || r_shadows->integer == 2 || tr_stencilled)
