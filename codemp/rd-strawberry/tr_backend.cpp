@@ -59,6 +59,7 @@ static const float s_flipMatrix[16] = {
 ** GL_Bind
 */
 void GL_Bind( image_t *image ) {
+#ifdef STRAWB
 	image_t *bindImage = image;
 	if (!image)
 	{
@@ -77,6 +78,7 @@ void GL_Bind( image_t *image ) {
 		bindImage->frameUsed = tr.frameCount;
 		glState.currenttextures[glState.currenttmu] = bindImage;
 	}
+#endif
 }
 
 /*
@@ -84,7 +86,6 @@ void GL_Bind( image_t *image ) {
 */
 void GL_SelectTexture( int unit )
 {
-	glState.currenttmu = unit;
 }
 
 /*
@@ -98,7 +99,6 @@ void GL_Cull( int cullType ) {
 */
 void GL_TexEnv( int env )
 {
-	glState.texEnv[glState.currenttmu] = env;
 }
 
 /*
@@ -1856,8 +1856,6 @@ static inline void RB_BlurGlowTexture()
 
 	qglDisable( GL_BLEND );
 	qglEnable( GL_DEPTH_TEST );
-
-	glState.currenttmu = 0;	//this matches the last one we activated
 }
 
 // Draw the glow blur over the screen additively.
