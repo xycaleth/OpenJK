@@ -935,9 +935,10 @@ VkBlendFactor GetVkDstBlendFactor(uint32_t stateBits)
 
 VkFormat PickDepthStencilFormat(VkPhysicalDevice physicalDevice)
 {
-	const std::array<VkFormat, 2> depthStencilFormatCandidates = {
+	const std::array<VkFormat, 3> depthStencilFormatCandidates = {
+		VK_FORMAT_D32_SFLOAT_S8_UINT,
 		VK_FORMAT_D24_UNORM_S8_UINT,
-		VK_FORMAT_D32_SFLOAT_S8_UINT
+		VK_FORMAT_D16_UNORM_S8_UINT,
 	};
 
 	for (auto format : depthStencilFormatCandidates)
@@ -1555,6 +1556,7 @@ void GpuContextInit(GpuContext& context)
 		&swapchainImageCount,
 		nullptr);
 
+    ri.Printf(PRINT_ALL, "Using %d swapchain images\n", swapchainImageCount);
 	std::vector<VkImage> swapchainImages(swapchainImageCount);
 	vkGetSwapchainImagesKHR(
 		context.device,
