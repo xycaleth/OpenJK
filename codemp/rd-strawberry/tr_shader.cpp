@@ -2971,7 +2971,28 @@ static void CreateShaderGraphicsPipelines()
             {
                 RenderState renderState;
                 renderState.vertexShader = tr.renderModuleVert;
-                renderState.fragmentShader = tr.renderModuleFrag;
+                switch (stateBits & GLS_ATEST_BITS)
+                {
+                case GLS_ATEST_GT_0:
+                    renderState.fragmentShader =
+                        tr.renderModuleFragAlphaTestGT0;
+                    break;
+                case GLS_ATEST_LT_80:
+                    renderState.fragmentShader =
+                        tr.renderModuleFragAlphaTestLT127;
+                    break;
+                case GLS_ATEST_GE_80:
+                    renderState.fragmentShader =
+                        tr.renderModuleFragAlphaTestGE127;
+                    break;
+                case GLS_ATEST_GE_C0:
+                    renderState.fragmentShader =
+                        tr.renderModuleFragAlphaTestGE192;
+                    break;
+                default:
+                    renderState.fragmentShader = tr.renderModuleFrag;
+                    break;
+                }
                 renderState.vertexAttributes =
                     SingleTextureVertexFormat::vertexAttributes.data();
                 renderState.vertexAttributeCount =

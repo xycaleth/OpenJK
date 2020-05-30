@@ -1331,6 +1331,14 @@ void R_Init( void ) {
 		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.vert.spv");
 	tr.renderModuleFrag =
 		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.frag.spv");
+	tr.renderModuleFragAlphaTestGT0 =
+		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.alphatest.gt0.frag.spv");
+	tr.renderModuleFragAlphaTestLT127 =
+		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.alphatest.lt127.frag.spv");
+	tr.renderModuleFragAlphaTestGE127 =
+		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.alphatest.ge127.frag.spv");
+	tr.renderModuleFragAlphaTestGE192 =
+		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.alphatest.ge192.frag.spv");
 	tr.renderModuleVertMultitexture =
 		GpuCreateShaderModuleFromFile(gpuContext, "spv/render.multitexture.vert.spv");
 	tr.renderModuleFragMultitextureAdditive =
@@ -1429,6 +1437,10 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 		GpuDestroyShaderModule(gpuContext, tr.renderModuleFragMultitextureMultiplicative);
 		GpuDestroyShaderModule(gpuContext, tr.renderModuleVert);
 		GpuDestroyShaderModule(gpuContext, tr.renderModuleFrag);
+		GpuDestroyShaderModule(gpuContext, tr.renderModuleFragAlphaTestGT0);
+		GpuDestroyShaderModule(gpuContext, tr.renderModuleFragAlphaTestLT127);
+		GpuDestroyShaderModule(gpuContext, tr.renderModuleFragAlphaTestGE127);
+		GpuDestroyShaderModule(gpuContext, tr.renderModuleFragAlphaTestGE192);
 
 		if (destroyWindow)
 		{

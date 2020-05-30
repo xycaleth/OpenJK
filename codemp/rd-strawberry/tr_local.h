@@ -1032,6 +1032,10 @@ typedef struct trGlobals_s {
 
 	VkShaderModule			renderModuleVert;
 	VkShaderModule			renderModuleFrag;
+	VkShaderModule			renderModuleFragAlphaTestGT0;
+	VkShaderModule			renderModuleFragAlphaTestLT127;
+	VkShaderModule			renderModuleFragAlphaTestGE127;
+	VkShaderModule			renderModuleFragAlphaTestGE192;
     VkShaderModule          renderModuleVertMultitexture;
     VkShaderModule          renderModuleFragMultitextureAdditive;
     VkShaderModule          renderModuleFragMultitextureMultiplicative;
