@@ -1591,62 +1591,60 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
         const VkDeviceSize indexBufferOffset = R_UploadIndexData(
             swapchainResources, input->numIndexes, input->indexes);
 
-        //
-        // multitexture stages are treated differently
-        //
         PipelineStateId stateId = PIPELINE_STATE_DEFAULT;
         if (backEnd.projection2D)
         {
             stateId = PIPELINE_STATE_NO_CULL;
-		}
-		else if (pStage->bundle[1].image == nullptr)
-		{
-			//
-			// set state
-			//
+        }
+        else if (pStage->bundle[1].image == nullptr)
+        {
+            //
+            // set state
+            //
 #ifdef STRAWB
-			// This doesn't do anything right now since the textures are coming from the
-			// descriptor sets
-			if (backEnd.currentEntity->e.renderfx & RF_DISTORTION)
-			{
-				GL_Bind(tr.screenImage);
-			}
-			else
-			{
-				R_BindAnimatedImage(&pStage->bundle[0]);
-			}
+            // This doesn't do anything right now since the textures are coming
+            // from the descriptor sets
+            if (backEnd.currentEntity->e.renderfx & RF_DISTORTION)
+            {
+                GL_Bind(tr.screenImage);
+            }
+            else
+            {
+                R_BindAnimatedImage(&pStage->bundle[0]);
+            }
 #endif
 
-			if (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA)
-			{
-				ForceAlpha(
-					(unsigned char *)tess.svars.colors,
-					backEnd.currentEntity->e.shaderRGBA[3]);
+            if (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA)
+            {
+                ForceAlpha(
+                    (unsigned char*)tess.svars.colors,
+                    backEnd.currentEntity->e.shaderRGBA[3]);
 
-				stateId = PIPELINE_STATE_FORCE_ENT_ALPHA;
+                stateId = PIPELINE_STATE_FORCE_ENT_ALPHA;
 
-				if (backEnd.currentEntity->e.renderfx & RF_ALPHA_DEPTH)
-				{
-					// depth write, so faces through the model will be
-					// stomped over by nearer ones. this works because we
-					// draw RF_FORCE_ENT_ALPHA stuff after everything else,
-					// including standard alpha surfs.
-					stateId = PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE;
-				}
-			}
-			else if (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1)
-			{
-				// we want to be able to rip a hole in the thing being
-				// disintegrated, and by doing the depth-testing it avoids some
-				// kinds of artefacts, but will probably introduce others?
-				stateId = PIPELINE_STATE_DISINTEGRATE;
-			}
+                if (backEnd.currentEntity->e.renderfx & RF_ALPHA_DEPTH)
+                {
+                    // depth write, so faces through the model will be
+                    // stomped over by nearer ones. this works because we
+                    // draw RF_FORCE_ENT_ALPHA stuff after everything else,
+                    // including standard alpha surfs.
+                    stateId = PIPELINE_STATE_FORCE_ENT_ALPHA_WITH_DEPTHWRITE;
+                }
+            }
+            else if (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1)
+            {
+                // we want to be able to rip a hole in the thing being
+                // disintegrated, and by doing the depth-testing it avoids some
+                // kinds of artefacts, but will probably introduce others?
+                stateId = PIPELINE_STATE_DISINTEGRATE;
+            }
 
-			if (backEnd.currentEntity->e.renderfx & RF_DISTORTION)
-			{
-				stateId = PIPELINE_STATE_NO_CULL;
-			}
-		}
+            if (backEnd.currentEntity->e.renderfx & RF_DISTORTION)
+            {
+                stateId = PIPELINE_STATE_NO_CULL;
+            }
+        }
+        // else multitexture - multitexturing isn't affected by any entity renderfx
 
         //
         // Render
