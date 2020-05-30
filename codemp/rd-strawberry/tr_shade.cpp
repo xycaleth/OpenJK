@@ -1575,22 +1575,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 
 		ComputeTexCoords(pStage);
 
-        //
-        // Upload vertex data
-        //
-        VkDeviceSize vertexBufferOffset = 0;
-        VkBuffer vertexBuffer = input->vertexBuffer;
-        if (input->vertexBuffer == VK_NULL_HANDLE)
-        {
-            vertexBufferOffset =
-                pStage->writeVertexData(swapchainResources, input->numVertexes);
-            vertexBuffer = swapchainResources->vertexBuffer;
-        }
-
-        const VkBuffer indexBuffer = swapchainResources->indexBuffer;
-        const VkDeviceSize indexBufferOffset = R_UploadIndexData(
-            swapchainResources, input->numIndexes, input->indexes);
-
         PipelineStateId stateId = PIPELINE_STATE_DEFAULT;
         if (backEnd.projection2D)
         {
@@ -1598,9 +1582,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
         }
         else if (pStage->bundle[1].image == nullptr)
         {
-            //
-            // set state
-            //
 #ifdef STRAWB
             // This doesn't do anything right now since the textures are coming
             // from the descriptor sets
@@ -1645,6 +1626,23 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
             }
         }
         // else multitexture - multitexturing isn't affected by any entity renderfx
+
+        //
+        // Upload vertex data
+        //
+        VkDeviceSize vertexBufferOffset = 0;
+        VkBuffer vertexBuffer = input->vertexBuffer;
+        if (input->vertexBuffer == VK_NULL_HANDLE)
+        {
+            vertexBufferOffset =
+                pStage->writeVertexData(swapchainResources, input->numVertexes);
+            vertexBuffer = swapchainResources->vertexBuffer;
+        }
+
+        const VkBuffer indexBuffer = swapchainResources->indexBuffer;
+        const VkDeviceSize indexBufferOffset = R_UploadIndexData(
+            swapchainResources, input->numIndexes, input->indexes);
+
 
         //
         // Render
