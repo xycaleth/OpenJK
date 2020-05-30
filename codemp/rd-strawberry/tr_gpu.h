@@ -124,6 +124,7 @@ struct GpuSwapchain
 	uint32_t height;
 
 	std::vector<GpuSwapchainResources> resources;
+    std::vector<VkFence> imagesInFlight;
 };
 
 // How many frames we want to be able to have in the pipeline at any one time

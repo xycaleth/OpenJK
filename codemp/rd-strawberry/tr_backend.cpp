@@ -25,6 +25,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "glext.h"
 #include "tr_WorldEffects.h"
 #include "tr_gpu.h"
+#include <limits>
+#include <vulkan/vulkan_core.h>
 
 backEndData_t	*backEndData;
 backEndState_t	backEnd;
@@ -1292,7 +1294,6 @@ const void	*RB_DrawBuffer( const void *data ) {
 		&frameResources.frameExecutedFence,
 		VK_TRUE,
 		std::numeric_limits<uint64_t>::max());
-	vkResetFences(gpuContext.device, 1, &frameResources.frameExecutedFence);
 
 	uint32_t nextImageIndex;
 	vkAcquireNextImageKHR(
@@ -1304,6 +1305,17 @@ const void	*RB_DrawBuffer( const void *data ) {
 		&nextImageIndex);
 
 	GpuSwapchain& swapchain = gpuContext.swapchain;
+    if (swapchain.imagesInFlight[nextImageIndex] != VK_NULL_HANDLE)
+    {
+        vkWaitForFences(
+            gpuContext.device,
+            1,
+            &swapchain.imagesInFlight[nextImageIndex],
+            VK_TRUE,
+            std::numeric_limits<uint64_t>::max());
+    }
+    swapchain.imagesInFlight[nextImageIndex] = frameResources.frameExecutedFence;
+
 	GpuSwapchainResources *swapchainResources =
 		&swapchain.resources[nextImageIndex];
 
@@ -1533,6 +1545,7 @@ const void	*RB_SwapBuffers( const void *data ) {
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &frameResources->renderFinishedSemaphore;
 
+	vkResetFences(gpuContext.device, 1, &frameResources->frameExecutedFence);
     if (vkQueueSubmit(
 			gpuContext.graphicsQueue.queue,
 			1,

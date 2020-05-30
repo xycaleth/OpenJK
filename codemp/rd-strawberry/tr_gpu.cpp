@@ -1290,11 +1290,17 @@ void GpuContextInit(GpuContext& context)
 	uint32_t swapchainImageCount = surfaceCapabilities.minImageCount + 1;
 	if (surfaceCapabilities.maxImageCount > 0)
 	{
-		swapchainImageCount = std::max(
+		swapchainImageCount = std::min(
 			swapchainImageCount,
 			surfaceCapabilities.maxImageCount);
 	}
 
+    ri.Printf(
+        PRINT_ALL,
+        "Swapchain Image Count: %d / %d / %d (min / max / chosen)\n",
+        surfaceCapabilities.minImageCount,
+        surfaceCapabilities.maxImageCount,
+        swapchainImageCount);
 
 	uint32_t surfaceFormatCount = 0;
 	vkGetPhysicalDeviceSurfaceFormatsKHR(
@@ -1580,6 +1586,8 @@ void GpuContextInit(GpuContext& context)
 		context.depthStencilFormat,
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
 		1);
+
+    context.swapchain.imagesInFlight.resize(swapchainImageCount, VK_NULL_HANDLE);
 
 	auto& swapchainResources = context.swapchain.resources;
 	swapchainResources.resize(swapchainImageCount);
