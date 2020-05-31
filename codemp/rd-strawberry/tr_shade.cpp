@@ -45,15 +45,26 @@ VkDeviceSize R_UploadIndexData(
     int numIndexes,
     const glIndex_t* indexes)
 {
-    const VkDeviceSize indexOffset = GetBufferOffset(
-		swapchainResources->indexBufferBase,
-		swapchainResources->indexBufferData);
+    VkDeviceSize indexOffset = GetBufferOffset(
+		swapchainResources->indexBuffer->base,
+		swapchainResources->indexBuffer->data);
+    
+    const size_t dataSize = tess.numIndexes * sizeof(glIndex_t);
+
+    if ((indexOffset + dataSize) > swapchainResources->indexBuffer->size)
+    {
+        backEndData->maxIndexBufferSize *= 2;
+        swapchainResources->indexBuffer = GpuGetTransientIndexBuffer(
+            gpuContext.transientBuffers, backEndData->maxIndexBufferSize);
+        
+        indexOffset = 0;
+    }
 
 	auto *outIndexes =
-		static_cast<uint32_t *>(swapchainResources->indexBufferData);
+		static_cast<uint32_t *>(swapchainResources->indexBuffer->data);
 	Com_Memcpy(outIndexes, indexes, tess.numIndexes * sizeof(glIndex_t));
 
-	swapchainResources->indexBufferData = outIndexes + numIndexes;
+	swapchainResources->indexBuffer->data = outIndexes + numIndexes;
 
     return indexOffset;
 }
@@ -1634,12 +1645,12 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
         {
             vertexBufferOffset =
                 pStage->writeVertexData(swapchainResources, input->numVertexes);
-            vertexBuffer = swapchainResources->vertexBuffer;
+            vertexBuffer = swapchainResources->vertexBuffer->buffer;
         }
 
-        const VkBuffer indexBuffer = swapchainResources->indexBuffer;
         const VkDeviceSize indexBufferOffset = R_UploadIndexData(
             swapchainResources, input->numIndexes, input->indexes);
+        const VkBuffer indexBuffer = swapchainResources->indexBuffer->buffer;
 
         //
         // Render

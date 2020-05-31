@@ -39,12 +39,25 @@ VkDeviceSize UploadSingleTextureVertexData(
         sizeof(SingleTextureVertex) == SingleTextureVertexFormat::vertexSize,
         "vertex must match SingleTextureVertexFormat::vertexSize");
 
-    const VkDeviceSize vertexOffset = GetBufferOffset(
-        swapchainResources->vertexBufferBase,
-        swapchainResources->vertexBufferData);
+    VkDeviceSize vertexOffset = GetBufferOffset(
+        swapchainResources->vertexBuffer->base,
+        swapchainResources->vertexBuffer->data);
 
-    auto* out =
-        static_cast<SingleTextureVertex*>(swapchainResources->vertexBufferData);
+    const size_t dataSize = sizeof(SingleTextureVertex) * numVertexes;
+
+    // NOTE: How can this be done better? I don't really want to copy/paste this
+    // code into every vertex format writer
+    if ((vertexOffset + dataSize) > swapchainResources->vertexBuffer->size)
+    {
+        backEndData->maxVertexBufferSize *= 2;
+        swapchainResources->vertexBuffer = GpuGetTransientVertexBuffer(
+            gpuContext.transientBuffers, backEndData->maxVertexBufferSize);
+
+        vertexOffset = 0;
+    }
+
+    auto* out = static_cast<SingleTextureVertex*>(
+        swapchainResources->vertexBuffer->data);
     for (int i = 0; i < numVertexes; ++i)
     {
         SingleTextureVertex* v = out + i;
@@ -62,7 +75,7 @@ VkDeviceSize UploadSingleTextureVertexData(
         v->color[3] = tess.svars.colors[i][3];
     }
 
-    swapchainResources->vertexBufferData = out + numVertexes;
+    swapchainResources->vertexBuffer->data = out + numVertexes;
 
     return vertexOffset;
 }
@@ -74,11 +87,23 @@ VkDeviceSize UploadMultiTextureVertexData(
         sizeof(MultiTextureVertex) == MultiTextureVertexFormat::vertexSize,
         "vertex must match MultiTextureVertexFormat::vertexSize");
 
-    const VkDeviceSize vertexOffset = GetBufferOffset(
-        swapchainResources->vertexBufferBase,
-        swapchainResources->vertexBufferData);
+    VkDeviceSize vertexOffset = GetBufferOffset(
+        swapchainResources->vertexBuffer->base,
+        swapchainResources->vertexBuffer->data);
 
-    auto* out = static_cast<MultiTextureVertex*>(swapchainResources->vertexBufferData);
+    const size_t dataSize = sizeof(MultiTextureVertex) * numVertexes;
+
+    if ((vertexOffset + dataSize) > swapchainResources->vertexBuffer->size)
+    {
+        backEndData->maxVertexBufferSize *= 2;
+        swapchainResources->vertexBuffer = GpuGetTransientVertexBuffer(
+            gpuContext.transientBuffers, backEndData->maxVertexBufferSize);
+
+        vertexOffset = 0;
+    }
+
+    auto* out = static_cast<MultiTextureVertex*>(
+        swapchainResources->vertexBuffer->data);
     for (int i = 0; i < numVertexes; ++i)
     {
         MultiTextureVertex* v = out + i;
@@ -98,7 +123,7 @@ VkDeviceSize UploadMultiTextureVertexData(
         v->color[3] = tess.svars.colors[i][3];
     }
 
-    swapchainResources->vertexBufferData = out + numVertexes;
+    swapchainResources->vertexBuffer->data = out + numVertexes;
 
     return vertexOffset;
 }

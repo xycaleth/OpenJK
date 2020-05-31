@@ -18,6 +18,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 #include "tr_gpu.h"
+#include <vulkan/vulkan_core.h>
 
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
@@ -1667,59 +1668,6 @@ void GpuContextInit(GpuContext& context)
 		{
 			Com_Error(ERR_FATAL, "Failed to create descriptor pool");
 		}
-
-		VkBufferCreateInfo indexBufferCreateInfo = {};
-		indexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		indexBufferCreateInfo.size = 1 * 1024 * 1024;
-		indexBufferCreateInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-
-		VkBufferCreateInfo vertexBufferCreateInfo = {};
-		vertexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		vertexBufferCreateInfo.size = 4 * 1024 * 1024;
-		vertexBufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-
-		VmaAllocationCreateInfo bufferAllocCreateInfo = {};
-		bufferAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-		if (vmaCreateBuffer(
-				context.allocator, 
-				&indexBufferCreateInfo,
-				&bufferAllocCreateInfo,
-				&resources.indexBuffer,
-				&resources.indexBufferAllocation,
-				nullptr) != VK_SUCCESS)
-		{
-			Com_Error(ERR_FATAL, "Failed to create index buffer");
-		}
-
-		if (vmaMapMemory(
-				context.allocator,
-				resources.indexBufferAllocation,
-				&resources.indexBufferBase) != VK_SUCCESS)
-		{
-			Com_Error(ERR_FATAL, "Failed to map index buffer into memory");
-		}
-		resources.indexBufferData = resources.indexBufferBase;
-
-		if (vmaCreateBuffer(
-				context.allocator, 
-				&vertexBufferCreateInfo,
-				&bufferAllocCreateInfo,
-				&resources.vertexBuffer,
-				&resources.vertexBufferAllocation,
-				nullptr) != VK_SUCCESS)
-		{
-			Com_Error(ERR_FATAL, "Failed to create vertex buffer");
-		}
-
-		if (vmaMapMemory(
-				context.allocator,
-				resources.vertexBufferAllocation,
-				&resources.vertexBufferBase) != VK_SUCCESS)
-		{
-			Com_Error(ERR_FATAL, "Failed to map vertex buffer into memory");
-		}
-		resources.vertexBufferData = resources.vertexBufferBase;
 	}
 
 	for (auto& resources : context.frameResources)
@@ -1762,6 +1710,8 @@ void GpuContextInit(GpuContext& context)
 
 	CreateDescriptorSetLayouts(gpuContext);
 	CreatePipelineLayouts(gpuContext);
+
+    context.transientBuffers.allocator = context.allocator;
 }
 
 void GpuContextPreShutdown(GpuContext& context)
@@ -1771,6 +1721,7 @@ void GpuContextPreShutdown(GpuContext& context)
 
 void GpuContextShutdown(GpuContext& context)
 {
+    GpuReleaseTransientBuffers(context.transientBuffers);
 	for (auto pipelineLayout : context.pipelineLayouts)
 	{
 		vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
@@ -1792,32 +1743,6 @@ void GpuContextShutdown(GpuContext& context)
 
 	for (auto& swapchainResources : context.swapchain.resources)
 	{
-		vmaUnmapMemory(
-			context.allocator,
-			swapchainResources.vertexBufferAllocation);
-
-		vmaFreeMemory(
-			context.allocator,
-			swapchainResources.vertexBufferAllocation);
-
-		vkDestroyBuffer(
-			context.device,
-			swapchainResources.vertexBuffer,
-			nullptr);
-
-		vmaUnmapMemory(
-			context.allocator,
-			swapchainResources.indexBufferAllocation);
-
-		vmaFreeMemory(
-			context.allocator,
-			swapchainResources.indexBufferAllocation);
-
-		vkDestroyBuffer(
-			context.device,
-			swapchainResources.indexBuffer,
-			nullptr);
-
 		vkDestroyDescriptorPool(
 			context.device,
 			swapchainResources.descriptorPool,
@@ -2149,4 +2074,160 @@ VkDescriptorSet GpuCreateDescriptorSet(
 VkDeviceSize GetBufferOffset(const void* base, const void* pointer)
 {
     return static_cast<const char*>(pointer) - static_cast<const char*>(base);
+}
+
+static void ReleaseTransientBuffer(
+    TransientBuffers& transientBuffers, TransientBufferEntry& entry)
+{
+    vmaUnmapMemory(transientBuffers.allocator, entry.userBuffer.allocation);
+    vmaDestroyBuffer(
+        transientBuffers.allocator,
+        entry.userBuffer.buffer,
+        entry.userBuffer.allocation);
+}
+
+void GpuResetTransientBuffers(
+    TransientBuffers& transientBuffers, int frameIndex)
+{
+    ++transientBuffers.generation;
+
+    transientBuffers.currentFrameIndex = frameIndex;
+    for (auto& entry : transientBuffers.transientBuffers)
+    {
+        if (entry->assignedFrameIndex == frameIndex)
+        {
+            entry->assignedFrameIndex = 0;
+        }
+    }
+
+    // Remove old unused buffers
+    static constexpr int MAX_AGE = 10;
+
+    const int currentGeneration = transientBuffers.generation;
+    auto write = std::begin(transientBuffers.transientBuffers);
+    auto end = std::end(transientBuffers.transientBuffers);
+    for (auto read = write; read != end; ++read)
+    {
+        if ((currentGeneration - (*read)->generation) < MAX_AGE)
+        {
+            // Let's keep this one
+            *write++ = std::move(*read);
+        }
+        else
+        {
+            ri.Printf(
+                PRINT_DEVELOPER,
+                "Del buffer %p allocation %p gen %d (current gen %d)\n",
+                (*read)->userBuffer.buffer,
+                (*read)->userBuffer.allocation,
+                (*read)->generation,
+                currentGeneration);
+            ReleaseTransientBuffer(transientBuffers, **read);
+        }
+    }
+
+    if (write != end)
+    {
+        transientBuffers.transientBuffers.erase(write, end);
+    }
+}
+
+void GpuReleaseTransientBuffers(TransientBuffers& transientBuffers)
+{
+    for (auto& entry : transientBuffers.transientBuffers)
+    {
+        ReleaseTransientBuffer(transientBuffers, *entry);
+    }
+}
+
+static TransientBufferEntry* FindTransientBuffer(
+    TransientBuffers& transientBuffers, size_t size,
+    VkBufferUsageFlagBits usageBits)
+{
+    for (auto& entry : transientBuffers.transientBuffers)
+    {
+        if (entry->assignedFrameIndex == 0 && entry->userBuffer.size >= size &&
+            entry->usageBits == usageBits)
+        {
+            return entry.get();
+        }
+    }
+
+    return nullptr;
+}
+
+static TransientBuffer* GetTransientBuffer(
+    TransientBuffers& transientBuffers, size_t size,
+    VkBufferUsageFlagBits usageBits)
+{
+    TransientBufferEntry* entry =
+        FindTransientBuffer(transientBuffers, size, usageBits);
+    if (entry == nullptr)
+    {
+        VkBufferCreateInfo vertexBufferCreateInfo = {};
+        vertexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        vertexBufferCreateInfo.size = size;
+        vertexBufferCreateInfo.usage = usageBits;
+
+        VmaAllocationCreateInfo bufferAllocCreateInfo = {};
+        bufferAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        std::unique_ptr<TransientBufferEntry> bufferEntry(
+            new TransientBufferEntry());
+
+        if (vmaCreateBuffer(
+                transientBuffers.allocator,
+                &vertexBufferCreateInfo,
+                &bufferAllocCreateInfo,
+                &bufferEntry->userBuffer.buffer,
+                &bufferEntry->userBuffer.allocation,
+                nullptr) != VK_SUCCESS)
+        {
+            Com_Error(ERR_FATAL, "Failed to create buffer");
+        }
+
+        if (vmaMapMemory(
+                transientBuffers.allocator,
+                bufferEntry->userBuffer.allocation,
+                &bufferEntry->userBuffer.base) != VK_SUCCESS)
+        {
+            Com_Error(ERR_FATAL, "Failed to map buffer into memory");
+        }
+
+        bufferEntry->assignedFrameIndex = transientBuffers.currentFrameIndex;
+        bufferEntry->usageBits = usageBits;
+        bufferEntry->userBuffer.size = size;
+        bufferEntry->userBuffer.data = bufferEntry->userBuffer.base;
+        bufferEntry->generation = transientBuffers.generation;
+
+        TransientBuffer* buffer = &bufferEntry->userBuffer;
+        transientBuffers.transientBuffers.push_back(std::move(bufferEntry));
+
+        ri.Printf(
+            PRINT_DEVELOPER,
+            "New buffer %p alloc %p size %zu\n",
+            buffer->buffer,
+            buffer->allocation,
+            size);
+        return buffer;
+    }
+    else
+    {
+        entry->assignedFrameIndex = transientBuffers.currentFrameIndex;
+        entry->generation = transientBuffers.generation;
+        entry->userBuffer.data = entry->userBuffer.base;
+        return &entry->userBuffer;
+    }
+}
+
+TransientBuffer* GpuGetTransientVertexBuffer(
+    TransientBuffers& transientBuffers, size_t size)
+{
+    return GetTransientBuffer(transientBuffers, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+}
+
+TransientBuffer* GpuGetTransientIndexBuffer(
+    TransientBuffers& transientBuffers, size_t size)
+{
+    return GetTransientBuffer(transientBuffers, size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 }

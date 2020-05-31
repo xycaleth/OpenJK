@@ -1318,6 +1318,8 @@ void R_Init( void ) {
 	backEndData = (backEndData_t *) ptr;
 	backEndData->polys = (srfPoly_t *) ((char *) ptr + sizeof( *backEndData ));
 	backEndData->polyVerts = (polyVert_t *) ((char *) ptr + sizeof( *backEndData ) + sizeof(srfPoly_t) * max_polys);
+    backEndData->maxVertexBufferSize = 4 * 1024 * 124;
+    backEndData->maxIndexBufferSize = 4 * 1024 * 124;
 
 	R_InitNextFrame();
 

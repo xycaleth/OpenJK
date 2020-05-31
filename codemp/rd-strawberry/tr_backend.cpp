@@ -1324,8 +1324,12 @@ const void* RB_DrawBuffer(const void* data)
     backEndData->swapchainResources = swapchainResources;
     backEndData->swapchainImageIndex = nextImageIndex;
 
-    swapchainResources->vertexBufferData = swapchainResources->vertexBufferBase;
-    swapchainResources->indexBufferData = swapchainResources->indexBufferBase;
+    GpuResetTransientBuffers(gpuContext.transientBuffers, nextImageIndex);
+
+    swapchainResources->vertexBuffer = GpuGetTransientVertexBuffer(
+        gpuContext.transientBuffers, backEndData->maxVertexBufferSize);
+    swapchainResources->indexBuffer = GpuGetTransientIndexBuffer(
+        gpuContext.transientBuffers, backEndData->maxIndexBufferSize);
 
     vkResetDescriptorPool(
         gpuContext.device, swapchainResources->descriptorPool, 0);
@@ -1510,20 +1514,20 @@ const void	*RB_SwapBuffers( const void *data ) {
 	vkEndCommandBuffer(cmdBuffer);
 
 	VkDeviceSize vertexBufferFlushEndRange =
-		static_cast<char *>(swapchainResources->vertexBufferData) -
-		static_cast<char *>(swapchainResources->vertexBufferBase);
+		static_cast<char *>(swapchainResources->vertexBuffer->data) -
+		static_cast<char *>(swapchainResources->vertexBuffer->base);
 	vmaFlushAllocation(
 		gpuContext.allocator,
-		swapchainResources->vertexBufferAllocation,
+		swapchainResources->vertexBuffer->allocation,
 		0,
 		vertexBufferFlushEndRange);
 
 	VkDeviceSize indexBufferFlushEndRange =
-		static_cast<char *>(swapchainResources->indexBufferData) -
-		static_cast<char *>(swapchainResources->indexBufferBase);
+		static_cast<char *>(swapchainResources->indexBuffer->data) -
+		static_cast<char *>(swapchainResources->indexBuffer->base);
 	vmaFlushAllocation(
 		gpuContext.allocator,
-		swapchainResources->indexBufferAllocation,
+		swapchainResources->indexBuffer->allocation,
 		0,
 		indexBufferFlushEndRange);
 

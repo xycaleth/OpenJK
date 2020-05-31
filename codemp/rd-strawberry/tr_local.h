@@ -1964,6 +1964,9 @@ typedef struct backEndData_s {
 	FrameResources *frameResources;
 	GpuSwapchainResources *swapchainResources;
 	uint32_t swapchainImageIndex;
+
+    int maxVertexBufferSize;
+    int maxIndexBufferSize;
 } backEndData_t;
 
 extern	int		max_polys;

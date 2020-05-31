@@ -4,8 +4,10 @@
 #include "vk_mem_alloc.h"
 
 #include <array>
+#include <memory>
 #include <unordered_map>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 #include "qcommon/q_math.h"
 #include "tr_vertex_formats.h"
@@ -95,25 +97,34 @@ struct GpuQueue
 	VkQueue queue;
 };
 
+struct TransientBuffer
+{
+    void* base;
+    VkDeviceSize size;
+    VkBuffer buffer;
+    VmaAllocation allocation;
+
+    void* data;
+};
+
+struct TransientBufferEntry
+{
+    TransientBuffer userBuffer;
+    VkBufferUsageFlagBits usageBits;
+    int assignedFrameIndex;
+    int generation;
+};
+
 struct GpuSwapchainResources
 {
-	VkImage image;
-	VkImageView imageView;
-	VkFramebuffer framebuffer;
-	VkCommandBuffer gfxCommandBuffer;
-	VkDescriptorPool descriptorPool;
+    VkImage image;
+    VkImageView imageView;
+    VkFramebuffer framebuffer;
+    VkCommandBuffer gfxCommandBuffer;
+    VkDescriptorPool descriptorPool;
 
-	VkBuffer vertexBuffer;
-	VmaAllocation vertexBufferAllocation;
-	uint32_t vertexBufferOffset;
-	void *vertexBufferBase;
-	void *vertexBufferData;
-
-	VkBuffer indexBuffer;
-	VmaAllocation indexBufferAllocation;
-	uint32_t indexBufferOffset;
-	void *indexBufferBase;
-	void *indexBufferData;
+    TransientBuffer* vertexBuffer;
+    TransientBuffer* indexBuffer;
 };
 
 struct GpuSwapchain
@@ -136,6 +147,14 @@ struct FrameResources
 	VkFence frameExecutedFence;
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
+};
+
+struct TransientBuffers
+{
+    VmaAllocator allocator;
+    int currentFrameIndex;
+    int generation;
+    std::vector<std::unique_ptr<TransientBufferEntry>> transientBuffers;
 };
 
 struct GpuContext
@@ -173,6 +192,8 @@ struct GpuContext
 
 	std::unordered_map<RenderState, VkPipeline> graphicsPipelines;
 	std::vector<VkDescriptorSet> descriptorSets;
+
+    TransientBuffers transientBuffers;
 };
 
 void GpuContextInit(GpuContext& context);
@@ -191,3 +212,11 @@ VkDescriptorSet GpuCreateDescriptorSet(
     GpuContext& context, const image_t* const* images, size_t imageCount);
 
 VkDeviceSize GetBufferOffset(const void* base, const void* pointer);
+
+void GpuResetTransientBuffers(
+    TransientBuffers& transientBuffers, int frameIndex);
+void GpuReleaseTransientBuffers(TransientBuffers& transientBuffers);
+TransientBuffer*
+GpuGetTransientVertexBuffer(TransientBuffers& transientBuffers, size_t size);
+TransientBuffer*
+GpuGetTransientIndexBuffer(TransientBuffers& transientBuffers, size_t size);

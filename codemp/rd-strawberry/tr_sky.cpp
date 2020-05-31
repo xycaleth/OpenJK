@@ -444,14 +444,14 @@ static void DrawSkySide( const skyParms_t* skyParms, int sideIndex, const int mi
     GL_BindVertexBuffers(
         swapchainResources,
         1,
-        &swapchainResources->vertexBuffer,
+        &swapchainResources->vertexBuffer->buffer,
         &vertexBufferOffset);
 
     R_DrawElementsWithShader(
         swapchainResources,
         tess.numIndexes,
         indexBufferOffset,
-        swapchainResources->indexBuffer);
+        swapchainResources->indexBuffer->buffer);
 }
 
 static void DrawSkyBox( shader_t *shader )
