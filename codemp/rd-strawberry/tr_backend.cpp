@@ -1279,32 +1279,33 @@ RB_DrawBuffer
 
 =============
 */
-const void	*RB_DrawBuffer( const void *data ) {
-	const drawBufferCommand_t	*cmd;
+const void* RB_DrawBuffer(const void* data)
+{
+    const drawBufferCommand_t* cmd;
 
-	cmd = (const drawBufferCommand_t *)data;
+    cmd = (const drawBufferCommand_t*)data;
 
-	int frameIndex = cmd->frameIndex % MAX_FRAMES_IN_FLIGHT;
-	FrameResources& frameResources = gpuContext.frameResources[frameIndex];
-	backEndData->frameResources = &frameResources;
+    int frameIndex = cmd->frameIndex % MAX_FRAMES_IN_FLIGHT;
+    FrameResources& frameResources = gpuContext.frameResources[frameIndex];
+    backEndData->frameResources = &frameResources;
 
-	vkWaitForFences(
-		gpuContext.device,
-		1,
-		&frameResources.frameExecutedFence,
-		VK_TRUE,
-		std::numeric_limits<uint64_t>::max());
+    vkWaitForFences(
+        gpuContext.device,
+        1,
+        &frameResources.frameExecutedFence,
+        VK_TRUE,
+        std::numeric_limits<uint64_t>::max());
 
-	uint32_t nextImageIndex;
-	vkAcquireNextImageKHR(
-		gpuContext.device,
-		gpuContext.swapchain.swapchain,
-		std::numeric_limits<uint64_t>::max(),
-		frameResources.imageAvailableSemaphore,
-		VK_NULL_HANDLE,
-		&nextImageIndex);
+    uint32_t nextImageIndex;
+    vkAcquireNextImageKHR(
+        gpuContext.device,
+        gpuContext.swapchain.swapchain,
+        std::numeric_limits<uint64_t>::max(),
+        frameResources.imageAvailableSemaphore,
+        VK_NULL_HANDLE,
+        &nextImageIndex);
 
-	GpuSwapchain& swapchain = gpuContext.swapchain;
+    GpuSwapchain& swapchain = gpuContext.swapchain;
     if (swapchain.imagesInFlight[nextImageIndex] != VK_NULL_HANDLE)
     {
         vkWaitForFences(
@@ -1314,108 +1315,103 @@ const void	*RB_DrawBuffer( const void *data ) {
             VK_TRUE,
             std::numeric_limits<uint64_t>::max());
     }
-    swapchain.imagesInFlight[nextImageIndex] = frameResources.frameExecutedFence;
+    swapchain.imagesInFlight[nextImageIndex] =
+        frameResources.frameExecutedFence;
 
-	GpuSwapchainResources *swapchainResources =
-		&swapchain.resources[nextImageIndex];
+    GpuSwapchainResources* swapchainResources =
+        &swapchain.resources[nextImageIndex];
 
-	backEndData->swapchainResources = swapchainResources;
-	backEndData->swapchainImageIndex = nextImageIndex;
+    backEndData->swapchainResources = swapchainResources;
+    backEndData->swapchainImageIndex = nextImageIndex;
 
-	swapchainResources->vertexBufferData =
-		swapchainResources->vertexBufferBase;
-	swapchainResources->indexBufferData =
-		swapchainResources->indexBufferBase;
+    swapchainResources->vertexBufferData = swapchainResources->vertexBufferBase;
+    swapchainResources->indexBufferData = swapchainResources->indexBufferBase;
 
-	vkResetDescriptorPool(
-		gpuContext.device, swapchainResources->descriptorPool, 0);
+    vkResetDescriptorPool(
+        gpuContext.device, swapchainResources->descriptorPool, 0);
 
-	VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
+    VkCommandBuffer cmdBuffer = swapchainResources->gfxCommandBuffer;
 
-	vkResetCommandBuffer(
-		cmdBuffer,
-		VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+    vkResetCommandBuffer(
+        cmdBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 
-	VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
-	cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
+    cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-	if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
-	{
-		Com_Printf(S_COLOR_RED "Failed to begin command buffer recording\n");
-	}
+    if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
+    {
+        Com_Printf(S_COLOR_RED "Failed to begin command buffer recording\n");
+    }
 
-	std::array<VkClearValue, 2> clearValues = {};
-	clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-	clearValues[1].depthStencil = {1.0f, 0};
+    std::array<VkClearValue, 2> clearValues = {};
+    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+    clearValues[1].depthStencil = {1.0f, 0};
 
-	// clear screen for debugging
-	if (tr.world && tr.world->globalFog != -1)
-	{
-		const fog_t		*fog = &tr.world->fogs[tr.world->globalFog];
+    // clear screen for debugging
+    if (tr.world && tr.world->globalFog != -1)
+    {
+        const fog_t* fog = &tr.world->fogs[tr.world->globalFog];
 
-		clearValues[0].color = {{
-			fog->parms.color[0],
-			fog->parms.color[1],
-			fog->parms.color[2],
-			1.0f
-		}};
-	}
-	else if ( r_clear->integer ) {
-		int i = r_clear->integer;
+        clearValues[0].color = {
+            {fog->parms.color[0],
+             fog->parms.color[1],
+             fog->parms.color[2],
+             1.0f}};
+    }
+    else if (r_clear->integer)
+    {
+        int i = r_clear->integer;
 
-		if (i == 42) {
-			i = Q_irand(0,8);
-		}
-		switch (i)
-		{
-		default:
-			clearValues[0].color = {{1.0f, 0.0f, 0.5f, 1.0f}}; // default q3 pink
-			break;
-		case 1:
-			clearValues[0].color = {{1.0f, 0.0f, 0.0f, 1.0f}}; //red
-			break;
-		case 2:
-			clearValues[0].color = {{0.0f, 1.0f, 0.0f, 1.0f}}; //green
-			break;
-		case 3:
-			clearValues[0].color = {{1.0f, 1.0f, 0.0f, 1.0f}}; //yellow
-			break;
-		case 4:
-			clearValues[0].color = {{0.0f, 0.0f, 1.0f, 1.0f}}; //blue
-			break;
-		case 5:
-			clearValues[0].color = {{0.0f, 1.0f, 1.0f, 1.0f}}; //cyan
-			break;
-		case 6:
-			clearValues[0].color = {{1.0f, 0.0f, 1.0f, 1.0f}}; //magenta
-			break;
-		case 7:
-			clearValues[0].color = {{1.0f, 1.0f, 1.0f, 1.0f}}; //white
-			break;
-		case 8:
-			clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; //black
-			break;
-		}
-	}
+        if (i == 42)
+        {
+            i = Q_irand(0, 8);
+        }
+        switch (i)
+        {
+        default:
+            clearValues[0].color = {
+                {1.0f, 0.0f, 0.5f, 1.0f}}; // default q3 pink
+            break;
+        case 1:
+            clearValues[0].color = {{1.0f, 0.0f, 0.0f, 1.0f}}; // red
+            break;
+        case 2:
+            clearValues[0].color = {{0.0f, 1.0f, 0.0f, 1.0f}}; // green
+            break;
+        case 3:
+            clearValues[0].color = {{1.0f, 1.0f, 0.0f, 1.0f}}; // yellow
+            break;
+        case 4:
+            clearValues[0].color = {{0.0f, 0.0f, 1.0f, 1.0f}}; // blue
+            break;
+        case 5:
+            clearValues[0].color = {{0.0f, 1.0f, 1.0f, 1.0f}}; // cyan
+            break;
+        case 6:
+            clearValues[0].color = {{1.0f, 0.0f, 1.0f, 1.0f}}; // magenta
+            break;
+        case 7:
+            clearValues[0].color = {{1.0f, 1.0f, 1.0f, 1.0f}}; // white
+            break;
+        case 8:
+            clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // black
+            break;
+        }
+    }
 
-	VkRenderPassBeginInfo passBeginInfo = {};
-	passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	passBeginInfo.renderPass = gpuContext.renderPass;
-	passBeginInfo.framebuffer = swapchainResources->framebuffer;
-	passBeginInfo.renderArea.offset = { 0, 0 };
-	passBeginInfo.renderArea.extent = {
-		gpuContext.swapchain.width,
-		gpuContext.swapchain.height
-	};
-	passBeginInfo.clearValueCount = clearValues.size();
-	passBeginInfo.pClearValues = clearValues.data();
+    VkRenderPassBeginInfo passBeginInfo = {};
+    passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    passBeginInfo.renderPass = gpuContext.renderPass;
+    passBeginInfo.framebuffer = swapchainResources->framebuffer;
+    passBeginInfo.renderArea.offset = {0, 0};
+    passBeginInfo.renderArea.extent = {
+        gpuContext.swapchain.width, gpuContext.swapchain.height};
+    passBeginInfo.clearValueCount = clearValues.size();
+    passBeginInfo.pClearValues = clearValues.data();
 
-	vkCmdBeginRenderPass(
-		cmdBuffer,
-		&passBeginInfo,
-		VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(cmdBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	return (const void *)(cmd + 1);
+    return (const void*)(cmd + 1);
 }
 
 static void RB_GammaCorrectRender()

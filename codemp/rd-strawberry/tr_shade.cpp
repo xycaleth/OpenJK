@@ -51,10 +51,8 @@ VkDeviceSize R_UploadIndexData(
 
 	auto *outIndexes =
 		static_cast<uint32_t *>(swapchainResources->indexBufferData);
-	for (int i = 0; i < tess.numIndexes; ++i)
-	{
-		outIndexes[i] = indexes[i];
-	}
+	Com_Memcpy(outIndexes, indexes, tess.numIndexes * sizeof(glIndex_t));
+
 	swapchainResources->indexBufferData = outIndexes + numIndexes;
 
     return indexOffset;
@@ -1642,7 +1640,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
         const VkBuffer indexBuffer = swapchainResources->indexBuffer;
         const VkDeviceSize indexBufferOffset = R_UploadIndexData(
             swapchainResources, input->numIndexes, input->indexes);
-
 
         //
         // Render

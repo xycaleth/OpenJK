@@ -3,6 +3,9 @@
 #include <array>
 #include <vulkan/vulkan.h>
 
+// NOTE: If more vertex formats are needed, we can look at improving this code.
+// The descriptor layouts, and pipeline layouts are scattered throughout the renderer
+// so adding a new format means changing many other parts of the code.
 struct SingleTextureVertexFormat
 {
     static constexpr std::array<VkVertexInputAttributeDescription, 3> vertexAttributes = {
