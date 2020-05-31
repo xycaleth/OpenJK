@@ -1520,6 +1520,12 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 #endif
 
     GpuSwapchainResources* swapchainResources = backEndData->swapchainResources;
+
+    // Upload index data
+    const VkDeviceSize indexBufferOffset = R_UploadIndexData(
+        swapchainResources, input->numIndexes, input->indexes);
+    const VkBuffer indexBuffer = swapchainResources->indexBuffer->buffer;
+
 	for (int stage = 0; stage < input->shader->numUnfoggedPasses; stage++)
 	{
 		shaderStage_t *pStage = &tess.xstages[stage];
@@ -1647,10 +1653,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
                 pStage->writeVertexData(swapchainResources, input->numVertexes);
             vertexBuffer = swapchainResources->vertexBuffer->buffer;
         }
-
-        const VkDeviceSize indexBufferOffset = R_UploadIndexData(
-            swapchainResources, input->numIndexes, input->indexes);
-        const VkBuffer indexBuffer = swapchainResources->indexBuffer->buffer;
 
         //
         // Render
