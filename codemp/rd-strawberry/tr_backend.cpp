@@ -1324,12 +1324,12 @@ const void* RB_DrawBuffer(const void* data)
     backEndData->swapchainResources = swapchainResources;
     backEndData->swapchainImageIndex = nextImageIndex;
 
-    GpuResetTransientBuffers(gpuContext.transientBuffers, nextImageIndex);
+    GpuResetTransientResources(gpuContext.transientResources, nextImageIndex);
 
     swapchainResources->vertexBuffer = GpuGetTransientVertexBuffer(
-        gpuContext.transientBuffers, backEndData->maxVertexBufferSize);
+        gpuContext.transientResources, backEndData->maxVertexBufferSize);
     swapchainResources->indexBuffer = GpuGetTransientIndexBuffer(
-        gpuContext.transientBuffers, backEndData->maxIndexBufferSize);
+        gpuContext.transientResources, backEndData->maxIndexBufferSize);
 
     vkResetDescriptorPool(
         gpuContext.device, swapchainResources->descriptorPool, 0);

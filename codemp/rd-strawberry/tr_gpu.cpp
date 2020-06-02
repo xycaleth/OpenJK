@@ -1711,7 +1711,7 @@ void GpuContextInit(GpuContext& context)
 	CreateDescriptorSetLayouts(gpuContext);
 	CreatePipelineLayouts(gpuContext);
 
-    context.transientBuffers.allocator = context.allocator;
+    context.transientResources.allocator = context.allocator;
 }
 
 void GpuContextPreShutdown(GpuContext& context)
@@ -1721,7 +1721,7 @@ void GpuContextPreShutdown(GpuContext& context)
 
 void GpuContextShutdown(GpuContext& context)
 {
-    GpuReleaseTransientBuffers(context.transientBuffers);
+    GpuReleaseTransientResources(context.transientResources);
 	for (auto pipelineLayout : context.pipelineLayouts)
 	{
 		vkDestroyPipelineLayout(context.device, pipelineLayout, nullptr);
@@ -2077,7 +2077,7 @@ VkDeviceSize GetBufferOffset(const void* base, const void* pointer)
 }
 
 static void ReleaseTransientBuffer(
-    TransientBuffers& transientBuffers, TransientBufferEntry& entry)
+    TransientResources& transientBuffers, TransientBufferEntry& entry)
 {
     vmaUnmapMemory(transientBuffers.allocator, entry.userBuffer.allocation);
     vmaDestroyBuffer(
@@ -2086,13 +2086,13 @@ static void ReleaseTransientBuffer(
         entry.userBuffer.allocation);
 }
 
-void GpuResetTransientBuffers(
-    TransientBuffers& transientBuffers, int frameIndex)
+void GpuResetTransientResources(
+    TransientResources& transientResources, int frameIndex)
 {
-    ++transientBuffers.generation;
+    ++transientResources.generation;
 
-    transientBuffers.currentFrameIndex = frameIndex;
-    for (auto& entry : transientBuffers.transientBuffers)
+    transientResources.currentFrameIndex = frameIndex;
+    for (auto& entry : transientResources.transientBuffers)
     {
         if (entry->assignedFrameIndex == frameIndex)
         {
@@ -2103,9 +2103,9 @@ void GpuResetTransientBuffers(
     // Remove old unused buffers
     static constexpr int MAX_AGE = 10;
 
-    const int currentGeneration = transientBuffers.generation;
-    auto write = std::begin(transientBuffers.transientBuffers);
-    auto end = std::end(transientBuffers.transientBuffers);
+    const int currentGeneration = transientResources.generation;
+    auto write = std::begin(transientResources.transientBuffers);
+    auto end = std::end(transientResources.transientBuffers);
     for (auto read = write; read != end; ++read)
     {
         if ((currentGeneration - (*read)->generation) < MAX_AGE)
@@ -2122,26 +2122,26 @@ void GpuResetTransientBuffers(
                 (*read)->userBuffer.allocation,
                 (*read)->generation,
                 currentGeneration);
-            ReleaseTransientBuffer(transientBuffers, **read);
+            ReleaseTransientBuffer(transientResources, **read);
         }
     }
 
     if (write != end)
     {
-        transientBuffers.transientBuffers.erase(write, end);
+        transientResources.transientBuffers.erase(write, end);
     }
 }
 
-void GpuReleaseTransientBuffers(TransientBuffers& transientBuffers)
+void GpuReleaseTransientResources(TransientResources& transientResources)
 {
-    for (auto& entry : transientBuffers.transientBuffers)
+    for (auto& entry : transientResources.transientBuffers)
     {
-        ReleaseTransientBuffer(transientBuffers, *entry);
+        ReleaseTransientBuffer(transientResources, *entry);
     }
 }
 
 static TransientBufferEntry* FindTransientBuffer(
-    TransientBuffers& transientBuffers, size_t size,
+    TransientResources& transientBuffers, size_t size,
     VkBufferUsageFlagBits usageBits)
 {
     for (auto& entry : transientBuffers.transientBuffers)
@@ -2157,7 +2157,7 @@ static TransientBufferEntry* FindTransientBuffer(
 }
 
 static TransientBuffer* GetTransientBuffer(
-    TransientBuffers& transientBuffers, size_t size,
+    TransientResources& transientBuffers, size_t size,
     VkBufferUsageFlagBits usageBits)
 {
     TransientBufferEntry* entry =
@@ -2221,13 +2221,13 @@ static TransientBuffer* GetTransientBuffer(
 }
 
 TransientBuffer* GpuGetTransientVertexBuffer(
-    TransientBuffers& transientBuffers, size_t size)
+    TransientResources& transientBuffers, size_t size)
 {
     return GetTransientBuffer(transientBuffers, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 }
 
 TransientBuffer* GpuGetTransientIndexBuffer(
-    TransientBuffers& transientBuffers, size_t size)
+    TransientResources& transientBuffers, size_t size)
 {
     return GetTransientBuffer(transientBuffers, size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 }

@@ -149,7 +149,7 @@ struct FrameResources
 	VkSemaphore renderFinishedSemaphore;
 };
 
-struct TransientBuffers
+struct TransientResources
 {
     VmaAllocator allocator;
     int currentFrameIndex;
@@ -193,7 +193,7 @@ struct GpuContext
 	std::unordered_map<RenderState, VkPipeline> graphicsPipelines;
 	std::vector<VkDescriptorSet> descriptorSets;
 
-    TransientBuffers transientBuffers;
+    TransientResources transientResources;
 };
 
 void GpuContextInit(GpuContext& context);
@@ -213,10 +213,10 @@ VkDescriptorSet GpuCreateDescriptorSet(
 
 VkDeviceSize GetBufferOffset(const void* base, const void* pointer);
 
-void GpuResetTransientBuffers(
-    TransientBuffers& transientBuffers, int frameIndex);
-void GpuReleaseTransientBuffers(TransientBuffers& transientBuffers);
+void GpuResetTransientResources(
+    TransientResources& transientResources, int frameIndex);
+void GpuReleaseTransientResources(TransientResources& transientResources);
+TransientBuffer* GpuGetTransientVertexBuffer(
+    TransientResources& transientResources, size_t size);
 TransientBuffer*
-GpuGetTransientVertexBuffer(TransientBuffers& transientBuffers, size_t size);
-TransientBuffer*
-GpuGetTransientIndexBuffer(TransientBuffers& transientBuffers, size_t size);
+GpuGetTransientIndexBuffer(TransientResources& transientResources, size_t size);

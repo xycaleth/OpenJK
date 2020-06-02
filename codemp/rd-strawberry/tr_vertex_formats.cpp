@@ -51,7 +51,7 @@ VkDeviceSize UploadSingleTextureVertexData(
     {
         backEndData->maxVertexBufferSize *= 2;
         swapchainResources->vertexBuffer = GpuGetTransientVertexBuffer(
-            gpuContext.transientBuffers, backEndData->maxVertexBufferSize);
+            gpuContext.transientResources, backEndData->maxVertexBufferSize);
 
         vertexOffset = 0;
     }
@@ -97,7 +97,7 @@ VkDeviceSize UploadMultiTextureVertexData(
     {
         backEndData->maxVertexBufferSize *= 2;
         swapchainResources->vertexBuffer = GpuGetTransientVertexBuffer(
-            gpuContext.transientBuffers, backEndData->maxVertexBufferSize);
+            gpuContext.transientResources, backEndData->maxVertexBufferSize);
 
         vertexOffset = 0;
     }

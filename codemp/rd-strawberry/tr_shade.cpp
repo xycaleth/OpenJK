@@ -55,8 +55,8 @@ VkDeviceSize R_UploadIndexData(
     {
         backEndData->maxIndexBufferSize *= 2;
         swapchainResources->indexBuffer = GpuGetTransientIndexBuffer(
-            gpuContext.transientBuffers, backEndData->maxIndexBufferSize);
-        
+            gpuContext.transientResources, backEndData->maxIndexBufferSize);
+
         indexOffset = 0;
     }
 
