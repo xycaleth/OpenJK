@@ -46,28 +46,23 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 
 	#    Dependencies
 	# OpenAL (is optionally included for Windows)
-	if(MSVC AND NOT WIN64)
-		if(UseInternalOpenAL)
-			# There's a libs/OpenAL32.lib
-			# (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
-			find_library(OpenALLibrary NAMES OpenAL32 PATHS "${OpenJKLibDir}")
-			if(NOT OpenALLibrary)
-				message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
-			endif(NOT OpenALLibrary)
-			set(SPEngineLibraries ${SPEngineLibraries} ${OpenALLibrary})
-		else(UseInternalOpenAL)
-			find_package(OpenAL REQUIRED)
-			set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OPENAL_INCLUDE_DIR})
-			set(SPEngineLibraries ${SPEngineLibraries} ${OPENAL_LIBRARY})
-		endif(UseInternalOpenAL)
-
-		set(SPEngineEAXFiles
-			"${SPDir}/client/eax/eax.h"
-			"${SPDir}/client/eax/EaxMan.h"
-			)
-		source_group("eax" FILES ${SPEngineEAXFiles})
-		set(SPEngineFiles ${SPEngineFiles} ${SPEngineEAXFiles})
-	endif()
+    if(UseInternalOpenAL AND MSVC)
+        # There's a libs/OpenAL32.lib
+        find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKLibDir})
+        if(NOT OpenALLibrary)
+            message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
+        else()
+            set(SPEngineLibraries ${SPEngineLibraries} ${OpenALLibrary})
+            set(USE_OPENAL TRUE)
+        endif()
+    else()
+        find_package(OpenAL REQUIRED)
+        if (OpenAL_FOUND)
+            set(SPEngineIncludeDirectories ${SPEngineIncludeDirectories} ${OPENAL_INCLUDE_DIR})
+            set(SPEngineLibraries ${SPEngineLibraries} ${OPENAL_LIBRARY})
+            set(USE_OPENAL TRUE)
+        endif()
+    endif()
 
 	if(UseInternalSDL2)
 		if(CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -114,7 +109,6 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		"${SPDir}/client/cl_mp3.h"
 		"${SPDir}/client/client.h"
 		"${SPDir}/client/client_ui.h"
-
 		"${SPDir}/client/snd_ambient.cpp"
 		"${SPDir}/client/snd_dma.cpp"
 		"${SPDir}/client/snd_mem.cpp"
@@ -126,8 +120,19 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		"${SPDir}/client/snd_public.h"
 
 		"${SPDir}/client/vmachine.cpp"
-		"${SPDir}/client/vmachine.h"
-		)
+		"${SPDir}/client/vmachine.h")
+
+    if(USE_OPENAL)
+        set(SPEngineClientFiles ${SPEngineClientFiles} "${SharedDir}/client/snd_openal.cpp")
+        set(SPEngineDefines ${SPEngineDefines} "USE_OPENAL")
+        if (MSVC)
+            set(SPEngineClientFiles
+                ${SPEngineClientFiles}
+                "${SharedDir}/client/snd_openal_eax.cpp"
+                "${SharedDir}/client/snd_openal_eax.h")
+            set(SPEngineDefines ${SPEngineDefines} "USE_EAX")
+        endif()
+    endif()
 	source_group("client" FILES ${SPEngineClientFiles})
 	set(SPEngineFiles ${SPEngineFiles} ${SPEngineClientFiles})
 

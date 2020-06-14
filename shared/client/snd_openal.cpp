@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
-#include "snd_local.h"
+#include "client/snd_local.h"
 
 #include <OpenAL/al.h>
 #include <OpenAL/alc.h>
@@ -30,12 +30,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //  Globals
 //
 //////////////////////////////////////////////////////////////////////////////
-#define sqr(a) ((a) * (a))
-#define ENV_UPDATE_RATE 100 // Environmental audio update rate (in ms)
-
-// Displays the closest env. zones (including the one the listener is in)
-//#define DISPLAY_CLOSEST_ENVS
-
 #define DEFAULT_REF_DISTANCE 300.0f	   // Default reference distance
 #define DEFAULT_VOICE_REF_DISTANCE 1500.0f // Default voice reference distance
 
@@ -62,8 +56,6 @@ static void UpdateSingleShotSounds();
 //////////////////////////////////////////////////////////////////////////////
 extern int s_soundStarted;
 extern int listener_number;
-extern vec3_t listener_origin;
-extern matrix3_t listener_axis;
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -289,7 +281,7 @@ void S_AL_SoundInfo_f() {
 #endif
 }
 
-void S_AL_MuteAllSounds(bool bMute) {
+void S_AL_MuteAllSounds(qboolean bMute) {
 	if (!s_soundStarted)
 		return;
 
@@ -678,15 +670,9 @@ void S_AL_Update() {
 			alSourcei(s_channels[source].alSource, AL_LOOPING, AL_FALSE);
 			alSourcei(s_channels[source].alSource, AL_SOURCE_RELATIVE, AL_TRUE);
 			if (ch->entchannel == CHAN_ANNOUNCER) {
-				alSourcef(
-					s_channels[source].alSource,
-					AL_GAIN,
-					((float)(ch->master_vol) * s_volume->value) / 255.0f);
+				alSourcef(s_channels[source].alSource, AL_GAIN, ((float)(ch->master_vol) * s_volume->value) / 255.0f);
 			} else {
-				alSourcef(
-					s_channels[source].alSource,
-					AL_GAIN,
-					((float)(ch->master_vol) * s_volumeVoice->value) / 255.0f);
+				alSourcef(s_channels[source].alSource, AL_GAIN, ((float)(ch->master_vol) * s_volumeVoice->value) / 255.0f);
 			}
 		} else {
 			float pos[3];
@@ -696,17 +682,13 @@ void S_AL_Update() {
 				pos[0] = ch->origin[0];
 				pos[1] = ch->origin[2];
 				pos[2] = -ch->origin[1];
-				alSourcei(
-					s_channels[source].alSource, AL_SOURCE_RELATIVE, AL_FALSE);
+				alSourcei(s_channels[source].alSource, AL_SOURCE_RELATIVE, AL_FALSE);
 			} else {
 				if (ch->entnum == listener_number) {
 					pos[0] = 0.0f;
 					pos[1] = 0.0f;
 					pos[2] = 0.0f;
-					alSourcei(
-						s_channels[source].alSource,
-						AL_SOURCE_RELATIVE,
-						AL_TRUE);
+					alSourcei(s_channels[source].alSource, AL_SOURCE_RELATIVE, AL_TRUE);
 				} else {
 					// Get position of Entity
 					if (ch->bLooping) {
@@ -718,10 +700,7 @@ void S_AL_Update() {
 						pos[1] = s_entityPosition[ch->entnum][2];
 						pos[2] = -s_entityPosition[ch->entnum][1];
 					}
-					alSourcei(
-						s_channels[source].alSource,
-						AL_SOURCE_RELATIVE,
-						AL_FALSE);
+					alSourcei(s_channels[source].alSource, AL_SOURCE_RELATIVE, AL_FALSE);
 				}
 			}
 
@@ -731,44 +710,20 @@ void S_AL_Update() {
 			if (ch->entchannel == CHAN_VOICE) {
 				// Reduced fall-off (Large Reference Distance), affected by
 				// Voice Volume
-				alSourcef(
-					s_channels[source].alSource,
-					AL_REFERENCE_DISTANCE,
-					DEFAULT_VOICE_REF_DISTANCE);
-				alSourcef(
-					s_channels[source].alSource,
-					AL_GAIN,
-					((float)(ch->master_vol) * s_volumeVoice->value) / 255.0f);
+				alSourcef(s_channels[source].alSource, AL_REFERENCE_DISTANCE, DEFAULT_VOICE_REF_DISTANCE);
+				alSourcef(s_channels[source].alSource, AL_GAIN, ((float)(ch->master_vol) * s_volumeVoice->value) / 255.0f);
 			} else if (ch->entchannel == CHAN_VOICE_ATTEN) {
 				// Normal fall-off, affected by Voice Volume
-				alSourcef(
-					s_channels[source].alSource,
-					AL_REFERENCE_DISTANCE,
-					DEFAULT_REF_DISTANCE);
-				alSourcef(
-					s_channels[source].alSource,
-					AL_GAIN,
-					((float)(ch->master_vol) * s_volumeVoice->value) / 255.0f);
+				alSourcef(s_channels[source].alSource, AL_REFERENCE_DISTANCE, DEFAULT_REF_DISTANCE);
+				alSourcef(s_channels[source].alSource, AL_GAIN, ((float)(ch->master_vol) * s_volumeVoice->value) / 255.0f);
 			} else if (ch->entchannel == CHAN_LESS_ATTEN) {
 				// Reduced fall-off, affected by Sound Effect Volume
-				alSourcef(
-					s_channels[source].alSource,
-					AL_REFERENCE_DISTANCE,
-					DEFAULT_VOICE_REF_DISTANCE);
-				alSourcef(
-					s_channels[source].alSource,
-					AL_GAIN,
-					((float)(ch->master_vol) * s_volume->value) / 255.f);
+				alSourcef(s_channels[source].alSource, AL_REFERENCE_DISTANCE, DEFAULT_VOICE_REF_DISTANCE);
+				alSourcef(s_channels[source].alSource, AL_GAIN, ((float)(ch->master_vol) * s_volume->value) / 255.f);
 			} else {
 				// Normal fall-off, affect by Sound Effect Volume
-				alSourcef(
-					s_channels[source].alSource,
-					AL_REFERENCE_DISTANCE,
-					DEFAULT_REF_DISTANCE);
-				alSourcef(
-					s_channels[source].alSource,
-					AL_GAIN,
-					((float)(ch->master_vol) * s_volume->value) / 255.f);
+				alSourcef(s_channels[source].alSource, AL_REFERENCE_DISTANCE, DEFAULT_REF_DISTANCE);
+				alSourcef(s_channels[source].alSource, AL_GAIN, ((float)(ch->master_vol) * s_volume->value) / 255.f);
 			}
 		}
 
@@ -778,10 +733,7 @@ void S_AL_Update() {
 #endif
 
 		if (ch->thesfx->pMP3StreamHeader) {
-			memcpy(
-				&ch->MP3StreamHeader,
-				ch->thesfx->pMP3StreamHeader,
-				sizeof(ch->MP3StreamHeader));
+			memcpy(&ch->MP3StreamHeader, ch->thesfx->pMP3StreamHeader, sizeof(ch->MP3StreamHeader));
 			ch->iMP3SlidingDecodeWritePos = 0;
 			ch->iMP3SlidingDecodeWindowPos = 0;
 
@@ -795,27 +747,16 @@ void S_AL_Update() {
 				int nTotalBytesDecoded = 0;
 
 				for (int j = 0; j < (STREAMING_BUFFER_SIZE / 1152); j++) {
-					int nBytesDecoded =
-						C_MP3Stream_Decode(&ch->MP3StreamHeader, 0);
-					memcpy(
-						ch->buffers[i].Data + nTotalBytesDecoded,
-						ch->MP3StreamHeader.bDecodeBuffer,
-						nBytesDecoded);
+					int nBytesDecoded = C_MP3Stream_Decode(&ch->MP3StreamHeader, 0);
+					memcpy(ch->buffers[i].Data + nTotalBytesDecoded, ch->MP3StreamHeader.bDecodeBuffer, nBytesDecoded);
 					if (ch->entchannel == CHAN_VOICE ||
 					    ch->entchannel == CHAN_VOICE_ATTEN ||
 					    ch->entchannel == CHAN_VOICE_GLOBAL) {
 						if (ch->thesfx->lipSyncData) {
-							ch->thesfx
-								->lipSyncData[(i * NUM_STREAMING_BUFFERS) + j] =
-								MP3PreProcessLipSync(
-									ch,
-									(short *)(ch->MP3StreamHeader
-											  .bDecodeBuffer));
+							ch->thesfx->lipSyncData[(i * NUM_STREAMING_BUFFERS) + j] = MP3PreProcessLipSync(ch, (short *)(ch->MP3StreamHeader.bDecodeBuffer));
 						} else {
 #ifdef _DEBUG
-							Com_OPrintf(
-								"Missing lip-sync info. for %s\n",
-								ch->thesfx->sSoundName);
+							Com_OPrintf("Missing lip-sync info. for %s\n", ch->thesfx->sSoundName);
 #endif
 						}
 					}
@@ -823,10 +764,7 @@ void S_AL_Update() {
 				}
 
 				if (nTotalBytesDecoded != STREAMING_BUFFER_SIZE) {
-					memset(
-						ch->buffers[i].Data + nTotalBytesDecoded,
-						0,
-						(STREAMING_BUFFER_SIZE - nTotalBytesDecoded));
+					memset(ch->buffers[i].Data + nTotalBytesDecoded, 0, (STREAMING_BUFFER_SIZE - nTotalBytesDecoded));
 					break;
 				}
 			}
@@ -842,16 +780,10 @@ void S_AL_Update() {
 
 			for (i = 0; i < nBuffersToAdd; i++) {
 				// Copy decoded data to AL Buffer
-				alBufferData(
-					ch->buffers[i].BufferID,
-					AL_FORMAT_MONO16,
-					ch->buffers[i].Data,
-					STREAMING_BUFFER_SIZE,
-					22050);
+				alBufferData(ch->buffers[i].BufferID, AL_FORMAT_MONO16, ch->buffers[i].Data, STREAMING_BUFFER_SIZE, 22050);
 
 				// Queue AL Buffer on Source
-				alSourceQueueBuffers(
-					s_channels[source].alSource, 1, &(ch->buffers[i].BufferID));
+				alSourceQueueBuffers(s_channels[source].alSource, 1, &(ch->buffers[i].BufferID));
 				if (alGetError() == AL_NO_ERROR) {
 					ch->buffers[i].Status = QUEUED;
 				}
@@ -887,8 +819,7 @@ void S_AL_Update() {
 			return;
 		} else {
 			// Attach buffer to source
-			alSourcei(
-				s_channels[source].alSource, AL_BUFFER, ch->thesfx->Buffer);
+			alSourcei(s_channels[source].alSource, AL_BUFFER, ch->thesfx->Buffer);
 
 			ch->bStreaming = false;
 

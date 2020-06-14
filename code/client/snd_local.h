@@ -31,27 +31,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "snd_public.h"
 #include "../mp3code/mp3struct.h"
 
-#if defined(_MSC_VER) && !defined(WIN64)
-#define USE_OPENAL
-#endif
-
-// Open AL Specific
-#ifdef USE_OPENAL
-#include "OpenAL/al.h"
-#include "OpenAL/alc.h"
-#include "eax/eax.h"
-#include "eax/EaxMan.h"
-/*#elif defined MACOS_X
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
-#else
-#include <AL/al.h>
-#include <AL/alc.h>*/
-#endif
-
 // Added for Open AL to know when to mute all sounds (e.g when app. loses focus)
 void S_AL_MuteAllSounds(qboolean bMute);
-
+bool S_AL_IsEnabled();
 
 //from SND_AMBIENT
 extern void AS_Init( void );
@@ -93,9 +75,7 @@ typedef struct sfx_s {
 	float			fVolRange;				// used to set the highest volume this sample has at load time - used for lipsynching
 
 	// Open AL
-#ifdef USE_OPENAL
-	ALuint		Buffer;
-#endif
+	uint32_t		Buffer;
 	char		*lipSyncData;
 
 	struct sfx_s	*next;					// only used because of hash table when registering
@@ -113,15 +93,12 @@ typedef struct {
 
 #define START_SAMPLE_IMMEDIATE	0x7fffffff
 
-// Open AL specific
-#ifdef USE_OPENAL
 typedef struct
 {
-	ALuint	BufferID;
-	ALuint	Status;
+	uint32_t	BufferID;
+	uint32_t	Status;
 	char	*Data;
 } STREAMINGBUFFER;
-#endif
 
 #define NUM_STREAMING_BUFFERS	4
 #define STREAMING_BUFFER_SIZE	4608		// 4 decoded MP3 frames
@@ -160,10 +137,8 @@ typedef struct
 //	bool	bAmbient;	// Signifies if this channel / source is playing a looping ambient sound
 	bool	bProcessed;	// Signifies if this channel / source has been processed
 	bool	bStreaming;	// Set to true if the data needs to be streamed (MP3 or dialogue)
-#ifdef USE_OPENAL
 	STREAMINGBUFFER	buffers[NUM_STREAMING_BUFFERS];	// AL Buffers for streaming
-	ALuint		alSource;		// Open AL Source
-#endif
+	uint32_t		alSource;		// Open AL Source
 	bool		bPlaying;		// Set to true when a sound is playing on this channel / source
 	int			iStartTime;		// Time playback of Source begins
 	int			lSlotID;		// ID of Slot rendering Source's environment (enables a send to this FXSlot)
@@ -234,8 +209,71 @@ void	 SND_TouchSFX(sfx_t *sfx);
 
 void S_DisplayFreeMemory(void);
 void S_memoryLoad(sfx_t *sfx);
+
+///////////////////////////////////////////////////////////////////////////////
 //
-//////////////////////////////////
+//  BADBADFIXMEFIXME: Structs/globals for OpenAL backend
+//
+///////////////////////////////////////////////////////////////////////////////
+typedef struct
+{
+	unsigned char volume;
+	vec3_t origin;
+	//	vec3_t			velocity;
+	/*	const*/ sfx_t *sfx;
+	int mergeFrame;
+	int entnum;
+	soundChannel_t entchan;
+
+	// For Open AL
+	bool bProcessed;
+	bool bRelative;
+} loopSound_t;
+
+#define MAX_LOOP_SOUNDS 64
+
+extern int numLoopSounds;
+extern loopSound_t loopSounds[MAX_LOOP_SOUNDS];
+
+extern vec3_t s_entityPosition[MAX_GENTITIES];
+extern int s_entityWavVol[MAX_GENTITIES];
+extern int s_entityWavVol_back[MAX_GENTITIES];
+
+extern int s_soundtime; // sample PAIRS
+
+extern cvar_t *s_lip_threshold_1;
+extern cvar_t *s_lip_threshold_2;
+extern cvar_t *s_lip_threshold_3;
+extern cvar_t *s_lip_threshold_4;
+
+void S_UpdateBackgroundTrack(void);
+
+///////////////////////////////////////////////////////////////////////////////
+//
+//  OpenAL sound backend API
+//
+///////////////////////////////////////////////////////////////////////////////
+bool S_AL_IsEnabled();
+
+qboolean S_AL_Init();
+void S_AL_InitCvars();
+void S_AL_Shutdown();
+void S_AL_SoundInfo_f();
+
+void S_AL_OnClearLoopingSounds();
+void S_AL_OnLoadSound(sfx_t* sfx);
+void S_AL_OnRegistration();
+void S_AL_OnStartSound(int entnum, int entchannel);
+void S_AL_OnUpdateEntityPosition(int entnum, const vec3_t position);
+int S_AL_OnFreeSfxMemory(sfx_t* sfx);
+
+void S_AL_MuteAllSounds(qboolean bMute);
+channel_t* S_AL_PickChannel(int entnum, int entchannel);
+void S_AL_ClearChannel(channel_t* channel);
+void S_AL_ClearSoundBuffer();
+void S_AL_Respatialize(int entityNum, const vec3_t head, matrix3_t axis, int inwater);
+void S_AL_StopSounds();
+void S_AL_Update();
 
 #include "cl_mp3.h"
 

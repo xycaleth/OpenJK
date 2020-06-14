@@ -31,6 +31,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 //  Creative EAX support
 //
 //////////////////////////////////////////////////////////////////////////////
+#define ENV_UPDATE_RATE 100 // Environmental audio update rate (in ms)
+
+// Displays the closest env. zones (including the one the listener is in)
+//#define DISPLAY_CLOSEST_ENVS
+
 typedef struct ENVTABLE_s {
 	ALuint ulNumApertures;
 	ALint lFXSlotID;

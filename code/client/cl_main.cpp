@@ -1125,7 +1125,7 @@ void CL_InitRef( void ) {
 	RIT(CM_DeleteCachedMap);
 	RIT(CM_DrawDebugSurface);
 	RIT(CM_PointContents);
-	RIT(Cvar_Get);
+	rit.Cvar_Get = Cvar_GetNoDesc;
 	RIT(Cvar_Set);
 	RIT(Cvar_SetValue);
 	RIT(Cvar_CheckRange);

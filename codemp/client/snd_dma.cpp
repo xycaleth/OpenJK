@@ -304,9 +304,9 @@ void S_Init( void ) {
 	s_volumeVoice= Cvar_Get ("s_volumeVoice", "1.0", CVAR_ARCHIVE, "Volume for voice channels" );
 	s_musicVolume = Cvar_Get ("s_musicvolume", "0.25", CVAR_ARCHIVE, "Music Volume" );
 
-    Cvar_CheckRange(s_volume, 0.0f, 1.0f, qfalse);
-    Cvar_CheckRange(s_volumeVoice, 0.0f, 1.0f, qfalse);
-    Cvar_CheckRange(s_musicVolume, 0.0f, 1.0f, qfalse);
+	Cvar_CheckRange(s_volume, 0.0f, 1.0f, qfalse);
+	Cvar_CheckRange(s_volumeVoice, 0.0f, 1.0f, qfalse);
+	Cvar_CheckRange(s_musicVolume, 0.0f, 1.0f, qfalse);
 
 	s_separation = Cvar_Get ("s_separation", "0.5", CVAR_ARCHIVE);
 	s_khz = Cvar_Get ("s_khz", "44", CVAR_ARCHIVE|CVAR_LATCH);
@@ -1137,7 +1137,7 @@ void S_CIN_StopSound(sfxHandle_t sfxHandle)
 		}
 		if (ch->thesfx == sfx)
 		{
-			S_AL_ClearChannel(&s_channels[i]);
+			S_AL_ClearChannel(ch);
 
 			SND_FreeSFXMem(ch->thesfx);	// heh, may as well...
 			ch->thesfx = NULL;

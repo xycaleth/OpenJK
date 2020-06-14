@@ -927,7 +927,7 @@ void SV_InitGameProgs (void) {
 
 	import.GetServerinfo = SV_GetServerinfo;
 
-	import.cvar = Cvar_Get;
+	import.cvar = Cvar_GetNoDesc;
 	import.cvar_set = Cvar_Set;
 	import.Cvar_VariableIntegerValue = Cvar_VariableIntegerValue;
 	import.Cvar_VariableStringBuffer = Cvar_VariableStringBuffer;

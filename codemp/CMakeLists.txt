@@ -359,11 +359,9 @@ if(BuildMPEngine)
 		set(MPEngineLibraries ${MPEngineLibraries} ${OPENGL_LIBRARIES})
 	endif()
 
-	# OpenAL (is optionally included for Windows)
     set(USE_OPENAL FALSE)
     if(UseInternalOpenAL AND MSVC)
         # There's a libs/OpenAL32.lib
-        # (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
         find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKLibDir})
         if(NOT OpenALLibrary)
             message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
@@ -448,13 +446,13 @@ if(BuildMPEngine)
 		"${MPDir}/client/snd_music.h")
 
     if(USE_OPENAL)
-        set(MPEngineClientFiles ${MPEngineClientFiles} "${MPDir}/client/snd_openal.cpp")
+        set(MPEngineClientFiles ${MPEngineClientFiles} "${SharedDir}/client/snd_openal.cpp")
         set(MPEngineDefines ${MPEngineDefines} "USE_OPENAL")
         if (MSVC)
             set(MPEngineClientFiles
                 ${MPEngineClientFiles}
-                "${MPDir}/client/snd_openal_eax.cpp"
-                "${MPDir}/client/snd_openal_eax.h")
+                "${SharedDir}/client/snd_openal_eax.cpp"
+                "${SharedDir}/client/snd_openal_eax.h")
             set(MPEngineDefines ${MPEngineDefines} "USE_EAX")
         endif()
     endif()

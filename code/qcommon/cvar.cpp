@@ -323,7 +323,7 @@ If the variable already exists, the value will not be set unless CVAR_ROM
 The flags will be or'ed in if the variable exists.
 ============
 */
-cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
+cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags, const char* var_desc_unused ) {
 	cvar_t	*var;
 	long	hash;
 	int		index;
@@ -479,6 +479,10 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, int flags ) {
 	cvar_sort = qtrue;
 
 	return var;
+}
+
+cvar_t *Cvar_GetNoDesc( const char *var_name, const char *var_value, int flags) {
+    return Cvar_Get(var_name, var_value, flags);
 }
 
 static void Cvar_QSortByName( cvar_t **a, int n ) 

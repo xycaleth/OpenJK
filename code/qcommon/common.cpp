@@ -238,6 +238,22 @@ void Com_FlushCamFile()
 	Com_Printf("flushed all cams to %s\n", flushedMapname);
 }
 
+// Outputs to the VC / Windows Debug window (only in debug compile)
+void QDECL Com_OPrintf( const char *fmt, ...)
+{
+	va_list		argptr;
+	char		msg[MAXPRINTMSG];
+
+	va_start (argptr,fmt);
+	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
+	va_end (argptr);
+#ifdef _WIN32
+	OutputDebugString(msg);
+#else
+	printf("%s", msg);
+#endif
+}
+
 /*
 =============
 Com_Error

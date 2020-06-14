@@ -789,8 +789,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 			{
 //				Com_DPrintf("(Keeping file \"%s\" as MP3)\n",sLoadName);
 
-#ifdef USE_OPENAL
-				if (s_UseOpenAL)
+				if (S_AL_IsEnabled())
 				{
 					// Create space for lipsync data (4 lip sync values per streaming AL buffer)
 					if (strstr(sfx->sSoundName, "chars") )
@@ -798,7 +797,6 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 					else
 						sfx->lipSyncData = NULL;
 				}
-#endif
 			}
 			else
 			{
@@ -849,37 +847,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 						}
 #endif
 
-						// Open AL
-#ifdef USE_OPENAL
-						if (s_UseOpenAL)
-						{
-							if (strstr(sfx->sSoundName, "chars"))
-							{
-								sfx->lipSyncData = (char *)Z_Malloc((sfx->iSoundLengthInSamples / 1000) + 1, TAG_SND_RAWDATA, qfalse);
-								S_PreProcessLipSync(sfx);
-							}
-							else
-								sfx->lipSyncData = NULL;
-
-							// Clear Open AL Error state
-							alGetError();
-
-							// Generate AL Buffer
-							ALuint Buffer;
-							alGenBuffers(1, &Buffer);
-							if (alGetError() == AL_NO_ERROR)
-							{
-								// Copy audio data to AL Buffer
-								alBufferData(Buffer, AL_FORMAT_MONO16, sfx->pSoundData, sfx->iSoundLengthInSamples*2, 22050);
-								if (alGetError() == AL_NO_ERROR)
-								{
-									sfx->Buffer = Buffer;
-									Z_Free(sfx->pSoundData);
-									sfx->pSoundData = NULL;
-								}
-							}
-						}
-#endif
+                        S_AL_OnLoadSound(sfx);
 
 						Z_Free(pbUnpackBuffer);
 					}
@@ -922,38 +890,7 @@ static qboolean S_LoadSound_Actual( sfx_t *sfx )
 		sfx->pSoundData = NULL;
 		ResampleSfx( sfx, info.rate, info.width, data + info.dataofs );
 
-		// Open AL
-#ifdef USE_OPENAL
-		if (s_UseOpenAL)
-		{
-			if ((strstr(sfx->sSoundName, "chars")) || (strstr(sfx->sSoundName, "CHARS")))
-			{
-				sfx->lipSyncData = (char *)Z_Malloc((sfx->iSoundLengthInSamples / 1000) + 1, TAG_SND_RAWDATA, qfalse);
-				S_PreProcessLipSync(sfx);
-			}
-			else
-				sfx->lipSyncData = NULL;
-
-			// Clear Open AL Error State
-			alGetError();
-
-			// Generate AL Buffer
-			ALuint Buffer;
-			alGenBuffers(1, &Buffer);
-			if (alGetError() == AL_NO_ERROR)
-			{
-				// Copy audio data to AL Buffer
-				alBufferData(Buffer, AL_FORMAT_MONO16, sfx->pSoundData, sfx->iSoundLengthInSamples*2, 22050);
-				if (alGetError() == AL_NO_ERROR)
-				{
-					// Store AL Buffer in sfx struct, and release sample data
-					sfx->Buffer = Buffer;
-					Z_Free(sfx->pSoundData);
-					sfx->pSoundData = NULL;
-				}
-			}
-		}
-#endif
+		S_AL_OnLoadSound(sfx);
 
 		Z_Free(samples);
 	}
