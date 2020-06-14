@@ -1,0 +1,7 @@
+BasedOnStyle: LLVM
+
+Language: Cpp
+ColumnLimit: 0
+ContinuationIndentWidth: 8
+IndentWidth: 8
+UseTab: Always
