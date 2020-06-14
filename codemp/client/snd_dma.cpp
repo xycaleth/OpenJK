@@ -253,12 +253,9 @@ void S_SoundInfo_f(void) {
 	if (!s_soundStarted) {
 		Com_Printf ("sound system not started\n");
 	} else {
-		if (S_AL_IsEnabled())
-		{
-            S_AL_SoundInfo_f();
-		}
-		else
-		{
+		if (S_AL_IsEnabled()) {
+			S_AL_SoundInfo_f();
+		} else {
 			Com_Printf("%5d stereo\n", dma.channels - 1);
 			Com_Printf("%5d samples\n", dma.samples);
 			Com_Printf("%5d samplebits\n", dma.samplebits);
@@ -348,28 +345,25 @@ void S_Init( void ) {
 	Cmd_AddCommand("mp3_calcvols", S_MP3_CalcVols_f);
 	Cmd_AddCommand("s_dynamic", S_SetDynamicMusic_f, "Change dynamic music state" );
 
-    S_AL_InitCvars();
-	if (S_AL_IsEnabled())
-	{
-        r = S_AL_Init() ? qtrue : qfalse;
-	}
-	else
-	{
+	S_AL_InitCvars();
+	if (S_AL_IsEnabled()) {
+		r = S_AL_Init();
+	} else {
 		r = SNDDMA_Init(s_khz->integer);
 	}
 
-    if ( r ) {
-        s_soundStarted = 1;
-        s_soundMuted = qtrue;
-//		s_numSfx = 0;	// do NOT do this here now!!!
+	if (r) {
+		s_soundStarted = 1;
+		s_soundMuted = qtrue;
+		//		s_numSfx = 0;	// do NOT do this here now!!!
 
-        s_soundtime = 0;
-        s_paintedtime = 0;
+		s_soundtime = 0;
+		s_paintedtime = 0;
 
-        S_StopAllSounds ();
+		S_StopAllSounds();
 
-        S_SoundInfo_f();
-    }
+		S_SoundInfo_f();
+	}
 
 	Com_Printf("------------------------------------\n");
 
@@ -410,12 +404,9 @@ void S_Shutdown( void )
 	S_FreeAllSFXMem();
 	S_UnCacheDynamicMusic();
 
-	if (S_AL_IsEnabled())
-	{
-        S_AL_Shutdown();
-	}
-	else
-	{
+	if (S_AL_IsEnabled()) {
+		S_AL_Shutdown();
+	} else {
 		SNDDMA_Shutdown();
 	}
 
@@ -589,7 +580,7 @@ void S_BeginRegistration( void )
 {
 	s_soundMuted = qfalse;		// we can play again
 
-    S_AL_OnRegistration();
+	S_AL_OnRegistration();
 
 	if (s_numSfx == 0) {
 		SND_setup();
@@ -637,10 +628,9 @@ sfxHandle_t	S_RegisterSound( const char *name)
         return sfx - s_knownSfx;
     }
 
-	if (S_AL_IsEnabled() && sfx->Buffer)
-	{
-        return sfx - s_knownSfx;
-	}
+    if (S_AL_IsEnabled() && sfx->Buffer) {
+	    return sfx - s_knownSfx;
+    }
 
 	sfx->bInMemory = qfalse;
 
@@ -674,10 +664,8 @@ void S_memoryLoad(sfx_t	*sfx)
 //=============================================================================
 static qboolean S_CheckChannelStomp( int chan1, int chan2 )
 {
-	if (!S_AL_IsEnabled())
-	{
-		if ( chan1 == chan2 )
-		{
+	if (!S_AL_IsEnabled()) {
+		if (chan1 == chan2) {
 			return qtrue;
 		}
 	}
@@ -881,9 +869,8 @@ void S_StartAmbientSound( const vec3_t origin, int entityNum, unsigned char volu
 	}
 	SND_TouchSFX(sfx);
 
-	if (S_AL_IsEnabled() && volume == 0)
-	{
-        return;
+	if (S_AL_IsEnabled() && volume == 0) {
+		return;
 	}
 
 	if ( s_show->integer == 1 ) {
@@ -990,7 +977,7 @@ void S_StartSound(const vec3_t origin, int entityNum, int entchannel, sfxHandle_
 		Com_Printf( "%i : %s on (%d)\n", s_paintedtime, sfx->sSoundName, entityNum );
 	}
 
-    S_AL_OnStartSound(entityNum, entchannel);
+	S_AL_OnStartSound(entityNum, entchannel);
 
 	ch = S_PickChannel( entityNum, entchannel );
 	if (!ch) {
@@ -1116,12 +1103,9 @@ void S_ClearSoundBuffer( void ) {
 #endif
 	s_rawend = 0;
 
-	if (S_AL_IsEnabled())
-	{
-        S_AL_ClearSoundBuffer();
-	}
-    else
-	{
+	if (S_AL_IsEnabled()) {
+		S_AL_ClearSoundBuffer();
+	} else {
 		if (dma.samplebits == 8)
 			clear = 0x80;
 		else
@@ -1153,7 +1137,7 @@ void S_CIN_StopSound(sfxHandle_t sfxHandle)
 		}
 		if (ch->thesfx == sfx)
 		{
-            S_AL_ClearChannel(&s_channels[i]);
+			S_AL_ClearChannel(&s_channels[i]);
 
 			SND_FreeSFXMem(ch->thesfx);	// heh, may as well...
 			ch->thesfx = NULL;
@@ -1183,12 +1167,9 @@ void S_StopSounds(void)
 	S_ClearLoopingSounds();
 
 	// clear all the s_channels
-	if (S_AL_IsEnabled())
-	{
-        S_AL_StopSounds();
-	}
-	else
-	{
+	if (S_AL_IsEnabled()) {
+		S_AL_StopSounds();
+	} else {
 		memset(s_channels, 0, sizeof(s_channels));
 	}
 
@@ -1230,7 +1211,7 @@ S_ClearLoopingSounds
 */
 void S_ClearLoopingSounds( void )
 {
-    S_AL_OnClearLoopingSounds();
+	S_AL_OnClearLoopingSounds();
 
 	numLoopSounds = 0;
 }
@@ -1343,9 +1324,8 @@ void S_AddAmbientLoopingSound( const vec3_t origin, unsigned char volume, sfxHan
 		return;
 	}
 
-	if (S_AL_IsEnabled() && volume == 0)
-	{
-        return;
+	if (S_AL_IsEnabled() && volume == 0) {
+		return;
 	}
 
 	if ( sfxHandle < 0 || sfxHandle >= s_numSfx ) {
@@ -1677,7 +1657,7 @@ void S_UpdateEntityPosition( int entityNum, const vec3_t origin )
 		Com_Error( ERR_DROP, "S_UpdateEntityPosition: bad entitynum %i", entityNum );
 	}
 
-    S_AL_OnUpdateEntityPosition(entityNum, origin);
+	S_AL_OnUpdateEntityPosition(entityNum, origin);
 
 	VectorCopy( origin, s_entityPosition[entityNum] );
 }
@@ -1825,12 +1805,9 @@ void S_Respatialize( int entityNum, const vec3_t head, matrix3_t axis, int inwat
 		return;
 	}
 
-	if (S_AL_IsEnabled())
-	{
-        S_AL_Respatialize(entityNum, head, axis, inwater);
-	}
-	else
-	{
+	if (S_AL_IsEnabled()) {
+		S_AL_Respatialize(entityNum, head, axis, inwater);
+	} else {
 		listener_number = entityNum;
 		VectorCopy(head, listener_origin);
 		VectorCopy(axis[0], listener_axis[0]);
@@ -1994,8 +1971,7 @@ void S_Update( void ) {
 	}
 
 	// The Open AL code, handles background music in the S_UpdateRawSamples function
-	if (!S_AL_IsEnabled())
-	{
+	if (!S_AL_IsEnabled()) {
 		// add raw data from streamed samples
 		S_UpdateBackgroundTrack();
 	}
@@ -2066,12 +2042,9 @@ void S_Update_(void) {
 		return;
 	}
 
-	if (S_AL_IsEnabled())
-	{
-        S_AL_Update();
-	}
-	else
-	{
+	if (S_AL_IsEnabled()) {
+		S_AL_Update();
+	} else {
 		// Updates s_soundtime
 		S_GetSoundtime();
 
@@ -3524,7 +3497,7 @@ static int SND_FreeSFXMem(sfx_t *sfx)
 {
 	int iBytesFreed = 0;
 
-    iBytesFreed += S_AL_OnFreeSfxMemory(sfx);
+	iBytesFreed += S_AL_OnFreeSfxMemory(sfx);
 
 	if (						sfx->pSoundData) {
 		iBytesFreed +=	Z_Size(	sfx->pSoundData);
