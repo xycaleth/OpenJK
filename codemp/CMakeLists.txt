@@ -360,18 +360,24 @@ if(BuildMPEngine)
 	endif()
 
 	# OpenAL (is optionally included for Windows)
+    set(USE_OPENAL FALSE)
     if(UseInternalOpenAL AND MSVC)
         # There's a libs/OpenAL32.lib
         # (mrw) TODO Is this actually required on windows? It is loaded at runtime, should not be linked?
         find_library(OpenALLibrary NAMES OpenAL32 PATHS ${OpenJKLibDir})
         if(NOT OpenALLibrary)
             message(FATAL_ERROR "UseInternalOpenAL enabled, but lib/OpenAL32.lib not found!")
+        else()
+            set(MPEngineLibraries ${MPEngineLibraries} ${OpenALLibrary})
+            set(USE_OPENAL TRUE)
         endif()
-        set(MPEngineLibraries ${MPEngineLibraries} ${OpenALLibrary})
     else()
         find_package(OpenAL REQUIRED)
-        set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} ${OPENAL_INCLUDE_DIR})
-        set(MPEngineLibraries ${MPEngineLibraries} ${OPENAL_LIBRARY})
+        if (OpenAL_FOUND)
+            set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} ${OPENAL_INCLUDE_DIR})
+            set(MPEngineLibraries ${MPEngineLibraries} ${OPENAL_LIBRARY})
+            set(USE_OPENAL TRUE)
+        endif()
     endif()
 
 	if(UseInternalSDL2)
@@ -398,16 +404,6 @@ if(BuildMPEngine)
 		set(MPEngineIncludeDirectories ${MPEngineIncludeDirectories} ${SDL2_INCLUDE_DIRS})
 		set(MPEngineLibraries ${MPEngineLibraries} ${SDL2_LIBRARIES})
 	endif()
-
-	# EAX is Windows-Only (right?)
-	if(MSVC)
-		set(MPEngineEAXFiles
-			"${MPDir}/client/eax/eax.h"
-			"${MPDir}/client/eax/EaxMan.h"
-			)
-		source_group("eax" FILES ${MPEngineEAXFiles})
-		set(MPEngineFiles ${MPEngineFiles} ${MPEngineEAXFiles})
-	endif(MSVC)
 
 	#    Source Files
 
@@ -449,9 +445,19 @@ if(BuildMPEngine)
 		"${MPDir}/client/snd_mp3.cpp"
 		"${MPDir}/client/snd_mp3.h"
 		"${MPDir}/client/snd_music.cpp"
-		"${MPDir}/client/snd_music.h"
-		"${MPDir}/client/snd_openal.cpp"
-		)
+		"${MPDir}/client/snd_music.h")
+
+    if(USE_OPENAL)
+        set(MPEngineClientFiles ${MPEngineClientFiles} "${MPDir}/client/snd_openal.cpp")
+        set(MPEngineDefines ${MPEngineDefines} "USE_OPENAL")
+        if (MSVC)
+            set(MPEngineClientFiles
+                ${MPEngineClientFiles}
+                "${MPDir}/client/snd_openal_eax.cpp"
+                "${MPDir}/client/snd_openal_eax.h")
+            set(MPEngineDefines ${MPEngineDefines} "USE_EAX")
+        endif()
+    endif()
 	source_group("client" FILES ${MPEngineClientFiles})
 	set(MPEngineFiles ${MPEngineFiles} ${MPEngineClientFiles})
 

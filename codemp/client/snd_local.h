@@ -254,6 +254,7 @@ bool S_AL_IsEnabled();
 qboolean S_AL_Init();
 void S_AL_InitCvars();
 void S_AL_Shutdown();
+void S_AL_SoundInfo_f();
 
 void S_AL_OnClearLoopingSounds();
 void S_AL_OnLoadSound(sfx_t* sfx);
@@ -269,7 +270,5 @@ void S_AL_ClearSoundBuffer();
 void S_AL_Respatialize(int entityNum, const vec3_t head, matrix3_t axis, int inwater);
 void S_AL_StopSounds();
 void S_AL_Update();
-
-void S_AL_SoundInfo_f();
 
 #include "snd_mp3.h"
