@@ -1396,23 +1396,6 @@ static void UpdateRawSamples() {
 		// Check that the Source is actually playing
 		alGetSourcei(musicChannel->alSource, AL_SOURCE_STATE, &state);
 		if (state != AL_PLAYING) {
-#if 0
-			// Stopped playing ... due to buffer underrun
-			// Unqueue any buffers still on the Source (they will be PROCESSED), and restart playback
-			alGetSourcei(musicChannel->alSource, AL_BUFFERS_PROCESSED, &processed);
-			while (processed--)
-			{
-				alSourceUnqueueBuffers(musicChannel->alSource, 1, &buffer);
-				alGetBufferi(buffer, AL_SIZE, &size);
-				alDeleteBuffers(1, &buffer);
-
-                //Com_Printf(S_COLOR_RED "Unqueued buffer=%d size=%d for underrun\n", buffer, size);
-
-				// Update sg.soundtime (+= number of samples played (number of bytes / 4))
-				s_soundtime += (size >> 2);
-			}
-#endif
-
 #ifdef _DEBUG
 			Com_OPrintf("Restarting / Starting playback of Raw Samples\n");
 #endif
