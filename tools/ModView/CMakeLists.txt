@@ -3,14 +3,13 @@ project(ModView)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Widgets REQUIRED)
-find_package(Qt5Gui REQUIRED)
-find_package(Qt5OpenGL REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(JPEG REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(zlib REQUIRED)
-find_package(jpeg REQUIRED)
 
 set(MODVIEW_GUI_FILES
 	GUIHelpers.h
@@ -97,10 +96,10 @@ set(MODVIEW_SOURCE_FILES
 	text.cpp
 	textures.cpp)
 
-qt5_wrap_ui(UI_HEADERS MainForm.ui ChangeFloor.ui)
+set(UI_HEADERS MainForm.ui ChangeFloor.ui)
 source_group("Qt UI Files" FILES ${UI_HEADERS})
 
-qt5_add_resources(MODVIEW_RESOURCES ModView.qrc)
+set(MODVIEW_RESOURCES ModView.qrc)
 source_group("Qt Resource Files" FILES ${MODVIEW_RESOURCES})
 
 if(MSVC)
@@ -119,7 +118,7 @@ add_executable(ModView
 	${MODVIEW_LIBJPEG_FILES}
 	${MODVIEW_GUI_FILES}
 	${UI_HEADERS})
-set_property(TARGET ModView PROPERTY CXX_STANDARD 14)
+target_compile_features(ModView PRIVATE cxx_std_14)
 
 if(MSVC)
 	target_compile_definitions(ModView
@@ -129,20 +128,11 @@ if(MSVC)
 		WIN32_LEAN_AND_MEAN)
 endif()
 
-message(
-	${JPEG_LIBRARIES})
 target_link_libraries(ModView
 	PRIVATE
-	${OPENGL_LIBRARIES}
-	Qt5::OpenGL
-	Qt5::Widgets
-	Qt5::Gui
-	${ZLIB_LIBRARIES}
-	${JPEG_LIBRARIES})
-
-target_include_directories(ModView
-	PRIVATE
-	${JPEG_INCLUDE_DIR}
-	${ZLIB_INCLUDE_DIRS})
-
-
+	OpenGL::GL
+	Qt::OpenGL
+	Qt::Widgets
+	Qt::Gui
+	ZLIB::ZLIB
+	JPEG::JPEG)
