@@ -38,7 +38,7 @@ set(MODVIEW_HEADER_FILES
     gl_bits.h
 	glm_code.h
 	includes.h
-	jpeg_interface.h
+	img_jpeg.h
 	matcomp.h
 	mc_compress2.h
 	md3_format.h
@@ -73,7 +73,7 @@ set(MODVIEW_SOURCE_FILES
 	GenericParser2.cpp
     gl_bits.cpp
 	glm_code.cpp
-	jpeg_interface.cpp
+	img_jpeg.cpp
 	Main.cpp
 	matcomp.cpp
 	mc_compress2.cpp
@@ -114,8 +114,6 @@ add_executable(ModView
 	${MODVIEW_RESOURCES}
 	${MODVIEW_SOURCE_FILES}
 	${MODVIEW_HEADER_FILES}
-	${MODVIEW_ZLIB_FILES}
-	${MODVIEW_LIBJPEG_FILES}
 	${MODVIEW_GUI_FILES}
 	${UI_HEADERS})
 target_compile_features(ModView PRIVATE cxx_std_14)

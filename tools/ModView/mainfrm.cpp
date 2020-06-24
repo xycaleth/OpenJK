@@ -731,7 +731,7 @@ void CMainFrame::OnUpdateEditTestfunction(CCmdUI* pCmdUI)
 }
 
 
-#include "jpeg_interface.h"
+#include "img_jpeg.h"
 #include "Splash.h"
 void CMainFrame::OnEditTestfunction() 
 {
@@ -1419,7 +1419,7 @@ static void XLS_To_SP(void)
 
 				// line example:
 				//
-				// 02KYK004	Kyle	Jan?  I’ve found an exit.				
+				// 02KYK004	Kyle	Jan?  Iï¿½ve found an exit.				
 				//
 
 				// get the label...
