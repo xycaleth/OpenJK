@@ -38,8 +38,9 @@ MainForm::MainForm(QSettings& settings, QWidget* parent)
     ui.treeView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(
         ui.treeView,
-        SIGNAL(customContextMenuRequested(const QPoint&)),
-        SLOT(OnRightClickTreeView(const QPoint&)));
+        &QTreeView::customContextMenuRequested,
+        this,
+        &MainForm::OnRightClickTreeView);
 
     PopulateMRUFiles(settings.value("mru").toStringList());
 
