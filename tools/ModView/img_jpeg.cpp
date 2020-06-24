@@ -114,7 +114,8 @@ void LoadJPG(const char* filename, unsigned char** pic, int* width, int* height)
         /* JSAMPLEs per row in output buffer */
         row_stride = cinfo.output_width * cinfo.output_components;
 
-        if (cinfo.output_components != 4 && cinfo.output_components != 1)
+        if (cinfo.output_components != 4 && cinfo.output_components != 3 &&
+            cinfo.output_components != 1)
         {
             WarningBox(
                 va("JPG %s is unsupported color depth (%d)",
@@ -140,17 +141,17 @@ void LoadJPG(const char* filename, unsigned char** pic, int* width, int* height)
              * Here the array is only one element long, but you could ask for
              * more than one scanline at a time if that's more convenient.
              */
-            bbuf = ((out + (row_stride * cinfo.output_scanline)));
+            bbuf = out + (row_stride * cinfo.output_scanline);
             buffer = &bbuf;
             (void)jpeg_read_scanlines(&cinfo, buffer, 1);
         }
 
-        // if we've just loaded a greyscale, then adjust it from 8-bit to 32bit
-        // by stretch-copying it over itself...
-        //  (this also does the alpha stuff as well)
-        //
-        if (cinfo.output_components == 1)
+        switch (cinfo.output_components)
         {
+        case 1: {
+            // if we've just loaded a greyscale, then adjust it from 8-bit to
+            // 32bit by stretch-copying it over itself...(this also does the
+            // alpha stuff as well)
             byte* pbDest =
                 (*pic + (cinfo.output_width * cinfo.output_height * 4)) - 1;
             byte* pbSrc =
@@ -165,19 +166,46 @@ void LoadJPG(const char* filename, unsigned char** pic, int* width, int* height)
                 *pbDest-- = b;
                 *pbDest-- = b;
             }
+            break;
         }
-        else
-        { // clear all the alphas to 255
-            int i, j;
-            byte* buf;
 
-            buf = *pic;
+        case 3: {
+            // set all the alphas to 255
+            byte* pbDest =
+                (*pic + (cinfo.output_width * cinfo.output_height * 4)) - 1;
+            byte* pbSrc =
+                (*pic + (cinfo.output_width * cinfo.output_height * 3)) - 1;
 
-            j = cinfo.output_width * cinfo.output_height * 4;
-            for (i = 3; i < j; i += 4)
+            int iPixels = cinfo.output_width * cinfo.output_height;
+
+            for (int i = 0; i < iPixels; i++)
+            {
+                byte b = *pbSrc--;
+                byte g = *pbSrc--;
+                byte r = *pbSrc--;
+
+                *pbDest-- = 255;
+                *pbDest-- = b;
+                *pbDest-- = g;
+                *pbDest-- = r;
+            }
+            break;
+        }
+
+        case 4: {
+            // clear all the alphas to 255
+            byte* buf = *pic;
+            int j = cinfo.output_width * cinfo.output_height * 4;
+            for (int i = 3; i < j; i += 4)
             {
                 buf[i] = 255;
             }
+            break;
+        }
+
+        default: {
+            break;
+        }
         }
 
         /* Step 7: Finish decompression */
