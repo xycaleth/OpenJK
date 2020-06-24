@@ -8,27 +8,27 @@ class RenderWidget : public QGLWidget
 {
     Q_OBJECT
 
-public:
-    RenderWidget ( QWidget *parent = 0 );
+  public:
+    RenderWidget(QWidget* parent = 0);
 
-signals:
-	void tookScreenshotForClipboard ( const QImage& image );
+  signals:
+    void tookScreenshotForClipboard(const QImage& image);
 
-protected:
+  protected:
     void initializeGL();
     void paintGL();
-    void resizeGL ( int width, int height );
+    void resizeGL(int width, int height);
 
-    void keyPressEvent ( QKeyEvent *event );
-    void keyReleaseEvent ( QKeyEvent *event );
+    void keyPressEvent(QKeyEvent* event);
+    void keyReleaseEvent(QKeyEvent* event);
 
-    void mousePressEvent ( QMouseEvent *event );
-    void mouseMoveEvent ( QMouseEvent *event );
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
 
-private:
-	void SaveScreenshot ( const std::string& filename, int width, int height );
+  private:
+    void SaveScreenshot(const std::string& filename, int width, int height);
 
-private:
+  private:
     int lastX, lastY;
     bool panning;
 };
