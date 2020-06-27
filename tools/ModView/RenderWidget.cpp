@@ -44,6 +44,8 @@ void RenderWidget::keyPressEvent(QKeyEvent* event)
     {
         panning = true;
     }
+
+    event->accept();
 }
 
 void RenderWidget::keyReleaseEvent(QKeyEvent* event)
@@ -52,12 +54,27 @@ void RenderWidget::keyReleaseEvent(QKeyEvent* event)
     {
         panning = false;
     }
+
+    event->accept();
 }
 
 void RenderWidget::mousePressEvent(QMouseEvent* event)
 {
     lastX = event->x();
     lastY = event->y();
+
+    event->accept();
+}
+
+void RenderWidget::wheelEvent(QWheelEvent* event)
+{
+    AppVars.zPos +=
+        ((float)event->angleDelta().y() / 10.0f) * MOUSE_ZPOS_SCALE;
+    AppVars.zPos = std::min(std::max(AppVars.zPos, -500.0f), 0.0f);
+
+    ModelList_ForceRedraw();
+
+    event->accept();
 }
 
 void RenderWidget::mouseMoveEvent(QMouseEvent* event)
@@ -100,16 +117,10 @@ void RenderWidget::mouseMoveEvent(QMouseEvent* event)
         ModelList_ForceRedraw();
     }
 
-    if (buttonsDown & Qt::RightButton)
-    {
-        AppVars.zPos += ((float)(y - lastY) / 10.0f) * MOUSE_ZPOS_SCALE;
-        AppVars.zPos = std::min(std::max(AppVars.zPos, -1000.0f), 1000.0f);
-
-        ModelList_ForceRedraw();
-    }
-
     lastX = x;
     lastY = y;
+
+    event->accept();
 }
 
 void RenderWidget::SaveScreenshot(

@@ -25,6 +25,8 @@ class RenderWidget : public QOpenGLWidget
     void mousePressEvent(QMouseEvent* event);
     void mouseMoveEvent(QMouseEvent* event);
 
+    void wheelEvent(QWheelEvent* event);
+
   private:
     void SaveScreenshot(const std::string& filename, int width, int height);
 
