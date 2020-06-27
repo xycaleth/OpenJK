@@ -16,7 +16,7 @@
 const float MOUSE_ROT_SCALE = 0.5f;
 const float MOUSE_XPOS_SCALE = 0.1f;
 const float MOUSE_YPOS_SCALE = 0.1f;
-const float MOUSE_ZPOS_SCALE = 0.4f;
+const float MOUSE_ZPOS_SCALE = 0.04f;
 
 int g_iScreenHeight;
 int g_iScreenWidth;
@@ -68,8 +68,7 @@ void RenderWidget::mousePressEvent(QMouseEvent* event)
 
 void RenderWidget::wheelEvent(QWheelEvent* event)
 {
-    AppVars.zPos +=
-        ((float)event->angleDelta().y() / 10.0f) * MOUSE_ZPOS_SCALE;
+    AppVars.zPos += event->angleDelta().y() * MOUSE_ZPOS_SCALE;
     AppVars.zPos = std::min(std::max(AppVars.zPos, -500.0f), 0.0f);
 
     ModelList_ForceRedraw();
