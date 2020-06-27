@@ -7,11 +7,11 @@
 // from other codebases )
 //
 
-#include "r_common.h"
 #include "stdafx.h"
 #include "files.h"
 #include "includes.h"
 #include "glm_code.h"
+#include "r_common.h"
 #include "r_model.h"
 #include "r_surface.h"
 #include "textures.h"
