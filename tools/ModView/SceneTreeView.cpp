@@ -4,6 +4,7 @@
 #include <QtCore/QStack>
 #include <algorithm>
 #include <vector>
+#include "files.h"
 #include "glm_code.h"
 #include "r_model.h"
 #include "SceneTreeItem.h"
@@ -168,100 +169,148 @@ void ClearSceneTreeModel ( SceneTreeModel& model )
 	model.clear();
 }
 
-void SetupSceneTreeModel ( const QString& modelName, ModelContainer_t& container, SceneTreeModel& model )
+void SetupSceneTreeModel(
+    const QString& modelName, ModelContainer_t& container,
+    SceneTreeModel& model)
 {
-    SceneTreeItem *root = new SceneTreeItem (MODELRESOURCE_NULL, NULL, -1, "", container.hModel, 0);
+    SceneTreeItem* root = new SceneTreeItem(
+        MODELRESOURCE_NULL, NULL, -1, "", container.hModel, 0);
 
-    SceneTreeItem *modelItem = new SceneTreeItem (MODELRESOURCE_NULL, NULL, -1, QString ("==> %1 <==").arg (QString::fromLatin1 (Filename_WithoutPath (modelName.toLatin1()))), container.hModel, root);
+    SceneTreeItem* modelItem = new SceneTreeItem(
+        MODELRESOURCE_NULL,
+        NULL,
+        -1,
+        QString("==> %1 <==")
+            .arg(QString::fromLatin1(
+                Filename_WithoutPath(modelName.toLatin1()))),
+        container.hModel,
+        root);
 
-    root->AddChild (modelItem);
+    root->AddChild(modelItem);
 
-    SceneTreeItem *surfacesItem = new SceneTreeItem (MODELRESOURCE_SURFACE, NULL, -1, QObject::tr ("Surfaces"), container.hModel, modelItem);
-    SceneTreeItem *tagsItem = new SceneTreeItem (MODELRESOURCE_TAG, NULL, -1, QObject::tr ("Tags"), container.hModel, modelItem);
-    SceneTreeItem *bonesItem = new SceneTreeItem (MODELRESOURCE_BONE, NULL, -1, QObject::tr ("Bones"), container.hModel, modelItem);
+    SceneTreeItem* surfacesItem = new SceneTreeItem(
+        MODELRESOURCE_SURFACE,
+        NULL,
+        -1,
+        QObject::tr("Surfaces"),
+        container.hModel,
+        modelItem);
+    SceneTreeItem* tagsItem = new SceneTreeItem(
+        MODELRESOURCE_TAG,
+        NULL,
+        -1,
+        QObject::tr("Tags"),
+        container.hModel,
+        modelItem);
+    SceneTreeItem* bonesItem = new SceneTreeItem(
+        MODELRESOURCE_BONE,
+        NULL,
+        -1,
+        QObject::tr("Bones"),
+        container.hModel,
+        modelItem);
 
-    mdxmHeader_t *pMDXMHeader = (mdxmHeader_t *)RE_GetModelData (container.hModel);
-    mdxaHeader_t *pMDXAHeader = (mdxaHeader_t *)RE_GetModelData (pMDXMHeader->animIndex);
-    mdxmHierarchyOffsets_t *pHierarchyOffsets = (mdxmHierarchyOffsets_t *)((byte *)pMDXMHeader + sizeof (*pMDXMHeader));
+    mdxmHeader_t* pMDXMHeader =
+        (mdxmHeader_t*)RE_GetModelData(container.hModel);
+    mdxaHeader_t* pMDXAHeader =
+        (mdxaHeader_t*)RE_GetModelData(pMDXMHeader->animIndex);
+    mdxmHierarchyOffsets_t* pHierarchyOffsets =
+        (mdxmHierarchyOffsets_t*)((byte*)pMDXMHeader + sizeof(*pMDXMHeader));
 
     SurfaceTreeApplication surfaceApp;
     surfaceApp.container = &container;
     surfaceApp.pHierarchyOffsets = pHierarchyOffsets;
 
     // Add surfaces
-    surfaceApp.nodes.append (surfacesItem);
-    R_GLM_SurfaceRecursiveApply (
+    surfaceApp.nodes.append(surfacesItem);
+    R_GLM_SurfaceRecursiveApply(
         container.hModel,
         0,
         pHierarchyOffsets,
         BeforeSurfaceChildrenAdded,
         SurfaceChildrenAdded,
         AfterSurfaceChildrenAdded,
-        static_cast<void *>(&surfaceApp));
+        static_cast<void*>(&surfaceApp));
 
     int numSurfacesInTree = surfacesItem->ChildCountRecursive();
-    if ( numSurfacesInTree != pMDXMHeader->numSurfaces )
+    if (numSurfacesInTree != pMDXMHeader->numSurfaces)
     {
-        ErrorBox (va ("Model has %d surfaces, but only %d of them are connected through the heirarchy, the rest will never be recursed into.\n\n"
-                        "This model needs rebuilding.",
-                        pMDXMHeader->numSurfaces, numSurfacesInTree));
+        ErrorBox(va(
+            "Model has %d surfaces, but only %d of them are connected through "
+            "the heirarchy, the rest will never be recursed into.\n\n"
+            "This model needs rebuilding.",
+            pMDXMHeader->numSurfaces,
+            numSurfacesInTree));
     }
 
     // Add tags
     surfaceApp.nodes.clear();
-    surfaceApp.nodes.append (tagsItem);
-    R_GLM_SurfaceRecursiveApply (
+    surfaceApp.nodes.append(tagsItem);
+    R_GLM_SurfaceRecursiveApply(
         container.hModel,
         0,
         pHierarchyOffsets,
         BeforeTagChildrenAdded,
         TagChildrenAdded,
         NULL,
-        static_cast<void *>(&surfaceApp));
+        static_cast<void*>(&surfaceApp));
 
     // Add bones
-    mdxaSkelOffsets_t *pSkelOffsets = (mdxaSkelOffsets_t *)((byte *)pMDXAHeader + sizeof (*pMDXAHeader));
+    mdxaSkelOffsets_t* pSkelOffsets =
+        (mdxaSkelOffsets_t*)((byte*)pMDXAHeader + sizeof(*pMDXAHeader));
     BoneTreeApplication boneApp;
     boneApp.container = &container;
-    boneApp.nodes.append (bonesItem);
+    boneApp.nodes.append(bonesItem);
     boneApp.pSkeletonOffsets = pSkelOffsets;
 
-    R_GLM_BoneRecursiveApply (
+    R_GLM_BoneRecursiveApply(
         container.hModel,
         0,
         pSkelOffsets,
         BeforeBoneChildrenAdded,
         BoneChildrenAdded,
         AfterBoneChildrenAdded,
-        static_cast<void *>(&boneApp));
+        static_cast<void*>(&boneApp));
 
     // Add skins
-    SceneTreeItem *skinsItem = new SceneTreeItem (MODELRESOURCE_SKIN, NULL, -1, QObject::tr ("Skins"), container.hModel, modelItem);
-    AddSkinsToTree (skinsItem, container, container.OldSkinSets);
+    SceneTreeItem* skinsItem = new SceneTreeItem(
+        MODELRESOURCE_SKIN,
+        NULL,
+        -1,
+        QObject::tr("Skins"),
+        container.hModel,
+        modelItem);
+    AddSkinsToTree(skinsItem, container, container.OldSkinSets);
 
     // Add animation sequences
-    SceneTreeItem *sequencesItem = NULL;
-    if ( !container.SequenceList.empty() )
+    SceneTreeItem* sequencesItem = NULL;
+    if (!container.SequenceList.empty())
     {
-        sequencesItem = new SceneTreeItem (MODELRESOURCE_ANIMSEQUENCE, NULL, -1,QObject::tr ("Sequences"), container.hModel, modelItem);
-        AddSequencesToTree (sequencesItem, container, container.SequenceList);
+        sequencesItem = new SceneTreeItem(
+            MODELRESOURCE_ANIMSEQUENCE,
+            NULL,
+            -1,
+            QObject::tr("Sequences"),
+            container.hModel,
+            modelItem);
+        AddSequencesToTree(sequencesItem, container, container.SequenceList);
     }
 
     // And add the items to model!
-    modelItem->AddChild (surfacesItem);
+    modelItem->AddChild(surfacesItem);
 
-    if ( tagsItem->ChildCount() > 0 )
+    if (tagsItem->ChildCount() > 0)
     {
-        modelItem->AddChild (tagsItem);
+        modelItem->AddChild(tagsItem);
     }
 
-    modelItem->AddChild (skinsItem);
-    modelItem->AddChild (bonesItem);
+    modelItem->AddChild(skinsItem);
+    modelItem->AddChild(bonesItem);
 
-    if ( sequencesItem != NULL )
+    if (sequencesItem != NULL)
     {
-        modelItem->AddChild (sequencesItem);
+        modelItem->AddChild(sequencesItem);
     }
 
-    model.setRoot (root);
+    model.setRoot(root);
 }

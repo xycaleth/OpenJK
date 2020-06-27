@@ -3,6 +3,7 @@
 #include <QAction>
 #include <QMenu>
 #include "GUIHelpers.h"
+#include "files.h"
 
 namespace
 {

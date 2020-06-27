@@ -33,14 +33,6 @@ typedef enum {
 // unfortunately, there isn't one tiny file I can just get these defines from without importing 10,000 other lines
 //	of crap I don't want, so for now....
 //
-#ifndef MAX_QPATH
-#define MAX_QPATH 64
-#ifdef _WIN32
-#define MAX_OSPATH MAX_PATH
-#else
-#define MAX_OSPATH PATH_MAX
-#endif
-
 #define MAX_SKIN_FILES 1000	// some high number we'll never reach (probably)
 
 
@@ -92,7 +84,6 @@ typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
 typedef vec_t vec4_t[4];
 
-#endif	// #ifndef MAX_QPATH
 //
 ////////////////////////////////////////////////////
 

@@ -8,6 +8,7 @@
 #include "anims.h"
 
 #include <algorithm>
+#include "files.h"
 #include "r_common.h"
 #include "sequence.h"
 #include "StringUtils.h"

@@ -4,6 +4,7 @@
 //
 
 #include "stdafx.h"
+#include "files.h"
 #include "includes.h"
 #include "r_common.h"
 #include "textures.h"

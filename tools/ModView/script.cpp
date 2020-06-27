@@ -5,6 +5,7 @@
 
 
 #include "stdafx.h"
+#include "files.h"
 #include "includes.h"
 #include "glm_code.h"
 #include "r_model.h"

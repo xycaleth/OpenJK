@@ -8,6 +8,7 @@
 //
 
 #include "stdafx.h"
+#include "files.h"
 #include "includes.h"
 #include "glm_code.h"
 #include "r_model.h"
@@ -1346,7 +1347,7 @@ static bool ModelContainer_EnsureBoltOnHeader(ModelContainer_t* pContainer)
 #endif
 }
 
-static bool _Actual_Model_LoadPrimary(const char* psFullPathedFilename)
+static bool Model_LoadPrimaryImpl(const char* psFullPathedFilename)
 {
     bool bReturn = false;
 
@@ -1396,7 +1397,7 @@ static bool _Actual_Model_LoadPrimary(const char* psFullPathedFilename)
 bool Model_LoadPrimary(const char* psFullPathedFilename)
 {
     gbRenderInhibit = true;
-    bool b = _Actual_Model_LoadPrimary(psFullPathedFilename);
+    bool b = Model_LoadPrimaryImpl(psFullPathedFilename);
     gbRenderInhibit = false;
 
     ModelList_ForceRedraw();

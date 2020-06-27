@@ -6,6 +6,7 @@
 #include "SceneTreeItem.h"
 #include "SceneTreeModel.h"
 #include "SceneTreeView.h"
+#include "files.h"
 #include "generic_stuff.h"
 #include "model.h"
 #include "text.h"

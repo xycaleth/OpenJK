@@ -16,6 +16,7 @@
 #ifndef MDX_FORMAT_H
 #define MDX_FORMAT_H
 
+#include "files.h"
 #include "includes.h"
 
 

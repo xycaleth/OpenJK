@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include <QtCore/QDateTime>
 #include <QtCore/QFileInfo>
+#include "files.h"
 #include "includes.h"
 #include "r_image.h"
 #include "stl.h"

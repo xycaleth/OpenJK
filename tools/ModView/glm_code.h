@@ -5,6 +5,7 @@
 #ifndef GLM_CODE_H
 #define GLM_CODE_H
 
+#include "files.h"
 #include "mdx_format.h"
 
 
