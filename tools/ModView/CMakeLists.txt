@@ -118,6 +118,11 @@ add_executable(ModView
 	${UI_HEADERS})
 target_compile_features(ModView PRIVATE cxx_std_14)
 
+if(APPLE)
+    target_compile_definitions(ModView PRIVATE GL_SILENCE_DEPRECATION)
+    set_target_properties(ModView PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/mac/Info.plist)
+endif()
+
 if(MSVC)
 	target_compile_definitions(ModView
 		PRIVATE

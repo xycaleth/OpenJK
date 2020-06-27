@@ -22,7 +22,7 @@ int g_iScreenHeight;
 int g_iScreenWidth;
 
 RenderWidget::RenderWidget(QWidget* parent)
-    : QGLWidget(parent), lastX(0), lastY(0), panning(false)
+    : QOpenGLWidget(parent), lastX(0), lastY(0), panning(false)
 {
 }
 
@@ -143,7 +143,8 @@ void RenderWidget::SaveScreenshot(
 
 void RenderWidget::paintGL()
 {
-    QSize frameSize(size());
+    QSize frameSize(size() * devicePixelRatio());
+    
     if (AppVars.takeScreenshot)
     {
         AppVars.takeScreenshot = false;

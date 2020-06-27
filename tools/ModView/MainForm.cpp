@@ -108,7 +108,7 @@ void MainForm::OnUpdateAnimation()
 {
     if (ModelList_Animation())
     {
-        ui.renderWidget->updateGL();
+        ui.renderWidget->update();
     }
 }
 

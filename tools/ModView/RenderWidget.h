@@ -1,10 +1,10 @@
 #ifndef RENDERWIDGET_H
 #define RENDERWIDGET_H
 
-#include <QtOpenGL/QGLWidget>
+#include <QOpenGLWidget>
 #include <string>
 
-class RenderWidget : public QGLWidget
+class RenderWidget : public QOpenGLWidget
 {
     Q_OBJECT
 

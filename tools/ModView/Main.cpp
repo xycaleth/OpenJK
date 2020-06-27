@@ -7,15 +7,15 @@
 #include "model.h"
 #include "textures.h"
 
-int main ( int argc, char *argv[] )
+int main(int argc, char* argv[])
 {
-    QApplication app (argc, argv);
-    QSettings settings ("OpenJK", "ModView");
+    QApplication app(argc, argv);
+    QSettings settings("OpenJK", "ModView");
 
     App_OnceOnly();
     FakeCvars_OnceOnlyInit();
 
-    MainForm w (settings);
+    MainForm w(settings);
     w.show();
 
     const int errorCode = app.exec();
