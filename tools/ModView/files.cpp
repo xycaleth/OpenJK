@@ -237,40 +237,10 @@ static bool SetQdirFromPath2( const char *path2, const char *psBaseDir )
 //
 void Filename_RemoveQUAKEBASE( std::string& string )
 {
-	std::replace (string.begin(), string.end(), '\\', '/');
-	ToLower (string);
-
-/*
-	int loc = string.Find("/quake");	
-	if (loc >=0 )
-	{
-		loc = string.Find("/",loc+1);
-		if (loc >=0)
-		{
-			// now pointing at "baseq3", "demoq3", whatever...
-			loc = string.Find("/", loc+1);
-
-			if (loc >= 0)
-			{
-				// now pointing at local filename...
-				//
-				string = string.Mid(loc+1);
-			}
-		}
-	}	
-*/
-
-//	SetQdirFromPath( string );
-	string = Replace (string, gamedir, "");
+    std::replace(string.begin(), string.end(), '\\', '/');
+    ToLower(string);
+    string = Replace(string, gamedir, "");
 }
-
-
-
-
-
-
-
-
 
 bool FileExists (const char * psFilename)
 {

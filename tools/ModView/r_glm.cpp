@@ -190,8 +190,6 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 #endif
 #endif
 	
-//	bool bSkinsExist = Skins_FilesExist(mod_name) || OldSkins_FilesExist(mod_name);
-	bool bOldSkinsExist = OldSkins_FilesExist(mod_name);
     
 	pinmodel = (mdxmHeader_t *)buffer;
 
@@ -256,7 +254,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 								mod_name, mdxm->numBones, pMDXAHeader->name, pMDXAHeader->numBones);
 	}
 
-
+	const bool bOldSkinsExist = OldSkins_FilesExist(mod_name);
 
 	surfInfo = (mdxmSurfHierarchy_t *)( (byte *)mdxm + mdxm->ofsSurfHierarchy);
  	for ( i = 0 ; i < mdxm->numSurfaces ; i++) 
@@ -335,6 +333,7 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 				ri.Error (ERR_DROP, "R_LoadMDXM: %s has more than %i verts on a surface (%i)",
 					mod_name, (bQ3RulesApply?SHADER_MAX_VERTEXES:ACTUAL_SHADER_MAX_VERTEXES), surf->numVerts );
 			}
+
 			if ( surf->numTriangles*3 > (bQ3RulesApply?SHADER_MAX_INDEXES:ACTUAL_SHADER_MAX_INDEXES) ) {
 				ri.Error (ERR_DROP, "R_LoadMDXM: %s has more than %i triangles on a surface (%i)",
 					mod_name, (bQ3RulesApply?SHADER_MAX_INDEXES:ACTUAL_SHADER_MAX_INDEXES) / 3, surf->numTriangles );
@@ -360,7 +359,6 @@ qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 			{
 					LL(boneRef[j]);
 			}
-
 			
 			// swap all the triangles
 			tri = (mdxmTriangle_t *) ( (byte *)surf + surf->ofsTriangles );

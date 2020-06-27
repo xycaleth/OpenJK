@@ -7,6 +7,7 @@
 // from other codebases )
 //
 
+#include "r_common.h"
 #include "stdafx.h"
 #include "files.h"
 #include "includes.h"
@@ -681,7 +682,6 @@ ModelHandle_t Model_Register(const std::string& strLocalFilename)
 
         hModel = RE_RegisterModel(strLocalFilename.c_str());
     }
-
     catch (const char* psMessage)
     {
         Model_Delete();
@@ -725,18 +725,15 @@ ModelContainer_t* ModelContainer_FindFromModelHandle(ModelHandle_t hModel)
 //	Any error will delete all loaded models (as per usual)...
 //
 static ModelHandle_t ModelContainer_RegisterModel(
-    const char* psLocalFilename, ModelContainer_t* pContainer);
-static ModelHandle_t ModelContainer_RegisterModel(
     const char* psLocalFilename, ModelContainer_t* pContainer)
 {
     ModelContainer_Clear(pContainer); //	ZEROMEM(*pContainer);
 
     ModelHandle_t hModel = Model_Register(psLocalFilename);
-    strncpy(
+    Q_strncpyz(
         pContainer->sLocalPathName,
         psLocalFilename,
         sizeof(pContainer->sLocalPathName));
-    pContainer->sLocalPathName[sizeof(pContainer->sLocalPathName) - 1] = '\0';
 
     int iBoltPoint = 0;
 
@@ -1364,7 +1361,6 @@ static bool Model_LoadPrimaryImpl(const char* psFullPathedFilename)
         Filename_RemoveQUAKEBASE(strLocalFilename);
 
         //		AppVars.Container = *ModelContainer_AllocNew();
-        ModelContainer_Clear(&AppVars.Container);
         ModelHandle_t hModel = ModelContainer_RegisterModel(
             strLocalFilename.c_str(),
             &AppVars.Container); // ModelContainer_AllocNew());
