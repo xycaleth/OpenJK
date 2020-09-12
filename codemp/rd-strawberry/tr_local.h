@@ -45,46 +45,17 @@ extern struct GpuContext gpuContext;
 #define SHADERNUM_BITS	14
 #define MAX_SHADERS		(1<<SHADERNUM_BITS)
 
-//#define MAX_SHADER_STATES 2048
-#define MAX_STATES_PER_SHADER 32
-#define MAX_STATE_NAME 32
-
-typedef enum
-{
-	DLIGHT_VERTICAL	= 0,
-	DLIGHT_PROJECTED
-} eDLightTypes;
-
 typedef struct dlight_s {
-	eDLightTypes	mType;
-
 	vec3_t			origin;
-	vec3_t			mProjOrigin;		// projected light's origin
-
 	vec3_t			color;				// range from 0.0 to 1.0, should be color normalized
-
 	float			radius;
-	float			mProjRadius;		// desired radius of light
-
 	int				additive;			// texture detail is lost tho when the lightmap is dark
-
 	vec3_t			transformed;		// origin in local coordinate system
-	vec3_t			mProjTransformed;	// projected light's origin in local coordinate system
-
-	vec3_t			mDirection;
-	vec3_t			mBasis2;
-	vec3_t			mBasis3;
-
-	vec3_t			mTransDirection;
-	vec3_t			mTransBasis2;
-	vec3_t			mTransBasis3;
 } dlight_t;
-
 
 // a trMiniRefEntity_t has all the information passed in by
 // the client game, other info will come from it's parent main ref entity
-typedef struct
-{
+typedef struct {
 	miniRefEntity_t	e;
 } trMiniRefEntity_t;
 
