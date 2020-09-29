@@ -1991,8 +1991,7 @@ VkPipeline GpuGetGraphicsPipelineForRenderState(
 		Com_Error(ERR_FATAL, "Failed to create graphics pipeline");
 	}
 
-	context.graphicsPipelines.insert(
-		std::make_pair(renderState, graphicsPipeline));
+	context.graphicsPipelines.emplace(renderState, graphicsPipeline);
 
 	return graphicsPipeline;
 }
@@ -2230,4 +2229,169 @@ TransientBuffer* GpuGetTransientIndexBuffer(
     TransientResources& transientBuffers, size_t size)
 {
     return GetTransientBuffer(transientBuffers, size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+}
+
+int GpuCreateVertexBuffer(GpuContext &context, size_t sizeInBytes, VertexBuffer &vertexBuffer)
+{
+    VkBufferCreateInfo vertexBufferCreateInfo = {};
+    vertexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    vertexBufferCreateInfo.size = sizeInBytes;
+    vertexBufferCreateInfo.usage =
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    VmaAllocationCreateInfo bufferAllocCreateInfo = {};
+    bufferAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+	VkBuffer buffer;
+	VmaAllocation allocation;
+    if (vmaCreateBuffer(
+            gpuContext.allocator,
+            &vertexBufferCreateInfo,
+            &bufferAllocCreateInfo,
+            &buffer,
+            &allocation,
+            nullptr) != VK_SUCCESS)
+    {
+        ri.Printf(PRINT_ALL, S_COLOR_YELLOW "Failed to create vertex buffer\n");
+        return -1;
+    }
+
+	vertexBuffer.buffer = buffer;
+	vertexBuffer.allocation = allocation;
+	vertexBuffer.size = sizeInBytes;
+
+	return 0;
+}
+
+void GpuDestroyVertexBuffer(GpuContext& context, VertexBuffer& vertexBuffer)
+{
+    vmaFreeMemory(gpuContext.allocator, vertexBuffer.allocation);
+    vkDestroyBuffer(gpuContext.device, vertexBuffer.buffer, nullptr);
+
+	vertexBuffer = {};
+}
+
+int GpuMapVertexBuffer(
+    GpuContext& context, const VertexBuffer& vertexBuffer,
+    MappedVertexBuffer& mappedVertexBuffer)
+{
+    VkBufferCreateInfo bufferCreateInfo = {};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.size = vertexBuffer.size;
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+
+    VmaAllocation allocation;
+    VkBuffer buffer;
+    if (vmaCreateBuffer(
+            gpuContext.allocator,
+            &bufferCreateInfo,
+            &allocCreateInfo,
+            &buffer,
+            &allocation,
+            nullptr) != VK_SUCCESS)
+    {
+        ri.Printf(
+            PRINT_ALL, S_COLOR_YELLOW "Failed to create vertex buffer.\n");
+        return -1;
+    }
+
+    void* data = nullptr;
+    if (vmaMapMemory(gpuContext.allocator, allocation, &data) != VK_SUCCESS)
+    {
+        ri.Printf(PRINT_ALL, S_COLOR_YELLOW "Failed to map vertex buffer.\n");
+
+        vmaFreeMemory(gpuContext.allocator, allocation);
+        vkDestroyBuffer(gpuContext.device, buffer, nullptr);
+
+        return -1;
+    }
+
+	mappedVertexBuffer.size = vertexBuffer.size;
+	mappedVertexBuffer.buffer = buffer;
+	mappedVertexBuffer.allocation = allocation;
+	mappedVertexBuffer.data = data;
+	mappedVertexBuffer.destinationBuffer = vertexBuffer.buffer;
+
+	return 0;
+}
+
+void GpuUnmapVertexBuffer(GpuContext& context, MappedVertexBuffer& mappedBuffer)
+{
+    vmaUnmapMemory(gpuContext.allocator, mappedBuffer.allocation);
+
+    //
+    // do the buffer copy
+    //
+    VkCommandBufferAllocateInfo cmdBufferAllocateInfo = {};
+    cmdBufferAllocateInfo.sType =
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdBufferAllocateInfo.commandPool = gpuContext.transferCommandPool;
+    cmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdBufferAllocateInfo.commandBufferCount = 1;
+
+    VkCommandBuffer cmdBuffer;
+    if (vkAllocateCommandBuffers(
+            gpuContext.device, &cmdBufferAllocateInfo, &cmdBuffer) !=
+        VK_SUCCESS)
+    {
+        ri.Printf(
+            PRINT_ALL,
+            S_COLOR_YELLOW
+            "Failed to allocate command buffer to transfer data.\n");
+
+        vmaFreeMemory(gpuContext.allocator, mappedBuffer.allocation);
+        vkDestroyBuffer(gpuContext.device, mappedBuffer.buffer, nullptr);
+        return;
+    }
+
+    VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
+    cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    cmdBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
+    {
+        ri.Printf(
+            PRINT_ALL, S_COLOR_YELLOW "Failed to transfer map data to GPU.\n");
+
+        vmaFreeMemory(gpuContext.allocator, mappedBuffer.allocation);
+        vkDestroyBuffer(gpuContext.device, mappedBuffer.buffer, nullptr);
+        return;
+    }
+
+    VkBufferCopy bufferCopy = {};
+    bufferCopy.size = mappedBuffer.size;
+
+    vkCmdCopyBuffer(
+        cmdBuffer,
+        mappedBuffer.buffer,
+        mappedBuffer.destinationBuffer,
+        1,
+        &bufferCopy);
+
+    vkEndCommandBuffer(cmdBuffer);
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuffer;
+
+    if (vkQueueSubmit(
+            gpuContext.transferQueue.queue, 1, &submitInfo, VK_NULL_HANDLE) !=
+        VK_SUCCESS)
+    {
+        Com_Error(ERR_FATAL, "Failed to submit command buffers to queue");
+    }
+
+    vkDeviceWaitIdle(gpuContext.device);
+    vkFreeCommandBuffers(
+        gpuContext.device, gpuContext.transferCommandPool, 1, &cmdBuffer);
+
+    vmaFreeMemory(gpuContext.allocator, mappedBuffer.allocation);
+    vkDestroyBuffer(gpuContext.device, mappedBuffer.buffer, nullptr);
+
+	mappedBuffer = {};
 }

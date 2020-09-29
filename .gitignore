@@ -185,3 +185,5 @@ pip-log.txt
 ## CLion
 #############
 .idea
+
+build*/

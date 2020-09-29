@@ -451,153 +451,20 @@ static void R_UploadBSPToVertexBuffer(world_t& worldData)
     const int totalVertexCount = R_GetBSPTotalVertexCount(worldData);
     const int vertexBufferSize = totalVertexCount * 32;
 
-    //
-    // gpu buffer
-    //
-    VkBufferCreateInfo vertexBufferCreateInfo = {};
-    vertexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    vertexBufferCreateInfo.size = vertexBufferSize;
-    vertexBufferCreateInfo.usage =
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	VertexBuffer vertexBuffer;
+	GpuCreateVertexBuffer(gpuContext, vertexBufferSize, vertexBuffer);
 
-    VmaAllocationCreateInfo bufferAllocCreateInfo = {};
-    bufferAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	MappedVertexBuffer mapping;
+	if (GpuMapVertexBuffer(gpuContext, vertexBuffer, mapping) == 0) {
+		BspVertex* stagingVertices = static_cast<BspVertex*>(mapping.data);
+		const int verticesWritten = R_WriteBSPVertexBufferDataAndUpdateSurfaces(
+			worldData, stagingVertices, s_worldData.vertexBuffer);
+		assert(verticesWritten == totalVertexCount);
 
-    if (vmaCreateBuffer(
-            gpuContext.allocator,
-            &vertexBufferCreateInfo,
-            &bufferAllocCreateInfo,
-            &worldData.vertexBuffer,
-            &worldData.vertexBufferAllocation,
-            nullptr) != VK_SUCCESS)
-    {
-        ri.Printf(
-            PRINT_ALL,
-            S_COLOR_YELLOW "Failed to create vertex buffer for map data. "
-                           "Vertex data will be uploaded every frame\n");
-        return;
-    }
-
-    //
-    // staging buffer
-    //
-    VkBufferCreateInfo bufferCreateInfo = {};
-    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferCreateInfo.size = vertexBufferSize;
-    bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-
-    VmaAllocation stagingBufferMemory;
-    VkBuffer stagingBuffer;
-    if (vmaCreateBuffer(
-            gpuContext.allocator,
-            &bufferCreateInfo,
-            &allocCreateInfo,
-            &stagingBuffer,
-            &stagingBufferMemory,
-            nullptr) != VK_SUCCESS)
-    {
-        ri.Printf(
-            PRINT_ALL,
-            S_COLOR_YELLOW "Failed to create vertex buffer for map data. "
-                           "Vertex data will be uploaded every frame\n");
-        return;
-    }
-
-    void* stagingBufferData = nullptr;
-    if (vmaMapMemory(
-            gpuContext.allocator, stagingBufferMemory, &stagingBufferData) !=
-        VK_SUCCESS)
-    {
-        ri.Printf(
-            PRINT_ALL,
-            S_COLOR_YELLOW "Failed to map vertex buffer for map data. "
-                           "Vertex data will be uploaded every frame\n");
-
-        vmaFreeMemory(gpuContext.allocator, stagingBufferMemory);
-        vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
-
-        return;
-    }
-
-    BspVertex* stagingVertices = static_cast<BspVertex*>(stagingBufferData);
-    const int verticesWritten = R_WriteBSPVertexBufferDataAndUpdateSurfaces(
-        worldData, stagingVertices, s_worldData.vertexBuffer);
-    assert(verticesWritten == totalVertexCount);
-
-    vmaUnmapMemory(gpuContext.allocator, stagingBufferMemory);
-
-    //
-    // do the buffer copy
-    //
-    VkCommandBufferAllocateInfo cmdBufferAllocateInfo = {};
-    cmdBufferAllocateInfo.sType =
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmdBufferAllocateInfo.commandPool = gpuContext.transferCommandPool;
-    cmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmdBufferAllocateInfo.commandBufferCount = 1;
-
-    VkCommandBuffer cmdBuffer;
-    if (vkAllocateCommandBuffers(
-            gpuContext.device, &cmdBufferAllocateInfo, &cmdBuffer) !=
-        VK_SUCCESS)
-    {
-        ri.Printf(
-            PRINT_ALL,
-            S_COLOR_YELLOW
-            "Failed to allocate command buffer to transfer map data. "
-            "Vertex data will be uploaded every frame\n");
-
-        vmaFreeMemory(gpuContext.allocator, stagingBufferMemory);
-        vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
-        return;
-    }
-
-    VkCommandBufferBeginInfo cmdBufferBeginInfo = {};
-    cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmdBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    if (vkBeginCommandBuffer(cmdBuffer, &cmdBufferBeginInfo) != VK_SUCCESS)
-    {
-        ri.Printf(
-            PRINT_ALL,
-            S_COLOR_YELLOW "Failed to transfer map data to GPU. "
-                           "Vertex data will be uploaded every frame\n");
-
-        vmaFreeMemory(gpuContext.allocator, stagingBufferMemory);
-        vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
-        return;
-    }
-
-    VkBufferCopy bufferCopy = {};
-    bufferCopy.size = vertexBufferSize;
-
-    vkCmdCopyBuffer(
-        cmdBuffer, stagingBuffer, worldData.vertexBuffer, 1, &bufferCopy);
-
-    vkEndCommandBuffer(cmdBuffer);
-
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &cmdBuffer;
-
-    if (vkQueueSubmit(
-            gpuContext.transferQueue.queue, 1, &submitInfo, VK_NULL_HANDLE) !=
-        VK_SUCCESS)
-    {
-        Com_Error(ERR_FATAL, "Failed to submit command buffers to queue");
-    }
-
-    vkDeviceWaitIdle(gpuContext.device);
-    vkFreeCommandBuffers(
-        gpuContext.device, gpuContext.transferCommandPool, 1, &cmdBuffer);
-
-    vmaFreeMemory(gpuContext.allocator, stagingBufferMemory);
-    vkDestroyBuffer(gpuContext.device, stagingBuffer, nullptr);
+		GpuUnmapVertexBuffer(gpuContext, mapping);
+	} else {
+		ri.Printf(PRINT_ALL, S_COLOR_RED "Failed to upload map data\n");
+	}
 
     ri.Printf(
         PRINT_ALL,

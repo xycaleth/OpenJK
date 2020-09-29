@@ -196,9 +196,35 @@ struct GpuContext
     TransientResources transientResources;
 };
 
+struct VertexBuffer
+{
+	VkBuffer buffer;
+	VmaAllocation allocation;
+	size_t size;
+};
+
+struct MappedVertexBuffer
+{
+	VkBuffer buffer;
+	VkBuffer destinationBuffer;
+	VmaAllocation allocation;
+	void *data;
+	size_t size;
+};
+
 void GpuContextInit(GpuContext& context);
 void GpuContextPreShutdown(GpuContext& context);
 void GpuContextShutdown(GpuContext& context);
+
+int GpuCreateVertexBuffer(
+    GpuContext& context, size_t sizeInBytes, VertexBuffer& vertexBuffer);
+void GpuDestroyVertexBuffer(GpuContext& context, VertexBuffer& vertexBuffer);
+
+int GpuMapVertexBuffer(
+    GpuContext& context, const VertexBuffer& vertexBuffer,
+    MappedVertexBuffer& mappedVertexBuffer);
+void GpuUnmapVertexBuffer(
+    GpuContext& context, MappedVertexBuffer& mappedBuffer);
 
 VkShaderModule GpuCreateShaderModuleFromFile(
 	GpuContext& context, const char *filePath);
