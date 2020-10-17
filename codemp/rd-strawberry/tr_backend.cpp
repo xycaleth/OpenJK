@@ -176,127 +176,149 @@ RB_BeginDrawingView
 
 Any mirrored or portaled views have already been drawn, so prepare
 to actually render the visible surfaces for this view
+
+STRAWB NOTE: This is called once per "scene" in a frame. A scene is a call to
+RB_DrawSurfs which happens once for the main scene, but again for any
+mirrors/portals within the view. Currently the mirror/portal view is rendered
+first and then the main scene rendered on top. Can this be improved by
+stenciling? e.g. render the main scene, and then only render the portal where
+it has been stenciled?
+
+It also raises the questions about buffer/depth clearing. In vanilla, this
+function clears the color/depth buffer, which we are currently doing in
+RB_BeginDrawingView which is called once per frame. Do we really need to
+clear here, or is clearing once per frame enough?
 =================
 */
-void RB_BeginDrawingView (void) {
-	// we will need to change the projection matrix before drawing
-	// 2D images again
-	backEnd.projection2D = qfalse;
+void RB_BeginDrawingView(void)
+{
+    // we will need to change the projection matrix before drawing
+    // 2D images again
+    backEnd.projection2D = qfalse;
 
-	//
-	// set the modelview matrix for the viewer
-	//
-	SetViewportAndScissor();
+    //
+    // set the modelview matrix for the viewer
+    //
+    SetViewportAndScissor();
 
-	// ensures that depth writes are enabled for the depth clear
-	GL_State(GLS_DEFAULT);
+    TransientBuffer* transientBuffer =
+        GpuGetTransientUniformBuffer(gpuContext.transientResources, 4096);
 
-	int clearBits = GL_DEPTH_BUFFER_BIT;
 
-	// clear relevant buffers
-	if (r_measureOverdraw->integer || r_shadows->integer == 2 || tr_stencilled)
-	{
-		clearBits |= GL_STENCIL_BUFFER_BIT;
-		tr_stencilled = false;
-	}
+    // ensures that depth writes are enabled for the depth clear
+    GL_State(GLS_DEFAULT);
 
-	if (skyboxportal)
-	{
-		if ( backEnd.refdef.rdflags & RDF_SKYBOXPORTAL )
-		{
-			// portal scene, clear whatever is necessary
-			if (r_fastsky->integer || (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
-			{
-				// fastsky: clear color
-				// try clearing first with the portal sky fog color, then the
-				// world fog color, then finally a default
-				clearBits |= GL_COLOR_BUFFER_BIT;
-				//rwwFIXMEFIXME: Clear with fog color if there is one
-				// STRAWB set clear color to {0.5, 0.5, 0.5, 1.0}
-			}
-		}
-	}
-	else
-	{
-		if (r_fastsky->integer &&
-			!( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) &&
-			!g_bRenderGlowingObjects )
-		{
-			clearBits |= GL_COLOR_BUFFER_BIT;	// FIXME: only if sky shaders have been used
+    int clearBits = GL_DEPTH_BUFFER_BIT;
+
+    // clear relevant buffers
+    if (r_measureOverdraw->integer || r_shadows->integer == 2 || tr_stencilled)
+    {
+        clearBits |= GL_STENCIL_BUFFER_BIT;
+        tr_stencilled = false;
+    }
+
+    if (skyboxportal)
+    {
+        if (backEnd.refdef.rdflags & RDF_SKYBOXPORTAL)
+        {
+            // portal scene, clear whatever is necessary
+            if (r_fastsky->integer ||
+                (backEnd.refdef.rdflags & RDF_NOWORLDMODEL))
+            {
+                // fastsky: clear color
+                // try clearing first with the portal sky fog color, then the
+                // world fog color, then finally a default
+                clearBits |= GL_COLOR_BUFFER_BIT;
+                // rwwFIXMEFIXME: Clear with fog color if there is one
+                // STRAWB set clear color to {0.5, 0.5, 0.5, 1.0}
+            }
+        }
+    }
+    else
+    {
+        if (r_fastsky->integer &&
+            !(backEnd.refdef.rdflags & RDF_NOWORLDMODEL) &&
+            !g_bRenderGlowingObjects)
+        {
+            // FIXME: only if sky shaders have been used
+            clearBits |= GL_COLOR_BUFFER_BIT;
 #ifdef _DEBUG
-			// STRAWB set clear color to {0.8, 0.7, 0.4, 1.0}
+            // STRAWB set clear color to {0.8, 0.7, 0.4, 1.0}
 #else
-			// STRAWB set clear color to {0.0, 0.0, 0.0, 1.0}
+            // STRAWB set clear color to {0.0, 0.0, 0.0, 1.0}
 #endif
-		}
-	}
+        }
+    }
 
-	if ((tr.refdef.rdflags & RDF_AUTOMAP) ||
-		((backEnd.refdef.rdflags & RDF_NOWORLDMODEL) == 0 &&
-		 r_DynamicGlow->integer &&
-		 !g_bRenderGlowingObjects))
-	{
-		if (tr.world && tr.world->globalFog != -1)
-		{
-			//this is because of a bug in multiple scenes I think, it needs to
-			//clear for the second scene but it doesn't normally.
-			const fog_t *fog = &tr.world->fogs[tr.world->globalFog];
+    if ((tr.refdef.rdflags & RDF_AUTOMAP) ||
+        ((backEnd.refdef.rdflags & RDF_NOWORLDMODEL) == 0 &&
+         r_DynamicGlow->integer && !g_bRenderGlowingObjects))
+    {
+        if (tr.world && tr.world->globalFog != -1)
+        {
+            // this is because of a bug in multiple scenes I think, it needs to
+            // clear for the second scene but it doesn't normally.
+            const fog_t* fog = &tr.world->fogs[tr.world->globalFog];
 
-			clearBits |= GL_COLOR_BUFFER_BIT;
-			// STRAWB set clear color to {for->parms.color.rgb, 1.0}
-		}
-	}
+            clearBits |= GL_COLOR_BUFFER_BIT;
+            // STRAWB set clear color to {for->parms.color.rgb, 1.0}
+        }
+    }
 
-	// If this pass is to just render the glowing objects, don't clear the depth buffer since
-	// we're sharing it with the main scene (since the main scene has already been rendered). -AReis
-	if ( g_bRenderGlowingObjects )
-	{
-		clearBits &= ~GL_DEPTH_BUFFER_BIT;
-	}
+    // If this pass is to just render the glowing objects, don't clear the depth
+    // buffer since we're sharing it with the main scene (since the main scene
+    // has already been rendered). -AReis
+    if (g_bRenderGlowingObjects)
+    {
+        clearBits &= ~GL_DEPTH_BUFFER_BIT;
+    }
 
-	if (clearBits)
-	{
-		// STRAWB clear various buffers based on clearBits
-	}
+    if (clearBits)
+    {
+        // STRAWB clear various buffers based on clearBits
+    }
 
-	if ( ( backEnd.refdef.rdflags & RDF_HYPERSPACE ) )
-	{
-		RB_Hyperspace();
-		return;
-	}
-	else
-	{
-		backEnd.isHyperspace = qfalse;
-	}
+    if ((backEnd.refdef.rdflags & RDF_HYPERSPACE))
+    {
+        RB_Hyperspace();
+        return;
+    }
+    else
+    {
+        backEnd.isHyperspace = qfalse;
+    }
 
-	// we will only draw a sun if there was sky rendered in this view
-	backEnd.skyRenderedThisView = qfalse;
+    // we will only draw a sun if there was sky rendered in this view
+    backEnd.skyRenderedThisView = qfalse;
 
-	// clip to the plane of the portal
-	if ( backEnd.viewParms.isPortal ) {
-		float	plane[4];
-		double	plane2[4];
+    // clip to the plane of the portal
+    if (backEnd.viewParms.isPortal)
+    {
+        float plane[4];
+        double plane2[4];
 
-		plane[0] = backEnd.viewParms.portalPlane.normal[0];
-		plane[1] = backEnd.viewParms.portalPlane.normal[1];
-		plane[2] = backEnd.viewParms.portalPlane.normal[2];
-		plane[3] = backEnd.viewParms.portalPlane.dist;
+        plane[0] = backEnd.viewParms.portalPlane.normal[0];
+        plane[1] = backEnd.viewParms.portalPlane.normal[1];
+        plane[2] = backEnd.viewParms.portalPlane.normal[2];
+        plane[3] = backEnd.viewParms.portalPlane.dist;
 
-		plane2[0] = DotProduct (backEnd.viewParms.ori.axis[0], plane);
-		plane2[1] = DotProduct (backEnd.viewParms.ori.axis[1], plane);
-		plane2[2] = DotProduct (backEnd.viewParms.ori.axis[2], plane);
-		plane2[3] = DotProduct (plane, backEnd.viewParms.ori.origin) - plane[3];
+        plane2[0] = DotProduct(backEnd.viewParms.ori.axis[0], plane);
+        plane2[1] = DotProduct(backEnd.viewParms.ori.axis[1], plane);
+        plane2[2] = DotProduct(backEnd.viewParms.ori.axis[2], plane);
+        plane2[3] = DotProduct(plane, backEnd.viewParms.ori.origin) - plane[3];
 
 #ifdef STRAWB
-		qglLoadMatrixf( s_flipMatrix );
-		qglClipPlane (GL_CLIP_PLANE0, plane2);
-		qglEnable (GL_CLIP_PLANE0);
+        qglLoadMatrixf(s_flipMatrix);
+        qglClipPlane(GL_CLIP_PLANE0, plane2);
+        qglEnable(GL_CLIP_PLANE0);
 #endif
-	} else {
+    }
+    else
+    {
 #ifdef STRAWB
-		qglDisable (GL_CLIP_PLANE0);
+        qglDisable(GL_CLIP_PLANE0);
 #endif
-	}
+    }
 }
 
 #define	MAC_EVENT_PUMP_MSEC		5

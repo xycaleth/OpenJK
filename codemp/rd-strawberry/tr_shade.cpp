@@ -1645,6 +1645,17 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
         //
         // Upload vertex data
         //
+        // STRAWB NOTE: Right now we upload all the vertex data for EVERY stage
+        // in the shader! We can optimize this by only uploading positions once.
+        // As a further optimization, even the texture coordinates or colour
+        // coordinates weren't modified in the shader stage then we can reuse
+        // the data from the previous stage.
+        //
+        // Another possible way of doing this would be to upload the vertex data
+        // once and do the texture transforms and colour changes on the GPU. The
+        // problem with this however is some of these transforms are kind of
+        // crazy and don't translate very easily to the GPU.
+        //
         VkDeviceSize vertexBufferOffset = 0;
         VkBuffer vertexBuffer = input->vertexBuffer;
         if (input->vertexBuffer == VK_NULL_HANDLE)

@@ -2164,6 +2164,13 @@ GpuGetTransientIndexBuffer(TransientResources& transientBuffers, size_t size)
         transientBuffers, size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 }
 
+TransientBuffer*
+GpuGetTransientUniformBuffer(TransientResources& transientBuffers, size_t size)
+{
+    return GetTransientBuffer(
+        transientBuffers, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+}
+
 int GpuCreateVertexBuffer(
     GpuContext& context, size_t sizeInBytes, VertexBuffer& vertexBuffer)
 {

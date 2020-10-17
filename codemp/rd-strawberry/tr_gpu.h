@@ -246,3 +246,5 @@ TransientBuffer* GpuGetTransientVertexBuffer(
     TransientResources& transientResources, size_t size);
 TransientBuffer*
 GpuGetTransientIndexBuffer(TransientResources& transientResources, size_t size);
+TransientBuffer*
+GpuGetTransientUniformBuffer(TransientResources& transientBuffers, size_t size);

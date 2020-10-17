@@ -1,5 +1,13 @@
 #version 450
 
+struct FogParameters
+{
+	vec3 start;  // or density if mode is exp/exp2
+	int mode;  // 0 = no fog, 1 = linear, 2 = exp, 3 = exp2
+	vec3 end;
+	uint color;  // packed color
+};
+
 layout(push_constant) uniform Matrices
 {
 	mat4 u_ModelviewMatrix;
