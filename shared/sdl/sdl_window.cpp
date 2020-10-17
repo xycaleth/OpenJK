@@ -317,7 +317,7 @@ static rserr_t GLimp_CreateOpenGLWindow(
 	const int y,
 	const windowDesc_t *windowDesc,
 	const Uint32 flags,
-	const SDL_Surface *icon,
+	SDL_Surface *icon,
 	glconfig_t *glConfig)
 {
 	const bool fullscreen = (flags & SDL_WINDOW_FULLSCREEN) != 0;
