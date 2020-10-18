@@ -20,14 +20,6 @@ struct BspVertex
 	uint32_t pad0;
 };
 
-enum DescriptorSetId
-{
-	DESCRIPTOR_SET_SINGLE_TEXTURE,
-	DESCRIPTOR_SET_MULTI_TEXTURE,
-
-	DESCRIPTOR_SET_COUNT
-};
-
 struct RenderState
 {
     VkShaderModule vertexShader = VK_NULL_HANDLE;
@@ -187,8 +179,8 @@ struct GpuContext
 	VkCommandPool gfxCommandPool;
 	VkRenderPass renderPass;
 
-	std::array<VkDescriptorSetLayout, DESCRIPTOR_SET_COUNT> descriptorSetLayouts;
-	std::array<VkPipelineLayout, DESCRIPTOR_SET_COUNT> pipelineLayouts;
+	VkDescriptorSetLayout descriptorSetLayout;
+	VkPipelineLayout pipelineLayout;
 
 	std::unordered_map<RenderState, VkPipeline> graphicsPipelines;
 	std::vector<VkDescriptorSet> descriptorSets;

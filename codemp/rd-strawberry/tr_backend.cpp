@@ -201,10 +201,6 @@ void RB_BeginDrawingView(void)
     //
     SetViewportAndScissor();
 
-    TransientBuffer* transientBuffer =
-        GpuGetTransientUniformBuffer(gpuContext.transientResources, 4096);
-
-
     // ensures that depth writes are enabled for the depth clear
     GL_State(GLS_DEFAULT);
 

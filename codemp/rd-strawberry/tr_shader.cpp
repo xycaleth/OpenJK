@@ -2951,8 +2951,7 @@ static void CreateShaderGraphicsPipelines()
         renderState.vertexAttributeCount =
             SingleTextureVertexFormat::vertexAttributes.size();
         renderState.vertexSize = SingleTextureVertexFormat::vertexSize;
-        renderState.pipelineLayout =
-            gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+        renderState.pipelineLayout = gpuContext.pipelineLayout;
         
         shader.sky->pipelineLayout = renderState.pipelineLayout;
         shader.sky->graphicsPipeline =
@@ -2998,8 +2997,7 @@ static void CreateShaderGraphicsPipelines()
                 renderState.vertexAttributeCount =
                     SingleTextureVertexFormat::vertexAttributes.size();
                 renderState.vertexSize = SingleTextureVertexFormat::vertexSize;
-                renderState.pipelineLayout =
-                    gpuContext.pipelineLayouts[DESCRIPTOR_SET_SINGLE_TEXTURE];
+                renderState.pipelineLayout = gpuContext.pipelineLayout;
                 renderState.stateBits = stateBits;
                 renderState.stateBits2 = stateBits2;
 
@@ -3070,8 +3068,7 @@ static void CreateShaderGraphicsPipelines()
                 renderState.vertexAttributeCount =
                     MultiTextureVertexFormat::vertexAttributes.size();
                 renderState.vertexSize = MultiTextureVertexFormat::vertexSize;
-                renderState.pipelineLayout =
-                    gpuContext.pipelineLayouts[DESCRIPTOR_SET_MULTI_TEXTURE];
+                renderState.pipelineLayout = gpuContext.pipelineLayout;
                 renderState.stateBits = stateBits;
                 renderState.stateBits2 = stateBits2;
 
