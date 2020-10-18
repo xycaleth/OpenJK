@@ -29,7 +29,7 @@ set(MPStrawberryRendererIncludeDirectories
 	${MPStrawberryRendererIncludeDirectories}
 	${SharedDir}
 	${MPDir}
-	"${MPDir}/rd-vanilla"
+	"${MPDir}/rd-strawberry"
 	"${GSLIncludeDirectory}"
 	)
 
