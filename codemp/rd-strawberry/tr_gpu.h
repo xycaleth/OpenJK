@@ -179,7 +179,9 @@ struct GpuContext
 	VkCommandPool gfxCommandPool;
 	VkRenderPass renderPass;
 
-	VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorSetLayout sceneDescriptorSetLayout;
+    VkDescriptorSetLayout modelDescriptorSetLayout;
+	VkDescriptorSetLayout materialDescriptorSetLayout;
 	VkPipelineLayout pipelineLayout;
 
 	std::unordered_map<RenderState, VkPipeline> graphicsPipelines;

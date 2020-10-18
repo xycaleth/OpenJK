@@ -776,50 +776,96 @@ VkInstance CreateInstance()
 
 void CreateDescriptorSetLayouts(GpuContext& context)
 {
-    VkDescriptorSetLayoutBinding bindings[2] = {};
-    bindings[0].binding = 0;
-    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bindings[0].descriptorCount = 1;
-    bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    bindings[1].binding = 1;
-    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bindings[1].descriptorCount = 1;
-    bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
-    setLayoutCreateInfo.sType =
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    setLayoutCreateInfo.bindingCount = 2;
-    setLayoutCreateInfo.pBindings = bindings;
-
-    if (vkCreateDescriptorSetLayout(
-            context.device,
-            &setLayoutCreateInfo,
-            nullptr,
-            &context.descriptorSetLayout) != VK_SUCCESS)
+    // Scene descriptor set
     {
-        Com_Error(
-            ERR_FATAL,
-            "Failed to create multi-texture descriptor set layout");
+        VkDescriptorSetLayoutBinding bindings[1] = {};
+        bindings[0].binding = 0;
+        bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        bindings[0].descriptorCount = 1;
+        bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        
+        VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
+        setLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        setLayoutCreateInfo.bindingCount = 1;
+        setLayoutCreateInfo.pBindings = bindings;
+
+        if (vkCreateDescriptorSetLayout(
+                gpuContext.device,
+                &setLayoutCreateInfo,
+                nullptr,
+                &context.sceneDescriptorSetLayout) != VK_SUCCESS)
+        {
+            Com_Error(ERR_FATAL, "Failed to create scene descriptor set layout\n");
+        }
+    }
+
+    // Model descriptor set
+    {
+        VkDescriptorSetLayoutBinding bindings[1] = {};
+        bindings[0].binding = 0;
+        bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        bindings[0].descriptorCount = 1;
+        bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
+        setLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        setLayoutCreateInfo.bindingCount = 1;
+        setLayoutCreateInfo.pBindings = bindings;
+
+        if (vkCreateDescriptorSetLayout(
+                gpuContext.device,
+                &setLayoutCreateInfo,
+                nullptr,
+                &context.modelDescriptorSetLayout) != VK_SUCCESS)
+        {
+            Com_Error(ERR_FATAL, "Failed to create model descriptor set layout\n");
+        }
+    }
+
+    // Material descriptor set
+    {
+        VkDescriptorSetLayoutBinding bindings[2] = {};
+        bindings[0].binding = 0;
+        bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        bindings[0].descriptorCount = 1;
+        bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        bindings[1].binding = 1;
+        bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        bindings[1].descriptorCount = 1;
+        bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
+        setLayoutCreateInfo.sType =
+            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        setLayoutCreateInfo.bindingCount = 2;
+        setLayoutCreateInfo.pBindings = bindings;
+
+        if (vkCreateDescriptorSetLayout(
+                context.device,
+                &setLayoutCreateInfo,
+                nullptr,
+                &context.materialDescriptorSetLayout) != VK_SUCCESS)
+        {
+            Com_Error(
+                ERR_FATAL,
+                "Failed to create descriptor set layout");
+        }
     }
 }
 
 void CreatePipelineLayouts(GpuContext& context)
 {
-    VkPushConstantRange pushConstants = {};
-    pushConstants.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    pushConstants.offset = 0;
-    pushConstants.size = sizeof(gpuMatrices_t);
+    const VkDescriptorSetLayout layouts[] = {
+        context.sceneDescriptorSetLayout,
+        context.modelDescriptorSetLayout,
+        context.materialDescriptorSetLayout
+    };
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
     pipelineLayoutCreateInfo.sType =
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutCreateInfo.setLayoutCount = 1;
-    pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
-    pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstants;
-
-    VkDescriptorSetLayout layout = context.descriptorSetLayout;
-    pipelineLayoutCreateInfo.pSetLayouts = &layout;
+    pipelineLayoutCreateInfo.setLayoutCount = 3;
+    pipelineLayoutCreateInfo.pSetLayouts = layouts;
 
     if (vkCreatePipelineLayout(
             context.device,
@@ -1640,7 +1686,9 @@ void GpuContextShutdown(GpuContext& context)
     GpuReleaseTransientResources(context.transientResources);
     vkDestroyPipelineLayout(context.device, context.pipelineLayout, nullptr);
 
-    vkDestroyDescriptorSetLayout(context.device, context.descriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(context.device, context.materialDescriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(context.device, context.modelDescriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(context.device, context.sceneDescriptorSetLayout, nullptr);
 
     vkDestroyCommandPool(context.device, context.gfxCommandPool, nullptr);
     vkDestroyCommandPool(context.device, context.transferCommandPool, nullptr);
@@ -1892,7 +1940,7 @@ VkDescriptorSet GpuAllocateDescriptorSet(GpuContext& context)
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     descriptorSetAllocateInfo.descriptorPool = context.globalDescriptorPool;
     descriptorSetAllocateInfo.descriptorSetCount = 1;
-    descriptorSetAllocateInfo.pSetLayouts = &gpuContext.descriptorSetLayout;
+    descriptorSetAllocateInfo.pSetLayouts = &gpuContext.materialDescriptorSetLayout;
 
     VkDescriptorSet descriptorSet;
     if (vkAllocateDescriptorSets(

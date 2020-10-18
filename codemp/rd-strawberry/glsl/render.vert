@@ -8,11 +8,15 @@ struct FogParameters
 	uint color;  // packed color
 };
 
-layout(push_constant) uniform Matrices
+layout(set = 0, binding = 0) uniform Camera
 {
-	mat4 u_ModelviewMatrix;
-	mat4 u_ProjectionMatrix;
-};
+	mat4 projectionMatrix;
+} u_Camera;
+
+layout(set = 1, binding = 0) uniform Entity
+{
+	mat4 modelViewMatrix;
+} u_Entity;
 
 layout(location = 0) in vec4 in_Position;
 layout(location = 1) in vec2 in_TexCoord0;
@@ -29,7 +33,7 @@ layout(location = 2) out vec2 out_TexCoord1;
 
 void main()
 {
-	gl_Position = u_ProjectionMatrix * u_ModelviewMatrix * in_Position;
+	gl_Position = u_Camera.projectionMatrix * u_Entity.modelviewMatrix * in_Position;
 
 	out_TexCoord0 = in_TexCoord0;
 	out_Color = in_Color;

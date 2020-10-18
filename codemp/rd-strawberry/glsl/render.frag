@@ -1,8 +1,8 @@
 #version 450
 
-layout(set = 0, binding = 0) uniform sampler2D u_Texture0;
+layout(set = 2, binding = 0) uniform sampler2D u_Texture0;
 #if defined(USE_MULTITEXTURE)
-layout(set = 0, binding = 1) uniform sampler2D u_Texture1;
+layout(set = 2, binding = 1) uniform sampler2D u_Texture1;
 #endif
 
 layout(location = 0) in vec2 in_TexCoord0;

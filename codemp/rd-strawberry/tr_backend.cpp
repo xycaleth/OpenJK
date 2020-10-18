@@ -418,6 +418,21 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	// clear the z buffer, set the modelview, etc
 	RB_BeginDrawingView ();
 
+	TransientBuffer* sceneBuffer = GpuGetTransientUniformBuffer(
+		gpuContext.transientResources,
+		sizeof(backEnd.viewParms.projectionMatrix));
+	Com_Memcpy(
+		sceneBuffer->data,
+		backEnd.viewParms.projectionMatrix,
+		sceneBuffer->size);
+	vmaFlushAllocation(
+		gpuContext.allocator,
+		sceneBuffer->allocation,
+		0,
+		sceneBuffer->size);
+
+
+
 	// draw everything
 	oldEntityNum = -1;
 	backEnd.currentEntity = &tr.worldEntity;
