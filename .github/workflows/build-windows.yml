@@ -23,7 +23,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -G "Visual Studio 12 2013" -S ${{runner.workspace}}
+      run: cmake $GITHUB_WORKSPACE -G "Visual Studio 12 2013"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
