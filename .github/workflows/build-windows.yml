@@ -1,0 +1,31 @@
+name: Windows build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: test
+  pull_request:
+    branches: test
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        build_type: [Debug, RelWithDebInfo]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -G "Visual Studio 12 2013" -S ${{runner.workspace}}
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build . --config ${{ matrix.build_type }}
