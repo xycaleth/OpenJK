@@ -9,10 +9,12 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    name: Build VS 2019, ${{ matrix.build_type }}, ${{ matrix.arch }}
+    runs-on: windows-2019
     strategy:
       matrix:
         build_type: [Debug, RelWithDebInfo]
+        arch: [Win32, x64]
 
     steps:
     - uses: actions/checkout@v2
@@ -26,7 +28,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE
+      run: cmake $GITHUB_WORKSPACE -A ${{ matrix.arch }}
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
