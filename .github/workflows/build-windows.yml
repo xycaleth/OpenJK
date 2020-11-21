@@ -8,7 +8,7 @@ on:
     branches: test
 
 jobs:
-  build:
+  vs2019:
     name: Build VS 2019, ${{ matrix.build_type }}, ${{ matrix.arch }}
     runs-on: windows-2019
     strategy:
@@ -34,3 +34,26 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: cmake --build . --config ${{ matrix.build_type }}
+
+  vs2017_xp:
+    name: Build VS 2017, Windows XP
+    runs-on: windows-2017
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -A Win32 -T v141_xp
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build . --config RelWithDebInfo
