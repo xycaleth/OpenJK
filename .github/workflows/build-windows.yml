@@ -37,7 +37,7 @@ jobs:
 
   vs2017_xp:
     name: Build VS 2017, Windows XP
-    runs-on: windows-2017
+    runs-on: windows-2016
 
     steps:
     - uses: actions/checkout@v2
