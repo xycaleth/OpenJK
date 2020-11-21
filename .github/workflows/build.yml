@@ -57,3 +57,23 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: cmake --build . --config RelWithDebInfo
+
+  macos:
+    name: Build macOS AppleClang
+    runs-on: macos-10.15
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: cmake --build .
