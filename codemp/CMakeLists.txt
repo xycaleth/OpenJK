@@ -43,6 +43,11 @@ if(BuildMPRdVanilla)
 	add_subdirectory("${MPDir}/rd-vanilla")
 endif(BuildMPRdVanilla)
 
+#	 Add Cookie Dough JKA Renderer Project
+if(BuildMPRdCookieDough)
+	add_subdirectory("${MPDir}/rd-cookie-dough")
+endif()
+
 #    Common things between Engine and Dedicated Server
 if(BuildMPEngine OR BuildMPDed)
 
