@@ -517,8 +517,6 @@ public:
 typedef std::map <const char *, image_t *, CStringComparator> AllocatedImages_t;
 AllocatedImages_t AllocatedImages;
 AllocatedImages_t::iterator itAllocatedImages;
-int giTextureBindNum = 1024;	// will be set to this anyway at runtime, but wtf?
-
 
 // return = number of images in the list, for those interested
 //
@@ -669,7 +667,7 @@ static void Upload32( unsigned *data,
 			}
 			else
 			{
-				*pformat = 3;
+				*pformat = GL_RGB8;
 			}
 		}
 		else if ( samples == 4 )
@@ -688,7 +686,7 @@ static void Upload32( unsigned *data,
 			}
 			else
 			{
-				*pformat = 4;
+				*pformat = GL_RGB8;
 			}
 		}
 
@@ -821,8 +819,6 @@ void R_Images_Clear(void)
 	}
 
 	AllocatedImages.clear();
-
-	giTextureBindNum = 1024;
 }
 
 
@@ -991,7 +987,7 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	image = (image_t*) Z_Malloc( sizeof( image_t ), TAG_IMAGE_T, qtrue );
 //	memset(image,0,sizeof(*image));	// qtrue above does this
 
-	image->texnum = 1024 + giTextureBindNum++;	// ++ is of course staggeringly important...
+	qglGenTextures(1, &image->texnum);
 
 	// record which map it was used on...
 	//
@@ -1009,7 +1005,7 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	GL_SelectTexture( 0 );
 
 	GLuint uiTarget = GL_TEXTURE_2D;
-		GL_Bind(image);
+	GL_Bind(image);
 
 	Upload32( (unsigned *)pic,	format,
 								(qboolean)image->mipmap,

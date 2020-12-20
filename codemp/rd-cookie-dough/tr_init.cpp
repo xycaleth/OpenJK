@@ -225,17 +225,15 @@ static void GL_SetDefaultState(void);
 
 static void R_Splash()
 {
-#if 0
 	image_t* pImage = R_FindImageFile("menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
-	extern void	RB_SetGL2D(void);
-	RB_SetGL2D();
+	//extern void	RB_SetGL2D(void);
+	//RB_SetGL2D();
 	if ( pImage )
 	{
 		//invalid paths?
 		GL_Bind(pImage);
 	}
 
-#endif
 	GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
 	
 	const char VERTEX_SHADER[] = R"(
@@ -256,16 +254,17 @@ void main() {
 	// 2 -> (0, 2)
 	out_TexCoord = vec2(
 		float(2 * (gl_VertexID % 2)),
-		float(2 * (gl_VertexID / 2)));
+		float(1 - 2 * (gl_VertexID / 2)));
 }
 )";
 
 	const char FRAGMENT_SHADER[] = R"(
+layout(binding = 0) uniform sampler2D u_SplashImage;
 layout(location = 0) in vec2 in_TexCoord;
 layout(location = 0) out vec4 out_FragColor;
 
 void main() {
-	out_FragColor = vec4(in_TexCoord, 0.0, 1.0);
+	out_FragColor = texture(u_SplashImage, in_TexCoord);
 }
 )";
 
