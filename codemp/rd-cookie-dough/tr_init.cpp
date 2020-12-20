@@ -221,78 +221,152 @@ bool g_bTextureRectangleHack = false;
 void RE_SetLightStyle(int style, int color);
 void RE_GetBModelVerts( int bmodelIndex, vec3_t *verts, vec3_t normal );
 
-void R_Splash()
+static void GL_SetDefaultState(void);
+
+static void R_Splash()
 {
-	image_t *pImage;
-/*	const char* s = ri.Cvar_VariableString("se_language");
-	if (Q_stricmp(s,"english"))
-	{
-		pImage = R_FindImageFile( "menu/splash_eur", qfalse, qfalse, qfalse, GL_CLAMP);
-	}
-	else
-	{
-		pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
-	}
-*/
-	pImage = R_FindImageFile( "menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
-	extern void	RB_SetGL2D (void);
+#if 0
+	image_t* pImage = R_FindImageFile("menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
+	extern void	RB_SetGL2D(void);
 	RB_SetGL2D();
-	if (pImage )
-	{//invalid paths?
-		GL_Bind( pImage );
+	if ( pImage )
+	{
+		//invalid paths?
+		GL_Bind(pImage);
 	}
+
+#endif
 	GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
+	
+	const char VERTEX_SHADER[] = R"(
+layout(location = 0) out vec2 out_TexCoord;
 
-	const int width = 640;
-	const int height = 480;
-	const float x1 = 320 - width / 2;
-	const float x2 = 320 + width / 2;
-	const float y1 = 240 - height / 2;
-	const float y2 = 240 + height / 2;
+void main() {
+	// 0 -> (-1, -1)
+	// 1 -> ( 3, -1)
+	// 2 -> (-1,  3)
+	gl_Position = vec4(
+		float(4 * (gl_VertexID % 2) - 1),
+		float(4 * (gl_VertexID / 2) - 1),
+		0.0,
+		1.0);
+	
+	// 0 -> (0, 0)
+	// 1 -> (2, 0)
+	// 2 -> (0, 2)
+	out_TexCoord = vec2(
+		float(2 * (gl_VertexID % 2)),
+		float(2 * (gl_VertexID / 2)));
+}
+)";
 
+	const char FRAGMENT_SHADER[] = R"(
+layout(location = 0) in vec2 in_TexCoord;
+layout(location = 0) out vec4 out_FragColor;
 
-	qglBegin (GL_TRIANGLE_STRIP);
-		qglTexCoord2f( 0,  0 );
-		qglVertex2f(x1, y1);
-		qglTexCoord2f( 1 ,  0 );
-		qglVertex2f(x2, y1);
-		qglTexCoord2f( 0, 1 );
-		qglVertex2f(x1, y2);
-		qglTexCoord2f( 1, 1 );
-		qglVertex2f(x2, y2);
-	qglEnd();
+void main() {
+	out_FragColor = vec4(in_TexCoord, 0.0, 1.0);
+}
+)";
+
+	const char VERSION_STRING[] = "#version 430 core";
+
+	const char *vertexShaderStrings[] = {VERSION_STRING, VERTEX_SHADER};
+	GLuint vertexShader = qglCreateShader(GL_VERTEX_SHADER);
+	qglShaderSource(vertexShader, 2, vertexShaderStrings, nullptr);
+	qglCompileShader(vertexShader);
+
+	GLint status;
+	qglGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE)
+	{
+		GLint logLength;
+		qglGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &logLength);
+
+		char *logText = reinterpret_cast<char*>(ri.Hunk_AllocateTempMemory(logLength));
+		qglGetShaderInfoLog(vertexShader, logLength, nullptr, logText);
+
+		Com_Printf("Failed to compile shader: %s\n", logText);
+
+		ri.Hunk_FreeTempMemory(logText);
+	}
+
+	const char *fragmentShaderStrings[] = {VERSION_STRING, FRAGMENT_SHADER};
+	GLuint fragmentShader = qglCreateShader(GL_FRAGMENT_SHADER);
+	qglShaderSource(fragmentShader, 2, fragmentShaderStrings, nullptr);
+	qglCompileShader(fragmentShader);
+
+	qglGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE)
+	{
+		GLint logLength;
+		qglGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &logLength);
+
+		char *logText = reinterpret_cast<char*>(ri.Hunk_AllocateTempMemory(logLength));
+		qglGetShaderInfoLog(fragmentShader, logLength, nullptr, logText);
+
+		Com_Printf("Failed to compile shader: %s\n", logText);
+
+		ri.Hunk_FreeTempMemory(logText);
+	}
+
+	GLuint program = qglCreateProgram();
+	qglAttachShader(program, vertexShader);
+	qglAttachShader(program, fragmentShader);
+	qglLinkProgram(program);
+
+	qglGetProgramiv(program, GL_LINK_STATUS, &status);
+	if (status != GL_TRUE)
+	{
+		GLint logLength;
+		qglGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
+
+		char *logText = reinterpret_cast<char*>(ri.Hunk_AllocateTempMemory(logLength));
+		qglGetProgramInfoLog(program, logLength, nullptr, logText);
+
+		Com_Printf("Failed to link program: %s\n", logText);
+
+		ri.Hunk_FreeTempMemory(logText);
+	}
+
+	qglDeleteShader(vertexShader);
+	qglDeleteShader(fragmentShader);
+
+	GLuint vao;
+	qglGenVertexArrays(1, &vao);
+	qglBindVertexArray(vao);
+
+	qglUseProgram(program);
+	qglDrawArrays(GL_TRIANGLES, 0, 3);
+
+	qglUseProgram(0);
+	qglDeleteProgram(program);
 
 	ri.WIN_Present(&window);
 }
 
-/*
-** GLW_CheckForExtension
-
-  Cannot use strstr directly to differentiate between (for eg) reg_combiners and reg_combiners2
-*/
-
-static void GLW_InitTextureCompression( void )
+static void GLW_InitTextureCompression(void)
 {
 	// Check for available tc methods.
 	const bool textureCompressionAvailable = GLAD_GL_ARB_texture_compression && GLAD_GL_EXT_texture_compression_s3tc;
 
 	if ( textureCompressionAvailable )
 	{
-		Com_Printf ("...GL_EXT_texture_compression_s3tc available\n" );
+		Com_Printf("...GL_EXT_texture_compression_s3tc available\n");
 	}
 
 	if ( !r_ext_compressed_textures->value )
 	{
 		// Compressed textures are off
 		glConfig.textureCompression = TC_NONE;
-		Com_Printf ("...ignoring texture compression\n" );
+		Com_Printf("...ignoring texture compression\n");
 	}
 	else if ( !textureCompressionAvailable )
 	{
 		// Requesting texture compression, but no method found
 		glConfig.textureCompression = TC_NONE;
-		Com_Printf ("...no supported texture compression method found\n" );
-		Com_Printf (".....ignoring texture compression\n" );
+		Com_Printf("...no supported texture compression method found\n");
+		Com_Printf(".....ignoring texture compression\n");
 	}
 	else
 	{
@@ -300,12 +374,12 @@ static void GLW_InitTextureCompression( void )
 		// some form of supported texture compression is avaiable, so see if the user has a preference
 		if ( r_ext_preferred_tc_method->integer == TC_NONE )
 		{
-			Com_Printf ("...no tc preference specified\n" );
-			Com_Printf (".....using GL_EXT_texture_compression_s3tc\n" );
+			Com_Printf("...no tc preference specified\n");
+			Com_Printf(".....using GL_EXT_texture_compression_s3tc\n");
 		}
 		else
 		{
-			Com_Printf ("...using preferred tc method, GL_EXT_texture_compression_s3tc\n" );
+			Com_Printf("...using preferred tc method, GL_EXT_texture_compression_s3tc\n");
 		}
 	}
 }
@@ -317,7 +391,7 @@ GLimp_InitExtensions
 */
 extern bool g_bDynamicGlowSupported;
 extern bool g_bARBShadersAvailable;
-static void GLimp_InitExtensions( void )
+static void GLimp_InitExtensions(void)
 {
 	if ( !r_allowExtensions->integer )
 	{
@@ -402,6 +476,17 @@ static const char *TruncateGLExtensionsString (const char *extensionsString, int
 	return truncatedExtensions;
 }
 
+static void APIENTRY OnGLDebugMessage(GLenum source,
+							 GLenum type,
+							 GLuint id,
+							 GLenum severity,
+							 GLsizei length,
+							 const GLchar* message,
+							 const GLvoid* userParam)
+{
+	Com_Printf("Error: %s", message);
+}
+
 /*
 ** InitOpenGL
 **
@@ -422,14 +507,13 @@ static void InitOpenGL( void )
 	//		- r_ignorehwgamma
 	//		- r_gamma
 	//
-
 	if ( glConfig.vidWidth == 0 )
 	{
 		windowDesc_t windowDesc = { GRAPHICS_API_OPENGL };
 		windowDesc.gl.majorVersion = 4;
 		windowDesc.gl.minorVersion = 3;
 		windowDesc.gl.contextFlags = GLCONTEXT_DEBUG;
-		//windowDesc.gl.profile = GLPROFILE_CORE;
+		windowDesc.gl.profile = GLPROFILE_CORE;
 
 		memset(&glConfig, 0, sizeof(glConfig));
 		memset(&glConfigExt, 0, sizeof(glConfigExt));
@@ -440,6 +524,9 @@ static void InitOpenGL( void )
 		{
 			Com_Error(ERR_FATAL, "Unable to load OpenGL functions\n");
 		}
+
+		qglEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+		qglDebugMessageCallbackARB(OnGLDebugMessage, nullptr);
 
 		Com_Printf( "GL_RENDERER: %s\n", (char *)qglGetString (GL_RENDERER) );
 
@@ -458,12 +545,11 @@ static void InitOpenGL( void )
 		// stubbed or broken drivers may have reported 0...
 		glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
 
-		// initialize extensions
-		GLimp_InitExtensions( );
+		GLimp_InitExtensions();
 
-		// set default state
-		GL_SetDefaultState();
-		R_Splash();	//get something on screen asap
+		//GL_SetDefaultState();
+
+		R_Splash();
 	}
 	else
 	{
@@ -946,44 +1032,44 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 /*
 ** GL_SetDefaultState
 */
-void GL_SetDefaultState( void )
+static void GL_SetDefaultState(void)
 {
-	qglClearDepth( 1.0f );
+	qglClearDepth(1.0f);
 
 	qglCullFace(GL_FRONT);
 
-	qglColor4f (1,1,1,1);
+	qglColor4f(1, 1, 1, 1);
 
 	// initialize downstream texture unit if we're running
 	// in a multitexture environment
-	GL_SelectTexture( 1 );
-	GL_TextureMode( r_textureMode->string );
-	GL_TexEnv( GL_MODULATE );
-	qglDisable( GL_TEXTURE_2D );
-	GL_SelectTexture( 0 );
+	GL_SelectTexture(1);
+	GL_TextureMode(r_textureMode->string);
+	GL_TexEnv(GL_MODULATE);
+	qglDisable(GL_TEXTURE_2D);
+	GL_SelectTexture(0);
 
 	qglEnable(GL_TEXTURE_2D);
-	GL_TextureMode( r_textureMode->string );
-	GL_TexEnv( GL_MODULATE );
+	GL_TextureMode(r_textureMode->string);
+	GL_TexEnv(GL_MODULATE);
 
-	qglShadeModel( GL_SMOOTH );
-	qglDepthFunc( GL_LEQUAL );
+	qglShadeModel(GL_SMOOTH);
+	qglDepthFunc(GL_LEQUAL);
 
 	// the vertex array is always enabled, but the color and texture
 	// arrays are enabled and disabled around the compiled vertex array call
-	qglEnableClientState (GL_VERTEX_ARRAY);
+	qglEnableClientState(GL_VERTEX_ARRAY);
 
 	//
 	// make sure our GL state vector is set correctly
 	//
 	glState.glStateBits = GLS_DEPTHTEST_DISABLE | GLS_DEPTHMASK_TRUE;
 
-	qglPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
-	qglDepthMask( GL_TRUE );
-	qglDisable( GL_DEPTH_TEST );
-	qglEnable( GL_SCISSOR_TEST );
-	qglDisable( GL_CULL_FACE );
-	qglDisable( GL_BLEND );
+	qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	qglDepthMask(GL_TRUE);
+	qglDisable(GL_DEPTH_TEST);
+	qglEnable(GL_SCISSOR_TEST);
+	qglDisable(GL_CULL_FACE);
+	qglDisable(GL_BLEND);
 }
 
 /*
