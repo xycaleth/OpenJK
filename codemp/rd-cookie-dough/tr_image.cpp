@@ -1322,8 +1322,6 @@ void R_CreateBuiltinImages( void ) {
 	}
 #endif
 
-	qglEnable(GL_TEXTURE_2D);
-
 	// with overbright bits active, we need an image which is some fraction of full color,
 	// for default lightmaps, etc
 	for (x=0 ; x<DEFAULT_SIZE ; x++) {

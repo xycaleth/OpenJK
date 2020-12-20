@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.h"
 #include "tr_WorldEffects.h"
+#include "tr_glsl.h"
 
 backEndData_t	*backEndData;
 backEndState_t	backEnd;
@@ -1175,18 +1176,18 @@ void RB_SetGL2D(void)
 	// set 2D virtual screen size
 	qglViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	qglScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+
+#if defined(COOKIE)
 	qglMatrixMode(GL_PROJECTION);
 	qglLoadIdentity();
 	qglOrtho(0, 640, 480, 0, 0, 1);
 	qglMatrixMode(GL_MODELVIEW);
 	qglLoadIdentity();
+#endif
 
 	GL_State(GLS_DEPTHTEST_DISABLE |
 		GLS_SRCBLEND_SRC_ALPHA |
 		GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
-
-	qglDisable(GL_CULL_FACE);
-	qglDisable(GL_CLIP_PLANE0);
 
 	// set time for 2D shaders
 	backEnd.refdef.time = ri.Milliseconds() * ri.Cvar_VariableValue("timescale");
@@ -1238,8 +1239,8 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 		qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGB8, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, glConfig.clampToEdgeAvailable ? GL_CLAMP_TO_EDGE : GL_CLAMP );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, glConfig.clampToEdgeAvailable ? GL_CLAMP_TO_EDGE : GL_CLAMP );
+		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 	} else {
 		if (dirty) {
 			// otherwise, just subimage upload it so that drivers can tell we are going to be changing
@@ -1255,18 +1256,10 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 
 	RB_SetGL2D();
 
-	qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
+	assert(x == 0 && y == 0 && w == 640 && h == 480);
 
-	qglBegin (GL_QUADS);
-	qglTexCoord2f ( 0.5f / cols,  0.5f / rows );
-	qglVertex2f (x, y);
-	qglTexCoord2f ( ( cols - 0.5f ) / cols ,  0.5f / rows );
-	qglVertex2f (x+w, y);
-	qglTexCoord2f ( ( cols - 0.5f ) / cols, ( rows - 0.5f ) / rows );
-	qglVertex2f (x+w, y+h);
-	qglTexCoord2f ( 0.5f / cols, ( rows - 0.5f ) / rows );
-	qglVertex2f (x, y+h);
-	qglEnd ();
+	GLSL_FullscreenShader_Use();
+	qglDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
 void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty) {

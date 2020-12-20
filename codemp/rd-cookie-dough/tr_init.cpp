@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include "../rd-common/tr_common.h"
+#include "tr_glsl.h"
 #include "tr_WorldEffects.h"
 #include "qcommon/MiniHeap.h"
 #include "ghoul2/g2_local.h"
@@ -225,6 +226,8 @@ static void GL_SetDefaultState(void);
 
 static void R_Splash()
 {
+	GLSL_FullscreenShader_Init();
+
 	image_t* pImage = R_FindImageFile("menu/splash", qfalse, qfalse, qfalse, GL_CLAMP_TO_EDGE);
 	//extern void	RB_SetGL2D(void);
 	//RB_SetGL2D();
@@ -236,110 +239,12 @@ static void R_Splash()
 
 	GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
 	
-	const char VERTEX_SHADER[] = R"(
-layout(location = 0) out vec2 out_TexCoord;
-
-void main() {
-	// 0 -> (-1, -1)
-	// 1 -> ( 3, -1)
-	// 2 -> (-1,  3)
-	gl_Position = vec4(
-		float(4 * (gl_VertexID % 2) - 1),
-		float(4 * (gl_VertexID / 2) - 1),
-		0.0,
-		1.0);
-	
-	// 0 -> (0, 0)
-	// 1 -> (2, 0)
-	// 2 -> (0, 2)
-	out_TexCoord = vec2(
-		float(2 * (gl_VertexID % 2)),
-		float(1 - 2 * (gl_VertexID / 2)));
-}
-)";
-
-	const char FRAGMENT_SHADER[] = R"(
-layout(binding = 0) uniform sampler2D u_SplashImage;
-layout(location = 0) in vec2 in_TexCoord;
-layout(location = 0) out vec4 out_FragColor;
-
-void main() {
-	out_FragColor = texture(u_SplashImage, in_TexCoord);
-}
-)";
-
-	const char VERSION_STRING[] = "#version 430 core";
-
-	const char *vertexShaderStrings[] = {VERSION_STRING, VERTEX_SHADER};
-	GLuint vertexShader = qglCreateShader(GL_VERTEX_SHADER);
-	qglShaderSource(vertexShader, 2, vertexShaderStrings, nullptr);
-	qglCompileShader(vertexShader);
-
-	GLint status;
-	qglGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-	if (status != GL_TRUE)
-	{
-		GLint logLength;
-		qglGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &logLength);
-
-		char *logText = reinterpret_cast<char*>(ri.Hunk_AllocateTempMemory(logLength));
-		qglGetShaderInfoLog(vertexShader, logLength, nullptr, logText);
-
-		Com_Printf("Failed to compile shader: %s\n", logText);
-
-		ri.Hunk_FreeTempMemory(logText);
-	}
-
-	const char *fragmentShaderStrings[] = {VERSION_STRING, FRAGMENT_SHADER};
-	GLuint fragmentShader = qglCreateShader(GL_FRAGMENT_SHADER);
-	qglShaderSource(fragmentShader, 2, fragmentShaderStrings, nullptr);
-	qglCompileShader(fragmentShader);
-
-	qglGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
-	if (status != GL_TRUE)
-	{
-		GLint logLength;
-		qglGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &logLength);
-
-		char *logText = reinterpret_cast<char*>(ri.Hunk_AllocateTempMemory(logLength));
-		qglGetShaderInfoLog(fragmentShader, logLength, nullptr, logText);
-
-		Com_Printf("Failed to compile shader: %s\n", logText);
-
-		ri.Hunk_FreeTempMemory(logText);
-	}
-
-	GLuint program = qglCreateProgram();
-	qglAttachShader(program, vertexShader);
-	qglAttachShader(program, fragmentShader);
-	qglLinkProgram(program);
-
-	qglGetProgramiv(program, GL_LINK_STATUS, &status);
-	if (status != GL_TRUE)
-	{
-		GLint logLength;
-		qglGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
-
-		char *logText = reinterpret_cast<char*>(ri.Hunk_AllocateTempMemory(logLength));
-		qglGetProgramInfoLog(program, logLength, nullptr, logText);
-
-		Com_Printf("Failed to link program: %s\n", logText);
-
-		ri.Hunk_FreeTempMemory(logText);
-	}
-
-	qglDeleteShader(vertexShader);
-	qglDeleteShader(fragmentShader);
-
 	GLuint vao;
 	qglGenVertexArrays(1, &vao);
 	qglBindVertexArray(vao);
 
-	qglUseProgram(program);
+	GLSL_FullscreenShader_Use();
 	qglDrawArrays(GL_TRIANGLES, 0, 3);
-
-	qglUseProgram(0);
-	qglDeleteProgram(program);
 
 	ri.WIN_Present(&window);
 }
