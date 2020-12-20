@@ -1235,7 +1235,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'clampmap' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
-			stage->bundle[0].image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_CLAMP );
+			stage->bundle[0].image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_CLAMP_TO_EDGE );
 			if ( !stage->bundle[0].image )
 			{
 				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
@@ -1271,7 +1271,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				}
 				num = stage->bundle[0].numImageAnimations;
 				if ( num < MAX_IMAGE_ANIMATIONS ) {
-					images[num] = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, bClamp?GL_CLAMP:GL_REPEAT );
+					images[num] = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, bClamp?GL_CLAMP_TO_EDGE:GL_REPEAT );
 					if ( !images[num] )
 					{
 						ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
@@ -1906,7 +1906,7 @@ static void ParseSkyParms( const char **text ) {
 	if ( strcmp( token, "-" ) ) {
 		for (i=0 ; i<6 ; i++) {
 			Com_sprintf( pathname, sizeof(pathname), "%s_%s", token, suf[i] );
-			shader.sky->outerbox[i] = R_FindImageFile( ( char * ) pathname, qtrue, qtrue, (qboolean)!shader.noTC, GL_CLAMP );
+			shader.sky->outerbox[i] = R_FindImageFile( ( char * ) pathname, qtrue, qtrue, (qboolean)!shader.noTC, GL_CLAMP_TO_EDGE );
 			if ( !shader.sky->outerbox[i] ) {
 				if (i) {
 					shader.sky->outerbox[i] = shader.sky->outerbox[i-1];//not found, so let's use the previous image
@@ -3355,7 +3355,7 @@ static inline const int *R_FindLightmap( const int *lightmapIndex )
 
 	// attempt to load an external lightmap
 	Com_sprintf( fileName, sizeof(fileName), "%s/" EXTERNAL_LIGHTMAP, tr.worldDir, *lightmapIndex );
-	image = R_FindImageFile( fileName, qfalse, qfalse, (qboolean)r_ext_compressed_lightmaps->integer, GL_CLAMP );
+	image = R_FindImageFile( fileName, qfalse, qfalse, (qboolean)r_ext_compressed_lightmaps->integer, GL_CLAMP_TO_EDGE );
 	if( image == NULL )
 	{
 		return lightmapsVertex;
@@ -3468,7 +3468,7 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 	// look for a single TGA, BMP, or PCX
 	//
 	COM_StripExtension( name, fileName, sizeof( fileName ) );
-	image = R_FindImageFile( fileName, mipRawImage, mipRawImage, qtrue, mipRawImage ? GL_REPEAT : GL_CLAMP );
+	image = R_FindImageFile( fileName, mipRawImage, mipRawImage, qtrue, mipRawImage ? GL_REPEAT : GL_CLAMP_TO_EDGE );
 	if ( !image ) {
 		ri.Printf( PRINT_DEVELOPER, S_COLOR_RED "Couldn't find image for shader %s\n", name );
 		shader.defaultShader = true;

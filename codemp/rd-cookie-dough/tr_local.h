@@ -116,7 +116,7 @@ typedef struct image_s {
 	int			frameUsed;			// for texture usage in frame statistics
 
 	int			internalFormat;
-	int			wrapClampMode;		// GL_CLAMP or GL_REPEAT
+	int			wrapClampMode;		// GL_CLAMP_TO_EDGE or GL_REPEAT
 
 	bool		mipmap;
 	bool		allowPicmip;

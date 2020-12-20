@@ -274,9 +274,6 @@ void R_ImageList_f( void ) {
 		case GL_REPEAT:
 			ri.Printf( PRINT_ALL, "rept " );
 			break;
-		case GL_CLAMP:
-			ri.Printf( PRINT_ALL, "clmp " );
-			break;
 		case GL_CLAMP_TO_EDGE:
 			ri.Printf( PRINT_ALL, "clpE " );
 			break;
@@ -962,10 +959,6 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 		Com_Error (ERR_DROP, "R_CreateImage: \"%s\" is too long\n", name);
 	}
 
-	if(glConfig.clampToEdgeAvailable && glWrapClampMode == GL_CLAMP) {
-		glWrapClampMode = GL_CLAMP_TO_EDGE;
-	}
-
 	if (name[0] == '*')
 	{
 		const char *psLightMapNameSearchPos = strrchr(name,'/');
@@ -1053,13 +1046,6 @@ image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmi
 		return NULL;
 	}
 
-	// need to do this here as well as in R_CreateImage, or R_FindImageFile_NoLoad() may complain about
-	//	different clamp parms used...
-	//
-	if(glConfig.clampToEdgeAvailable && glWrapClampMode == GL_CLAMP) {
-		glWrapClampMode = GL_CLAMP_TO_EDGE;
-	}
-
 	image = R_FindImageFile_NoLoad(name, mipmap, allowPicmip, allowTC, glWrapClampMode );
 	if (image) {
 		return image;
@@ -1102,7 +1088,7 @@ static void R_CreateDlightImage( void )
 	R_LoadImage("gfx/2d/dlight", &pic, &width, &height);
 	if (pic)
 	{
-		tr.dlightImage = R_CreateImage("*dlight", pic, width, height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+		tr.dlightImage = R_CreateImage("*dlight", pic, width, height, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP_TO_EDGE );
 		Z_Free(pic);
 	}
 	else
@@ -1130,7 +1116,7 @@ static void R_CreateDlightImage( void )
 				data[y][x][3] = 255;
 			}
 		}
-		tr.dlightImage = R_CreateImage("*dlight", (byte *)data, DLIGHT_SIZE, DLIGHT_SIZE, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+		tr.dlightImage = R_CreateImage("*dlight", (byte *)data, DLIGHT_SIZE, DLIGHT_SIZE, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP_TO_EDGE );
 	}
 }
 
@@ -1218,7 +1204,7 @@ static void R_CreateFogImage( void ) {
 	// standard openGL clamping doesn't really do what we want -- it includes
 	// the border color at the edges.  OpenGL 1.2 has clamp-to-edge, which does
 	// what we want.
-	tr.fogImage = R_CreateImage("*fog", (byte *)data, FOG_S, FOG_T, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP );
+	tr.fogImage = R_CreateImage("*fog", (byte *)data, FOG_S, FOG_T, GL_RGBA, qfalse, qfalse, qfalse, GL_CLAMP_TO_EDGE );
 	Hunk_FreeTempMemory( data );
 
 	borderColor[0] = 1.0;
@@ -1353,7 +1339,7 @@ void R_CreateBuiltinImages( void ) {
 
 	for(x=0;x<NUM_SCRATCH_IMAGES;x++) {
 		// scratchimage is usually used for cinematic drawing
-		tr.scratchImage[x] = R_CreateImage(va("*scratch%d",x), (byte *)data, DEFAULT_SIZE, DEFAULT_SIZE, GL_RGBA, qfalse, qtrue, qfalse, GL_CLAMP);
+		tr.scratchImage[x] = R_CreateImage(va("*scratch%d",x), (byte *)data, DEFAULT_SIZE, DEFAULT_SIZE, GL_RGBA, qfalse, qtrue, qfalse, GL_CLAMP_TO_EDGE);
 	}
 
 	R_CreateDlightImage();

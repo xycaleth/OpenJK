@@ -811,7 +811,7 @@ public:
 
 		// Create The Image
 		//------------------
-		mImage = R_FindImageFile(texturePath, qfalse, qfalse, qfalse, GL_CLAMP);
+		mImage = R_FindImageFile(texturePath, qfalse, qfalse, qfalse, GL_CLAMP_TO_EDGE);
 		if (!mImage)
 		{
 			Com_Error(ERR_DROP, "CWeatherParticleCloud: Could not texture %s", texturePath);

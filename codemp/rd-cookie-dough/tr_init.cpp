@@ -225,7 +225,7 @@ static void GL_SetDefaultState(void);
 
 static void R_Splash()
 {
-	image_t* pImage = R_FindImageFile("menu/splash", qfalse, qfalse, qfalse, GL_CLAMP);
+	image_t* pImage = R_FindImageFile("menu/splash", qfalse, qfalse, qfalse, GL_CLAMP_TO_EDGE);
 	//extern void	RB_SetGL2D(void);
 	//RB_SetGL2D();
 	if ( pImage )
@@ -436,9 +436,8 @@ static void GLimp_InitExtensions(void)
 		ri.Cvar_Set( "r_ext_texture_filter_anisotropic_avail", "0" );
 	}
 
-	// GL_EXT_clamp_to_edge
+	// Clamp to edge is always available in modern GL
 	glConfig.clampToEdgeAvailable = qtrue;
-	Com_Printf ("...using GL_EXT_texture_edge_clamp\n" );
 
 	glConfigExt.doGammaCorrectionWithShaders = qfalse;
 
