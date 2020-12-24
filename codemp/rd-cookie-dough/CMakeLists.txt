@@ -42,6 +42,8 @@ set(MPCookieDoughRendererFiles
 	"${MPDir}/rd-cookie-dough/tr_arb.cpp"
 	"${MPDir}/rd-cookie-dough/tr_backend.cpp"
 	"${MPDir}/rd-cookie-dough/tr_bsp.cpp"
+	"${MPDir}/rd-cookie-dough/tr_buffers.cpp"
+	"${MPDir}/rd-cookie-dough/tr_buffers.h"
 	"${MPDir}/rd-cookie-dough/tr_cmds.cpp"
 	"${MPDir}/rd-cookie-dough/tr_curve.cpp"
 	"${MPDir}/rd-cookie-dough/tr_decals.cpp"

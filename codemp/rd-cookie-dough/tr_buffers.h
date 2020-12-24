@@ -22,12 +22,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 
-void GLSL_Init();
-void GLSL_Shutdown();
-
-// Main shader
-void GLSL_MainShader_Use();
-
-// Fullscreen shader
-void GLSL_FullscreenShader_Init();
-void GLSL_FullscreenShader_Use();
+void GpuBuffers_Init();
+int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size);
+int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size);

@@ -30,49 +30,12 @@ static constexpr char VERSION_STRING[] = "#version 430 core";
 static struct 
 {
 	GLuint fullscreenProgram;
+	GLuint mainProgram;
 } s_shaders;
 
-void GLSL_Init()
+static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragmentShaderCode)
 {
-	static constexpr char VERTEX_SHADER[] = R"(
-)";
-}
-
-void GLSL_FullscreenShader_Init()
-{
-	static constexpr char VERTEX_SHADER[] = R"(
-layout(location = 0) out vec2 out_TexCoord;
-
-void main() {
-	// 0 -> (-1, -1)
-	// 1 -> ( 3, -1)
-	// 2 -> (-1,  3)
-	gl_Position = vec4(
-		float(4 * (gl_VertexID % 2) - 1),
-		float(4 * (gl_VertexID / 2) - 1),
-		0.0,
-		1.0);
-	
-	// 0 -> (0, 0)
-	// 1 -> (2, 0)
-	// 2 -> (0, 2)
-	out_TexCoord = vec2(
-		float(2 * (gl_VertexID % 2)),
-		float(1 - 2 * (gl_VertexID / 2)));
-}
-)";
-
-	static constexpr char FRAGMENT_SHADER[] = R"(
-layout(binding = 0) uniform sampler2D u_SplashImage;
-layout(location = 0) in vec2 in_TexCoord;
-layout(location = 0) out vec4 out_FragColor;
-
-void main() {
-	out_FragColor = texture(u_SplashImage, in_TexCoord);
-}
-)";
-
-	const char *vertexShaderStrings[] = {VERSION_STRING, VERTEX_SHADER};
+	const char *vertexShaderStrings[] = {VERSION_STRING, vertexShaderCode};
 	GLuint vertexShader = qglCreateShader(GL_VERTEX_SHADER);
 	qglShaderSource(vertexShader, 2, vertexShaderStrings, nullptr);
 	qglCompileShader(vertexShader);
@@ -92,7 +55,7 @@ void main() {
 		ri.Hunk_FreeTempMemory(logText);
 	}
 
-	const char *fragmentShaderStrings[] = {VERSION_STRING, FRAGMENT_SHADER};
+	const char *fragmentShaderStrings[] = {VERSION_STRING, fragmentShaderCode};
 	GLuint fragmentShader = qglCreateShader(GL_FRAGMENT_SHADER);
 	qglShaderSource(fragmentShader, 2, fragmentShaderStrings, nullptr);
 	qglCompileShader(fragmentShader);
@@ -130,10 +93,114 @@ void main() {
 		ri.Hunk_FreeTempMemory(logText);
 	}
 
+	qglDetachShader(program, vertexShader);
+	qglDetachShader(program, fragmentShader);
 	qglDeleteShader(vertexShader);
 	qglDeleteShader(fragmentShader);
 
-	s_shaders.fullscreenProgram = program;
+	return program;
+}
+
+static void GLSL_MainShader_Init()
+{
+	static constexpr const char VERTEX_SHADER[] = R"(
+layout(std140, binding = 0) uniform Scene
+{
+	mat4 u_ViewMatrix;
+	mat4 u_ViewProjectionMatrix;
+};
+
+layout(std140, binding = 1) uniform Model
+{
+	mat4 u_ModelMatrix;
+};
+
+layout(location = 0) in vec3 in_Position;
+layout(location = 1) in vec4 in_Color;
+layout(location = 2) in vec2 in_TexCoord;
+
+layout(location = 0) out vec4 out_Color;
+layout(location = 1) out vec2 out_TexCoord;
+
+void main()
+{
+	vec2 position = in_Position.xy;
+	position.x = (position.x / 640.0) * 2.0 - 1.0;
+	position.y = -((position.y / 480.0) * 2.0 - 1.0);
+	gl_Position = vec4(position, 0.0, 1.0);
+	out_Color = in_Color;
+	out_TexCoord = in_TexCoord;
+}
+)";
+
+	static constexpr const char FRAGMENT_SHADER[] = R"(
+layout(binding = 0) uniform sampler2D u_Texture;
+
+layout(location = 0) in vec4 in_Color;
+layout(location = 1) in vec2 in_TexCoord;
+
+layout(location = 0) out vec4 out_FragColor;
+
+void main()
+{
+	out_FragColor = in_Color * texture(u_Texture, in_TexCoord);
+}
+)";
+
+	s_shaders.mainProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+}
+
+void GLSL_Init()
+{
+	GLSL_MainShader_Init();
+}
+
+void GLSL_Shutdown()
+{
+	qglDeleteProgram(s_shaders.fullscreenProgram);
+	qglDeleteProgram(s_shaders.mainProgram);
+}
+
+void GLSL_MainShader_Use()
+{
+	qglUseProgram(s_shaders.mainProgram);
+}
+
+void GLSL_FullscreenShader_Init()
+{
+	static constexpr char VERTEX_SHADER[] = R"(
+layout(location = 0) out vec2 out_TexCoord;
+
+void main() {
+	// 0 -> (-1, -1)
+	// 1 -> ( 3, -1)
+	// 2 -> (-1,  3)
+	gl_Position = vec4(
+		float(4 * (gl_VertexID % 2) - 1),
+		float(4 * (gl_VertexID / 2) - 1),
+		0.0,
+		1.0);
+	
+	// 0 -> (0, 0)
+	// 1 -> (2, 0)
+	// 2 -> (0, 2)
+	out_TexCoord = vec2(
+		float(2 * (gl_VertexID % 2)),
+		float(1 - 2 * (gl_VertexID / 2)));
+}
+)";
+
+	static constexpr char FRAGMENT_SHADER[] = R"(
+layout(binding = 0) uniform sampler2D u_SplashImage;
+layout(location = 0) in vec2 in_TexCoord;
+layout(location = 0) out vec4 out_FragColor;
+
+void main() {
+	out_FragColor = texture(u_SplashImage, in_TexCoord);
+}
+)";
+
+	s_shaders.fullscreenProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
 }
 
 void GLSL_FullscreenShader_Use()

@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include "../rd-common/tr_common.h"
+#include "tr_buffers.h"
 #include "tr_glsl.h"
 #include "tr_WorldEffects.h"
 #include "qcommon/MiniHeap.h"
@@ -229,8 +230,8 @@ static void R_Splash()
 	GLSL_FullscreenShader_Init();
 
 	image_t* pImage = R_FindImageFile("menu/splash", qfalse, qfalse, qfalse, GL_CLAMP_TO_EDGE);
-	//extern void	RB_SetGL2D(void);
-	//RB_SetGL2D();
+	extern void	RB_SetGL2D(void);
+	RB_SetGL2D();
 	if ( pImage )
 	{
 		//invalid paths?
@@ -1405,6 +1406,8 @@ void R_Init( void ) {
 	}
 	InitOpenGL();
 
+	GLSL_Init();
+	GpuBuffers_Init();
 	R_InitImages();
 	R_InitShaders(qfalse);
 	R_InitSkins();
@@ -1469,6 +1472,8 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 				SaveGhoul2InfoArray();
 			}
 		}
+
+		GLSL_Shutdown();
 	}
 
 	// shut down platform specific OpenGL stuff

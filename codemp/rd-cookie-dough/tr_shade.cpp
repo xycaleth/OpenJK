@@ -25,6 +25,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.h"
 #include "tr_quicksprite.h"
+#include "tr_buffers.h"
+#include "tr_glsl.h"
 
 /*
 
@@ -34,132 +36,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 shaderCommands_t	tess;
-static qboolean	setArraysOnce;
 
 color4ub_t	styleColors[MAX_LIGHT_STYLES];
 
 extern bool g_bRenderGlowingObjects;
-
-/*
-================
-R_ArrayElementDiscrete
-
-This is just for OpenGL conformance testing, it should never be the fastest
-================
-*/
-static void APIENTRY R_ArrayElementDiscrete( GLint index ) {
-	qglColor4ubv( tess.svars.colors[ index ] );
-	if ( glState.currenttmu ) {
-		qglMultiTexCoord2f( 0, tess.svars.texcoords[ 0 ][ index ][0], tess.svars.texcoords[ 0 ][ index ][1] );
-		qglMultiTexCoord2f( 1, tess.svars.texcoords[ 1 ][ index ][0], tess.svars.texcoords[ 1 ][ index ][1] );
-	} else {
-		qglTexCoord2fv( tess.svars.texcoords[ 0 ][ index ] );
-	}
-	qglVertex3fv( tess.xyz[ index ] );
-}
-
-/*
-===================
-R_DrawStripElements
-
-===================
-*/
-static int		c_vertexes;		// for seeing how long our average strips are
-static int		c_begins;
-static void R_DrawStripElements( int numIndexes, const glIndex_t *indexes, void ( APIENTRY *element )(GLint) ) {
-	int i;
-	glIndex_t last[3];
-	qboolean even;
-
-	c_begins++;
-
-	if ( numIndexes <= 0 ) {
-		return;
-	}
-
-	qglBegin( GL_TRIANGLE_STRIP );
-
-	// prime the strip
-	element( indexes[0] );
-	element( indexes[1] );
-	element( indexes[2] );
-	c_vertexes += 3;
-
-	last[0] = indexes[0];
-	last[1] = indexes[1];
-	last[2] = indexes[2];
-
-	even = qfalse;
-
-	for ( i = 3; i < numIndexes; i += 3 )
-	{
-		// odd numbered triangle in potential strip
-		if ( !even )
-		{
-			// check previous triangle to see if we're continuing a strip
-			if ( ( indexes[i+0] == last[2] ) && ( indexes[i+1] == last[1] ) )
-			{
-				element( indexes[i+2] );
-				c_vertexes++;
-				assert( (int)indexes[i+2] < tess.numVertexes );
-				even = qtrue;
-			}
-			// otherwise we're done with this strip so finish it and start
-			// a new one
-			else
-			{
-				qglEnd();
-
-				qglBegin( GL_TRIANGLE_STRIP );
-				c_begins++;
-
-				element( indexes[i+0] );
-				element( indexes[i+1] );
-				element( indexes[i+2] );
-
-				c_vertexes += 3;
-
-				even = qfalse;
-			}
-		}
-		else
-		{
-			// check previous triangle to see if we're continuing a strip
-			if ( ( last[2] == indexes[i+1] ) && ( last[0] == indexes[i+0] ) )
-			{
-				element( indexes[i+2] );
-				c_vertexes++;
-
-				even = qfalse;
-			}
-			// otherwise we're done with this strip so finish it and start
-			// a new one
-			else
-			{
-				qglEnd();
-
-				qglBegin( GL_TRIANGLE_STRIP );
-				c_begins++;
-
-				element( indexes[i+0] );
-				element( indexes[i+1] );
-				element( indexes[i+2] );
-				c_vertexes += 3;
-
-				even = qfalse;
-			}
-		}
-
-		// cache the last three vertices
-		last[0] = indexes[i+0];
-		last[1] = indexes[i+1];
-		last[2] = indexes[i+2];
-	}
-
-	qglEnd();
-}
-
-
 
 /*
 ==================
@@ -171,35 +51,11 @@ without compiled vertex arrays.
 ==================
 */
 static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
-	int		primitives;
-
-	primitives = r_primitives->integer;
-
-	// default is to use triangles if compiled vertex arrays are present
-	if ( primitives == 0 ) {
-		primitives = 1;
-	}
-
-
-	if ( primitives == 2 ) {
-		qglDrawElements( GL_TRIANGLES,
-						numIndexes,
-						GL_INDEX_TYPE,
-						indexes );
-		return;
-	}
-
-	if ( primitives == 1 ) {
-		R_DrawStripElements( numIndexes,  indexes, qglArrayElement );
-		return;
-	}
-
-	if ( primitives == 3 ) {
-		R_DrawStripElements( numIndexes,  indexes, R_ArrayElementDiscrete );
-		return;
-	}
-
-	// anything else will cause no drawing
+	const int offset = GpuBuffers_AllocFrameIndexDataMemory(indexes, numIndexes * sizeof(*indexes));
+	qglDrawElements( GL_TRIANGLES,
+					numIndexes,
+					GL_INDEX_TYPE,
+					reinterpret_cast<const void*>(offset) );
 }
 
 
@@ -1621,6 +1477,12 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			break;
 		}
 
+		if (pStage->ss && pStage->ss->surfaceSpriteType)
+		{
+			// We check for surfacesprites AFTER drawing everything else
+			continue;
+		}
+
 		stateBits = pStage->stateBits;
 
 		if ( backEnd.currentEntity )
@@ -1637,12 +1499,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			{//want to use RGBGen from ent
 				forceRGBGen = CGEN_ENTITY;
 			}
-		}
-
-		if (pStage->ss && pStage->ss->surfaceSpriteType)
-		{
-			// We check for surfacesprites AFTER drawing everything else
-			continue;
 		}
 
 		if (UseGLFog)
@@ -1665,27 +1521,25 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		}
 		ComputeTexCoords( pStage );
 
-		if ( !setArraysOnce )
-		{
-			qglEnableClientState( GL_COLOR_ARRAY );
-			qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, input->svars.colors );
-		}
+		int offset = GpuBuffers_AllocFrameVertexDataMemory(tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numIndexes);
+		qglEnableVertexAttribArray(1);
+		qglVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, reinterpret_cast<const void*>(offset));
 
 		//
 		// do multitexture
 		//
 		if ( pStage->bundle[1].image != 0 )
 		{
+			assert(!"Unsupported right now");
 			DrawMultitextured( input, stage );
 		}
 		else
 		{
 			static bool lStencilled = false;
 
-			if ( !setArraysOnce )
-			{
-				qglTexCoordPointer( 2, GL_FLOAT, 0, input->svars.texcoords[0] );
-			}
+			int offset = GpuBuffers_AllocFrameVertexDataMemory(tess.svars.texcoords, sizeof(tess.svars.texcoords[0][0]) * input->numIndexes);
+			qglEnableVertexAttribArray(2);
+			qglVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<const void*>(offset));
 
 			//
 			// set state
@@ -1763,10 +1617,6 @@ void RB_StageIteratorGeneric( void )
 	shaderCommands_t *input;
 	int stage;
 
-	input = &tess;
-
-	RB_DeformTessGeometry();
-
 	//
 	// log this call
 	//
@@ -1776,6 +1626,10 @@ void RB_StageIteratorGeneric( void )
 		// a call to va() every frame!
 		GLimp_LogComment( va("--- RB_StageIteratorGeneric( %s ) ---\n", tess.shader->name) );
 	}
+
+	input = &tess;
+
+	RB_DeformTessGeometry();
 
 	//
 	// set face culling appropriately
@@ -1789,39 +1643,11 @@ void RB_StageIteratorGeneric( void )
 		qglPolygonOffset( r_offsetFactor->value, r_offsetUnits->value );
 	}
 
-	//
-	// if there is only a single pass then we can enable color
-	// and texture arrays before we compile, otherwise we need
-	// to avoid compiling those arrays since they will change
-	// during multipass rendering
-	//
-	if ( tess.numPasses > 1 || input->shader->multitextureEnv )
-	{
-		setArraysOnce = qfalse;
-		qglDisableClientState (GL_COLOR_ARRAY);
-		qglDisableClientState (GL_TEXTURE_COORD_ARRAY);
-	}
-	else
-	{
-		setArraysOnce = qtrue;
+	int offset = GpuBuffers_AllocFrameVertexDataMemory(input->xyz, sizeof(input->xyz[0]) * input->numIndexes);
+	qglEnableVertexAttribArray(0);
+	qglVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 16, reinterpret_cast<const void*>(offset));
 
-		qglEnableClientState( GL_COLOR_ARRAY);
-		qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, tess.svars.colors );
-
-		qglEnableClientState( GL_TEXTURE_COORD_ARRAY);
-		qglTexCoordPointer( 2, GL_FLOAT, 0, tess.svars.texcoords[0] );
-	}
-
-	qglVertexPointer (3, GL_FLOAT, 16, input->xyz);	// padded for SIMD
-
-	//
-	// enable color and texcoord arrays after the lock if necessary
-	//
-	if ( !setArraysOnce )
-	{
-		qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-		qglEnableClientState( GL_COLOR_ARRAY );
-	}
+	GLSL_MainShader_Use();
 
 	//
 	// call shader function
