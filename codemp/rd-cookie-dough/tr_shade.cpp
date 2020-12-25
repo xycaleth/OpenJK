@@ -1445,8 +1445,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 	for ( stage = 0; stage < input->shader->numUnfoggedPasses; stage++ )
 	{
 		shaderStage_t *pStage = &tess.xstages[stage];
-		int forceRGBGen = 0;
-		int stateBits = 0;
 
 		if ( !pStage->active )
 		{
@@ -1470,24 +1468,6 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			continue;
 		}
 
-		stateBits = pStage->stateBits;
-
-		if ( backEnd.currentEntity )
-		{
-			assert(backEnd.currentEntity->e.renderfx >= 0);
-
-			if ( backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1 )
-			{
-				// we want to be able to rip a hole in the thing being disintegrated, and by doing the depth-testing it avoids some kinds of artefacts, but will probably introduce others?
-				stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
-			}
-
-			if ( backEnd.currentEntity->e.renderfx & RF_RGB_TINT )
-			{//want to use RGBGen from ent
-				forceRGBGen = CGEN_ENTITY;
-			}
-		}
-
 		if (UseGLFog)
 		{
 			if (pStage->mGLFogColorOverride)
@@ -1503,14 +1483,30 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		}
 
 		if (!input->fading)
-		{ //this means ignore this, while we do a fade-out
+		{
+			//this means ignore this, while we do a fade-out
+			int forceRGBGen = 0;
+			if ( backEnd.currentEntity )
+			{
+				assert(backEnd.currentEntity->e.renderfx >= 0);
+
+				if ( backEnd.currentEntity->e.renderfx & RF_RGB_TINT )
+				{//want to use RGBGen from ent
+					forceRGBGen = CGEN_ENTITY;
+				}
+			}
 			ComputeColors( pStage, forceRGBGen );
 		}
+
 		ComputeTexCoords( pStage );
 
 		int offset = GpuBuffers_AllocFrameVertexDataMemory(tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numIndexes);
 		qglEnableVertexAttribArray(1);
 		qglVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, reinterpret_cast<const void*>(offset));
+
+		offset = GpuBuffers_AllocFrameVertexDataMemory(tess.svars.texcoords, sizeof(tess.svars.texcoords[0][0]) * input->numIndexes);
+		qglEnableVertexAttribArray(2);
+		qglVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<const void*>(offset));
 
 		//
 		// do multitexture
@@ -1522,32 +1518,33 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		}
 		else
 		{
-			static bool lStencilled = false;
-
-			int offset = GpuBuffers_AllocFrameVertexDataMemory(tess.svars.texcoords, sizeof(tess.svars.texcoords[0][0]) * input->numIndexes);
-			qglEnableVertexAttribArray(2);
-			qglVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<const void*>(offset));
-
 			//
-			// set state
+			// set textures
 			//
 			if ( (tess.shader == tr.distortionShader) ||
 				 (backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_DISTORTION)) )
-			{ //special distortion effect -rww
+			{
+				//special distortion effect -rww
 				//tr.screenImage should have been set for this specific entity before we got in here.
 				GL_Bind( tr.screenImage );
 				GL_Cull(CT_TWO_SIDED);
 			}
-			else if ( pStage->bundle[0].vertexLightmap && ( r_vertexLight->integer && !r_uiFullScreen->integer ) && r_lightmap->integer )
+			else if ( pStage->bundle[0].vertexLightmap && (r_vertexLight->integer && !r_uiFullScreen->integer) && r_lightmap->integer )
 			{
-				GL_Bind( tr.whiteImage );
+				GL_Bind(tr.whiteImage);
 			}
 			else
-				R_BindAnimatedImage( &pStage->bundle[0] );
+			{
+				R_BindAnimatedImage(&pStage->bundle[0]);
+			}
 
-			if (tess.shader == tr.distortionShader &&
-				glConfig.stencilBits >= 4)
-			{ //draw it to the stencil buffer!
+			//
+			// set state
+			//
+			bool lStencilled = false;
+			if (tess.shader == tr.distortionShader && glConfig.stencilBits >= 4)
+			{
+				//draw it to the stencil buffer!
 				tr_stencilled = true;
 				lStencilled = true;
 				qglEnable(GL_STENCIL_TEST);
@@ -1562,7 +1559,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			{
 				ForceAlpha((unsigned char *) tess.svars.colors, backEnd.currentEntity->e.shaderRGBA[3]);
 				if (backEnd.currentEntity->e.renderfx & RF_ALPHA_DEPTH)
-				{ //depth write, so faces through the model will be stomped over by nearer ones. this works because
+				{
+					//depth write, so faces through the model will be stomped over by nearer ones. this works because
 					//we draw RF_FORCE_ENT_ALPHA stuff after everything else, including standard alpha surfs.
 					GL_State(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE);
 				}
@@ -1571,9 +1569,14 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 					GL_State(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
 				}
 			}
+			else if (backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1))
+			{
+				// we want to be able to rip a hole in the thing being disintegrated, and by doing the depth-testing it avoids some kinds of artefacts, but will probably introduce others?
+				GL_State(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0);
+			}
 			else
 			{
-				GL_State( stateBits );
+				GL_State(pStage->stateBits);
 			}
 
 			//
@@ -1582,7 +1585,8 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			R_DrawElements( input->numIndexes, input->indexes );
 
 			if (lStencilled)
-			{ //re-enable the color buffer, disable stencil test
+			{
+				//re-enable the color buffer, disable stencil test
 				lStencilled = false;
 				qglDisable(GL_STENCIL_TEST);
 				qglColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
