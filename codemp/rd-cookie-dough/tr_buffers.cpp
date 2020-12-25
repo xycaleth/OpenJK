@@ -63,7 +63,7 @@ int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size)
 int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
 {
 	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_buffers.ibo);
-	if (s_buffers.size == 0 || (s_buffers.offset + size) >= s_buffers.iboSize)
+	if (s_buffers.iboSize == 0 || (s_buffers.iboOffset + size) >= s_buffers.iboSize)
 	{
 		// 4mb for now
 		qglBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * 1024 * 1024, nullptr, GL_STREAM_DRAW);

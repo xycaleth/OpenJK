@@ -388,7 +388,10 @@ static void APIENTRY OnGLDebugMessage(GLenum source,
 							 const GLchar* message,
 							 const GLvoid* userParam)
 {
-	Com_Printf("Error: %s", message);
+	if (severity == GL_DEBUG_SEVERITY_MEDIUM_ARB || severity == GL_DEBUG_SEVERITY_HIGH_ARB)
+	{
+		Com_Printf("%s\n", message);
+	}
 }
 
 /*
@@ -451,7 +454,7 @@ static void InitOpenGL( void )
 
 		GLimp_InitExtensions();
 
-		//GL_SetDefaultState();
+		GL_SetDefaultState();
 
 		R_Splash();
 	}
@@ -942,26 +945,26 @@ static void GL_SetDefaultState(void)
 
 	qglCullFace(GL_FRONT);
 
-	qglColor4f(1, 1, 1, 1);
+	//qglColor4f(1, 1, 1, 1);
 
 	// initialize downstream texture unit if we're running
 	// in a multitexture environment
-	GL_SelectTexture(1);
-	GL_TextureMode(r_textureMode->string);
-	GL_TexEnv(GL_MODULATE);
-	qglDisable(GL_TEXTURE_2D);
-	GL_SelectTexture(0);
+	//GL_SelectTexture(1);
+	//GL_TextureMode(r_textureMode->string);
+	//GL_TexEnv(GL_MODULATE);
+	//qglDisable(GL_TEXTURE_2D);
+	//GL_SelectTexture(0);
 
-	qglEnable(GL_TEXTURE_2D);
-	GL_TextureMode(r_textureMode->string);
-	GL_TexEnv(GL_MODULATE);
+	//qglEnable(GL_TEXTURE_2D);
+	//GL_TextureMode(r_textureMode->string);
+	//GL_TexEnv(GL_MODULATE);
 
-	qglShadeModel(GL_SMOOTH);
+	//qglShadeModel(GL_SMOOTH);
 	qglDepthFunc(GL_LEQUAL);
 
 	// the vertex array is always enabled, but the color and texture
 	// arrays are enabled and disabled around the compiled vertex array call
-	qglEnableClientState(GL_VERTEX_ARRAY);
+	//qglEnableClientState(GL_VERTEX_ARRAY);
 
 	//
 	// make sure our GL state vector is set correctly

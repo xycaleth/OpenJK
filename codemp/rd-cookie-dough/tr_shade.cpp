@@ -41,15 +41,6 @@ color4ub_t	styleColors[MAX_LIGHT_STYLES];
 
 extern bool g_bRenderGlowingObjects;
 
-/*
-==================
-R_DrawElements
-
-Optionally performs our own glDrawElements that looks for strip conditions
-instead of using the single glDrawElements call that may be inefficient
-without compiled vertex arrays.
-==================
-*/
 static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 	const int offset = GpuBuffers_AllocFrameIndexDataMemory(indexes, numIndexes * sizeof(*indexes));
 	qglDrawElements( GL_TRIANGLES,
@@ -57,9 +48,6 @@ static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
 					GL_INDEX_TYPE,
 					reinterpret_cast<const void*>(offset) );
 }
-
-
-
 
 /*
 =============================================================
