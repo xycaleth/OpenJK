@@ -42,11 +42,10 @@ color4ub_t	styleColors[MAX_LIGHT_STYLES];
 extern bool g_bRenderGlowingObjects;
 
 static void R_DrawElements( int numIndexes, const glIndex_t *indexes ) {
-	const int offset = GpuBuffers_AllocFrameIndexDataMemory(indexes, numIndexes * sizeof(*indexes));
 	qglDrawElements( GL_TRIANGLES,
 					numIndexes,
 					GL_INDEX_TYPE,
-					reinterpret_cast<const void*>(offset) );
+					reinterpret_cast<const void*>(tess.indexOffset) );
 }
 
 /*
@@ -258,7 +257,7 @@ static void DrawMultitextured( shaderCommands_t *input, int stage ) {
 	// disable texturing on TEXTURE1, then select TEXTURE0
 	//
 	//qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
-	qglDisable( GL_TEXTURE_2D );
+	//qglDisable( GL_TEXTURE_2D );
 
 	GL_SelectTexture( 0 );
 }
@@ -1634,6 +1633,8 @@ void RB_StageIteratorGeneric( void )
 	int offset = GpuBuffers_AllocFrameVertexDataMemory(input->xyz, sizeof(input->xyz[0]) * input->numIndexes);
 	qglEnableVertexAttribArray(0);
 	qglVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 16, reinterpret_cast<const void*>(offset));
+
+	input->indexOffset = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
 
 	GLSL_MainShader_Use();
 

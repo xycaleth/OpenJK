@@ -1442,6 +1442,7 @@ struct shaderCommands_s
 	int			vertexDlightBits[SHADER_MAX_VERTEXES]; QALIGN(16)
 
 	stageVars_t	svars QALIGN(16);
+	int			indexOffset;
 
 	shader_t	*shader;
   float   shaderTime;
