@@ -683,7 +683,7 @@ static void Upload32( unsigned *data,
 			}
 			else
 			{
-				*pformat = GL_RGB8;
+				*pformat = GL_RGBA8;
 			}
 		}
 
