@@ -162,6 +162,48 @@ void GL_Cull( int cullType ) {
 	}
 }
 
+uint64_t GL_GetCullState( int cullType ) {
+	if ( glState.faceCulling == cullType )
+	{
+		return 0;
+	}
+
+	if ( backEnd.projection2D )
+	{
+		return 0;
+	}
+
+	if ( cullType == CT_TWO_SIDED )
+	{
+		return 0;
+	}
+	else
+	{
+		if ( cullType == CT_BACK_SIDED )
+		{
+			if ( backEnd.viewParms.isMirror )
+			{
+				return GLS_CULL_FRONT;
+			}
+			else
+			{
+				return GLS_CULL_BACK;
+			}
+		}
+		else
+		{
+			if ( backEnd.viewParms.isMirror )
+			{
+				return GLS_CULL_BACK;
+			}
+			else
+			{
+				return GLS_CULL_FRONT;
+			}
+		}
+	}
+}
+
 /*
 ** GL_TexEnv
 */
@@ -201,9 +243,9 @@ void GL_TexEnv( int env )
 ** This routine is responsible for setting the most commonly changed state
 ** in Q3.
 */
-void GL_State( uint32_t stateBits )
+void GL_State( uint64_t stateBits )
 {
-	uint32_t diff = stateBits ^ glState.glStateBits;
+	uint64_t diff = stateBits ^ glState.glStateBits;
 
 	if ( !diff )
 	{
@@ -384,6 +426,48 @@ void GL_State( uint32_t stateBits )
 		default:
 			assert( 0 );
 			break;
+		}
+	}
+
+	//
+	// polygon offset
+	//
+	if (diff & GLS_POLYGON_OFFSET_TRUE)
+	{
+		if (stateBits & GLS_POLYGON_OFFSET_TRUE)
+		{
+			qglEnable(GL_POLYGON_OFFSET_FILL);
+			qglPolygonOffset(r_offsetFactor->value, r_offsetUnits->value);
+		}
+		else
+		{
+			qglDisable(GL_POLYGON_OFFSET_FILL);
+		}
+	}
+
+	//
+	// cull state
+	//
+	if (diff & GLS_CULL_BITS)
+	{
+		const uint64_t cullBits = stateBits & GLS_CULL_BITS;
+		if (cullBits != 0)
+		{
+			qglEnable(GL_CULL_FACE);
+			switch (cullBits)
+			{
+				case GLS_CULL_FRONT:
+					qglCullFace(GL_FRONT);
+					break;
+
+				case GLS_CULL_BACK:
+					qglCullFace(GL_BACK);
+					break;
+			}
+		}
+		else
+		{
+			qglDisable(GL_CULL_FACE);
 		}
 	}
 

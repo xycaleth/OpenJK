@@ -896,7 +896,7 @@ typedef struct glstate_s {
 	qboolean	finishCalled;
 	int			texEnv[2];
 	int			faceCulling;
-	uint32_t	glStateBits;
+	uint64_t	glStateBits;
 } glstate_t;
 
 
@@ -1279,9 +1279,10 @@ void	GL_Bind( image_t *image );
 void	GL_SelectTexture( int unit );
 void	GL_TextureMode( const char *string );
 void	GL_CheckErrors( void );
-void	GL_State( uint32_t stateVector );
+void	GL_State( uint64_t stateVector );
 void	GL_TexEnv( int env );
 void	GL_Cull( int cullType );
+uint64_t GL_GetCullState( int cullType );
 
 #define GLS_SRCBLEND_ZERO						0x00000001ULL
 #define GLS_SRCBLEND_ONE						0x00000002ULL

@@ -1423,6 +1423,8 @@ void RenderContext_AddDrawItem(const DrawItem& drawItem)
 
 void RenderContext_Draw(const DrawItem* drawItem)
 {
+	qglUseProgram(drawItem->shaderProgram);
+
 	qglVertexAttribPointer(
 		0, 3, GL_FLOAT, GL_FALSE, 16, reinterpret_cast<const void*>(drawItem->vtxPositionBufferOffset));
 
@@ -1569,6 +1571,7 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 		ComputeTexCoords( pStage );
 
 		DrawItem::Layer* layer = drawItem->layers + drawItem->layerCount++;
+
 		//
 		// upload per-stage vertex data
 		//
@@ -1590,13 +1593,12 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 			//
 			// set textures
 			//
-			if ( (tess.shader == tr.distortionShader) ||
-				 (backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_DISTORTION)) )
+			const bool distortionEffect = ((tess.shader == tr.distortionShader) ||
+				(backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_DISTORTION)));
+			if (distortionEffect)
 			{
 				//special distortion effect -rww
 				//tr.screenImage should have been set for this specific entity before we got in here.
-				GL_Cull(CT_TWO_SIDED);
-
 				layer->textures[0] = tr.screenImage;
 			}
 			else if ( pStage->bundle[0].vertexLightmap && (r_vertexLight->integer && !r_uiFullScreen->integer) && r_lightmap->integer )
@@ -1648,7 +1650,21 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 			{
 				stateBits = pStage->stateBits;
 			}
-			layer->stateGroup.stateBits = pStage->stateBits;
+
+			//
+			// shader-specific stateBits
+			//
+			if ( input->shader->polygonOffset )
+			{
+				stateBits |= GLS_POLYGON_OFFSET_TRUE;
+			}
+
+			if (!distortionEffect)
+			{
+				stateBits |= GL_GetCullState(input->shader->cullType);
+			}
+
+			layer->stateGroup.stateBits = stateBits;
 
 			if (lStencilled)
 			{
@@ -1689,26 +1705,13 @@ void RB_StageIteratorGeneric( void )
 
 	RB_DeformTessGeometry();
 
-	//
-	// set face culling appropriately
-	//
-	GL_Cull( input->shader->cullType );
-
-	// set polygon offset if necessary
-	if ( input->shader->polygonOffset )
-	{
-		qglEnable( GL_POLYGON_OFFSET_FILL );
-		qglPolygonOffset( r_offsetFactor->value, r_offsetUnits->value );
-	}
-
 	DrawItem drawItem = {};
 	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
 	drawItem.indexCount = input->numIndexes;
 	drawItem.indexOffset = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
 	drawItem.vtxPositionBufferOffset = GpuBuffers_AllocFrameVertexDataMemory(
 		input->xyz, sizeof(input->xyz[0]) * input->numIndexes);
-
-	GLSL_MainShader_Use();
+	drawItem.shaderProgram = GLSL_MainShader_GetHandle();
 
 	//
 	// call shader function

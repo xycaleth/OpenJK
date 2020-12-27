@@ -166,6 +166,11 @@ void GLSL_MainShader_Use()
 	qglUseProgram(s_shaders.mainProgram);
 }
 
+int GLSL_MainShader_GetHandle()
+{
+	return s_shaders.mainProgram;
+}
+
 void GLSL_FullscreenShader_Init()
 {
 	static constexpr char VERTEX_SHADER[] = R"(
