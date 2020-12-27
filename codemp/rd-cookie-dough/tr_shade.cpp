@@ -64,24 +64,22 @@ R_BindAnimatedImage
 */
 
 // de-static'd because tr_quicksprite wants it
-void R_BindAnimatedImage( textureBundle_t *bundle ) {
+image_t* R_GetAnimatedImage( textureBundle_t *bundle ) {
 	int		index;
 
 	if ( bundle->isVideoMap ) {
 		ri.CIN_RunCinematic(bundle->videoMapHandle);
 		ri.CIN_UploadCinematic(bundle->videoMapHandle);
-		return;
+		return tr.scratchImage[bundle->videoMapHandle];
 	}
 
 	if ((r_fullbright->value /*|| tr.refdef.doFullbright */) && bundle->isLightmap)
 	{
-		GL_Bind( tr.whiteImage );
-		return;
+		return tr.whiteImage;
 	}
 
 	if ( bundle->numImageAnimations <= 1 ) {
-		GL_Bind( bundle->image );
-		return;
+		return bundle->image;
 	}
 
 	if (backEnd.currentEntity->e.renderfx & RF_SETANIMINDEX )
@@ -114,7 +112,7 @@ void R_BindAnimatedImage( textureBundle_t *bundle ) {
 		index %= bundle->numImageAnimations;
 	}
 
-	GL_Bind( *((image_t**)bundle->image + index) );
+	return *((image_t**)bundle->image + index);
 }
 
 /*
@@ -232,7 +230,7 @@ static void DrawMultitextured( shaderCommands_t *input, int stage ) {
 	//
 	GL_SelectTexture( 0 );
 	qglTexCoordPointer( 2, GL_FLOAT, 0, input->svars.texcoords[0] );
-	R_BindAnimatedImage( &pStage->bundle[0] );
+	//R_BindAnimatedImage( &pStage->bundle[0] );
 
 	//
 	// lightmap/secondary pass
@@ -249,7 +247,7 @@ static void DrawMultitextured( shaderCommands_t *input, int stage ) {
 
 	qglTexCoordPointer( 2, GL_FLOAT, 0, input->svars.texcoords[1] );
 
-	R_BindAnimatedImage( &pStage->bundle[1] );
+	//R_BindAnimatedImage( &pStage->bundle[1] );
 
 	R_DrawElements( input->numIndexes, input->indexes );
 
@@ -519,11 +517,11 @@ static void ProjectDlightTexture2( void ) {
 			qglTexCoordPointer( 2, GL_FLOAT, 0, oldTexCoordsArray[0] );
 			if (dStage->bundle[0].image && !dStage->bundle[0].isLightmap && !dStage->bundle[0].numTexMods && dStage->bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED && dStage->bundle[0].tcGen != TCGEN_FOG)
 			{
-				R_BindAnimatedImage( &dStage->bundle[0] );
+				//R_BindAnimatedImage( &dStage->bundle[0] );
 			}
 			else
 			{
-				R_BindAnimatedImage( &dStage->bundle[1] );
+				//R_BindAnimatedImage( &dStage->bundle[1] );
 			}
 
 			GL_SelectTexture( 1 );
@@ -857,11 +855,11 @@ static void ProjectDlightTexture( void ) {
 			qglTexCoordPointer( 2, GL_FLOAT, 0, tess.svars.texcoords[0] );
 			if (dStage->bundle[0].image && !dStage->bundle[0].isLightmap && !dStage->bundle[0].numTexMods)
 			{
-				R_BindAnimatedImage( &dStage->bundle[0] );
+				//R_BindAnimatedImage( &dStage->bundle[0] );
 			}
 			else
 			{
-				R_BindAnimatedImage( &dStage->bundle[1] );
+				//R_BindAnimatedImage( &dStage->bundle[1] );
 			}
 
 			GL_SelectTexture( 1 );
@@ -1607,8 +1605,7 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 			}
 			else
 			{
-				//R_BindAnimatedImage(&pStage->bundle[0]);
-				layer->textures[0] = pStage->bundle[0].image;
+				layer->textures[0] = R_GetAnimatedImage(&pStage->bundle[0]);
 			}
 
 			//

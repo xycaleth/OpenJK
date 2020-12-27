@@ -100,7 +100,7 @@ void CQuickSpriteSystem::Flush(void)
 	//
 	// render the main pass
 	//
-	R_BindAnimatedImage( mTexBundle );
+	//R_BindAnimatedImage( mTexBundle );
 	GL_State(mGLStateBits);
 
 	//
