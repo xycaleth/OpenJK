@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.h"
 #include "tr_WorldEffects.h"
+#include "tr_buffers.h"
 #include "tr_glsl.h"
 
 backEndData_t	*backEndData;
@@ -414,10 +415,6 @@ static void RB_Hyperspace( void ) {
 
 
 void SetViewportAndScissor( void ) {
-	qglMatrixMode(GL_PROJECTION);
-	qglLoadMatrixf( backEnd.viewParms.projectionMatrix );
-	qglMatrixMode(GL_MODELVIEW);
-
 	// set the window clipping
 	qglViewport( backEnd.viewParms.viewportX, backEnd.viewParms.viewportY,
 		backEnd.viewParms.viewportWidth, backEnd.viewParms.viewportHeight );
@@ -620,7 +617,6 @@ typedef struct postRender_s {
 	int			depthRange;
 	drawSurf_t	*drawSurf;
 	shader_t	*shader;
-	qboolean	eValid;
 } postRender_t;
 
 static postRender_t g_postRenders[MAX_POST_RENDERS];
@@ -731,7 +727,8 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 			if ( (backEnd.refdef.entities[entityNum].e.renderfx & RF_DISTORTION) ||
 				 (backEnd.refdef.entities[entityNum].e.renderfx & RF_FORCEPOST) ||
 				 (backEnd.refdef.entities[entityNum].e.renderfx & RF_FORCE_ENT_ALPHA) )
-			{ //must render last
+			{
+				//must render last
 				curEnt = &backEnd.refdef.entities[entityNum];
 				pRender = &g_postRenders[g_numPostRenders];
 
@@ -762,17 +759,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				pRender->fogNum = fogNum;
 				pRender->shader = shader;
 
-				/*
-				if (shader == tr.distortionShader)
-				{
-					pRender->eValid = qfalse;
-				}
-				else
-				*/
-				{
-					pRender->eValid = qtrue;
-				}
-
 				//assure the info is back to the last set state
 				shader = oldShader;
 				entityNum = oldEntityNum;
@@ -785,45 +771,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				continue;
 			}
 		}
-		/*
-		else if (shader == tr.distortionShader &&
-			g_numPostRenders < MAX_POST_RENDERS)
-		{ //not an ent, just a surface that needs this effect
-			pRender = &g_postRenders[g_numPostRenders];
-
-			g_numPostRenders++;
-
-			depthRange = 0;
-			pRender->depthRange = depthRange;
-
-			//It is not necessary to update the old* values because
-			//we are not updating now with the current values.
-			depthRange = oldDepthRange;
-
-			//store off the ent num
-			pRender->entNum = entityNum;
-
-			//remember the other values necessary for rendering this surf
-			pRender->drawSurf = drawSurf;
-			pRender->dlighted = dlighted;
-			pRender->fogNum = fogNum;
-			pRender->shader = shader;
-
-			pRender->eValid = qfalse;
-
-			//assure the info is back to the last set state
-			shader = oldShader;
-			entityNum = oldEntityNum;
-			fogNum = oldFogNum;
-			dlighted = oldDlighted;
-
-			oldSort = -20; //invalidate this thing, cause we may want to postrender more surfs of the same sort
-
-			//continue without bothering to begin a draw surf
-			continue;
-		}
-		*/
-
 		if (shader != oldShader || fogNum != oldFogNum || dlighted != oldDlighted
 			|| ( entityNum != oldEntityNum && !shader->entityMergable ) )
 		{
@@ -882,8 +829,6 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
 			}
 
-			qglLoadMatrixf( backEnd.ori.modelMatrix );
-
 			//
 			// change depthrange if needed
 			//
@@ -915,17 +860,9 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 	backEnd.refdef.floatTime = originalTime;
 
-	// draw the contents of the last shader batch
-	//assert(entityNum < MAX_GENTITIES);
-
 	if (oldShader != NULL) {
 		RB_EndSurface();
 	}
-
-#ifdef _CRAZY_ATTRIB_DEBUG
-	qglPopAttrib();
-	glState.glStateBits = -1;
-#endif
 
 	if (tr_stencilled && tr_distortionPrePost)
 	{ //ok, cap it now
@@ -945,38 +882,20 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 			RB_BeginSurface( pRender->shader, pRender->fogNum );
 
-			/*
-			if (!pRender->eValid && pRender->entNum == REFENTITYNUM_WORLD)
-			{ //world/other surface
-				backEnd.currentEntity = &tr.worldEntity;
-				backEnd.refdef.floatTime = originalTime;
-				backEnd.ori = backEnd.viewParms.world;
-				// we have to reset the shaderTime as well otherwise image animations on
-				// the world (like water) continue with the wrong frame
-				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+			backEnd.currentEntity = &backEnd.refdef.entities[pRender->entNum];
 
+			backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
+			// we have to reset the shaderTime as well otherwise image animations start
+			// from the wrong frame
+			tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
+
+			// set up the transformation matrix
+			R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.ori );
+
+			// set up the dynamic lighting if needed
+			if ( backEnd.currentEntity->needDlights ) {
 				R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
 			}
-			else
-			*/
-			{ //ent
-				backEnd.currentEntity = &backEnd.refdef.entities[pRender->entNum];
-
-				backEnd.refdef.floatTime = originalTime - backEnd.currentEntity->e.shaderTime;
-				// we have to reset the shaderTime as well otherwise image animations start
-				// from the wrong frame
-				tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
-
-				// set up the transformation matrix
-				R_RotateForEntity( backEnd.currentEntity, &backEnd.viewParms, &backEnd.ori );
-
-				// set up the dynamic lighting if needed
-				if ( backEnd.currentEntity->needDlights ) {
-					R_TransformDlights( backEnd.refdef.num_dlights, backEnd.refdef.dlights, &backEnd.ori );
-				}
-			}
-
-			qglLoadMatrixf( backEnd.ori.modelMatrix );
 
 			depthRange = pRender->depthRange;
 			switch ( depthRange )
@@ -995,80 +914,10 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 					break;
 			}
 
-			/*
-			if (!pRender->eValid)
-			{ //special full-screen "distortion" (or refraction or whatever the heck you want to call it)
-				if (!tr_stencilled)
-				{ //only need to do this once every frame (that a surface using it is around)
-					int radX = 2048;
-					int radY = 2048;
-					int x = glConfig.vidWidth/2;
-					int y = glConfig.vidHeight/2;
-					int cX, cY;
-
-					GL_Bind( tr.screenImage );
-					//using this method, we could pixel-filter the texture and all sorts of crazy stuff.
-					//but, it is slow as hell.
-#if 0
-					static byte *tmp = NULL;
-					if (!tmp)
-					{
-						tmp = (byte *)Z_Malloc((sizeof(byte)*4)*(glConfig.vidWidth*glConfig.vidHeight), TAG_ICARUS, qtrue);
-					}
-					qglReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
-					qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
-#endif
-
-					if (radX > glConfig.maxTextureSize)
-					{
-						radX = glConfig.maxTextureSize;
-					}
-					if (radY > glConfig.maxTextureSize)
-					{
-						radY = glConfig.maxTextureSize;
-					}
-
-					while (glConfig.vidWidth < radX)
-					{
-						radX /= 2;
-					}
-					while (glConfig.vidHeight < radY)
-					{
-						radY /= 2;
-					}
-
-					cX = x-(radX/2);
-					cY = y-(radY/2);
-
-					if (cX+radX > glConfig.vidWidth)
-					{ //would it go off screen?
-						cX = glConfig.vidWidth-radX;
-					}
-					else if (cX < 0)
-					{ //cap it off at 0
-						cX = 0;
-					}
-
-					if (cY+radY > glConfig.vidHeight)
-					{ //would it go off screen?
-						cY = glConfig.vidHeight-radY;
-					}
-					else if (cY < 0)
-					{ //cap it off at 0
-						cY = 0;
-					}
-
-					qglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, cX, cY, radX, radY, 0);
-				}
-				lastPostEnt = ENTITYNUM_NONE;
-			}
-			*/
-			if (!pRender->eValid)
-			{
-			}
-			else if ((backEnd.refdef.entities[pRender->entNum].e.renderfx & RF_DISTORTION) &&
+			if ((backEnd.refdef.entities[pRender->entNum].e.renderfx & RF_DISTORTION) &&
 				lastPostEnt != pRender->entNum)
-			{ //do the capture now, we only need to do it once per ent
+			{
+				//do the capture now, we only need to do it once per ent
 				int x, y;
 				int rad;
 				bool r;
@@ -1076,27 +925,8 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				//stomp over this texture num in texture memory.
 				GL_Bind( tr.screenImage );
 
-#if 0 //yeah.. this kinda worked but it was stupid
-				if (pRender->eValid)
-				{
-					r = R_WorldCoordToScreenCoord( backEnd.currentEntity->e.origin, &x, &y );
-					rad = backEnd.currentEntity->e.radius;
-				}
-				else
-				{
-					vec3_t v;
-					//probably a little bit expensive.. but we're doing this for looks, not speed!
-					if (!R_AverageTessXYZ(v))
-					{ //failed, just use first vert I guess
-						VectorCopy(tess.xyz[0], v);
-					}
-					r = R_WorldCoordToScreenCoord( v, &x, &y );
-					rad = 256;
-				}
-#else
 				r = R_WorldCoordToScreenCoord( backEnd.currentEntity->e.origin, &x, &y );
 				rad = backEnd.currentEntity->e.radius;
-#endif
 
 				if (r)
 				{
@@ -1134,19 +964,15 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 	}
 
-	// go back to the world modelview matrix
-	qglLoadMatrixf( backEnd.viewParms.world.modelMatrix );
 	if ( depthRange ) {
 		qglDepthRange (0, 1);
 	}
 
-#if 0
-	RB_DrawSun();
-#endif
 	if (tr_stencilled && !tr_distortionPrePost)
 	{ //draw in the stencil buffer's cutout
 		RB_DistortionFill();
 	}
+
 	if (!didShadowPass)
 	{
 		// darken down any stencil shadows
@@ -1176,14 +1002,6 @@ void RB_SetGL2D(void)
 	// set 2D virtual screen size
 	qglViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	qglScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-
-#if defined(COOKIE)
-	qglMatrixMode(GL_PROJECTION);
-	qglLoadIdentity();
-	qglOrtho(0, 640, 480, 0, 0, 1);
-	qglMatrixMode(GL_MODELVIEW);
-	qglLoadIdentity();
-#endif
 
 	GL_State(GLS_DEPTHTEST_DISABLE |
 		GLS_SRCBLEND_SRC_ALPHA |

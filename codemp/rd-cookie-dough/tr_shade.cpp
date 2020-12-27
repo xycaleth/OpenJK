@@ -1383,9 +1383,74 @@ static vec4_t	GLFogOverrideColors[GLFOGOVERRIDE_MAX] =
 	{ 1.0, 1.0, 1.0, 1.0 }	// GLFOGOVERRIDE_WHITE
 };
 
+enum PrimitiveType {
+	PRIMITIVE_TRIANGLES
+};
+
+struct StateGroup
+{
+	uint64_t stateBits;
+};
+
+struct DrawItem
+{
+	int layerCount;
+	struct Layer
+	{
+		StateGroup stateGroup;
+		image_t* textures[2];
+		int vtxBufferOffsets[2];
+	} layers[16];
+
+	int shaderProgram;
+	int vtxPositionBufferOffset;
+
+	PrimitiveType primitiveType;
+	int indexCount;
+	int indexOffset;
+};
+
+struct RenderContext
+{
+	uint64_t stateBits;
+
+	int drawItemCount;
+	DrawItem drawItems[4000];
+} s_context;
+
+void RenderContext_AddDrawItem(const DrawItem& drawItem)
+{
+	s_context.drawItems[s_context.drawItemCount++] = drawItem;
+}
+
+void RenderContext_Draw(const DrawItem* drawItem)
+{
+	qglVertexAttribPointer(
+		0, 3, GL_FLOAT, GL_FALSE, 16, reinterpret_cast<const void*>(drawItem->vtxPositionBufferOffset));
+
+	for (int i = 0; i < drawItem->layerCount; ++i)
+	{
+		const DrawItem::Layer* layer = drawItem->layers + i;
+		GL_State(layer->stateGroup.stateBits);
+
+		qglVertexAttribPointer(
+			1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, reinterpret_cast<const void*>(layer->vtxBufferOffsets[0]));
+		qglVertexAttribPointer(
+			2, 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<const void*>(layer->vtxBufferOffsets[1]));
+
+		GL_Bind(layer->textures[0]);
+
+		qglDrawElements(
+			GL_TRIANGLES,
+			drawItem->indexCount,
+			GL_INDEX_TYPE,
+			reinterpret_cast<const void*>(drawItem->indexOffset));
+	}
+}
+
 static const float logtestExp2 = (sqrt( -log( 1.0 / 255.0 ) ));
 extern bool tr_stencilled; //tr_backend.cpp
-static void RB_IterateStagesGeneric( shaderCommands_t *input )
+static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input )
 {
 	int stage;
 	bool	UseGLFog = false;
@@ -1496,23 +1561,29 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				}
 			}
 			ComputeColors( pStage, forceRGBGen );
+
+			if ( backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA) )
+			{
+				ForceAlpha((unsigned char*)tess.svars.colors, backEnd.currentEntity->e.shaderRGBA[3]);
+			}
 		}
 
 		ComputeTexCoords( pStage );
 
-		int offset = GpuBuffers_AllocFrameVertexDataMemory(tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numIndexes);
-		qglEnableVertexAttribArray(1);
-		qglVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, reinterpret_cast<const void*>(offset));
-
-		offset = GpuBuffers_AllocFrameVertexDataMemory(tess.svars.texcoords, sizeof(tess.svars.texcoords[0][0]) * input->numIndexes);
-		qglEnableVertexAttribArray(2);
-		qglVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<const void*>(offset));
-
+		DrawItem::Layer* layer = drawItem->layers + drawItem->layerCount++;
 		//
-		// do multitexture
+		// upload per-stage vertex data
 		//
+		layer->vtxBufferOffsets[0] = GpuBuffers_AllocFrameVertexDataMemory(
+			tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numIndexes);
+		layer->vtxBufferOffsets[1] = GpuBuffers_AllocFrameVertexDataMemory(
+			tess.svars.texcoords, sizeof(tess.svars.texcoords[0][0]) * input->numIndexes);
+
 		if ( pStage->bundle[1].image != 0 )
 		{
+			//
+			// do multitexture
+			//
 			assert(!"Unsupported right now");
 			DrawMultitextured( input, stage );
 		}
@@ -1526,22 +1597,25 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			{
 				//special distortion effect -rww
 				//tr.screenImage should have been set for this specific entity before we got in here.
-				GL_Bind( tr.screenImage );
 				GL_Cull(CT_TWO_SIDED);
+
+				layer->textures[0] = tr.screenImage;
 			}
 			else if ( pStage->bundle[0].vertexLightmap && (r_vertexLight->integer && !r_uiFullScreen->integer) && r_lightmap->integer )
 			{
-				GL_Bind(tr.whiteImage);
+				layer->textures[0] = tr.whiteImage;
 			}
 			else
 			{
-				R_BindAnimatedImage(&pStage->bundle[0]);
+				//R_BindAnimatedImage(&pStage->bundle[0]);
+				layer->textures[0] = pStage->bundle[0].image;
 			}
 
 			//
 			// set state
 			//
 			bool lStencilled = false;
+			uint64_t stateBits = 0;
 			if (tess.shader == tr.distortionShader && glConfig.stencilBits >= 4)
 			{
 				//draw it to the stencil buffer!
@@ -1553,36 +1627,31 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 				qglColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 
 				//don't depthmask, don't blend.. don't do anything
-				GL_State(0);
+				stateBits = 0;
 			}
 			else if (backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_FORCE_ENT_ALPHA))
 			{
-				ForceAlpha((unsigned char *) tess.svars.colors, backEnd.currentEntity->e.shaderRGBA[3]);
 				if (backEnd.currentEntity->e.renderfx & RF_ALPHA_DEPTH)
 				{
 					//depth write, so faces through the model will be stomped over by nearer ones. this works because
 					//we draw RF_FORCE_ENT_ALPHA stuff after everything else, including standard alpha surfs.
-					GL_State(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE);
+					stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE;
 				}
 				else
 				{
-					GL_State(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
+					stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 				}
 			}
 			else if (backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1))
 			{
 				// we want to be able to rip a hole in the thing being disintegrated, and by doing the depth-testing it avoids some kinds of artefacts, but will probably introduce others?
-				GL_State(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0);
+				stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
 			}
 			else
 			{
-				GL_State(pStage->stateBits);
+				stateBits = pStage->stateBits;
 			}
-
-			//
-			// draw
-			//
-			R_DrawElements( input->numIndexes, input->indexes );
+			layer->stateGroup.stateBits = pStage->stateBits;
 
 			if (lStencilled)
 			{
@@ -1593,6 +1662,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 			}
 		}
 	}
+
 	if (FogColorChange)
 	{
 		qglFogfv(GL_FOG_COLOR, fog->parms.color);
@@ -1634,18 +1704,22 @@ void RB_StageIteratorGeneric( void )
 		qglPolygonOffset( r_offsetFactor->value, r_offsetUnits->value );
 	}
 
-	int offset = GpuBuffers_AllocFrameVertexDataMemory(input->xyz, sizeof(input->xyz[0]) * input->numIndexes);
-	qglEnableVertexAttribArray(0);
-	qglVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 16, reinterpret_cast<const void*>(offset));
-
-	input->indexOffset = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
+	DrawItem drawItem = {};
+	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
+	drawItem.indexCount = input->numIndexes;
+	drawItem.indexOffset = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
+	drawItem.vtxPositionBufferOffset = GpuBuffers_AllocFrameVertexDataMemory(
+		input->xyz, sizeof(input->xyz[0]) * input->numIndexes);
 
 	GLSL_MainShader_Use();
 
 	//
 	// call shader function
 	//
-	RB_IterateStagesGeneric( input );
+	RB_IterateStagesGeneric( &drawItem, input );
+
+	//RenderContext_AddDrawItem(drawItem);
+	RenderContext_Draw(&drawItem);
 
 	//
 	// now do any dynamic lighting needed

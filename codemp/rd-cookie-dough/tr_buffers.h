@@ -23,5 +23,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 void GpuBuffers_Init();
+
 int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size);
 int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size);
+int GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size);
+
+void GpuBuffers_BindConstantBuffer(int bufferIndex, int offset, int size);

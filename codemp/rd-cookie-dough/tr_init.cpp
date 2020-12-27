@@ -240,10 +240,6 @@ static void R_Splash()
 
 	GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
 	
-	GLuint vao;
-	qglGenVertexArrays(1, &vao);
-	qglBindVertexArray(vao);
-
 	GLSL_FullscreenShader_Use();
 	qglDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -945,26 +941,7 @@ static void GL_SetDefaultState(void)
 
 	qglCullFace(GL_FRONT);
 
-	//qglColor4f(1, 1, 1, 1);
-
-	// initialize downstream texture unit if we're running
-	// in a multitexture environment
-	//GL_SelectTexture(1);
-	//GL_TextureMode(r_textureMode->string);
-	//GL_TexEnv(GL_MODULATE);
-	//qglDisable(GL_TEXTURE_2D);
-	//GL_SelectTexture(0);
-
-	//qglEnable(GL_TEXTURE_2D);
-	//GL_TextureMode(r_textureMode->string);
-	//GL_TexEnv(GL_MODULATE);
-
-	//qglShadeModel(GL_SMOOTH);
 	qglDepthFunc(GL_LEQUAL);
-
-	// the vertex array is always enabled, but the color and texture
-	// arrays are enabled and disabled around the compiled vertex array call
-	//qglEnableClientState(GL_VERTEX_ARRAY);
 
 	//
 	// make sure our GL state vector is set correctly
@@ -977,6 +954,14 @@ static void GL_SetDefaultState(void)
 	qglEnable(GL_SCISSOR_TEST);
 	qglDisable(GL_CULL_FACE);
 	qglDisable(GL_BLEND);
+
+	GLuint vao;
+	qglGenVertexArrays(1, &vao);
+	qglBindVertexArray(vao);
+
+	qglEnableVertexAttribArray(0);
+	qglEnableVertexAttribArray(1);
+	qglEnableVertexAttribArray(2);
 }
 
 /*
