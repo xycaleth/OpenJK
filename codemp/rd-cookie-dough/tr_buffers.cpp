@@ -48,22 +48,27 @@ static struct {
 void GpuBuffers_Init()
 {
 	s_buffers = {};
-
-	qglGenBuffers(1, &s_buffers.vbo);
-	qglGenBuffers(1, &s_buffers.ibo);
-	qglGenBuffers(1, &s_buffers.ibo);
-
 	qglGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &s_buffers.uboAlignment);
 }
 
 void GpuBuffers_Shutdown()
 {
-	qglUnmapBuffer(GL_ARRAY_BUFFER);
-	qglUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+	if (s_buffers.vbo != 0)
+	{
+		qglUnmapNamedBuffer(s_buffers.vbo);
+		qglDeleteBuffers(1, &s_buffers.vbo);
+	}
 
-	qglDeleteBuffers(1, &s_buffers.vbo);
-	qglDeleteBuffers(1, &s_buffers.ibo);
-	qglDeleteBuffers(1, &s_buffers.ubo);
+	if (s_buffers.ibo != 0)
+	{
+		qglUnmapNamedBuffer(s_buffers.ibo);
+		qglDeleteBuffers(1, &s_buffers.ibo);
+	}
+
+	if (s_buffers.ubo != 0)
+	{
+		qglDeleteBuffers(1, &s_buffers.ubo);
+	}
 }
 
 VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size)
@@ -76,10 +81,10 @@ VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size
 		const uint32_t flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		s_buffers.vboSize = 16 * 1024 * 1024;
 
-		qglBindBuffer(GL_ARRAY_BUFFER, s_buffers.vbo);
-		qglBufferStorage(GL_ARRAY_BUFFER, s_buffers.vboSize, nullptr, flags);
+		qglCreateBuffers(1, &s_buffers.vbo);
+		qglNamedBufferStorage(s_buffers.vbo, s_buffers.vboSize, nullptr, flags);
 
-		s_buffers.vboBasePtr = qglMapBufferRange(GL_ARRAY_BUFFER, 0, s_buffers.vboSize, flags);
+		s_buffers.vboBasePtr = qglMapNamedBufferRange(s_buffers.vbo, 0, s_buffers.vboSize, flags);
 	}
 	
 	if ((s_buffers.vboOffset + paddedSize) >= s_buffers.vboSize)
@@ -108,10 +113,10 @@ IndexBuffer GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
 		const uint32_t flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		s_buffers.iboSize = 4 * 1024 * 1024;
 
-		qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_buffers.ibo);
-		qglBufferStorage(GL_ELEMENT_ARRAY_BUFFER, s_buffers.iboSize, nullptr, flags);
+		qglCreateBuffers(1, &s_buffers.ibo);
+		qglNamedBufferStorage(s_buffers.ibo, s_buffers.iboSize, nullptr, flags);
 
-		s_buffers.iboBasePtr = qglMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, s_buffers.iboSize, flags);
+		s_buffers.iboBasePtr = qglMapNamedBufferRange(s_buffers.ibo, 0, s_buffers.iboSize, flags);
 	}
 	
 	if ((s_buffers.iboOffset + size) >= s_buffers.iboSize)
