@@ -1645,7 +1645,8 @@ void RB_StageIteratorGeneric( void )
 	drawItem.drawType = DRAW_INDEXED;
 	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
 	drawItem.count = input->numIndexes;
-	drawItem.offset = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
+	drawItem.offset = 0;
+	drawItem.indexBuffer = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
 	drawItem.shaderProgram = GLSL_MainShader_GetHandle();
 
 	const VertexBuffer positionsBuffer = GpuBuffers_AllocFrameVertexDataMemory(

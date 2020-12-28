@@ -6,6 +6,8 @@ static struct RenderContext
 	int shaderProgram;
 	image_t *texture;
 
+	int indexBuffer;
+
 	int drawItemCount;
 	DrawItem drawItems[4000];
 } s_context;
@@ -112,11 +114,17 @@ void RenderContext_Draw(const DrawItem* drawItem)
 					drawItem->count);
 				break;
 			case DRAW_INDEXED:
+				if (drawItem->indexBuffer.handle != s_context.indexBuffer)
+				{
+					qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, drawItem->indexBuffer.handle);
+					s_context.indexBuffer = drawItem->indexBuffer.handle;
+				}
+
 				qglDrawElements(
 					GL_TRIANGLES,
 					drawItem->count,
 					GL_INDEX_TYPE,
-					reinterpret_cast<const void*>(drawItem->offset));
+					reinterpret_cast<const void*>(drawItem->indexBuffer.offset));
 				break;
 		}
 	}

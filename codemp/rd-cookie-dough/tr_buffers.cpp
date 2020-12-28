@@ -100,7 +100,7 @@ VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size
 	return buffer;
 }
 
-int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
+IndexBuffer GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
 {
 	if (s_buffers.iboSize == 0)
 	{
@@ -122,9 +122,14 @@ int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
 
 	Com_Memcpy(reinterpret_cast<char*>(s_buffers.iboBasePtr) + s_buffers.iboOffset, data, size);
 
-	int offset = s_buffers.iboOffset;
+	IndexBuffer indexBuffer = {};
+	indexBuffer.handle = s_buffers.ibo;
+	indexBuffer.size = size;
+	indexBuffer.offset = s_buffers.iboOffset;
+
 	s_buffers.iboOffset += size;
-	return offset;
+
+	return indexBuffer;
 }
 
 int GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size)

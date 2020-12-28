@@ -34,6 +34,7 @@ struct DrawItem
 
 	int shaderProgram;
 
+	IndexBuffer indexBuffer;
 	DrawType drawType;
 	PrimitiveType primitiveType;
 	int count;

@@ -50,7 +50,7 @@ void GpuBuffers_Init();
 void GpuBuffers_Shutdown();
 
 VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size);
-int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size);
+IndexBuffer GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size);
 int GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size);
 
 int GpuBuffers_AllocConstantDataMemory(const void *data, size_t size);
