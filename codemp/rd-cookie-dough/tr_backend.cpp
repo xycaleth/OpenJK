@@ -25,6 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "tr_WorldEffects.h"
 #include "tr_buffers.h"
 #include "tr_glsl.h"
+#include "tr_gpucontext.h"
 
 backEndData_t	*backEndData;
 backEndState_t	backEnd;
@@ -1160,8 +1161,20 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 
 	assert(x == 0 && y == 0 && w == 640 && h == 480);
 
-	GLSL_FullscreenShader_Use();
-	qglDrawArrays(GL_TRIANGLES, 0, 3);
+	DrawItem drawItem = {};
+	drawItem.drawType = DRAW_ARRAYS;
+	drawItem.count = 3;
+	drawItem.offset = 0;
+	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
+	drawItem.shaderProgram = GLSL_FullscreenShader_GetHandle();
+
+	drawItem.layerCount = 1;
+	drawItem.layers[0].stateGroup.stateBits = GLS_DEPTHTEST_DISABLE |
+		GLS_SRCBLEND_SRC_ALPHA |
+		GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
+	drawItem.layers[0].textures[0] = tr.scratchImage[client];
+
+	RenderContext_Draw(&drawItem);
 }
 
 void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty) {
@@ -1798,7 +1811,7 @@ const void	*RB_SwapBuffers( const void *data ) {
 	}
 
     if ( !glState.finishCalled ) {
-        qglFinish();
+        //qglFinish();
 	}
 
     GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );

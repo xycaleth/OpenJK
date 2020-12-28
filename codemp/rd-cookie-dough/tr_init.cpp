@@ -242,7 +242,9 @@ static void R_Splash()
 	drawItem.shaderProgram = GLSL_FullscreenShader_GetHandle();
 
 	drawItem.layerCount = 1;
-	drawItem.layers[0].stateGroup.stateBits = GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO;
+	drawItem.layers[0].stateGroup.stateBits = GLS_DEPTHTEST_DISABLE |
+		GLS_SRCBLEND_SRC_ALPHA |
+		GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 	drawItem.layers[0].textures[0] = pImage;
 
 	RenderContext_Draw(&drawItem);
@@ -434,8 +436,10 @@ static void InitOpenGL( void )
 
 		RenderContext_Init();
 
+#if 0
 		qglEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 		qglDebugMessageCallbackARB(OnGLDebugMessage, nullptr);
+#endif
 
 		Com_Printf( "GL_RENDERER: %s\n", (char *)qglGetString (GL_RENDERER) );
 
