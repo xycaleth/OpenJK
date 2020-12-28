@@ -420,7 +420,7 @@ static void InitOpenGL( void )
 	{
 		windowDesc_t windowDesc = { GRAPHICS_API_OPENGL };
 		windowDesc.gl.majorVersion = 4;
-		windowDesc.gl.minorVersion = 3;
+		windowDesc.gl.minorVersion = 5;
 		windowDesc.gl.contextFlags = GLCONTEXT_DEBUG;
 		windowDesc.gl.profile = GLPROFILE_CORE;
 

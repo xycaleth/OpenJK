@@ -1088,10 +1088,6 @@ void RB_SetGL2D(void)
 	qglViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	qglScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 
-	GL_State(GLS_DEPTHTEST_DISABLE |
-		GLS_SRCBLEND_SRC_ALPHA |
-		GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA);
-
 	// set time for 2D shaders
 	backEnd.refdef.time = ri.Milliseconds() * ri.Cvar_VariableValue("timescale");
 	backEnd.refdef.floatTime = backEnd.refdef.time * 0.001f;

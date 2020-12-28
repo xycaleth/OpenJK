@@ -23,14 +23,19 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "glad.h"
 
+#include "qcommon/q_shared.h"
+#include <cstdint>
+
 static struct {
 	GLuint vbo;
 	size_t vboOffset;
 	size_t vboSize;
+	void *vboBasePtr;
 
 	GLuint ibo;
 	size_t iboOffset;
 	size_t iboSize;
+	void *iboBasePtr;
 
 	GLuint ubo;
 	int uboAlignment;
@@ -53,16 +58,25 @@ int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size)
 {
 	const size_t paddedSize = (size + 15) & ~15;
 
-	qglBindBuffer(GL_ARRAY_BUFFER, s_buffers.vbo);
-	if (s_buffers.vboSize == 0 || (s_buffers.vboOffset + paddedSize) >= s_buffers.vboSize)
+	if (s_buffers.vboSize == 0)
 	{
 		// 16mb for now
-		qglBufferData(GL_ARRAY_BUFFER, 16 * 1024 * 1024, nullptr, GL_STREAM_DRAW);
+		const uint32_t flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		s_buffers.vboSize = 16 * 1024 * 1024;
+
+		qglBindBuffer(GL_ARRAY_BUFFER, s_buffers.vbo);
+		qglBufferStorage(GL_ARRAY_BUFFER, s_buffers.vboSize, nullptr, flags);
+
+		s_buffers.vboBasePtr = qglMapBufferRange(GL_ARRAY_BUFFER, 0, s_buffers.vboSize, flags);
+	}
+	
+	if ((s_buffers.vboOffset + paddedSize) >= s_buffers.vboSize)
+	{
+		// This is completely wrong right now.
 		s_buffers.vboOffset = 0;
 	}
 
-	qglBufferSubData(GL_ARRAY_BUFFER, s_buffers.vboOffset, size, data);
+	Com_Memcpy(reinterpret_cast<char*>(s_buffers.vboBasePtr) + s_buffers.vboOffset, data, size);
 
 	int offset = s_buffers.vboOffset;
 	s_buffers.vboOffset += paddedSize;
@@ -71,16 +85,25 @@ int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size)
 
 int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
 {
-	qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_buffers.ibo);
-	if (s_buffers.iboSize == 0 || (s_buffers.iboOffset + size) >= s_buffers.iboSize)
+	if (s_buffers.iboSize == 0)
 	{
-		// 4mb for now
-		qglBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * 1024 * 1024, nullptr, GL_STREAM_DRAW);
+		// 16mb for now
+		const uint32_t flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		s_buffers.iboSize = 4 * 1024 * 1024;
+
+		qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_buffers.ibo);
+		qglBufferStorage(GL_ELEMENT_ARRAY_BUFFER, s_buffers.iboSize, nullptr, flags);
+
+		s_buffers.iboBasePtr = qglMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, s_buffers.iboSize, flags);
+	}
+	
+	if ((s_buffers.iboOffset + size) >= s_buffers.iboSize)
+	{
+		// This is completely wrong right now.
 		s_buffers.iboOffset = 0;
 	}
 
-	qglBufferSubData(GL_ELEMENT_ARRAY_BUFFER, s_buffers.iboOffset, size, data);
+	Com_Memcpy(reinterpret_cast<char*>(s_buffers.iboBasePtr) + s_buffers.iboOffset, data, size);
 
 	int offset = s_buffers.iboOffset;
 	s_buffers.iboOffset += size;
