@@ -2,6 +2,7 @@
 
 #include "tr_local.h"
 
+#include "tr_buffers.h"
 #include <cstdint>
 
 enum PrimitiveType {
@@ -28,7 +29,7 @@ struct DrawItem
 
 		// Vertex format
 		uint32_t enabledVertexAttributes;
-		int vtxBufferOffsets[3];
+		VertexBuffer vertexBuffers[3];
 	} layers[16];
 
 	int shaderProgram;

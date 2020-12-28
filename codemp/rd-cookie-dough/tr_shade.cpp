@@ -1384,7 +1384,7 @@ static vec4_t	GLFogOverrideColors[GLFOGOVERRIDE_MAX] =
 
 static const float logtestExp2 = (sqrt( -log( 1.0 / 255.0 ) ));
 extern bool tr_stencilled; //tr_backend.cpp
-static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input, int positionsOffset )
+static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input, const VertexBuffer* positionsBuffer )
 {
 	int stage;
 	bool	UseGLFog = false;
@@ -1510,10 +1510,10 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 		// upload per-stage vertex data
 		//
 		layer->enabledVertexAttributes = 7;
-		layer->vtxBufferOffsets[0] = positionsOffset;
-		layer->vtxBufferOffsets[1] = GpuBuffers_AllocFrameVertexDataMemory(
+		layer->vertexBuffers[0] = *positionsBuffer;
+		layer->vertexBuffers[1] = GpuBuffers_AllocFrameVertexDataMemory(
 			tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numIndexes);
-		layer->vtxBufferOffsets[2] = GpuBuffers_AllocFrameVertexDataMemory(
+		layer->vertexBuffers[2] = GpuBuffers_AllocFrameVertexDataMemory(
 			tess.svars.texcoords, sizeof(tess.svars.texcoords[0][0]) * input->numIndexes);
 
 		if ( pStage->bundle[1].image != 0 )
@@ -1648,13 +1648,13 @@ void RB_StageIteratorGeneric( void )
 	drawItem.offset = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
 	drawItem.shaderProgram = GLSL_MainShader_GetHandle();
 
-	const int positionsOffset = GpuBuffers_AllocFrameVertexDataMemory(
+	const VertexBuffer positionsBuffer = GpuBuffers_AllocFrameVertexDataMemory(
 		input->xyz, sizeof(input->xyz[0]) * input->numIndexes);
 
 	//
 	// call shader function
 	//
-	RB_IterateStagesGeneric( &drawItem, input, positionsOffset );
+	RB_IterateStagesGeneric( &drawItem, input, &positionsBuffer );
 
 	//RenderContext_AddDrawItem(drawItem);
 	RenderContext_Draw(&drawItem);

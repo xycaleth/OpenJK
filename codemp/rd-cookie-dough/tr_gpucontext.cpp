@@ -43,8 +43,9 @@ void RenderContext_Draw(const DrawItem* drawItem)
 				s_context.enabledVertexAttribs |= 1;
 			}
 
+			qglBindBuffer(GL_ARRAY_BUFFER, layer->vertexBuffers[0].handle);
 			qglVertexAttribPointer(
-				0, 3, GL_FLOAT, GL_FALSE, 16, reinterpret_cast<const void*>(layer->vtxBufferOffsets[0]));
+				0, 3, GL_FLOAT, GL_FALSE, 16, reinterpret_cast<const void*>(layer->vertexBuffers[0].offset));
 		}
 		else
 		{
@@ -62,8 +63,10 @@ void RenderContext_Draw(const DrawItem* drawItem)
 				qglEnableVertexAttribArray(1);
 				s_context.enabledVertexAttribs |= 2;
 			}
+
+			qglBindBuffer(GL_ARRAY_BUFFER, layer->vertexBuffers[1].handle);
 			qglVertexAttribPointer(
-				1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, reinterpret_cast<const void*>(layer->vtxBufferOffsets[1]));
+				1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, reinterpret_cast<const void*>(layer->vertexBuffers[1].offset));
 		}
 		else
 		{
@@ -81,8 +84,9 @@ void RenderContext_Draw(const DrawItem* drawItem)
 				qglEnableVertexAttribArray(2);
 				s_context.enabledVertexAttribs |= 4;
 			}
+			qglBindBuffer(GL_ARRAY_BUFFER, layer->vertexBuffers[2].handle);
 			qglVertexAttribPointer(
-				2, 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<const void*>(layer->vtxBufferOffsets[2]));
+				2, 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<const void*>(layer->vertexBuffers[2].offset));
 		}
 		else
 		{

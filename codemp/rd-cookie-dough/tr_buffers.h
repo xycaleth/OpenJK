@@ -22,10 +22,34 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 
+template<typename Tag>
+struct GpuBuffer
+{
+	int handle;
+	int size;
+	int offset;
+};
+
+struct VertexBufferTag
+{
+};
+
+struct IndexBufferTag
+{
+};
+
+struct ConstantBufferTag
+{
+};
+
+typedef GpuBuffer<VertexBufferTag> VertexBuffer;
+typedef GpuBuffer<IndexBufferTag> IndexBuffer;
+typedef GpuBuffer<ConstantBufferTag> ConstantBuffer;
+
 void GpuBuffers_Init();
 void GpuBuffers_Shutdown();
 
-int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size);
+VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size);
 int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size);
 int GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size);
 

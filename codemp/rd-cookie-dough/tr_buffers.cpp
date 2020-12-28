@@ -21,6 +21,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
+#include "tr_buffers.h"
+
 #include "glad.h"
 
 #include "qcommon/q_shared.h"
@@ -64,7 +66,7 @@ void GpuBuffers_Shutdown()
 	qglDeleteBuffers(1, &s_buffers.ubo);
 }
 
-int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size)
+VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size)
 {
 	const size_t paddedSize = (size + 15) & ~15;
 
@@ -88,9 +90,14 @@ int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size)
 
 	Com_Memcpy(reinterpret_cast<char*>(s_buffers.vboBasePtr) + s_buffers.vboOffset, data, size);
 
-	int offset = s_buffers.vboOffset;
+	VertexBuffer buffer = {};
+	buffer.handle = s_buffers.vbo;
+	buffer.offset = s_buffers.vboOffset;
+	buffer.size = paddedSize;
+
 	s_buffers.vboOffset += paddedSize;
-	return offset;
+
+	return buffer;
 }
 
 int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
