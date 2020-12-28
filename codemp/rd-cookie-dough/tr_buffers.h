@@ -29,4 +29,7 @@ int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size);
 int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size);
 int GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size);
 
+int GpuBuffers_AllocConstantDataMemory(const void *data, size_t size);
+void GpuBuffers_ReleaseConstantDataMemory(int buffer);
+
 void GpuBuffers_BindConstantBuffer(int bufferIndex, int offset, int size);

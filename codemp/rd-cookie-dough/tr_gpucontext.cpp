@@ -28,6 +28,8 @@ void RenderContext_Draw(const DrawItem* drawItem)
 		s_context.shaderProgram = drawItem->shaderProgram;
 	}
 
+	qglBindBufferRange(GL_UNIFORM_BUFFER, 0, tr.viewConstantsBuffer, 0, sizeof(float) * 16);
+
 	for ( int i = 0; i < drawItem->layerCount; ++i )
 	{
 		const DrawItem::Layer* layer = drawItem->layers + i;

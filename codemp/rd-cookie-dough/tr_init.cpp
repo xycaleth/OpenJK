@@ -1388,6 +1388,15 @@ void R_Init( void ) {
 
 	GLSL_Init();
 	GpuBuffers_Init();
+
+	const float orthoMatrix[16] = {
+		1.0f / 320.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, -1.0f / 240.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 2.0f, 0.0f,
+		-1.0f, 1.0f, -1.0f, 1.0f
+	};
+	tr.viewConstantsBuffer = GpuBuffers_AllocConstantDataMemory(orthoMatrix, sizeof(float) * 16);
+
 	R_InitImages();
 	R_InitShaders(qfalse);
 	R_InitSkins();
@@ -1453,6 +1462,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 			}
 		}
 
+		GpuBuffers_ReleaseConstantDataMemory(tr.viewConstantsBuffer);
 		GpuBuffers_Shutdown();
 		GLSL_Shutdown();
 	}

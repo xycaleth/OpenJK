@@ -26,10 +26,8 @@ void GLSL_Init();
 void GLSL_Shutdown();
 
 // Main shader
-void GLSL_MainShader_Use();
 int GLSL_MainShader_GetHandle();
 
 // Fullscreen shader
 void GLSL_FullscreenShader_Init();
-void GLSL_FullscreenShader_Use();
 int GLSL_FullscreenShader_GetHandle();

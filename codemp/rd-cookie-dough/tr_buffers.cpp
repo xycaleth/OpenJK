@@ -143,3 +143,17 @@ void GpuBuffers_BindConstantBuffer(int bufferIndex, int offset, int size)
 {
 	qglBindBufferRange(GL_UNIFORM_BUFFER, bufferIndex, s_buffers.ubo, offset, size);
 }
+
+int GpuBuffers_AllocConstantDataMemory(const void* data, size_t size)
+{
+	GLuint ubo;
+	qglCreateBuffers(1, &ubo);
+	qglNamedBufferStorage(ubo, size, data, 0);
+	return ubo;
+}
+
+void GpuBuffers_ReleaseConstantDataMemory(int buffer)
+{
+	GLuint ubo = buffer;
+	qglDeleteBuffers(1, &ubo);
+}

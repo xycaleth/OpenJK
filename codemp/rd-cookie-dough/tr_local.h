@@ -929,8 +929,6 @@ typedef struct backEndState_s {
 	byte		color2D[4];
 	qboolean	vertexes2D;		// shader needs to be finished
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
-
-	int cameraUboOffset;
 } backEndState_t;
 
 /*
@@ -1058,6 +1056,8 @@ typedef struct trGlobals_s {
 
 	float					rangedFog;
 	float					distanceCull;
+
+	int viewConstantsBuffer;
 } trGlobals_t;
 
 struct glconfigExt_t

@@ -104,15 +104,9 @@ static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragm
 static void GLSL_MainShader_Init()
 {
 	static constexpr const char VERTEX_SHADER[] = R"(
-layout(std140, binding = 0) uniform Scene
+layout(std140, binding = 0) uniform View
 {
-	mat4 u_ViewMatrix;
-	mat4 u_ViewProjectionMatrix;
-};
-
-layout(std140, binding = 1) uniform Model
-{
-	mat4 u_ModelMatrix;
+	mat4 u_ProjectionMatrix;
 };
 
 layout(location = 0) in vec3 in_Position;
@@ -124,10 +118,7 @@ layout(location = 1) out vec2 out_TexCoord;
 
 void main()
 {
-	vec2 position = in_Position.xy;
-	position.x = (position.x / 640.0) * 2.0 - 1.0;
-	position.y = -((position.y / 480.0) * 2.0 - 1.0);
-	gl_Position = vec4(position, -1.0, 1.0);
+	gl_Position = u_ProjectionMatrix * vec4(in_Position, 1.0);
 	out_Color = in_Color;
 	out_TexCoord = in_TexCoord;
 }
@@ -159,11 +150,6 @@ void GLSL_Shutdown()
 {
 	qglDeleteProgram(s_shaders.fullscreenProgram);
 	qglDeleteProgram(s_shaders.mainProgram);
-}
-
-void GLSL_MainShader_Use()
-{
-	qglUseProgram(s_shaders.mainProgram);
 }
 
 int GLSL_MainShader_GetHandle()
@@ -206,11 +192,6 @@ void main() {
 )";
 
 	s_shaders.fullscreenProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
-}
-
-void GLSL_FullscreenShader_Use()
-{
-	qglUseProgram(s_shaders.fullscreenProgram);
 }
 
 int GLSL_FullscreenShader_GetHandle()
