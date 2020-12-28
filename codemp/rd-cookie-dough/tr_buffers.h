@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 void GpuBuffers_Init();
+void GpuBuffers_Shutdown();
 
 int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size);
 int GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size);

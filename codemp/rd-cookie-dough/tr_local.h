@@ -1066,7 +1066,9 @@ struct glconfigExt_t
 
 	qboolean doGammaCorrectionWithShaders;
 	qboolean doStencilShadowsInOneDrawcall;
-	const char *originalExtensionString;
+
+	int extensionCount;
+	const char **extensionsList;
 };
 
 int		 R_Images_StartIteration(void);

@@ -54,6 +54,16 @@ void GpuBuffers_Init()
 	qglGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &s_buffers.uboAlignment);
 }
 
+void GpuBuffers_Shutdown()
+{
+	qglUnmapBuffer(GL_ARRAY_BUFFER);
+	qglUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+
+	qglDeleteBuffers(1, &s_buffers.vbo);
+	qglDeleteBuffers(1, &s_buffers.ibo);
+	qglDeleteBuffers(1, &s_buffers.ubo);
+}
+
 int GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size)
 {
 	const size_t paddedSize = (size + 15) & ~15;

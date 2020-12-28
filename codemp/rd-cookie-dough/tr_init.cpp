@@ -353,33 +353,39 @@ static void GLimp_InitExtensions(void)
 	ri.Cvar_Set( "r_DynamicGlow","0" );
 }
 
-// Truncates the GL extensions string by only allowing up to 'maxExtensions' extensions in the string.
-static const char *TruncateGLExtensionsString (const char *extensionsString, int maxExtensions)
+static void GetExtensionsList()
 {
-	const char *p = extensionsString;
-	const char *q;
-	int numExtensions = 0;
-	size_t extensionsLen = strlen (extensionsString);
+	qglGetIntegerv(GL_NUM_EXTENSIONS, &glConfigExt.extensionCount);
 
-	char *truncatedExtensions;
-
-	while ( (q = strchr (p, ' ')) != NULL && numExtensions <= maxExtensions )
+	glConfigExt.extensionsList = reinterpret_cast<const char**>(
+		Hunk_Alloc(sizeof(const char*) * glConfigExt.extensionCount, h_low));
+	for ( int i = 0; i < glConfigExt.extensionCount; ++i )
 	{
-		p = q + 1;
-		numExtensions++;
+		glConfigExt.extensionsList[i] = reinterpret_cast<const char*>(qglGetStringi(GL_EXTENSIONS, i));
 	}
 
-	if ( q != NULL )
+	const int maxExtensions = 128;
+	size_t extensionStringLength = 0;
+	for ( int i = 0; i < maxExtensions; ++i )
 	{
-		// We still have more extensions. We'll call this the end
-
-		extensionsLen = p - extensionsString - 1;
+		// +1 for the space delimiter
+		extensionStringLength += 1 + strlen(glConfigExt.extensionsList[i]);
 	}
 
-	truncatedExtensions = (char *)Hunk_Alloc(extensionsLen + 1, h_low);
-	Q_strncpyz (truncatedExtensions, extensionsString, extensionsLen + 1);
+	// +1 for the null byte. This means there's a trailing space at the end of the list, but nobody will notice.
+	char* truncatedExtensionString = reinterpret_cast<char*>(Hunk_Alloc(extensionStringLength + 1, h_low));
+	char* write = truncatedExtensionString;
+	for ( int i = 0; i < maxExtensions; ++i )
+	{
+		const int charsWritten = Com_sprintf(
+			write, extensionStringLength, "%s ", glConfigExt.extensionsList[i]);
 
-	return truncatedExtensions;
+		write += charsWritten;
+		extensionStringLength -= charsWritten;
+	}
+
+	*write = '\0';
+	glConfig.extensions_string = truncatedExtensionString;
 }
 
 static void APIENTRY OnGLDebugMessage(GLenum source,
@@ -436,7 +442,7 @@ static void InitOpenGL( void )
 
 		RenderContext_Init();
 
-#if 0
+#if defined(_DEBUG)
 		qglEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 		qglDebugMessageCallbackARB(OnGLDebugMessage, nullptr);
 #endif
@@ -447,10 +453,7 @@ static void InitOpenGL( void )
 		glConfig.vendor_string = (const char *)qglGetString (GL_VENDOR);
 		glConfig.renderer_string = (const char *)qglGetString (GL_RENDERER);
 		glConfig.version_string = (const char *)qglGetString (GL_VERSION);
-		glConfig.extensions_string = "";
-
-		glConfigExt.originalExtensionString = glConfig.extensions_string;
-		glConfig.extensions_string = TruncateGLExtensionsString(glConfigExt.originalExtensionString, 128);
+		GetExtensionsList();
 
 		// OpenGL driver constants
 		qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
@@ -1045,7 +1048,11 @@ void GfxInfo_f( void )
 	ri.Printf( PRINT_ALL, "\nGL_VENDOR: %s\n", glConfig.vendor_string );
 	ri.Printf( PRINT_ALL, "GL_RENDERER: %s\n", glConfig.renderer_string );
 	ri.Printf( PRINT_ALL, "GL_VERSION: %s\n", glConfig.version_string );
-	R_PrintLongString( glConfigExt.originalExtensionString );
+	for (int i = 0; i < glConfigExt.extensionCount; ++i)
+	{
+		ri.Printf(PRINT_ALL, "%s ", glConfigExt.extensionsList[i]);
+	}
+	ri.Printf(PRINT_ALL, "\n");
 	ri.Printf( PRINT_ALL, "\n");
 	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_SIZE: %d\n", glConfig.maxTextureSize );
 	ri.Printf( PRINT_ALL, "GL_MAX_TEXTURE_UNITS_ARB: %d\n", glConfig.maxActiveTextures );
@@ -1467,6 +1474,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 			}
 		}
 
+		GpuBuffers_Shutdown();
 		GLSL_Shutdown();
 	}
 
