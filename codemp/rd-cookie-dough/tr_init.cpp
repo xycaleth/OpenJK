@@ -971,6 +971,14 @@ static void GL_SetDefaultState(void)
 	GLuint vao;
 	qglGenVertexArrays(1, &vao);
 	qglBindVertexArray(vao);
+
+	qglVertexAttribFormat(0, 3, GL_FLOAT, GL_FALSE, 0);
+	qglVertexAttribFormat(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0);
+	qglVertexAttribFormat(2, 2, GL_FLOAT, GL_FALSE, 0);
+
+	qglVertexAttribBinding(0, 0);
+	qglVertexAttribBinding(1, 1);
+	qglVertexAttribBinding(2, 2);
 }
 
 /*

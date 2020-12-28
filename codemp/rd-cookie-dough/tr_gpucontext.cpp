@@ -1,12 +1,20 @@
 #include "tr_gpucontext.h"
 
+struct VertexBuffers
+{
+	int vertexBuffer;
+	int offset;
+};
+
 static struct RenderContext
 {
 	uint32_t enabledVertexAttribs;
+	VertexBuffers vertexBuffers[8];
 	int shaderProgram;
 	image_t *texture;
 
 	int indexBuffer;
+	int uniformBuffers[1];
 
 	int drawItemCount;
 	DrawItem drawItems[4000];
@@ -30,72 +38,47 @@ void RenderContext_Draw(const DrawItem* drawItem)
 		s_context.shaderProgram = drawItem->shaderProgram;
 	}
 
-	qglBindBufferRange(GL_UNIFORM_BUFFER, 0, tr.viewConstantsBuffer, 0, sizeof(float) * 16);
+	if (tr.viewConstantsBuffer != s_context.uniformBuffers[0])
+	{
+		qglBindBufferRange(GL_UNIFORM_BUFFER, 0, tr.viewConstantsBuffer, 0, sizeof(float) * 16);
+		s_context.uniformBuffers[0] = tr.viewConstantsBuffer;
+	}
 
 	for ( int i = 0; i < drawItem->layerCount; ++i )
 	{
 		const DrawItem::Layer* layer = drawItem->layers + i;
 		GL_State(layer->stateGroup.stateBits);
 
-		if ( (layer->enabledVertexAttributes & 1) != 0 )
+		int strides[] = {16, 4, 8};
+		for ( int attribIndex = 0; attribIndex < 3; ++attribIndex)
 		{
-			if ((s_context.enabledVertexAttribs & 1) == 0)
+			const uint32_t attribBit = 1u << attribIndex;
+			if ( (layer->enabledVertexAttributes & attribBit) != 0 )
 			{
-				qglEnableVertexAttribArray(0);
-				s_context.enabledVertexAttribs |= 1;
-			}
+				if ( (s_context.enabledVertexAttribs & attribBit) == 0 )
+				{
+					qglEnableVertexAttribArray(attribIndex);
+					s_context.enabledVertexAttribs |= attribBit;
+				}
 
-			qglBindBuffer(GL_ARRAY_BUFFER, layer->vertexBuffers[0].handle);
-			qglVertexAttribPointer(
-				0, 3, GL_FLOAT, GL_FALSE, 16, reinterpret_cast<const void*>(layer->vertexBuffers[0].offset));
-		}
-		else
-		{
-			if (s_context.enabledVertexAttribs & 1)
-			{
-				qglDisableVertexAttribArray(0);
-				s_context.enabledVertexAttribs &= ~1u;
-			}
-		}
+				const VertexBuffer *vertexBuffer = layer->vertexBuffers + attribIndex;
+				if (vertexBuffer->handle != s_context.vertexBuffers[attribIndex].vertexBuffer ||
+					vertexBuffer->offset != s_context.vertexBuffers[attribIndex].offset)
+				{
+					qglBindVertexBuffer(
+						attribIndex, vertexBuffer->handle, vertexBuffer->offset, strides[attribIndex]);
 
-		if ( (layer->enabledVertexAttributes & 2) != 0 )
-		{
-			if ((s_context.enabledVertexAttribs & 2) == 0)
-			{
-				qglEnableVertexAttribArray(1);
-				s_context.enabledVertexAttribs |= 2;
+					s_context.vertexBuffers[attribIndex].vertexBuffer = vertexBuffer->handle;
+					s_context.vertexBuffers[attribIndex].offset = vertexBuffer->offset;
+				}
 			}
-
-			qglBindBuffer(GL_ARRAY_BUFFER, layer->vertexBuffers[1].handle);
-			qglVertexAttribPointer(
-				1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, reinterpret_cast<const void*>(layer->vertexBuffers[1].offset));
-		}
-		else
-		{
-			if (s_context.enabledVertexAttribs & 2)
+			else
 			{
-				qglDisableVertexAttribArray(1);
-				s_context.enabledVertexAttribs &= ~2u;
-			}
-		}
-
-		if ( (layer->enabledVertexAttributes & 4) != 0 )
-		{
-			if ((s_context.enabledVertexAttribs & 4) == 0)
-			{
-				qglEnableVertexAttribArray(2);
-				s_context.enabledVertexAttribs |= 4;
-			}
-			qglBindBuffer(GL_ARRAY_BUFFER, layer->vertexBuffers[2].handle);
-			qglVertexAttribPointer(
-				2, 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<const void*>(layer->vertexBuffers[2].offset));
-		}
-		else
-		{
-			if (s_context.enabledVertexAttribs & 4)
-			{
-				qglDisableVertexAttribArray(2);
-				s_context.enabledVertexAttribs &= ~4u;
+				if ( s_context.enabledVertexAttribs & attribBit )
+				{
+					qglDisableVertexAttribArray(attribIndex);
+					s_context.enabledVertexAttribs &= ~attribBit;
+				}
 			}
 		}
 
