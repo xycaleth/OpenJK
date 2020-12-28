@@ -212,3 +212,8 @@ void GLSL_FullscreenShader_Use()
 {
 	qglUseProgram(s_shaders.fullscreenProgram);
 }
+
+int GLSL_FullscreenShader_GetHandle()
+{
+	return s_shaders.fullscreenProgram;
+}

@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "../rd-common/tr_common.h"
 #include "tr_buffers.h"
 #include "tr_glsl.h"
+#include "tr_gpucontext.h"
 #include "tr_WorldEffects.h"
 #include "qcommon/MiniHeap.h"
 #include "ghoul2/g2_local.h"
@@ -232,16 +233,19 @@ static void R_Splash()
 	image_t* pImage = R_FindImageFile("menu/splash", qfalse, qfalse, qfalse, GL_CLAMP_TO_EDGE);
 	extern void	RB_SetGL2D(void);
 	RB_SetGL2D();
-	if ( pImage )
-	{
-		//invalid paths?
-		GL_Bind(pImage);
-	}
 
-	GL_State(GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO);
-	
-	GLSL_FullscreenShader_Use();
-	qglDrawArrays(GL_TRIANGLES, 0, 3);
+	DrawItem drawItem = {};
+	drawItem.drawType = DRAW_ARRAYS;
+	drawItem.count = 3;
+	drawItem.offset = 0;
+	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
+	drawItem.shaderProgram = GLSL_FullscreenShader_GetHandle();
+
+	drawItem.layerCount = 1;
+	drawItem.layers[0].stateGroup.stateBits = GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO;
+	drawItem.layers[0].textures[0] = pImage;
+
+	RenderContext_Draw(&drawItem);
 
 	ri.WIN_Present(&window);
 }
@@ -427,6 +431,8 @@ static void InitOpenGL( void )
 		{
 			Com_Error(ERR_FATAL, "Unable to load OpenGL functions\n");
 		}
+
+		RenderContext_Init();
 
 		qglEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 		qglDebugMessageCallbackARB(OnGLDebugMessage, nullptr);
@@ -958,10 +964,6 @@ static void GL_SetDefaultState(void)
 	GLuint vao;
 	qglGenVertexArrays(1, &vao);
 	qglBindVertexArray(vao);
-
-	qglEnableVertexAttribArray(0);
-	qglEnableVertexAttribArray(1);
-	qglEnableVertexAttribArray(2);
 }
 
 /*

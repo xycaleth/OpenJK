@@ -32,3 +32,4 @@ int GLSL_MainShader_GetHandle();
 // Fullscreen shader
 void GLSL_FullscreenShader_Init();
 void GLSL_FullscreenShader_Use();
+int GLSL_FullscreenShader_GetHandle();

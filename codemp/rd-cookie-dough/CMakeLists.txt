@@ -50,6 +50,8 @@ set(MPCookieDoughRendererFiles
 	"${MPDir}/rd-cookie-dough/tr_ghoul2.cpp"
 	"${MPDir}/rd-cookie-dough/tr_glsl.cpp"
 	"${MPDir}/rd-cookie-dough/tr_glsl.h"
+	"${MPDir}/rd-cookie-dough/tr_gpucontext.cpp"
+	"${MPDir}/rd-cookie-dough/tr_gpucontext.h"
 	"${MPDir}/rd-cookie-dough/tr_image.cpp"
 	"${MPDir}/rd-cookie-dough/tr_init.cpp"
 	"${MPDir}/rd-cookie-dough/tr_light.cpp"

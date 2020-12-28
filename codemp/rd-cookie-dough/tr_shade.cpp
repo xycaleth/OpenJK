@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "tr_quicksprite.h"
 #include "tr_buffers.h"
 #include "tr_glsl.h"
+#include "tr_gpucontext.h"
 
 /*
 
@@ -1381,76 +1382,9 @@ static vec4_t	GLFogOverrideColors[GLFOGOVERRIDE_MAX] =
 	{ 1.0, 1.0, 1.0, 1.0 }	// GLFOGOVERRIDE_WHITE
 };
 
-enum PrimitiveType {
-	PRIMITIVE_TRIANGLES
-};
-
-struct StateGroup
-{
-	uint64_t stateBits;
-};
-
-struct DrawItem
-{
-	int layerCount;
-	struct Layer
-	{
-		StateGroup stateGroup;
-		image_t* textures[2];
-		int vtxBufferOffsets[2];
-	} layers[16];
-
-	int shaderProgram;
-	int vtxPositionBufferOffset;
-
-	PrimitiveType primitiveType;
-	int indexCount;
-	int indexOffset;
-};
-
-struct RenderContext
-{
-	uint64_t stateBits;
-
-	int drawItemCount;
-	DrawItem drawItems[4000];
-} s_context;
-
-void RenderContext_AddDrawItem(const DrawItem& drawItem)
-{
-	s_context.drawItems[s_context.drawItemCount++] = drawItem;
-}
-
-void RenderContext_Draw(const DrawItem* drawItem)
-{
-	qglUseProgram(drawItem->shaderProgram);
-
-	qglVertexAttribPointer(
-		0, 3, GL_FLOAT, GL_FALSE, 16, reinterpret_cast<const void*>(drawItem->vtxPositionBufferOffset));
-
-	for (int i = 0; i < drawItem->layerCount; ++i)
-	{
-		const DrawItem::Layer* layer = drawItem->layers + i;
-		GL_State(layer->stateGroup.stateBits);
-
-		qglVertexAttribPointer(
-			1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, reinterpret_cast<const void*>(layer->vtxBufferOffsets[0]));
-		qglVertexAttribPointer(
-			2, 2, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<const void*>(layer->vtxBufferOffsets[1]));
-
-		GL_Bind(layer->textures[0]);
-
-		qglDrawElements(
-			GL_TRIANGLES,
-			drawItem->indexCount,
-			GL_INDEX_TYPE,
-			reinterpret_cast<const void*>(drawItem->indexOffset));
-	}
-}
-
 static const float logtestExp2 = (sqrt( -log( 1.0 / 255.0 ) ));
 extern bool tr_stencilled; //tr_backend.cpp
-static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input )
+static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input, int positionsOffset )
 {
 	int stage;
 	bool	UseGLFog = false;
@@ -1575,9 +1509,11 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 		//
 		// upload per-stage vertex data
 		//
-		layer->vtxBufferOffsets[0] = GpuBuffers_AllocFrameVertexDataMemory(
-			tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numIndexes);
+		layer->enabledVertexAttributes = 7;
+		layer->vtxBufferOffsets[0] = positionsOffset;
 		layer->vtxBufferOffsets[1] = GpuBuffers_AllocFrameVertexDataMemory(
+			tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numIndexes);
+		layer->vtxBufferOffsets[2] = GpuBuffers_AllocFrameVertexDataMemory(
 			tess.svars.texcoords, sizeof(tess.svars.texcoords[0][0]) * input->numIndexes);
 
 		if ( pStage->bundle[1].image != 0 )
@@ -1706,17 +1642,19 @@ void RB_StageIteratorGeneric( void )
 	RB_DeformTessGeometry();
 
 	DrawItem drawItem = {};
+	drawItem.drawType = DRAW_INDEXED;
 	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
-	drawItem.indexCount = input->numIndexes;
-	drawItem.indexOffset = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
-	drawItem.vtxPositionBufferOffset = GpuBuffers_AllocFrameVertexDataMemory(
-		input->xyz, sizeof(input->xyz[0]) * input->numIndexes);
+	drawItem.count = input->numIndexes;
+	drawItem.offset = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
 	drawItem.shaderProgram = GLSL_MainShader_GetHandle();
+
+	const int positionsOffset = GpuBuffers_AllocFrameVertexDataMemory(
+		input->xyz, sizeof(input->xyz[0]) * input->numIndexes);
 
 	//
 	// call shader function
 	//
-	RB_IterateStagesGeneric( &drawItem, input );
+	RB_IterateStagesGeneric( &drawItem, input, positionsOffset );
 
 	//RenderContext_AddDrawItem(drawItem);
 	RenderContext_Draw(&drawItem);
