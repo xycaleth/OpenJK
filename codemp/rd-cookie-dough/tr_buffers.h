@@ -42,18 +42,22 @@ struct ConstantBufferTag
 {
 };
 
+struct StorageBufferTag
+{
+};
+
 typedef GpuBuffer<VertexBufferTag> VertexBuffer;
 typedef GpuBuffer<IndexBufferTag> IndexBuffer;
 typedef GpuBuffer<ConstantBufferTag> ConstantBuffer;
+typedef GpuBuffer<StorageBufferTag> StorageBuffer;
 
 void GpuBuffers_Init();
 void GpuBuffers_Shutdown();
 
 VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size);
 IndexBuffer GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size);
-int GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size);
+ConstantBuffer GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size);
+StorageBuffer GpuBuffers_AllocFrameStorageDataMemory(const void* data, size_t size);
 
-int GpuBuffers_AllocConstantDataMemory(const void *data, size_t size);
-void GpuBuffers_ReleaseConstantDataMemory(int buffer);
-
-void GpuBuffers_BindConstantBuffer(int bufferIndex, int offset, int size);
+ConstantBuffer GpuBuffers_AllocConstantDataMemory(const void* data, size_t size);
+void GpuBuffers_ReleaseConstantDataMemory(const ConstantBuffer* buffer);

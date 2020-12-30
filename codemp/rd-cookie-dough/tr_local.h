@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "rd-common/tr_common.h"
 #include "ghoul2/ghoul2_shared.h" //rwwRMG - added
 #include "glad.h"
+#include "tr_buffers.h"
 
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
@@ -929,6 +930,10 @@ typedef struct backEndState_s {
 	byte		color2D[4];
 	qboolean	vertexes2D;		// shader needs to be finished
 	trRefEntity_t	entity2D;	// currentEntity will point at this when doing 2D rendering
+
+	ConstantBuffer viewConstantsBuffer;	// constants buffer for view data
+	StorageBuffer modelsStorageBuffer; // shader storage buffer for model matrices
+	int shaderProgram; // main shader program to use
 } backEndState_t;
 
 /*
@@ -1057,7 +1062,7 @@ typedef struct trGlobals_s {
 	float					rangedFog;
 	float					distanceCull;
 
-	int viewConstantsBuffer;
+	ConstantBuffer viewConstantsBuffer;
 } trGlobals_t;
 
 struct glconfigExt_t

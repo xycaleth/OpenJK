@@ -707,43 +707,7 @@ typedef struct postRender_s {
 static postRender_t g_postRenders[MAX_POST_RENDERS];
 static int g_numPostRenders = 0;
 
-#if 0
-//get the "average" (ideally center) position of a surface on the tess.
-//this is a kind of lame method because I can't think correctly right now.
-static inline bool R_AverageTessXYZ(vec3_t dest)
-{
-	int i = 1;
-	float bd = 0.0f;
-	float d = 0.0f;
-	int b = -1;
-	vec3_t v;
-
-	while (i < tess.numVertexes)
-	{
-		VectorSubtract(tess.xyz[i], tess.xyz[i], v);
-		d = VectorLength(v);
-		if (b == -1 || d < bd)
-		{
-			b = i;
-			bd = d;
-		}
-		i++;
-	}
-	if (b != -1)
-	{
-		VectorSubtract(tess.xyz[0], tess.xyz[b], v);
-
-		VectorScale(v, 0.5f, dest);
-		VectorAdd(dest, tess.xyz[0], dest);
-
-		return true;
-	}
-
-	return false;
-}
-#endif
-
-void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
+static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	shader_t		*shader, *oldShader;
 	int				fogNum, oldFogNum;
 	int				entityNum, oldEntityNum;
@@ -756,6 +720,26 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	trRefEntity_t	*curEnt;
 	postRender_t	*pRender;
 	bool			didShadowPass = false;
+
+	ConstantBuffer view2DBuffer = backEnd.viewConstantsBuffer;
+	backEnd.viewConstantsBuffer = GpuBuffers_AllocFrameConstantDataMemory(
+		backEnd.viewParms.projectionMatrix, sizeof(backEnd.viewParms.projectionMatrix));
+
+	const size_t matricesSize = sizeof(float) * 16 * (MAX_REFENTITIES + 1);
+	float* modelMatrices = reinterpret_cast<float*>(Hunk_AllocateTempMemory(matricesSize));
+	for (int i = 0; i < backEnd.refdef.num_entities; ++i)
+	{
+		orientationr_t ori = {};
+		R_RotateForEntity(backEnd.refdef.entities + i, &backEnd.viewParms, &ori);
+		Com_Memcpy(modelMatrices + 16 * i, ori.modelMatrix, sizeof(ori.modelMatrix));
+	}
+	Com_Memcpy(modelMatrices + 16 * REFENTITYNUM_WORLD, backEnd.viewParms.world.modelMatrix, sizeof(float) * 16);
+
+	backEnd.modelsStorageBuffer = GpuBuffers_AllocFrameStorageDataMemory(modelMatrices, matricesSize);
+	Hunk_FreeTempMemory(modelMatrices);
+
+	int shaderProgram2D = backEnd.shaderProgram;
+	backEnd.shaderProgram = GLSL_MainShader_GetHandle();
 
 	if (g_bRenderGlowingObjects)
 	{ //only shadow on initial passes
@@ -1069,6 +1053,10 @@ void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 	// rww - 9-13-01 [1-26-01-sof2]
 //	RB_RenderFlares();
+
+	// Restore the 2D view constant buffer
+	backEnd.viewConstantsBuffer = view2DBuffer;
+	backEnd.shaderProgram = shaderProgram2D;
 }
 
 
@@ -1162,13 +1150,13 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 	drawItem.count = 3;
 	drawItem.offset = 0;
 	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
-	drawItem.shaderProgram = GLSL_FullscreenShader_GetHandle();
 
 	drawItem.layerCount = 1;
 	drawItem.layers[0].stateGroup.stateBits = GLS_DEPTHTEST_DISABLE |
 		GLS_SRCBLEND_SRC_ALPHA |
 		GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 	drawItem.layers[0].textures[0] = tr.scratchImage[client];
+	drawItem.layers[0].shaderProgram = GLSL_FullscreenShader_GetHandle();
 
 	RenderContext_Draw(&drawItem);
 }

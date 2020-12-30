@@ -23,22 +23,48 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.h"
 
+#include <cassert>
 #include "glad.h"
 #include "tr_glsl.h"
 
-static constexpr char VERSION_STRING[] = "#version 430 core";
+static constexpr char VERSION_STRING[] = "#version 430 core\n";
 static struct 
 {
 	GLuint fullscreenProgram;
 	GLuint mainProgram;
+	GLuint mainProgram2D;
 } s_shaders;
 
-static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragmentShaderCode)
+static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragmentShaderCode, const char **definitions, size_t definitionsCount)
 {
-	const char *vertexShaderStrings[] = {VERSION_STRING, vertexShaderCode};
 	GLuint vertexShader = qglCreateShader(GL_VERTEX_SHADER);
-	qglShaderSource(vertexShader, 2, vertexShaderStrings, nullptr);
+
+	assert(definitionsCount <= 126);
+
+	const char *vertexShaderStrings[128];
+	int stringCount = 0;
+	vertexShaderStrings[stringCount++] = VERSION_STRING;
+
+	for (int i = 0; i < definitionsCount; ++i)
+	{
+		char defineStr[128];
+		int len = Com_sprintf(defineStr, sizeof(defineStr), "#define %s\n", definitions[i]);
+
+		char *define = reinterpret_cast<char*>(Hunk_AllocateTempMemory(len + 1));
+		Q_strncpyz(define, defineStr, len + 1);
+
+		vertexShaderStrings[stringCount++] = define;
+	}
+
+	vertexShaderStrings[stringCount++] = vertexShaderCode;
+
+	qglShaderSource(vertexShader, stringCount, vertexShaderStrings, nullptr);
 	qglCompileShader(vertexShader);
+
+	for ( int i = 1; (i + 1) < stringCount; ++i)
+	{
+		Hunk_FreeTempMemory(const_cast<char*>(vertexShaderStrings[i]));
+	}
 
 	GLint status;
 	qglGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
@@ -101,6 +127,11 @@ static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragm
 	return program;
 }
 
+static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragmentShaderCode)
+{
+	return GLSL_CreateProgram(vertexShaderCode, fragmentShaderCode, nullptr, 0);
+}
+
 static void GLSL_MainShader_Init()
 {
 	static constexpr const char VERTEX_SHADER[] = R"(
@@ -109,6 +140,13 @@ layout(std140, binding = 0) uniform View
 	mat4 u_ProjectionMatrix;
 };
 
+layout(std430, binding = 0) buffer ModelMatrices
+{
+	mat4 u_ModelViewMatrix[];
+};
+
+layout(location = 0) uniform float u_PushConstants[128];
+
 layout(location = 0) in vec3 in_Position;
 layout(location = 1) in vec4 in_Color;
 layout(location = 2) in vec2 in_TexCoord;
@@ -116,9 +154,16 @@ layout(location = 2) in vec2 in_TexCoord;
 layout(location = 0) out vec4 out_Color;
 layout(location = 1) out vec2 out_TexCoord;
 
+#define u_EntityIndex int(u_PushConstants[0])
+
 void main()
 {
-	gl_Position = u_ProjectionMatrix * vec4(in_Position, 1.0);
+	vec4 position = vec4(in_Position, 1.0);
+#if defined(RENDER_SCENE)
+	position = u_ModelViewMatrix[u_EntityIndex] * position;
+#endif
+	gl_Position = u_ProjectionMatrix * position;
+
 	out_Color = in_Color;
 	out_TexCoord = in_TexCoord;
 }
@@ -138,7 +183,10 @@ void main()
 }
 )";
 
-	s_shaders.mainProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+	s_shaders.mainProgram2D = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+
+	const char *defines[] = {"RENDER_SCENE"};
+	s_shaders.mainProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER, defines, 1);
 }
 
 void GLSL_Init()
@@ -150,11 +198,17 @@ void GLSL_Shutdown()
 {
 	qglDeleteProgram(s_shaders.fullscreenProgram);
 	qglDeleteProgram(s_shaders.mainProgram);
+	qglDeleteProgram(s_shaders.mainProgram2D);
 }
 
 int GLSL_MainShader_GetHandle()
 {
 	return s_shaders.mainProgram;
+}
+
+int GLSL_MainShader2D_GetHandle()
+{
+	return s_shaders.mainProgram2D;
 }
 
 void GLSL_FullscreenShader_Init()

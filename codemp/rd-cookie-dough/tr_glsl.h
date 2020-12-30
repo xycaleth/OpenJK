@@ -27,6 +27,7 @@ void GLSL_Shutdown();
 
 // Main shader
 int GLSL_MainShader_GetHandle();
+int GLSL_MainShader2D_GetHandle();
 
 // Fullscreen shader
 void GLSL_FullscreenShader_Init();

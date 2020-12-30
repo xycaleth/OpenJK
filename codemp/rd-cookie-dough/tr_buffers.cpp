@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "tr_buffers.h"
+#include "tr_local.h"
 
 #include "glad.h"
 
@@ -43,12 +44,25 @@ static struct {
 	int uboAlignment;
 	size_t uboOffset;
 	size_t uboSize;
+	void *uboBasePtr;
+
+	GLuint ssbo;
+	int ssboAlignment;
+	size_t ssboOffset;
+	size_t ssboSize;
+	void *ssboBasePtr;
 } s_buffers;
 
 void GpuBuffers_Init()
 {
 	s_buffers = {};
 	qglGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &s_buffers.uboAlignment);
+	qglGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, &s_buffers.ssboAlignment);
+
+	int maxBufferSize;
+	qglGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxBufferSize);
+
+	ri.Printf(PRINT_ALL, "GL_MAX_UNIFORM_BLOCK_SIZE: %d\n", maxBufferSize);
 }
 
 void GpuBuffers_Shutdown()
@@ -67,7 +81,14 @@ void GpuBuffers_Shutdown()
 
 	if (s_buffers.ubo != 0)
 	{
+		qglUnmapNamedBuffer(s_buffers.ubo);
 		qglDeleteBuffers(1, &s_buffers.ubo);
+	}
+
+	if (s_buffers.ssbo != 0)
+	{
+		qglUnmapNamedBuffer(s_buffers.ssbo);
+		qglDeleteBuffers(1, &s_buffers.ssbo);
 	}
 }
 
@@ -137,40 +158,85 @@ IndexBuffer GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
 	return indexBuffer;
 }
 
-int GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size)
+ConstantBuffer GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size)
 {
 	const size_t paddedSize = (size + s_buffers.uboAlignment) & ~s_buffers.uboAlignment;
-	qglBindBuffer(GL_UNIFORM_BUFFER, s_buffers.ubo);
-	if (s_buffers.uboSize == 0 || (s_buffers.uboOffset + paddedSize) >= s_buffers.uboSize)
+	if (s_buffers.uboSize == 0)
 	{
 		// 4mb for now
-		qglBufferData(GL_UNIFORM_BUFFER, 4 * 1024 * 1024, nullptr, GL_STREAM_DRAW);
+		const uint32_t flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		s_buffers.uboSize = 4 * 1024 * 1024;
+
+		qglCreateBuffers(1, &s_buffers.ubo);
+		qglNamedBufferStorage(s_buffers.ubo, s_buffers.uboSize, nullptr, flags);
+
+		s_buffers.uboBasePtr = qglMapNamedBufferRange(s_buffers.ubo, 0, s_buffers.uboSize, flags);
+	}
+
+	if ( (s_buffers.uboOffset + paddedSize) >= s_buffers.uboSize )
+	{
 		s_buffers.uboOffset = 0;
 	}
 
-	qglBufferSubData(GL_UNIFORM_BUFFER, s_buffers.uboOffset, paddedSize, data);
+	Com_Memcpy(reinterpret_cast<char*>(s_buffers.uboBasePtr) + s_buffers.uboOffset, data, size);
 
-	int offset = s_buffers.uboOffset;
+	ConstantBuffer buffer = {};
+	buffer.handle = s_buffers.ubo;
+	buffer.offset = s_buffers.uboOffset;
+	buffer.size = size;
+
 	s_buffers.uboOffset += paddedSize;
-	return offset;
+
+	return buffer;
 }
 
-void GpuBuffers_BindConstantBuffer(int bufferIndex, int offset, int size)
+StorageBuffer GpuBuffers_AllocFrameStorageDataMemory(const void* data, size_t size)
 {
-	qglBindBufferRange(GL_UNIFORM_BUFFER, bufferIndex, s_buffers.ubo, offset, size);
+	const size_t paddedSize = (size + s_buffers.ssboAlignment) & ~s_buffers.ssboAlignment;
+	if (s_buffers.ssboSize == 0)
+	{
+		// 4mb for now
+		const uint32_t flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+		s_buffers.ssboSize = 4 * 1024 * 1024;
+
+		qglCreateBuffers(1, &s_buffers.ssbo);
+		qglNamedBufferStorage(s_buffers.ssbo, s_buffers.ssboSize, nullptr, flags);
+
+		s_buffers.ssboBasePtr = qglMapNamedBufferRange(s_buffers.ssbo, 0, s_buffers.ssboSize, flags);
+	}
+
+	if ( (s_buffers.ssboOffset + paddedSize) >= s_buffers.ssboSize )
+	{
+		s_buffers.ssboOffset = 0;
+	}
+
+	Com_Memcpy(reinterpret_cast<char*>(s_buffers.ssboBasePtr) + s_buffers.ssboOffset, data, size);
+
+	StorageBuffer buffer = {};
+	buffer.handle = s_buffers.ssbo;
+	buffer.offset = s_buffers.ssboOffset;
+	buffer.size = size;
+
+	s_buffers.ssboOffset += paddedSize;
+
+	return buffer;
 }
 
-int GpuBuffers_AllocConstantDataMemory(const void* data, size_t size)
+ConstantBuffer GpuBuffers_AllocConstantDataMemory(const void* data, size_t size)
 {
 	GLuint ubo;
 	qglCreateBuffers(1, &ubo);
 	qglNamedBufferStorage(ubo, size, data, 0);
-	return ubo;
+
+	ConstantBuffer buffer = {};
+	buffer.handle = ubo;
+	buffer.size = size;
+	buffer.offset = 0;
+	return buffer;
 }
 
-void GpuBuffers_ReleaseConstantDataMemory(int buffer)
+void GpuBuffers_ReleaseConstantDataMemory(const ConstantBuffer *buffer)
 {
-	GLuint ubo = buffer;
+	GLuint ubo = buffer->handle;
 	qglDeleteBuffers(1, &ubo);
 }

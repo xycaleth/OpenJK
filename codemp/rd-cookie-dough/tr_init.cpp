@@ -239,13 +239,13 @@ static void R_Splash()
 	drawItem.count = 3;
 	drawItem.offset = 0;
 	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
-	drawItem.shaderProgram = GLSL_FullscreenShader_GetHandle();
 
 	drawItem.layerCount = 1;
 	drawItem.layers[0].stateGroup.stateBits = GLS_DEPTHTEST_DISABLE |
 		GLS_SRCBLEND_SRC_ALPHA |
 		GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA;
 	drawItem.layers[0].textures[0] = pImage;
+	drawItem.layers[0].shaderProgram = GLSL_FullscreenShader_GetHandle();
 
 	RenderContext_Draw(&drawItem);
 
@@ -358,7 +358,7 @@ static void GetExtensionsList()
 	qglGetIntegerv(GL_NUM_EXTENSIONS, &glConfigExt.extensionCount);
 
 	glConfigExt.extensionsList = reinterpret_cast<const char**>(
-		Hunk_Alloc(sizeof(const char*) * glConfigExt.extensionCount, h_low));
+		Z_Malloc(sizeof(const char*) * glConfigExt.extensionCount, TAG_GENERAL));
 	for ( int i = 0; i < glConfigExt.extensionCount; ++i )
 	{
 		glConfigExt.extensionsList[i] = reinterpret_cast<const char*>(qglGetStringi(GL_EXTENSIONS, i));
@@ -373,7 +373,7 @@ static void GetExtensionsList()
 	}
 
 	// +1 for the null byte. This means there's a trailing space at the end of the list, but nobody will notice.
-	char* truncatedExtensionString = reinterpret_cast<char*>(Hunk_Alloc(extensionStringLength + 1, h_low));
+	char* truncatedExtensionString = reinterpret_cast<char*>(Z_Malloc(extensionStringLength + 1, TAG_GENERAL));
 	char* write = truncatedExtensionString;
 	for ( int i = 0; i < maxExtensions; ++i )
 	{
@@ -422,6 +422,7 @@ static void InitOpenGL( void )
 	//		- r_ignorehwgamma
 	//		- r_gamma
 	//
+	bool newWindow = false;
 	if ( glConfig.vidWidth == 0 )
 	{
 		windowDesc_t windowDesc = { GRAPHICS_API_OPENGL };
@@ -439,8 +440,6 @@ static void InitOpenGL( void )
 		{
 			Com_Error(ERR_FATAL, "Unable to load OpenGL functions\n");
 		}
-
-		RenderContext_Init();
 
 #if defined(_DEBUG)
 		qglEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
@@ -463,15 +462,17 @@ static void InitOpenGL( void )
 
 		GLimp_InitExtensions();
 
-		GL_SetDefaultState();
+		newWindow = true;
+	}
 
+	RenderContext_Init();
+	GL_SetDefaultState();
+
+	if (newWindow)
+	{
 		R_Splash();
 	}
-	else
-	{
-		// set default state
-		GL_SetDefaultState();
-	}
+
 }
 
 /*
@@ -1397,6 +1398,8 @@ void R_Init( void ) {
 	GLSL_Init();
 	GpuBuffers_Init();
 
+	backEnd.shaderProgram = GLSL_MainShader2D_GetHandle();
+
 	const float orthoMatrix[16] = {
 		1.0f / 320.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, -1.0f / 240.0f, 0.0f, 0.0f,
@@ -1404,6 +1407,7 @@ void R_Init( void ) {
 		-1.0f, 1.0f, -1.0f, 1.0f
 	};
 	tr.viewConstantsBuffer = GpuBuffers_AllocConstantDataMemory(orthoMatrix, sizeof(float) * 16);
+	backEnd.viewConstantsBuffer = tr.viewConstantsBuffer;
 
 	R_InitImages();
 	R_InitShaders(qfalse);
@@ -1470,14 +1474,27 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 			}
 		}
 
-		GpuBuffers_ReleaseConstantDataMemory(tr.viewConstantsBuffer);
+		GpuBuffers_ReleaseConstantDataMemory(&tr.viewConstantsBuffer);
 		GpuBuffers_Shutdown();
 		GLSL_Shutdown();
 	}
 
 	// shut down platform specific OpenGL stuff
-	if ( destroyWindow ) {
+	if ( destroyWindow )
+	{
 		ri.WIN_Shutdown();
+
+		if (glConfig.extensions_string != nullptr)
+		{
+			Z_Free(const_cast<char*>(glConfig.extensions_string));
+			glConfig.extensions_string = nullptr;
+		}
+
+		if (glConfigExt.extensionsList != nullptr)
+		{
+			Z_Free(glConfigExt.extensionsList);
+			glConfigExt.extensionsList = nullptr;
+		}
 	}
 
 	tr.registered = qfalse;

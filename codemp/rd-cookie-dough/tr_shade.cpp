@@ -1509,12 +1509,19 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 		//
 		// upload per-stage vertex data
 		//
+		layer->shaderProgram = backEnd.shaderProgram;
 		layer->enabledVertexAttributes = 7;
 		layer->vertexBuffers[0] = *positionsBuffer;
 		layer->vertexBuffers[1] = GpuBuffers_AllocFrameVertexDataMemory(
 			tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numIndexes);
 		layer->vertexBuffers[2] = GpuBuffers_AllocFrameVertexDataMemory(
 			tess.svars.texcoords, sizeof(tess.svars.texcoords[0][0]) * input->numIndexes);
+
+		if (!backEnd.projection2D)
+		{
+			layer->storageBuffersUsed = 1;
+			layer->storageBuffers[0] = backEnd.modelsStorageBuffer;
+		}
 
 		if ( pStage->bundle[1].image != 0 )
 		{
@@ -1647,7 +1654,20 @@ void RB_StageIteratorGeneric( void )
 	drawItem.count = input->numIndexes;
 	drawItem.offset = 0;
 	drawItem.indexBuffer = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
-	drawItem.shaderProgram = GLSL_MainShader_GetHandle();
+
+	drawItem.entityNum = 0;
+	if (!backEnd.projection2D)
+	{
+		drawItem.isEntity = true;
+		if (backEnd.currentEntity != &tr.worldEntity)
+		{
+			drawItem.entityNum = backEnd.currentEntity - backEnd.refdef.entities;
+		}
+		else
+		{
+			drawItem.entityNum = REFENTITYNUM_WORLD;
+		}
+	}
 
 	const VertexBuffer positionsBuffer = GpuBuffers_AllocFrameVertexDataMemory(
 		input->xyz, sizeof(input->xyz[0]) * input->numIndexes);

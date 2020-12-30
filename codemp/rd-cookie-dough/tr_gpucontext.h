@@ -24,15 +24,21 @@ struct DrawItem
 	int layerCount;
 	struct Layer
 	{
+		int shaderProgram;
+
 		StateGroup stateGroup;
 		image_t* textures[2];
 
 		// Vertex format
 		uint32_t enabledVertexAttributes;
 		VertexBuffer vertexBuffers[3];
+
+		uint32_t storageBuffersUsed;
+		StorageBuffer storageBuffers[1];
 	} layers[16];
 
-	int shaderProgram;
+	bool isEntity;
+	int entityNum;
 
 	IndexBuffer indexBuffer;
 	DrawType drawType;

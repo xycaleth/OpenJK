@@ -14,7 +14,8 @@ static struct RenderContext
 	image_t *texture;
 
 	int indexBuffer;
-	int uniformBuffers[1];
+	ConstantBuffer uniformBuffers[1];
+	StorageBuffer storageBuffers[1];
 
 	int drawItemCount;
 	DrawItem drawItems[4000];
@@ -32,21 +33,42 @@ void RenderContext_AddDrawItem(const DrawItem& drawItem)
 
 void RenderContext_Draw(const DrawItem* drawItem)
 {
-	if (drawItem->shaderProgram != s_context.shaderProgram)
-	{
-		qglUseProgram(drawItem->shaderProgram);
-		s_context.shaderProgram = drawItem->shaderProgram;
-	}
-
-	if (tr.viewConstantsBuffer != s_context.uniformBuffers[0])
-	{
-		qglBindBufferRange(GL_UNIFORM_BUFFER, 0, tr.viewConstantsBuffer, 0, sizeof(float) * 16);
-		s_context.uniformBuffers[0] = tr.viewConstantsBuffer;
-	}
-
 	for ( int i = 0; i < drawItem->layerCount; ++i )
 	{
 		const DrawItem::Layer* layer = drawItem->layers + i;
+		if (layer->shaderProgram != s_context.shaderProgram)
+		{
+			qglUseProgram(layer->shaderProgram);
+			s_context.shaderProgram = layer->shaderProgram;
+		}
+		
+		if (drawItem->isEntity)
+		{
+			float pushConstants[128];
+			pushConstants[0] = (float)drawItem->entityNum;
+			qglUniform1fv(0, 1, pushConstants);
+		}
+
+		if (backEnd.viewConstantsBuffer.handle != s_context.uniformBuffers[0].handle ||
+			backEnd.viewConstantsBuffer.offset != s_context.uniformBuffers[0].offset ||
+			backEnd.viewConstantsBuffer.size != s_context.uniformBuffers[0].size)
+		{
+			qglBindBufferRange(GL_UNIFORM_BUFFER, 0, backEnd.viewConstantsBuffer.handle, 0, backEnd.viewConstantsBuffer.size);
+			s_context.uniformBuffers[0] = backEnd.viewConstantsBuffer;
+		}
+
+		if (layer->storageBuffersUsed)
+		{
+			if ((layer->storageBuffers[0].handle != s_context.storageBuffers[0].handle) ||
+				(layer->storageBuffers[0].offset != s_context.storageBuffers[0].offset) ||
+				(layer->storageBuffers[0].size != s_context.storageBuffers[0].size))
+			{
+				const StorageBuffer* buffer = layer->storageBuffers + 0;
+				qglBindBufferRange(GL_SHADER_STORAGE_BUFFER, 0, buffer->handle, buffer->offset, buffer->size);
+				s_context.storageBuffers[0] = *buffer;
+			}
+		}
+
 		GL_State(layer->stateGroup.stateBits);
 
 		int strides[] = {16, 4, 8};
