@@ -1679,7 +1679,6 @@ void RB_StageIteratorGeneric( void )
 	//
 	RB_IterateStagesGeneric( &drawItem, input, &positionsBuffer );
 
-	//RenderContext_AddDrawItem(drawItem);
 	RenderContext_Draw(&drawItem);
 
 	//
@@ -1703,14 +1702,6 @@ void RB_StageIteratorGeneric( void )
 	if (tr.world && (tess.fogNum != tr.world->globalFog || r_drawfog->value != 2) && r_drawfog->value && tess.fogNum && tess.shader->fogPass)
 	{
 		RB_FogPass();
-	}
-
-	//
-	// reset polygon offset
-	//
-	if ( input->shader->polygonOffset )
-	{
-		qglDisable( GL_POLYGON_OFFSET_FILL );
 	}
 
 	// Now check for surfacesprites.

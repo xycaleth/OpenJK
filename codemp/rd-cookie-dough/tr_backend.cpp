@@ -1056,7 +1056,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	// rww - 9-13-01 [1-26-01-sof2]
 //	RB_RenderFlares();
 
-	// Restore the 2D view constant buffer
+	// Restore the 2D render state
 	backEnd.viewConstantsBuffer = view2DBuffer;
 	backEnd.shaderProgram = shaderProgram2D;
 	backEnd.minDepthRange = minDepthRange2D;
