@@ -387,8 +387,7 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 		for ( int s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++ )
 		{
 			VectorAdd( s_skyPoints[t][s], backEnd.viewParms.ori.origin, *positions );
-			(*texcoords)[0] = s_skyTexCoords[t][s][0];
-			(*texcoords)[1] = s_skyTexCoords[t][s][1];
+			VectorCopy2(s_skyTexCoords[t][s], *texcoords);
 
 			positions++;
 			texcoords++;

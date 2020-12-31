@@ -1655,7 +1655,7 @@ void RB_StageIteratorGeneric( void )
 	drawItem.offset = 0;
 	drawItem.minDepthRange = backEnd.minDepthRange;
 	drawItem.maxDepthRange = backEnd.maxDepthRange;
-	drawItem.indexBuffer = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
+	drawItem.indexBuffer = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(input->indexes[0]));
 
 	drawItem.entityNum = 0;
 	if (!backEnd.projection2D)
@@ -1672,7 +1672,7 @@ void RB_StageIteratorGeneric( void )
 	}
 
 	const VertexBuffer positionsBuffer = GpuBuffers_AllocFrameVertexDataMemory(
-		input->xyz, sizeof(input->xyz[0]) * input->numIndexes);
+		input->xyz, sizeof(input->xyz[0]) * input->numVertexes);
 
 	//
 	// call shader function
@@ -1681,6 +1681,7 @@ void RB_StageIteratorGeneric( void )
 
 	RenderContext_Draw(&drawItem);
 
+#if 0
 	//
 	// now do any dynamic lighting needed
 	//
@@ -1723,6 +1724,7 @@ void RB_StageIteratorGeneric( void )
 	{
 		qglDisable(GL_FOG);
 	}
+#endif
 }
 
 
