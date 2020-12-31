@@ -33,6 +33,7 @@ static struct
 	GLuint fullscreenProgram;
 	GLuint mainProgram;
 	GLuint mainProgram2D;
+	GLuint skyProgram;
 } s_shaders;
 
 static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragmentShaderCode, const char **definitions, size_t definitionsCount)
@@ -189,9 +190,53 @@ void main()
 	s_shaders.mainProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER, defines, 1);
 }
 
+static void GLSL_SkyShader_Init()
+{
+	static constexpr const char VERTEX_SHADER[] = R"(
+layout(std140, binding = 0) uniform View
+{
+	mat4 u_ProjectionMatrix;
+};
+
+layout(std430, binding = 0) buffer ModelMatrices
+{
+	mat4 u_ModelViewMatrix[];
+};
+
+layout(location = 0) in vec3 in_Position;
+layout(location = 2) in vec2 in_TexCoord;
+
+layout(location = 0) out vec2 out_TexCoord;
+
+void main()
+{
+	vec4 position = u_ModelViewMatrix[2047] * vec4(in_Position, 1.0);
+	gl_Position = u_ProjectionMatrix * position;
+
+	out_TexCoord = in_TexCoord;
+}
+)";
+
+	static constexpr const char FRAGMENT_SHADER[] = R"(
+layout(binding = 0) uniform sampler2D u_Texture;
+
+layout(location = 0) in vec2 in_TexCoord;
+
+layout(location = 0) out vec4 out_FragColor;
+
+void main()
+{
+	out_FragColor = texture(u_Texture, in_TexCoord);
+}
+)";
+
+	s_shaders.skyProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+}
+
 void GLSL_Init()
 {
 	GLSL_MainShader_Init();
+	GLSL_SkyShader_Init();
 }
 
 void GLSL_Shutdown()
@@ -199,6 +244,7 @@ void GLSL_Shutdown()
 	qglDeleteProgram(s_shaders.fullscreenProgram);
 	qglDeleteProgram(s_shaders.mainProgram);
 	qglDeleteProgram(s_shaders.mainProgram2D);
+	qglDeleteProgram(s_shaders.skyProgram);
 }
 
 int GLSL_MainShader_GetHandle()
@@ -209,6 +255,11 @@ int GLSL_MainShader_GetHandle()
 int GLSL_MainShader2D_GetHandle()
 {
 	return s_shaders.mainProgram2D;
+}
+
+int GLSL_SkyShader_GetHandle()
+{
+	return s_shaders.skyProgram;
 }
 
 void GLSL_FullscreenShader_Init()

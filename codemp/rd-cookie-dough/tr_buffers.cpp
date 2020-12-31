@@ -114,12 +114,16 @@ VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size
 		s_buffers.vboOffset = 0;
 	}
 
-	Com_Memcpy(reinterpret_cast<char*>(s_buffers.vboBasePtr) + s_buffers.vboOffset, data, size);
+	if (data != nullptr)
+	{
+		Com_Memcpy(reinterpret_cast<char*>(s_buffers.vboBasePtr) + s_buffers.vboOffset, data, size);
+	}
 
 	VertexBuffer buffer = {};
 	buffer.handle = s_buffers.vbo;
 	buffer.offset = s_buffers.vboOffset;
 	buffer.size = paddedSize;
+	buffer.memory = reinterpret_cast<char*>(s_buffers.vboBasePtr) + s_buffers.vboOffset;
 
 	s_buffers.vboOffset += paddedSize;
 
@@ -146,12 +150,16 @@ IndexBuffer GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
 		s_buffers.iboOffset = 0;
 	}
 
-	Com_Memcpy(reinterpret_cast<char*>(s_buffers.iboBasePtr) + s_buffers.iboOffset, data, size);
+	if (data != nullptr)
+	{
+		Com_Memcpy(reinterpret_cast<char*>(s_buffers.iboBasePtr) + s_buffers.iboOffset, data, size);
+	}
 
 	IndexBuffer indexBuffer = {};
 	indexBuffer.handle = s_buffers.ibo;
 	indexBuffer.size = size;
 	indexBuffer.offset = s_buffers.iboOffset;
+	indexBuffer.memory = reinterpret_cast<char*>(s_buffers.iboBasePtr) + s_buffers.iboOffset;
 
 	s_buffers.iboOffset += size;
 
@@ -178,12 +186,16 @@ ConstantBuffer GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t 
 		s_buffers.uboOffset = 0;
 	}
 
-	Com_Memcpy(reinterpret_cast<char*>(s_buffers.uboBasePtr) + s_buffers.uboOffset, data, size);
+	if (data != nullptr)
+	{
+		Com_Memcpy(reinterpret_cast<char*>(s_buffers.uboBasePtr) + s_buffers.uboOffset, data, size);
+	}
 
 	ConstantBuffer buffer = {};
 	buffer.handle = s_buffers.ubo;
 	buffer.offset = s_buffers.uboOffset;
 	buffer.size = size;
+	buffer.memory = reinterpret_cast<char*>(s_buffers.uboBasePtr) + s_buffers.uboOffset;
 
 	s_buffers.uboOffset += paddedSize;
 

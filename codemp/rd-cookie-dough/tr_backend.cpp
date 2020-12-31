@@ -721,6 +721,17 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	postRender_t	*pRender;
 	bool			didShadowPass = false;
 
+	if (g_bRenderGlowingObjects)
+	{ //only shadow on initial passes
+		didShadowPass = true;
+	}
+
+	// save original time for entity shader offsets
+	originalTime = backEnd.refdef.floatTime;
+
+	// clear the z buffer, set the modelview, etc
+	RB_BeginDrawingView ();
+
 	ConstantBuffer view2DBuffer = backEnd.viewConstantsBuffer;
 	backEnd.viewConstantsBuffer = GpuBuffers_AllocFrameConstantDataMemory(
 		backEnd.viewParms.projectionMatrix, sizeof(backEnd.viewParms.projectionMatrix));
@@ -743,17 +754,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 	float minDepthRange2D = backEnd.minDepthRange;
 	float maxDepthRange2D = backEnd.maxDepthRange;
-
-	if (g_bRenderGlowingObjects)
-	{ //only shadow on initial passes
-		didShadowPass = true;
-	}
-
-	// save original time for entity shader offsets
-	originalTime = backEnd.refdef.floatTime;
-
-	// clear the z buffer, set the modelview, etc
-	RB_BeginDrawingView ();
 
 	// draw everything
 	oldEntityNum = -1;

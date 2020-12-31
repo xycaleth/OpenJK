@@ -32,3 +32,6 @@ int GLSL_MainShader2D_GetHandle();
 // Fullscreen shader
 void GLSL_FullscreenShader_Init();
 int GLSL_FullscreenShader_GetHandle();
+
+// Sky shader
+int GLSL_SkyShader_GetHandle();

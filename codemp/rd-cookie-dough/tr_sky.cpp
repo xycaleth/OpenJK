@@ -24,6 +24,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // tr_sky.c
 #include "tr_local.h"
 
+#include "tr_buffers.h"
+#include "tr_glsl.h"
+#include "tr_gpucontext.h"
+
 #define SKY_SUBDIVISIONS		8
 #define HALF_SKY_SUBDIVISIONS	(SKY_SUBDIVISIONS/2)
 
@@ -366,26 +370,72 @@ static float	s_skyTexCoords[SKY_SUBDIVISIONS+1][SKY_SUBDIVISIONS+1][2];
 
 static void DrawSkySide( struct image_s *image, const int mins[2], const int maxs[2] )
 {
-	int s, t;
+	const int tHeight = maxs[1] - mins[1] + 1;
+	const int sWidth = maxs[0] - mins[0] + 1;
+	const int numVertexes = sWidth * tHeight;
 
-	GL_Bind( image );
+	VertexBuffer positionsBuffer = GpuBuffers_AllocFrameVertexDataMemory(
+		nullptr, sizeof(vec4_t) * numVertexes);
+	vec4_t *positions = reinterpret_cast<vec4_t*>(GpuBuffers_Map(&positionsBuffer));
 
+	VertexBuffer texcoordsBuffer = GpuBuffers_AllocFrameVertexDataMemory(
+		nullptr, sizeof(vec2_t) * numVertexes);
+	vec2_t* texcoords = reinterpret_cast<vec2_t*>(GpuBuffers_Map(&texcoordsBuffer));
 
-	for ( t = mins[1]+HALF_SKY_SUBDIVISIONS; t < maxs[1]+HALF_SKY_SUBDIVISIONS; t++ )
+	for ( int t = mins[1]+HALF_SKY_SUBDIVISIONS; t <= maxs[1]+HALF_SKY_SUBDIVISIONS; t++ )
 	{
-		qglBegin( GL_TRIANGLE_STRIP );
-
-		for ( s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++ )
+		for ( int s = mins[0]+HALF_SKY_SUBDIVISIONS; s <= maxs[0]+HALF_SKY_SUBDIVISIONS; s++ )
 		{
-			qglTexCoord2fv( s_skyTexCoords[t][s] );
-			qglVertex3fv( s_skyPoints[t][s] );
+			VectorAdd( s_skyPoints[t][s], backEnd.viewParms.ori.origin, *positions );
+			(*texcoords)[0] = s_skyTexCoords[t][s][0];
+			(*texcoords)[1] = s_skyTexCoords[t][s][1];
 
-			qglTexCoord2fv( s_skyTexCoords[t+1][s] );
-			qglVertex3fv( s_skyPoints[t+1][s] );
+			positions++;
+			texcoords++;
 		}
-
-		qglEnd();
 	}
+
+	GpuBuffers_Unmap(&positionsBuffer);
+	GpuBuffers_Unmap(&texcoordsBuffer);
+
+	const int indexCount = (sWidth - 1) * (tHeight - 1) * 6;
+	IndexBuffer indexBuffer = GpuBuffers_AllocFrameIndexDataMemory(
+		nullptr, sizeof(GL_INDEX_TYPE) * indexCount);
+	glIndex_t* indexes = reinterpret_cast<glIndex_t*>(GpuBuffers_Map(&indexBuffer));
+
+	for ( int t = 0; t < tHeight-1; t++ )
+	{
+		for ( int s = 0; s < sWidth-1; s++ )
+		{
+			*indexes++ = s + t * ( sWidth );
+			*indexes++ = s + ( t + 1 ) * ( sWidth );
+			*indexes++ = s + 1 + t * ( sWidth );
+
+			*indexes++ = s + ( t + 1 ) * ( sWidth );
+			*indexes++ = s + 1 + ( t + 1 ) * ( sWidth );
+			*indexes++ = s + 1 + t * ( sWidth );
+		}
+	}
+
+	GpuBuffers_Unmap(&indexBuffer);
+
+	DrawItem drawItem = {};
+	drawItem.count = indexCount;
+	drawItem.drawType = DRAW_INDEXED;
+	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
+	drawItem.minDepthRange = 0.0f;
+	drawItem.maxDepthRange = 1.0f;
+	drawItem.indexBuffer = indexBuffer;
+	drawItem.layerCount = 1;
+	drawItem.layers[0].shaderProgram = GLSL_SkyShader_GetHandle();
+	drawItem.layers[0].storageBuffersUsed = true;
+	drawItem.layers[0].storageBuffers[0] = backEnd.modelsStorageBuffer;
+	drawItem.layers[0].textures[0] = image;
+	drawItem.layers[0].enabledVertexAttributes = 5;
+	drawItem.layers[0].vertexBuffers[0] = positionsBuffer;
+	drawItem.layers[0].vertexBuffers[2] = texcoordsBuffer;
+
+	RenderContext_Draw(&drawItem);
 }
 
 static void DrawSkyBox( shader_t *shader )
@@ -808,26 +858,9 @@ void RB_StageIteratorSky( void )
 	// to be drawn
 	RB_ClipSkyPolygons( &tess );
 
-	// r_showsky will let all the sky blocks be drawn in
-	// front of everything to allow developers to see how
-	// much sky is getting sucked in
-	if ( r_showsky->integer ) {
-		qglDepthRange( 0.0, 0.0 );
-	} else {
-		qglDepthRange( 1.0, 1.0 );
-	}
-
 	// draw the outer skybox
 	if ( tess.shader->sky->outerbox[0] && tess.shader->sky->outerbox[0] != tr.defaultImage ) {
-		qglColor3f( tr.identityLight, tr.identityLight, tr.identityLight );
-
-		qglPushMatrix ();
-		GL_State( 0 );
-		qglTranslatef (backEnd.viewParms.ori.origin[0], backEnd.viewParms.ori.origin[1], backEnd.viewParms.ori.origin[2]);
-
 		DrawSkyBox( tess.shader );
-
-		qglPopMatrix();
 	}
 
 	// generate the vertexes for all the clouds, which will be drawn
@@ -838,12 +871,6 @@ void RB_StageIteratorSky( void )
 	{
 		RB_StageIteratorGeneric();
 	}
-
-	// draw the inner skybox
-
-
-	// back to normal depth range
-	qglDepthRange( 0.0, 1.0 );
 
 	// note that sky was drawn so we will draw a sun later
 	backEnd.skyRenderedThisView = qtrue;

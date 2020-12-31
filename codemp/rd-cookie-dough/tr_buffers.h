@@ -28,6 +28,7 @@ struct GpuBuffer
 	int handle;
 	int size;
 	int offset;
+	void *memory;
 };
 
 struct VertexBufferTag
@@ -58,6 +59,13 @@ VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size
 IndexBuffer GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size);
 ConstantBuffer GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size);
 StorageBuffer GpuBuffers_AllocFrameStorageDataMemory(const void* data, size_t size);
+
+template<typename BufferType>
+inline void* GpuBuffers_Map(BufferType *buffer) {
+	return buffer->memory;
+}
+template<typename BufferType>
+inline void GpuBuffers_Unmap(BufferType *buffer) {}
 
 ConstantBuffer GpuBuffers_AllocConstantDataMemory(const void* data, size_t size);
 void GpuBuffers_ReleaseConstantDataMemory(const ConstantBuffer* buffer);
