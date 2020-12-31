@@ -1399,6 +1399,8 @@ void R_Init( void ) {
 	GpuBuffers_Init();
 
 	backEnd.shaderProgram = GLSL_MainShader2D_GetHandle();
+	backEnd.minDepthRange = 0.0f;
+	backEnd.maxDepthRange = 1.0f;
 
 	const float orthoMatrix[16] = {
 		1.0f / 320.0f, 0.0f, 0.0f, 0.0f,

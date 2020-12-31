@@ -934,6 +934,8 @@ typedef struct backEndState_s {
 	ConstantBuffer viewConstantsBuffer;	// constants buffer for view data
 	StorageBuffer modelsStorageBuffer; // shader storage buffer for model matrices
 	int shaderProgram; // main shader program to use
+	float minDepthRange;
+	float maxDepthRange;
 } backEndState_t;
 
 /*

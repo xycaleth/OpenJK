@@ -1653,6 +1653,8 @@ void RB_StageIteratorGeneric( void )
 	drawItem.primitiveType = PRIMITIVE_TRIANGLES;
 	drawItem.count = input->numIndexes;
 	drawItem.offset = 0;
+	drawItem.minDepthRange = backEnd.minDepthRange;
+	drawItem.maxDepthRange = backEnd.maxDepthRange;
 	drawItem.indexBuffer = GpuBuffers_AllocFrameIndexDataMemory(input->indexes, input->numIndexes * sizeof(*input->indexes));
 
 	drawItem.entityNum = 0;

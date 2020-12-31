@@ -741,6 +741,9 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	int shaderProgram2D = backEnd.shaderProgram;
 	backEnd.shaderProgram = GLSL_MainShader_GetHandle();
 
+	float minDepthRange2D = backEnd.minDepthRange;
+	float maxDepthRange2D = backEnd.maxDepthRange;
+
 	if (g_bRenderGlowingObjects)
 	{ //only shadow on initial passes
 		didShadowPass = true;
@@ -905,15 +908,18 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 				switch ( depthRange ) {
 					default:
 					case 0:
-						qglDepthRange (0, 1);
+						backEnd.minDepthRange = 0.0f;
+						backEnd.maxDepthRange = 1.0f;
 						break;
 
 					case 1:
-						qglDepthRange (0, .3);
+						backEnd.minDepthRange = 0.0f;
+						backEnd.maxDepthRange = 0.3f;
 						break;
 
 					case 2:
-						qglDepthRange (0, 0);
+						backEnd.minDepthRange = 0.0f;
+						backEnd.maxDepthRange = 0.0f;
 						break;
 				}
 
@@ -1033,10 +1039,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		}
 	}
 
-	if ( depthRange ) {
-		qglDepthRange (0, 1);
-	}
-
 	if (tr_stencilled && !tr_distortionPrePost)
 	{ //draw in the stencil buffer's cutout
 		RB_DistortionFill();
@@ -1057,6 +1059,8 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	// Restore the 2D view constant buffer
 	backEnd.viewConstantsBuffer = view2DBuffer;
 	backEnd.shaderProgram = shaderProgram2D;
+	backEnd.minDepthRange = minDepthRange2D;
+	backEnd.maxDepthRange = maxDepthRange2D;
 }
 
 

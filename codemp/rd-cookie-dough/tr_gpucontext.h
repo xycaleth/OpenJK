@@ -37,6 +37,9 @@ struct DrawItem
 		StorageBuffer storageBuffers[1];
 	} layers[16];
 
+	float minDepthRange;
+	float maxDepthRange;
+
 	bool isEntity;
 	int entityNum;
 

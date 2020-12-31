@@ -13,6 +13,9 @@ static struct RenderContext
 	int shaderProgram;
 	image_t *texture;
 
+	float minDepthRange;
+	float maxDepthRange;
+
 	int indexBuffer;
 	ConstantBuffer uniformBuffers[1];
 	StorageBuffer storageBuffers[1];
@@ -33,6 +36,14 @@ void RenderContext_AddDrawItem(const DrawItem& drawItem)
 
 void RenderContext_Draw(const DrawItem* drawItem)
 {
+	if (drawItem->minDepthRange != s_context.minDepthRange ||
+		drawItem->maxDepthRange != s_context.maxDepthRange)
+	{
+		qglDepthRangef(drawItem->minDepthRange, drawItem->maxDepthRange);
+		s_context.minDepthRange = drawItem->minDepthRange;
+		s_context.maxDepthRange = drawItem->maxDepthRange;
+	}
+
 	for ( int i = 0; i < drawItem->layerCount; ++i )
 	{
 		const DrawItem::Layer* layer = drawItem->layers + i;
