@@ -371,10 +371,6 @@ void RB_SurfaceTriangles( srfTriangles_t *srf ) {
 		color += 4;
 	}
 
-	for ( i = 0 ; i < srf->numVerts ; i++ ) {
-		tess.vertexDlightBits[ tess.numVertexes + i] = dlightBits;
-	}
-
 	tess.numVertexes += srf->numVerts;
 }
 
@@ -1352,7 +1348,6 @@ void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
 		ba.ui = ComputeFinalVertexColor( (byte *)&v[VERTEX_COLOR] );
 		for ( j=0; j<4; j++ )
 			tess.vertexColors[ndx][j] = ba.b[j];
-		tess.vertexDlightBits[ndx] = dlightBits;
 	}
 
 	tess.numVertexes += surf->numPoints;
@@ -1411,7 +1406,6 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 	int		lodWidth, lodHeight;
 	int		numVertexes;
 	int		dlightBits;
-	int		*vDlightBits;
 
 	dlightBits = cv->dlightBits;
 	tess.dlightBits |= dlightBits;
@@ -1478,7 +1472,6 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 		normal = tess.normal[numVertexes];
 		texCoords = tess.texCoords[numVertexes][0];
 		color = ( unsigned char * ) &tess.vertexColors[numVertexes];
-		vDlightBits = &tess.vertexDlightBits[numVertexes];
 
 		for ( i = 0 ; i < rows ; i++ ) {
 			for ( j = 0 ; j < lodWidth ; j++ ) {
@@ -1509,7 +1502,6 @@ void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 
 				*(unsigned *)color = ComputeFinalVertexColor((byte *)dv->color);
 				color += 4;
-				*vDlightBits++ = dlightBits;
 			}
 		}
 

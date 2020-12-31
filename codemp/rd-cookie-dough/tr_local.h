@@ -1457,7 +1457,6 @@ struct shaderCommands_s
 	vec2_t		texCoords[SHADER_MAX_VERTEXES][NUM_TEX_COORDS] QALIGN(16);
 	color4ub_t	vertexColors[SHADER_MAX_VERTEXES] QALIGN(16);
 	byte		vertexAlphas[SHADER_MAX_VERTEXES][4]; QALIGN(16) //rwwRMG - added support
-	int			vertexDlightBits[SHADER_MAX_VERTEXES]; QALIGN(16)
 
 	stageVars_t	svars QALIGN(16);
 	int			indexOffset;
