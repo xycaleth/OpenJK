@@ -212,6 +212,7 @@ void main()
 {
 	vec4 position = u_ModelViewMatrix[2047] * vec4(in_Position, 1.0);
 	gl_Position = u_ProjectionMatrix * position;
+	gl_Position.w = gl_Position.z;  // force vertices to far plane
 
 	out_TexCoord = in_TexCoord;
 }

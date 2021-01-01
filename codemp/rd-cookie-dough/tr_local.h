@@ -131,8 +131,9 @@ typedef struct image_s {
 typedef enum {
 	SS_BAD,
 	SS_PORTAL,			// mirrors, portals, viewscreens
-	SS_ENVIRONMENT,		// sky box
 	SS_OPAQUE,			// opaque
+
+	SS_ENVIRONMENT,		// sky box
 
 	SS_DECAL,			// scorch marks, etc.
 	SS_SEE_THROUGH,		// ladders, grates, grills that may have small blended edges
