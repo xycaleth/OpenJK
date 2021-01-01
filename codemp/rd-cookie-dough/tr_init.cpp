@@ -976,10 +976,12 @@ static void GL_SetDefaultState(void)
 	qglVertexAttribFormat(0, 3, GL_FLOAT, GL_FALSE, 0);
 	qglVertexAttribFormat(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0);
 	qglVertexAttribFormat(2, 2, GL_FLOAT, GL_FALSE, 0);
+	qglVertexAttribFormat(3, 2, GL_FLOAT, GL_FALSE, 0);
 
 	qglVertexAttribBinding(0, 0);
 	qglVertexAttribBinding(1, 1);
 	qglVertexAttribBinding(2, 2);
+	qglVertexAttribBinding(3, 3);
 }
 
 /*
@@ -1398,7 +1400,6 @@ void R_Init( void ) {
 	GLSL_Init();
 	GpuBuffers_Init();
 
-	backEnd.shaderProgram = GLSL_MainShader2D_GetHandle();
 	backEnd.minDepthRange = 0.0f;
 	backEnd.maxDepthRange = 1.0f;
 

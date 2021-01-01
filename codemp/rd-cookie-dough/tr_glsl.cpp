@@ -30,21 +30,20 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 static constexpr char VERSION_STRING[] = "#version 430 core\n";
 static struct 
 {
-	GLuint fullscreenProgram;
-	GLuint mainProgram;
-	GLuint mainProgram2D;
-	GLuint skyProgram;
+	ShaderProgram fullscreenProgram;
+	ShaderProgram mainProgram;
+	ShaderProgram skyProgram;
 } s_shaders;
 
-static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragmentShaderCode, const char **definitions, size_t definitionsCount)
+static GLuint GLSL_CompileShader(GLenum shaderType, const char* code, const char** definitions, size_t definitionsCount)
 {
-	GLuint vertexShader = qglCreateShader(GL_VERTEX_SHADER);
-
 	assert(definitionsCount <= 126);
 
-	const char *vertexShaderStrings[128];
+	GLuint shader = qglCreateShader(shaderType);
+
+	const char *shaderStrings[128];
 	int stringCount = 0;
-	vertexShaderStrings[stringCount++] = VERSION_STRING;
+	shaderStrings[stringCount++] = VERSION_STRING;
 
 	for (int i = 0; i < definitionsCount; ++i)
 	{
@@ -54,60 +53,50 @@ static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragm
 		char *define = reinterpret_cast<char*>(Hunk_AllocateTempMemory(len + 1));
 		Q_strncpyz(define, defineStr, len + 1);
 
-		vertexShaderStrings[stringCount++] = define;
+		shaderStrings[stringCount++] = define;
 	}
 
-	vertexShaderStrings[stringCount++] = vertexShaderCode;
+	shaderStrings[stringCount++] = code;
 
-	qglShaderSource(vertexShader, stringCount, vertexShaderStrings, nullptr);
-	qglCompileShader(vertexShader);
+	qglShaderSource(shader, stringCount, shaderStrings, nullptr);
+	qglCompileShader(shader);
 
 	for ( int i = 1; (i + 1) < stringCount; ++i)
 	{
-		Hunk_FreeTempMemory(const_cast<char*>(vertexShaderStrings[i]));
+		Hunk_FreeTempMemory(const_cast<char*>(shaderStrings[i]));
 	}
 
 	GLint status;
-	qglGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+	qglGetShaderiv(shader, GL_COMPILE_STATUS, &status);
 	if (status != GL_TRUE)
 	{
 		GLint logLength;
-		qglGetShaderiv(vertexShader, GL_INFO_LOG_LENGTH, &logLength);
+		qglGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
 
 		char *logText = reinterpret_cast<char*>(ri.Hunk_AllocateTempMemory(logLength));
-		qglGetShaderInfoLog(vertexShader, logLength, nullptr, logText);
+		qglGetShaderInfoLog(shader, logLength, nullptr, logText);
 
 		Com_Printf("Failed to compile shader: %s\n", logText);
 
 		ri.Hunk_FreeTempMemory(logText);
 	}
 
-	const char *fragmentShaderStrings[] = {VERSION_STRING, fragmentShaderCode};
-	GLuint fragmentShader = qglCreateShader(GL_FRAGMENT_SHADER);
-	qglShaderSource(fragmentShader, 2, fragmentShaderStrings, nullptr);
-	qglCompileShader(fragmentShader);
+	return shader;
+}
 
-	qglGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
-	if (status != GL_TRUE)
-	{
-		GLint logLength;
-		qglGetShaderiv(fragmentShader, GL_INFO_LOG_LENGTH, &logLength);
-
-		char *logText = reinterpret_cast<char*>(ri.Hunk_AllocateTempMemory(logLength));
-		qglGetShaderInfoLog(fragmentShader, logLength, nullptr, logText);
-
-		Com_Printf("Failed to compile shader: %s\n", logText);
-
-		ri.Hunk_FreeTempMemory(logText);
-	}
+static GLuint GLSL_CreateProgram(const char* vertexShaderCode, const char* fragmentShaderCode, const char **definitions, size_t definitionsCount)
+{
+	GLuint vertexShader = GLSL_CompileShader(GL_VERTEX_SHADER, vertexShaderCode, definitions, definitionsCount);
+	GLuint fragmentShader = GLSL_CompileShader(GL_FRAGMENT_SHADER, fragmentShaderCode, definitions, definitionsCount);
 
 	GLuint program = qglCreateProgram();
 	qglAttachShader(program, vertexShader);
 	qglAttachShader(program, fragmentShader);
 	qglLinkProgram(program);
 
-	qglGetProgramiv(program, GL_LINK_STATUS, &status);
-	if (status != GL_TRUE)
+	GLint linkStatus;
+	qglGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+	if (linkStatus != GL_TRUE)
 	{
 		GLint logLength;
 		qglGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
@@ -150,10 +139,14 @@ layout(location = 0) uniform float u_PushConstants[128];
 
 layout(location = 0) in vec3 in_Position;
 layout(location = 1) in vec4 in_Color;
-layout(location = 2) in vec2 in_TexCoord;
+layout(location = 2) in vec2 in_TexCoord0;
+#if defined(MULTITEXTURE)
+layout(location = 3) in vec2 in_TexCoord1;
+#endif
 
 layout(location = 0) out vec4 out_Color;
-layout(location = 1) out vec2 out_TexCoord;
+layout(location = 1) out vec2 out_TexCoord0;
+layout(location = 2) out vec2 out_TexCoord1;
 
 #define u_EntityIndex int(u_PushConstants[0])
 
@@ -166,28 +159,59 @@ void main()
 	gl_Position = u_ProjectionMatrix * position;
 
 	out_Color = in_Color;
-	out_TexCoord = in_TexCoord;
+	out_TexCoord0 = in_TexCoord0;
+#if defined(MULTITEXTURE)
+	out_TexCoord1 = in_TexCoord1;
+#endif
 }
 )";
 
 	static constexpr const char FRAGMENT_SHADER[] = R"(
-layout(binding = 0) uniform sampler2D u_Texture;
+layout(binding = 0) uniform sampler2D u_Texture0;
+layout(binding = 1) uniform sampler2D u_Texture1;
+layout(location = 0) uniform float u_PushConstants[128];
 
 layout(location = 0) in vec4 in_Color;
-layout(location = 1) in vec2 in_TexCoord;
+layout(location = 1) in vec2 in_TexCoord0;
+layout(location = 2) in vec2 in_TexCoord1;
 
 layout(location = 0) out vec4 out_FragColor;
 
+#define u_MultiplyTextures (u_PushConstants[1] > 0.0)
+
 void main()
 {
-	out_FragColor = in_Color * texture(u_Texture, in_TexCoord);
+	vec4 color = texture(u_Texture0, in_TexCoord0);
+
+#if defined(MULTITEXTURE)
+	vec4 color1 = texture(u_Texture1, in_TexCoord1);
+	color = mix(color + color1, color * color1, u_MultiplyTextures);
+#endif
+
+	out_FragColor = in_Color * color;
 }
 )";
 
-	s_shaders.mainProgram2D = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+	ShaderProgram* program = &s_shaders.mainProgram;
 
-	const char *defines[] = {"RENDER_SCENE"};
-	s_shaders.mainProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER, defines, 1);
+	program->permutationCount = MAIN_SHADER_PERMUTATION_COUNT;
+	program->permutations = reinterpret_cast<int*>(
+		Hunk_Alloc(sizeof(int) * program->permutationCount, h_low));
+	Com_Memset(program->permutations, 0, sizeof(int) * program->permutationCount);
+
+	program->permutations[0] = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+
+	{
+		const char *defines[] = {"RENDER_SCENE"};
+		program->permutations[MAIN_SHADER_RENDER_SCENE] =
+			GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER, defines, 1);
+	}
+
+	{
+		const char *defines[] = {"RENDER_SCENE", "MULTITEXTURE"};
+		program->permutations[MAIN_SHADER_RENDER_SCENE | MAIN_SHADER_MULTITEXTURE] =
+			GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER, defines, 2);
+	}
 }
 
 static void GLSL_SkyShader_Init()
@@ -231,7 +255,14 @@ void main()
 }
 )";
 
-	s_shaders.skyProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+	ShaderProgram* program = &s_shaders.skyProgram;
+
+	program->permutationCount = 1;
+	program->permutations = reinterpret_cast<int*>(
+		Hunk_Alloc(sizeof(int) * program->permutationCount, h_low));
+	Com_Memset(program->permutations, 0, sizeof(int) * program->permutationCount);
+
+	program->permutations[0] = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
 }
 
 void GLSL_Init()
@@ -240,25 +271,30 @@ void GLSL_Init()
 	GLSL_SkyShader_Init();
 }
 
-void GLSL_Shutdown()
+static void GLSL_ReleaseShaderProgram(ShaderProgram* program)
 {
-	qglDeleteProgram(s_shaders.fullscreenProgram);
-	qglDeleteProgram(s_shaders.mainProgram);
-	qglDeleteProgram(s_shaders.mainProgram2D);
-	qglDeleteProgram(s_shaders.skyProgram);
+	for (int i = 0; i < program->permutationCount; ++i)
+	{
+		if (program->permutations[i] > 0)
+		{
+			qglDeleteProgram(program->permutations[i]);
+		}
+	}
 }
 
-int GLSL_MainShader_GetHandle()
+void GLSL_Shutdown()
+{
+	GLSL_ReleaseShaderProgram(&s_shaders.fullscreenProgram);
+	GLSL_ReleaseShaderProgram(&s_shaders.mainProgram);
+	GLSL_ReleaseShaderProgram(&s_shaders.skyProgram);
+}
+
+ShaderProgram GLSL_MainShader_GetHandle()
 {
 	return s_shaders.mainProgram;
 }
 
-int GLSL_MainShader2D_GetHandle()
-{
-	return s_shaders.mainProgram2D;
-}
-
-int GLSL_SkyShader_GetHandle()
+ShaderProgram GLSL_SkyShader_GetHandle()
 {
 	return s_shaders.skyProgram;
 }
@@ -297,10 +333,17 @@ void main() {
 }
 )";
 
-	s_shaders.fullscreenProgram = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
+	ShaderProgram* program = &s_shaders.fullscreenProgram;
+
+	program->permutationCount = 1;
+	program->permutations = reinterpret_cast<int*>(
+		Hunk_Alloc(sizeof(int) * program->permutationCount, h_low));
+	Com_Memset(program->permutations, 0, sizeof(int) * program->permutationCount);
+
+	program->permutations[0] = GLSL_CreateProgram(VERTEX_SHADER, FRAGMENT_SHADER);
 }
 
-int GLSL_FullscreenShader_GetHandle()
+ShaderProgram GLSL_FullscreenShader_GetHandle()
 {
 	return s_shaders.fullscreenProgram;
 }

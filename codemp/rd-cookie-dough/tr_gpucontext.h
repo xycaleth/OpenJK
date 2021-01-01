@@ -3,6 +3,7 @@
 #include "tr_local.h"
 
 #include "tr_buffers.h"
+#include "tr_glsl.h"
 #include <cstdint>
 
 enum PrimitiveType {
@@ -24,17 +25,20 @@ struct DrawItem
 	int layerCount;
 	struct Layer
 	{
-		int shaderProgram;
+		ShaderProgram shaderProgram;
+		uint32_t shaderOptions;
 
 		StateGroup stateGroup;
 		image_t* textures[2];
 
 		// Vertex format
 		uint32_t enabledVertexAttributes;
-		VertexBuffer vertexBuffers[3];
+		VertexBuffer vertexBuffers[4];
 
 		uint32_t storageBuffersUsed;
 		StorageBuffer storageBuffers[1];
+
+		bool modulateTextures;
 	} layers[16];
 
 	float minDepthRange;

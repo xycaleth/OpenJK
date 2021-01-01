@@ -22,16 +22,26 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 
+struct ShaderProgram
+{
+	int permutationCount;
+	int *permutations;
+};
+
+enum MainShaderOptions
+{
+	MAIN_SHADER_RENDER_SCENE = (1u << 0),
+	MAIN_SHADER_MULTITEXTURE = (1u << 1),
+
+	MAIN_SHADER_PERMUTATION_COUNT = (1u << 2),
+};
+
 void GLSL_Init();
 void GLSL_Shutdown();
 
-// Main shader
-int GLSL_MainShader_GetHandle();
-int GLSL_MainShader2D_GetHandle();
-
-// Fullscreen shader
 void GLSL_FullscreenShader_Init();
-int GLSL_FullscreenShader_GetHandle();
 
-// Sky shader
-int GLSL_SkyShader_GetHandle();
+ShaderProgram GLSL_MainShader_GetHandle();
+ShaderProgram GLSL_SkyShader_GetHandle();
+ShaderProgram GLSL_FullscreenShader_GetHandle();
+

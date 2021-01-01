@@ -749,9 +749,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	backEnd.modelsStorageBuffer = GpuBuffers_AllocFrameStorageDataMemory(modelMatrices, matricesSize);
 	Hunk_FreeTempMemory(modelMatrices);
 
-	int shaderProgram2D = backEnd.shaderProgram;
-	backEnd.shaderProgram = GLSL_MainShader_GetHandle();
-
 	float minDepthRange2D = backEnd.minDepthRange;
 	float maxDepthRange2D = backEnd.maxDepthRange;
 
@@ -1058,7 +1055,6 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 
 	// Restore the 2D render state
 	backEnd.viewConstantsBuffer = view2DBuffer;
-	backEnd.shaderProgram = shaderProgram2D;
 	backEnd.minDepthRange = minDepthRange2D;
 	backEnd.maxDepthRange = maxDepthRange2D;
 }

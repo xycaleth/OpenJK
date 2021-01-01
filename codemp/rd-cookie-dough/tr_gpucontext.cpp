@@ -11,7 +11,7 @@ static struct RenderContext
 	uint32_t enabledVertexAttribs;
 	VertexBuffers vertexBuffers[8];
 	int shaderProgram;
-	image_t *texture;
+	image_t *textures[2];
 
 	float minDepthRange;
 	float maxDepthRange;
@@ -47,24 +47,32 @@ void RenderContext_Draw(const DrawItem* drawItem)
 	for ( int i = 0; i < drawItem->layerCount; ++i )
 	{
 		const DrawItem::Layer* layer = drawItem->layers + i;
-		if (layer->shaderProgram != s_context.shaderProgram)
+
+		const int shaderProgram = layer->shaderProgram.permutations[layer->shaderOptions];
+		assert(shaderProgram != 0);
+		if (shaderProgram != s_context.shaderProgram)
 		{
-			qglUseProgram(layer->shaderProgram);
-			s_context.shaderProgram = layer->shaderProgram;
+			qglUseProgram(shaderProgram);
+			s_context.shaderProgram = shaderProgram;
 		}
 		
 		if (drawItem->isEntity)
 		{
 			float pushConstants[128];
 			pushConstants[0] = (float)drawItem->entityNum;
-			qglUniform1fv(0, 1, pushConstants);
+			if (layer->modulateTextures) 
+			{
+				pushConstants[1] = 1.0f;
+			}
+			qglUniform1fv(0, 2, pushConstants);
 		}
 
 		if (backEnd.viewConstantsBuffer.handle != s_context.uniformBuffers[0].handle ||
 			backEnd.viewConstantsBuffer.offset != s_context.uniformBuffers[0].offset ||
 			backEnd.viewConstantsBuffer.size != s_context.uniformBuffers[0].size)
 		{
-			qglBindBufferRange(GL_UNIFORM_BUFFER, 0, backEnd.viewConstantsBuffer.handle, 0, backEnd.viewConstantsBuffer.size);
+			qglBindBufferRange(
+				GL_UNIFORM_BUFFER, 0, backEnd.viewConstantsBuffer.handle, 0, backEnd.viewConstantsBuffer.size);
 			s_context.uniformBuffers[0] = backEnd.viewConstantsBuffer;
 		}
 
@@ -82,8 +90,8 @@ void RenderContext_Draw(const DrawItem* drawItem)
 
 		GL_State(layer->stateGroup.stateBits);
 
-		int strides[] = {16, 4, 8};
-		for ( int attribIndex = 0; attribIndex < 3; ++attribIndex)
+		int strides[] = {16, 4, 8, 8};
+		for ( int attribIndex = 0; attribIndex < 4; ++attribIndex)
 		{
 			const uint32_t attribBit = 1u << attribIndex;
 			if ( (layer->enabledVertexAttributes & attribBit) != 0 )
@@ -115,10 +123,14 @@ void RenderContext_Draw(const DrawItem* drawItem)
 			}
 		}
 
-		if (layer->textures[0] != s_context.texture)
+		for (int i = 0; i < 2; ++i)
 		{
-			GL_Bind(layer->textures[0]);
-			s_context.texture = layer->textures[0];
+			if (layer->textures[i] != nullptr &&
+				layer->textures[i] != s_context.textures[i])
+			{
+				qglBindTextureUnit(i, layer->textures[i]->texnum);
+				s_context.textures[i] = layer->textures[i];
+			}
 		}
 
 		switch (drawItem->drawType)

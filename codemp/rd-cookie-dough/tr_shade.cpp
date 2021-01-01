@@ -213,52 +213,25 @@ t0 = most upstream according to spec
 t1 = most downstream according to spec
 ===================
 */
-static void DrawMultitextured( shaderCommands_t *input, int stage ) {
+static void DrawMultitextured( shaderCommands_t *input, DrawItem::Layer* drawItemLayer, int stage ) {
 	shaderStage_t	*pStage;
 
 	pStage = &tess.xstages[stage];
 
-	GL_State( pStage->stateBits );
+	drawItemLayer->shaderOptions |= MAIN_SHADER_MULTITEXTURE;
+	drawItemLayer->enabledVertexAttributes |= 8;  // add texcoord1
+	drawItemLayer->textures[0] = R_GetAnimatedImage(&pStage->bundle[0]);
+	drawItemLayer->textures[1] = R_GetAnimatedImage(&pStage->bundle[1]);
+	drawItemLayer->vertexBuffers[3] = GpuBuffers_AllocFrameVertexDataMemory(
+		input->svars.texcoords[1], sizeof(input->svars.texcoords[1][0]) * input->numVertexes);
+	drawItemLayer->stateGroup.stateBits = pStage->stateBits;
+	drawItemLayer->modulateTextures = (tess.shader->multitextureEnv == GL_MODULATE);
 
-	// this is an ugly hack to work around a GeForce driver
-	// bug with multitexture and clip planes
-	if ( backEnd.viewParms.isPortal ) {
-		qglPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-	}
-
-	//
-	// base
-	//
-	GL_SelectTexture( 0 );
-	qglTexCoordPointer( 2, GL_FLOAT, 0, input->svars.texcoords[0] );
-	//R_BindAnimatedImage( &pStage->bundle[0] );
-
-	//
-	// lightmap/secondary pass
-	//
-	GL_SelectTexture( 1 );
-	qglEnable( GL_TEXTURE_2D );
-	qglEnableClientState( GL_TEXTURE_COORD_ARRAY );
-
-	if ( r_lightmap->integer ) {
-		GL_TexEnv( GL_REPLACE );
-	} else {
-		GL_TexEnv( tess.shader->multitextureEnv );
-	}
-
-	qglTexCoordPointer( 2, GL_FLOAT, 0, input->svars.texcoords[1] );
-
-	//R_BindAnimatedImage( &pStage->bundle[1] );
-
-	R_DrawElements( input->numIndexes, input->indexes );
-
-	//
-	// disable texturing on TEXTURE1, then select TEXTURE0
-	//
-	//qglDisableClientState( GL_TEXTURE_COORD_ARRAY );
-	//qglDisable( GL_TEXTURE_2D );
-
-	GL_SelectTexture( 0 );
+	//if ( r_lightmap->integer ) {
+		//GL_TexEnv( GL_REPLACE );
+	//} else {
+		//GL_TexEnv( tess.shader->multitextureEnv );
+	//}
 }
 
 /*
@@ -1509,13 +1482,17 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 		//
 		// upload per-stage vertex data
 		//
-		layer->shaderProgram = backEnd.shaderProgram;
+		layer->shaderProgram = GLSL_MainShader_GetHandle();
+		if (!backEnd.projection2D)
+		{
+			layer->shaderOptions = MAIN_SHADER_RENDER_SCENE;
+		}
 		layer->enabledVertexAttributes = 7;
 		layer->vertexBuffers[0] = *positionsBuffer;
 		layer->vertexBuffers[1] = GpuBuffers_AllocFrameVertexDataMemory(
-			tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numIndexes);
+			tess.svars.colors, sizeof(tess.svars.colors[0]) * input->numVertexes);
 		layer->vertexBuffers[2] = GpuBuffers_AllocFrameVertexDataMemory(
-			tess.svars.texcoords, sizeof(tess.svars.texcoords[0][0]) * input->numIndexes);
+			tess.svars.texcoords[0], sizeof(tess.svars.texcoords[0][0]) * input->numVertexes);
 
 		if (!backEnd.projection2D)
 		{
@@ -1525,11 +1502,7 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 
 		if ( pStage->bundle[1].image != 0 )
 		{
-			//
-			// do multitexture
-			//
-			assert(!"Unsupported right now");
-			DrawMultitextured( input, stage );
+			DrawMultitextured( input, layer, stage );
 		}
 		else
 		{
@@ -1632,7 +1605,6 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 void RB_StageIteratorGeneric( void )
 {
 	shaderCommands_t *input;
-	int stage;
 
 	//
 	// log this call
