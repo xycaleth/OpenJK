@@ -1117,24 +1117,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 		Com_Error (ERR_DROP, "Draw_StretchRaw: size not a power of 2: %i by %i", cols, rows);
 	}
 
-	GL_Bind( tr.scratchImage[client] );
-
-	// if the scratchImage isn't in the format we want, specify it as a new texture
-	if ( cols != tr.scratchImage[client]->width || rows != tr.scratchImage[client]->height ) {
-		tr.scratchImage[client]->width = cols;
-		tr.scratchImage[client]->height = rows;
-		qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGB8, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-	} else {
-		if (dirty) {
-			// otherwise, just subimage upload it so that drivers can tell we are going to be changing
-			// it and don't try and do a texture compression
-			qglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cols, rows, GL_RGBA, GL_UNSIGNED_BYTE, data );
-		}
-	}
+	RE_UploadCinematic(cols, rows, data, client, dirty);
 
 	if ( r_speeds->integer ) {
 		end = ri.Milliseconds()*ri.Cvar_VariableValue( "timescale" );
@@ -1162,25 +1145,30 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 }
 
 void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty) {
+	image_t* cinematicImage = tr.scratchImage[client];
+	if ( cols != cinematicImage->width || rows != cinematicImage->height ) {
+		cinematicImage->width = cols;
+		cinematicImage->height = rows;
 
-	GL_Bind( tr.scratchImage[client] );
-
-	// if the scratchImage isn't in the format we want, specify it as a new texture
-	if ( cols != tr.scratchImage[client]->width || rows != tr.scratchImage[client]->height ) {
-		// Note: q3 has the commented sections being uploaded width/height
-		tr.scratchImage[client]->width = /*tr.scratchImage[client]->width =*/ cols;
-		tr.scratchImage[client]->height = /*tr.scratchImage[client]->height =*/ rows;
-		qglTexImage2D( GL_TEXTURE_2D, 0, GL_RGB8, cols, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-		qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-	} else {
-		if (dirty) {
-			// otherwise, just subimage upload it so that drivers can tell we are going to be changing
-			// it and don't try and do a texture compression
-			qglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, cols, rows, GL_RGBA, GL_UNSIGNED_BYTE, data );
+		if (cinematicImage->texnum > 0)
+		{
+			qglDeleteTextures(1, &cinematicImage->texnum);
 		}
+		qglCreateTextures(GL_TEXTURE_2D, 1, &cinematicImage->texnum);
+		qglTextureStorage2D(cinematicImage->texnum, 1, GL_RGB8, cols, rows);
+
+		qglTextureParameterf(cinematicImage->texnum, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		qglTextureParameterf(cinematicImage->texnum, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		qglTextureParameterf(cinematicImage->texnum, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		qglTextureParameterf(cinematicImage->texnum, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		dirty = qtrue;
+	}
+
+	if (dirty) {
+		// otherwise, just subimage upload it so that drivers can tell we are going to be changing
+		// it and don't try and do a texture compression
+		qglTextureSubImage2D(cinematicImage->texnum, 0, 0, 0, cols, cols, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	}
 }
 
