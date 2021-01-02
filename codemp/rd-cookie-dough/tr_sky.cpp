@@ -429,12 +429,14 @@ static void DrawSkySide( struct image_s *image, const int mins[2], const int max
 	drawItem.layers[0].shaderProgram = GLSL_SkyShader_GetHandle();
 	drawItem.layers[0].storageBuffersUsed = true;
 	drawItem.layers[0].storageBuffers[0] = backEnd.modelsStorageBuffer;
+	drawItem.layers[0].constantBuffersUsed = 1;
+	drawItem.layers[0].constantBuffers[0] = backEnd.viewConstantsBuffer;
 	drawItem.layers[0].textures[0] = image;
 	drawItem.layers[0].enabledVertexAttributes = 5;
 	drawItem.layers[0].vertexBuffers[0] = positionsBuffer;
 	drawItem.layers[0].vertexBuffers[2] = texcoordsBuffer;
 
-	RenderContext_Draw(&drawItem);
+	RenderContext_AddDrawItem(drawItem);
 }
 
 static void DrawSkyBox( shader_t *shader )

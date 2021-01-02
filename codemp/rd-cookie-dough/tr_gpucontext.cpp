@@ -21,20 +21,46 @@ static struct RenderContext
 	StorageBuffer storageBuffers[1];
 
 	int drawItemCount;
-	DrawItem drawItems[4000];
+	int drawItemCapacity;
+	DrawItem* drawItems;
 } s_context;
 
 void RenderContext_Init()
 {
 	Com_Memset(&s_context, 0, sizeof(s_context));
+	s_context.drawItemCapacity = 400;
+	s_context.drawItems = reinterpret_cast<DrawItem*>(
+		Z_Malloc(sizeof(DrawItem) * s_context.drawItemCapacity, TAG_GENERAL));
+}
+
+void RenderContext_Shutdown()
+{
+	if (s_context.drawItems != nullptr)
+	{
+		Z_Free(s_context.drawItems);
+		s_context.drawItems = nullptr;
+	}
 }
 
 void RenderContext_AddDrawItem(const DrawItem& drawItem)
 {
+	if (s_context.drawItemCount == s_context.drawItemCapacity)
+	{
+		const int newCapacity = s_context.drawItemCapacity * 1.5f;
+		DrawItem* newDrawItems = reinterpret_cast<DrawItem*>(
+			Z_Malloc(sizeof(DrawItem) * newCapacity, TAG_GENERAL));
+
+		Com_Memcpy(newDrawItems, s_context.drawItems, sizeof(DrawItem) * s_context.drawItemCapacity);
+
+		Z_Free(s_context.drawItems);
+		s_context.drawItems = newDrawItems;
+		s_context.drawItemCapacity = newCapacity;
+	}
+
 	s_context.drawItems[s_context.drawItemCount++] = drawItem;
 }
 
-void RenderContext_Draw(const DrawItem* drawItem)
+static void RenderContext_Draw(const DrawItem* drawItem)
 {
 	if (drawItem->minDepthRange != s_context.minDepthRange ||
 		drawItem->maxDepthRange != s_context.maxDepthRange)
@@ -67,13 +93,16 @@ void RenderContext_Draw(const DrawItem* drawItem)
 			qglUniform1fv(0, 2, pushConstants);
 		}
 
-		if (backEnd.viewConstantsBuffer.handle != s_context.uniformBuffers[0].handle ||
-			backEnd.viewConstantsBuffer.offset != s_context.uniformBuffers[0].offset ||
-			backEnd.viewConstantsBuffer.size != s_context.uniformBuffers[0].size)
+		if (layer->constantBuffersUsed)
 		{
-			qglBindBufferRange(
-				GL_UNIFORM_BUFFER, 0, backEnd.viewConstantsBuffer.handle, 0, backEnd.viewConstantsBuffer.size);
-			s_context.uniformBuffers[0] = backEnd.viewConstantsBuffer;
+			if (layer->constantBuffers[0].handle != s_context.uniformBuffers[0].handle ||
+				layer->constantBuffers[0].offset != s_context.uniformBuffers[0].offset ||
+				layer->constantBuffers[0].size != s_context.uniformBuffers[0].size)
+			{
+				qglBindBufferRange(
+					GL_UNIFORM_BUFFER, 0, layer->constantBuffers[0].handle, 0, layer->constantBuffers[0].size);
+				s_context.uniformBuffers[0] = layer->constantBuffers[0];
+			}
 		}
 
 		if (layer->storageBuffersUsed)
@@ -158,3 +187,11 @@ void RenderContext_Draw(const DrawItem* drawItem)
 	}
 }
 
+void RenderContext_Submit()
+{
+	for (int i = 0; i < s_context.drawItemCount; ++i)
+	{
+		RenderContext_Draw(s_context.drawItems + i);
+	}
+	s_context.drawItemCount = 0;
+}

@@ -1141,7 +1141,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 	drawItem.layers[0].textures[0] = tr.scratchImage[client];
 	drawItem.layers[0].shaderProgram = GLSL_FullscreenShader_GetHandle();
 
-	RenderContext_Draw(&drawItem);
+	RenderContext_AddDrawItem(drawItem);
 }
 
 void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty) {
@@ -1761,6 +1761,8 @@ const void	*RB_SwapBuffers( const void *data ) {
 	if ( r_showImages->integer ) {
 		RB_ShowImages();
 	}
+
+	RenderContext_Submit();
 
 	cmd = (const swapBuffersCommand_t *)data;
 

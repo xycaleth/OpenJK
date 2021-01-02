@@ -1500,6 +1500,9 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 			layer->storageBuffers[0] = backEnd.modelsStorageBuffer;
 		}
 
+		layer->constantBuffersUsed = 1;
+		layer->constantBuffers[0] = backEnd.viewConstantsBuffer;
+
 		if ( pStage->bundle[1].image != 0 )
 		{
 			DrawMultitextured( input, layer, stage );
@@ -1651,7 +1654,7 @@ void RB_StageIteratorGeneric( void )
 	//
 	RB_IterateStagesGeneric( &drawItem, input, &positionsBuffer );
 
-	RenderContext_Draw(&drawItem);
+	RenderContext_AddDrawItem(drawItem);
 
 #if 0
 	//

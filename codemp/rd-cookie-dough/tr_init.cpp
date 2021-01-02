@@ -247,7 +247,8 @@ static void R_Splash()
 	drawItem.layers[0].textures[0] = pImage;
 	drawItem.layers[0].shaderProgram = GLSL_FullscreenShader_GetHandle();
 
-	RenderContext_Draw(&drawItem);
+	RenderContext_AddDrawItem(drawItem);
+	RenderContext_Submit();
 
 	ri.WIN_Present(&window);
 }
@@ -1480,6 +1481,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 		GpuBuffers_ReleaseConstantDataMemory(&tr.viewConstantsBuffer);
 		GpuBuffers_Shutdown();
 		GLSL_Shutdown();
+		RenderContext_Shutdown();
 	}
 
 	// shut down platform specific OpenGL stuff

@@ -38,6 +38,9 @@ struct DrawItem
 		uint32_t storageBuffersUsed;
 		StorageBuffer storageBuffers[1];
 
+		uint32_t constantBuffersUsed;
+		ConstantBuffer constantBuffers[1];
+
 		bool modulateTextures;
 	} layers[16];
 
@@ -55,5 +58,7 @@ struct DrawItem
 };
 
 void RenderContext_Init();
+void RenderContext_Shutdown();
+
 void RenderContext_AddDrawItem(const DrawItem& drawItem);
-void RenderContext_Draw(const DrawItem* drawItem);
+void RenderContext_Submit();
