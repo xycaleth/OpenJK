@@ -106,13 +106,18 @@ static void RenderContext_Draw(const DrawItem* drawItem)
 
 		if (layer->constantBuffersUsed)
 		{
-			if (layer->constantBuffers[0].handle != s_context.uniformBuffers[0].handle ||
-				layer->constantBuffers[0].offset != s_context.uniformBuffers[0].offset ||
-				layer->constantBuffers[0].size != s_context.uniformBuffers[0].size)
+			const ConstantBuffer* buffer = &layer->constantBuffers[0];
+			if (buffer->handle != s_context.uniformBuffers[0].handle ||
+				buffer->offset != s_context.uniformBuffers[0].offset ||
+				buffer->size != s_context.uniformBuffers[0].size)
 			{
 				qglBindBufferRange(
-					GL_UNIFORM_BUFFER, 0, layer->constantBuffers[0].handle, 0, layer->constantBuffers[0].size);
-				s_context.uniformBuffers[0] = layer->constantBuffers[0];
+					GL_UNIFORM_BUFFER,
+					0,
+					buffer->handle,
+					buffer->offset,
+					buffer->size);
+				s_context.uniformBuffers[0] = *buffer;
 			}
 		}
 

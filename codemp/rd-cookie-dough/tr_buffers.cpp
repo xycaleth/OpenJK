@@ -168,7 +168,7 @@ IndexBuffer GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
 
 ConstantBuffer GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t size)
 {
-	const size_t paddedSize = (size + s_buffers.uboAlignment) & ~s_buffers.uboAlignment;
+	const size_t paddedSize = (size + s_buffers.uboAlignment - 1) & ~(s_buffers.uboAlignment - 1);
 	if (s_buffers.uboSize == 0)
 	{
 		// 4mb for now
@@ -204,7 +204,7 @@ ConstantBuffer GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t 
 
 StorageBuffer GpuBuffers_AllocFrameStorageDataMemory(const void* data, size_t size)
 {
-	const size_t paddedSize = (size + s_buffers.ssboAlignment) & ~s_buffers.ssboAlignment;
+	const size_t paddedSize = (size + s_buffers.ssboAlignment - 1) & ~(s_buffers.ssboAlignment - 1);
 	if (s_buffers.ssboSize == 0)
 	{
 		// 4mb for now
