@@ -25,6 +25,8 @@ static struct RenderContext
 	DrawItem* drawItems;
 } s_context;
 
+static void RenderContext_Draw(const DrawItem* drawItem);
+
 void RenderContext_Init()
 {
 	Com_Memset(&s_context, 0, sizeof(s_context));
@@ -58,6 +60,15 @@ void RenderContext_AddDrawItem(const DrawItem& drawItem)
 	}
 
 	s_context.drawItems[s_context.drawItemCount++] = drawItem;
+}
+
+void RenderContext_Submit()
+{
+	for (int i = 0; i < s_context.drawItemCount; ++i)
+	{
+		RenderContext_Draw(s_context.drawItems + i);
+	}
+	s_context.drawItemCount = 0;
 }
 
 static void RenderContext_Draw(const DrawItem* drawItem)
@@ -185,13 +196,4 @@ static void RenderContext_Draw(const DrawItem* drawItem)
 				break;
 		}
 	}
-}
-
-void RenderContext_Submit()
-{
-	for (int i = 0; i < s_context.drawItemCount; ++i)
-	{
-		RenderContext_Draw(s_context.drawItems + i);
-	}
-	s_context.drawItemCount = 0;
 }
