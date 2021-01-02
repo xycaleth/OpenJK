@@ -600,7 +600,6 @@ Ghoul2 Insert End
 */
 	SF_FLARE,
 	SF_ENTITY,				// beams, rails, lightning, etc that can be determined by entity
-	SF_DISPLAY_LIST,
 
 	SF_NUM_SURFACE_TYPES,
 	SF_MAX = 0xffffffff			// ensures that sizeof( surfaceType_t ) == sizeof( int )

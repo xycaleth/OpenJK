@@ -21,7 +21,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-// tr_surf.c
 #include "tr_local.h"
 
 /*
@@ -38,15 +37,6 @@ It is safe to actually issue drawing commands here if you don't want to
 use the shader system.
 */
 
-
-//============================================================================
-
-
-/*
-==============
-RB_CheckOverflow
-==============
-*/
 void RB_CheckOverflow( int verts, int indexes ) {
 	if (tess.numVertexes + verts < SHADER_MAX_VERTEXES
 		&& tess.numIndexes + indexes < SHADER_MAX_INDEXES) {
@@ -65,12 +55,6 @@ void RB_CheckOverflow( int verts, int indexes ) {
 	RB_BeginSurface(tess.shader, tess.fogNum );
 }
 
-
-/*
-==============
-RB_AddQuadStampExt
-==============
-*/
 void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, float s1, float t1, float s2, float t2 ) {
 	vec3_t		normal;
 	int			ndx;
@@ -142,20 +126,10 @@ void RB_AddQuadStampExt( vec3_t origin, vec3_t left, vec3_t up, byte *color, flo
 	tess.numIndexes += 6;
 }
 
-/*
-==============
-RB_AddQuadStamp
-==============
-*/
 void RB_AddQuadStamp( vec3_t origin, vec3_t left, vec3_t up, byte *color ) {
 	RB_AddQuadStampExt( origin, left, up, color, 0, 0, 1, 1 );
 }
 
-/*
-==============
-RB_SurfaceSprite
-==============
-*/
 static void RB_SurfaceSprite( void ) {
 	vec3_t		left, up;
 	float		radius;
@@ -186,12 +160,6 @@ static void RB_SurfaceSprite( void ) {
 	RB_AddQuadStamp( backEnd.currentEntity->e.origin, left, up, backEnd.currentEntity->e.shaderRGBA );
 }
 
-
-/*
-=======================
-RB_SurfaceOrientedQuad
-=======================
-*/
 static void RB_SurfaceOrientedQuad( void )
 {
 	vec3_t	left, up;
@@ -237,12 +205,7 @@ static void RB_SurfaceOrientedQuad( void )
 	RB_AddQuadStamp( backEnd.currentEntity->e.origin, left, up, backEnd.currentEntity->e.shaderRGBA );
 }
 
-/*
-=============
-RB_SurfacePolychain
-=============
-*/
-void RB_SurfacePolychain( srfPoly_t *p ) {
+static void RB_SurfacePolychain( srfPoly_t *p ) {
 	int		i;
 	int		numv;
 
@@ -308,12 +271,7 @@ inline static uint32_t ComputeFinalVertexColor( const byte *colors ) {
 	return result.ui;
 }
 
-/*
-=============
-RB_SurfaceTriangles
-=============
-*/
-void RB_SurfaceTriangles( srfTriangles_t *srf ) {
+static void RB_SurfaceTriangles( srfTriangles_t *srf ) {
 	int			i, k;
 	drawVert_t	*dv;
 	float		*xyz, *normal, *texCoords;
@@ -374,13 +332,6 @@ void RB_SurfaceTriangles( srfTriangles_t *srf ) {
 	tess.numVertexes += srf->numVerts;
 }
 
-
-
-/*
-==============
-RB_SurfaceBeam
-==============
-*/
 static void RB_SurfaceBeam( void )
 {
 #define NUM_BEAM_SEGS 6
@@ -433,9 +384,6 @@ static void RB_SurfaceBeam( void )
 	qglEnd();
 }
 
-//------------------
-// DoSprite
-//------------------
 static void DoSprite( vec3_t origin, float radius, float rotation )
 {
 	float	s, c;
@@ -460,9 +408,6 @@ static void DoSprite( vec3_t origin, float radius, float rotation )
 	RB_AddQuadStamp( origin, left, up, backEnd.currentEntity->e.shaderRGBA );
 }
 
-//------------------
-// RB_SurfaceSaber
-//------------------
 static void RB_SurfaceSaberGlow()
 {
 	vec3_t		end;
@@ -671,9 +616,6 @@ static void DoLine_Oriented( const vec3_t start, const vec3_t end, const vec3_t 
 	tess.indexes[tess.numIndexes++] = vbase + 3;
 }
 
-//-----------------
-// RB_SurfaceLine
-//-----------------
 static void RB_SurfaceLine( void )
 {
 	refEntity_t *e;
@@ -711,12 +653,6 @@ static void RB_SurfaceOrientedLine( void )
 	VectorCopy(e->axis[1], right);
 	DoLine_Oriented( start, end, right, e->data.line.width*0.5 );
 }
-
-/*
-==============
-RB_SurfaceCylinder
-==============
-*/
 
 #define NUM_CYLINDER_SEGMENTS 32
 
@@ -756,6 +692,11 @@ static void DoCylinderPart(polyVert_t *verts)
 // e->oldorigin holds the top point
 // e->radius holds the radius
 
+/*
+==============
+RB_SurfaceCylinder
+==============
+*/
 static void RB_SurfaceCylinder( void )
 {
 	static polyVert_t	lower_points[NUM_CYLINDER_SEGMENTS], upper_points[NUM_CYLINDER_SEGMENTS], verts[4];
@@ -863,24 +804,8 @@ static float f_count;
 
 #define LIGHTNING_RECURSION_LEVEL 1 // was 2
 
-// these functions are pretty crappy in terms of returning a nice range of rnd numbers, but it's probably good enough?
-/*static int Q_rand( int *seed ) {
-	*seed = (69069 * *seed + 1);
-	return *seed;
-}
-
-static float Q_random( int *seed ) {
-	return ( Q_rand( seed ) & 0xffff ) / (float)0x10000;
-}
-
-static float Q_crandom( int *seed ) {
-	return 2.0F * ( Q_random( seed ) - 0.5f );
-}
-*/
 // Up front, we create a random "shape", then apply that to each line segment...and then again to each of those segments...kind of like a fractal
-//----------------------------------------------------------------------------
 static void CreateShape()
-//----------------------------------------------------------------------------
 {
 	VectorSet( sh1, 0.66f + Q_flrand(-1.0f, 1.0f) * 0.1f,	// fwd
 				0.07f + Q_flrand(-1.0f, 1.0f) * 0.025f,
@@ -892,9 +817,7 @@ static void CreateShape()
 					-sh1[2] + Q_flrand(-1.0f, 1.0f) * 0.02f );// up
 }
 
-//----------------------------------------------------------------------------
 static void ApplyShape( vec3_t start, vec3_t end, vec3_t right, float sradius, float eradius, int count )
-//----------------------------------------------------------------------------
 {
 	vec3_t	point1, point2, fwd;
 	vec3_t	rt, up;
@@ -941,9 +864,7 @@ static void ApplyShape( vec3_t start, vec3_t end, vec3_t right, float sradius, f
 	ApplyShape( point2, end, right, rads2, eradius, count - 1 );
 }
 
-//----------------------------------------------------------------------------
 static void DoBoltSeg( vec3_t start, vec3_t end, vec3_t right, float radius )
-//----------------------------------------------------------------------------
 {
 	refEntity_t *e;
 	vec3_t fwd, old;
@@ -1029,9 +950,7 @@ static void DoBoltSeg( vec3_t start, vec3_t end, vec3_t right, float radius )
 	}
 }
 
-//------------------------------------------
 static void RB_SurfaceElectricity()
-//------------------------------------------
 {
 	refEntity_t *e;
 	vec3_t		right, fwd;
@@ -1073,9 +992,6 @@ static void RB_SurfaceElectricity()
 
     DoBoltSeg( start, end, right, radius );
 }
-
-//================================================================================
-
 
 /*
 ** VectorArrayNormalize
@@ -1132,8 +1048,6 @@ static void VectorArrayNormalize(vec4_t *normals, unsigned int count)
 #endif
 
 }
-
-
 
 /*
 ** LerpMeshVertexes
@@ -1240,7 +1154,7 @@ static void LerpMeshVertexes (md3Surface_t *surf, float backlerp)
 RB_SurfaceMesh
 =============
 */
-void RB_SurfaceMesh(md3Surface_t *surface) {
+static void RB_SurfaceMesh(md3Surface_t *surface) {
 	int				j;
 	float			backlerp;
 	int				*triangles;
@@ -1281,13 +1195,12 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 
 }
 
-
 /*
 ==============
 RB_SurfaceFace
 ==============
 */
-void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
+static void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
 	int			i, j, k;
 	unsigned int *indices;
 	glIndex_t	*tessIndexes;
@@ -1353,8 +1266,7 @@ void RB_SurfaceFace( srfSurfaceFace_t *surf ) {
 	tess.numVertexes += surf->numPoints;
 }
 
-
-static float	LodErrorForVolume( vec3_t local, float radius ) {
+static float LodErrorForVolume( vec3_t local, float radius ) {
 	vec3_t		world;
 	float		d;
 
@@ -1391,7 +1303,7 @@ RB_SurfaceGrid
 Just copy the grid of points and triangulate
 =============
 */
-void RB_SurfaceGrid( srfGridMesh_t *cv ) {
+static void RB_SurfaceGrid( srfGridMesh_t *cv ) {
 	int		i, j, k;
 	float	*xyz;
 	float	*texCoords;
@@ -1586,7 +1498,7 @@ RB_SurfaceEntity
 Entities that have a single procedurally generated surface
 ====================
 */
-void RB_SurfaceEntity( surfaceType_t *surfType ) {
+static void RB_SurfaceEntity( surfaceType_t *surfType ) {
 	switch( backEnd.currentEntity->e.reType ) {
 	case RT_SPRITE:
 		RB_SurfaceSprite();
@@ -1644,7 +1556,7 @@ void RB_SurfaceEntity( surfaceType_t *surfType ) {
 	return;
 }
 
-void RB_SurfaceBad( surfaceType_t *surfType ) {
+static void RB_SurfaceBad( surfaceType_t *surfType ) {
 	ri.Printf( PRINT_ALL, "Bad surface tesselated.\n" );
 }
 
@@ -1699,7 +1611,7 @@ static bool RB_TestZFlare( vec3_t point) {
 	return visible;
 }
 
-void RB_SurfaceFlare( srfFlare_t *surf ) {
+static void RB_SurfaceFlare( srfFlare_t *surf ) {
 	vec3_t		left, up;
 	float		radius;
 	byte		color[4];
@@ -1752,16 +1664,8 @@ void RB_SurfaceFlare( srfFlare_t *surf ) {
 	RB_AddQuadStamp( origin, left, up, color );
 }
 
-
-void RB_SurfaceDisplayList( srfDisplayList_t *surf ) {
-	// all appropriate state must be set in RB_BeginSurface
-	// this isn't implemented yet...
-	qglCallList( surf->listNum );
+static void RB_SurfaceSkip( void *surf ) {
 }
-
-void RB_SurfaceSkip( void *surf ) {
-}
-
 
 void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( void *) = {
 	(void(*)(void*))RB_SurfaceBad,			// SF_BAD,
@@ -1771,14 +1675,7 @@ void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( void *) = {
 	(void(*)(void*))RB_SurfaceTriangles,	// SF_TRIANGLES,
 	(void(*)(void*))RB_SurfacePolychain,	// SF_POLY,
 	(void(*)(void*))RB_SurfaceMesh,			// SF_MD3,
-/*
-Ghoul2 Insert Start
-*/
 	(void(*)(void*))RB_SurfaceGhoul,		// SF_MDX,
-/*
-Ghoul2 Insert End
-*/
 	(void(*)(void*))RB_SurfaceFlare,		// SF_FLARE,
 	(void(*)(void*))RB_SurfaceEntity,		// SF_ENTITY
-	(void(*)(void*))RB_SurfaceDisplayList	// SF_DISPLAY_LIST
 };
