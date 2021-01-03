@@ -114,16 +114,17 @@ VertexBuffer GpuBuffers_AllocFrameVertexDataMemory(const void* data, size_t size
 		s_buffers.vboOffset = 0;
 	}
 
+	void* memory = reinterpret_cast<char*>(s_buffers.vboBasePtr) + s_buffers.vboOffset;
 	if (data != nullptr)
 	{
-		Com_Memcpy(reinterpret_cast<char*>(s_buffers.vboBasePtr) + s_buffers.vboOffset, data, size);
+		Com_Memcpy(memory, data, size);
 	}
 
 	VertexBuffer buffer = {};
 	buffer.handle = s_buffers.vbo;
 	buffer.offset = s_buffers.vboOffset;
 	buffer.size = paddedSize;
-	buffer.memory = reinterpret_cast<char*>(s_buffers.vboBasePtr) + s_buffers.vboOffset;
+	buffer.memory = memory;
 
 	s_buffers.vboOffset += paddedSize;
 
@@ -150,16 +151,17 @@ IndexBuffer GpuBuffers_AllocFrameIndexDataMemory(const void* data, size_t size)
 		s_buffers.iboOffset = 0;
 	}
 
+	void *memory = reinterpret_cast<char*>(s_buffers.iboBasePtr) + s_buffers.iboOffset;
 	if (data != nullptr)
 	{
-		Com_Memcpy(reinterpret_cast<char*>(s_buffers.iboBasePtr) + s_buffers.iboOffset, data, size);
+		Com_Memcpy(memory, data, size);
 	}
 
 	IndexBuffer indexBuffer = {};
 	indexBuffer.handle = s_buffers.ibo;
 	indexBuffer.size = size;
 	indexBuffer.offset = s_buffers.iboOffset;
-	indexBuffer.memory = reinterpret_cast<char*>(s_buffers.iboBasePtr) + s_buffers.iboOffset;
+	indexBuffer.memory = memory;
 
 	s_buffers.iboOffset += size;
 
@@ -186,16 +188,17 @@ ConstantBuffer GpuBuffers_AllocFrameConstantDataMemory(const void* data, size_t 
 		s_buffers.uboOffset = 0;
 	}
 
+	void* memory = reinterpret_cast<char*>(s_buffers.uboBasePtr) + s_buffers.uboOffset;
 	if (data != nullptr)
 	{
-		Com_Memcpy(reinterpret_cast<char*>(s_buffers.uboBasePtr) + s_buffers.uboOffset, data, size);
+		Com_Memcpy(memory, data, size);
 	}
 
 	ConstantBuffer buffer = {};
 	buffer.handle = s_buffers.ubo;
 	buffer.offset = s_buffers.uboOffset;
 	buffer.size = size;
-	buffer.memory = reinterpret_cast<char*>(s_buffers.uboBasePtr) + s_buffers.uboOffset;
+	buffer.memory = memory;
 
 	s_buffers.uboOffset += paddedSize;
 
@@ -222,12 +225,17 @@ StorageBuffer GpuBuffers_AllocFrameStorageDataMemory(const void* data, size_t si
 		s_buffers.ssboOffset = 0;
 	}
 
-	Com_Memcpy(reinterpret_cast<char*>(s_buffers.ssboBasePtr) + s_buffers.ssboOffset, data, size);
+	void *memory = reinterpret_cast<char*>(s_buffers.ssboBasePtr) + s_buffers.ssboOffset;
+	if (data != nullptr)
+	{
+		Com_Memcpy(memory, data, size);
+	}
 
 	StorageBuffer buffer = {};
 	buffer.handle = s_buffers.ssbo;
 	buffer.offset = s_buffers.ssboOffset;
 	buffer.size = size;
+	buffer.memory = memory;
 
 	s_buffers.ssboOffset += paddedSize;
 

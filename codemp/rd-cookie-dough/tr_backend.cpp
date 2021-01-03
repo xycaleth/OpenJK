@@ -737,7 +737,9 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 		backEnd.viewParms.projectionMatrix, sizeof(backEnd.viewParms.projectionMatrix));
 
 	const size_t matricesSize = sizeof(float) * 16 * (MAX_REFENTITIES + 1);
-	float* modelMatrices = reinterpret_cast<float*>(Hunk_AllocateTempMemory(matricesSize));
+	backEnd.modelsStorageBuffer = GpuBuffers_AllocFrameStorageDataMemory(nullptr, matricesSize);
+	float* modelMatrices = reinterpret_cast<float*>(GpuBuffers_Map(&backEnd.modelsStorageBuffer));
+
 	for (int i = 0; i < backEnd.refdef.num_entities; ++i)
 	{
 		orientationr_t ori = {};
@@ -746,8 +748,7 @@ static void RB_RenderDrawSurfList( drawSurf_t *drawSurfs, int numDrawSurfs ) {
 	}
 	Com_Memcpy(modelMatrices + 16 * REFENTITYNUM_WORLD, backEnd.viewParms.world.modelMatrix, sizeof(float) * 16);
 
-	backEnd.modelsStorageBuffer = GpuBuffers_AllocFrameStorageDataMemory(modelMatrices, matricesSize);
-	Hunk_FreeTempMemory(modelMatrices);
+	GpuBuffers_Unmap(&backEnd.modelsStorageBuffer);
 
 	float minDepthRange2D = backEnd.minDepthRange;
 	float maxDepthRange2D = backEnd.maxDepthRange;
