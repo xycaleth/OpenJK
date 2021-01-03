@@ -1619,6 +1619,20 @@ static void RB_SurfaceFlare( srfFlare_t *surf ) {
 	vec3_t		origin;
 	float		d, dist;
 
+	// COOKIE: This needs to be re-implemented. Possible solutions off the top
+	// of my head are either:
+	//
+	// 1. Submit draws where the flare position is duplicated in the vbo 6
+	// times. In the vertex shader, check the position against the depth buffer
+	// (by reading the depth texture). If depth test passes, use the
+	// gl_VertexID to determine which corner of the flare quad this is, and
+	// expand it that way. Otherwise create a degenerate triangle (where all
+	// the verts are at 0).
+	// so that nothing is rendered, otherwise draw them as usual.
+	// 2. Compute shader -> check depth -> generate indirect draws
+	//
+	// First option is much simpler and probably easier to implement.
+#if defined(COOKIE)
 	if ( !r_flares->integer ) {
 		return;
 	}
@@ -1662,6 +1676,7 @@ static void RB_SurfaceFlare( srfFlare_t *surf ) {
 	}
 
 	RB_AddQuadStamp( origin, left, up, color );
+#endif
 }
 
 static void RB_SurfaceSkip( void *surf ) {
