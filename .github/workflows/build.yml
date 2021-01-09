@@ -38,7 +38,7 @@ jobs:
     - name: Publish
       if: ${{ matrix.build_type == "RelWithDebInfo" && matrix.arch == "Win32" }}
       shell: bash
-      run: echo ${{ github.event_name}} is the event name
+      run: echo ${{ github.event_name }} is the event name
 
   vs2017_xp:
     name: Build VS 2017, Windows XP
@@ -87,7 +87,7 @@ jobs:
     
     - name: Publish
       shell: bash
-      run: echo ${{ github.event_name}} is the event name
+      run: echo ${{ github.event_name }} is the event name
 
   linux:
     name: Build Linux, ${{ matrix.build_type }}
@@ -117,4 +117,4 @@ jobs:
     - name: Publish
       if: ${{ matrix.build_type == "RelWithDebInfo" }}
       shell: bash
-      run: echo ${{ github.event_name}} is the event name
+      run: echo ${{ github.event_name }} is the event name
