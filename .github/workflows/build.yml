@@ -36,7 +36,7 @@ jobs:
       run: cmake --build . --config ${{ matrix.build_type }}
     
     - name: Publish
-      if: ${{ matrix.build_type == "RelWithDebInfo" && matrix.arch == "Win32" }}
+      if: ${{ matrix.build_type == 'RelWithDebInfo' && matrix.arch == 'Win32' }}
       shell: bash
       run: echo ${{ github.event_name }} is the event name
 
@@ -115,6 +115,6 @@ jobs:
       run: cmake --build .
     
     - name: Publish
-      if: ${{ matrix.build_type == "RelWithDebInfo" }}
+      if: ${{ matrix.build_type == 'RelWithDebInfo' }}
       shell: bash
       run: echo ${{ github.event_name }} is the event name
