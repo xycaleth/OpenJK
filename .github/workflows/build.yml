@@ -28,15 +28,15 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -A ${{ matrix.arch }}
+      run: cmake $GITHUB_WORKSPACE -A ${{ matrix.arch }} -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/package
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: cmake --build . --config ${{ matrix.build_type }}
     
-    - name: Publish
-      if: ${{ matrix.build_type == 'RelWithDebInfo' && matrix.arch == 'Win32' }}
+    - name: Package and Publish
+      if: matrix.build_type == 'RelWithDebInfo' && matrix.arch == 'Win32'
       shell: bash
       run: echo ${{ github.event_name }} is the event name
 
@@ -78,16 +78,20 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/package
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: cmake --build .
     
-    - name: Publish
+    - name: Package and Publish
       shell: bash
-      run: echo ${{ github.event_name }} is the event name
+      working-directory: ${{runner.workspace}}/build
+      run: |
+        cmake --install . --config RelWithDebInfo
+        (cd package/OpenJK; cmake -E tar cv game.pk3 --format=zip cgamex86_64.dylib jampgamex86_64.dylib uix86_64.dylib; rm cgamex86_64.dylib jampgamex86_64.dylib uix86_64.dylib)
+        (cd package; cmake -E tar cv ../openjk-macos.zip --format=zip .)
 
   linux:
     name: Build Linux, ${{ matrix.build_type }}
@@ -101,20 +105,21 @@ jobs:
 
     - name: Create Build Environment
       run: |
+        sudo apt-get update
         sudo apt-get install libjpeg-dev libpng-dev zlib1g-dev libsdl2-dev
         cmake -E make_directory ${{runner.workspace}}/build
 
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_INSTALL_PREFIX=${{ runner.workspace }}/package
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
       shell: bash
       run: cmake --build .
     
-    - name: Publish
-      if: ${{ matrix.build_type == 'RelWithDebInfo' }}
+    - name: Package and Publish
+      if: matrix.build_type == 'RelWithDebInfo'
       shell: bash
       run: echo ${{ github.event_name }} is the event name
