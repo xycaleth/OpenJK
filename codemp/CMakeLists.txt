@@ -597,16 +597,16 @@ if(BuildMPEngine)
 			COMPONENT Runtime)
 		install(TARGETS ${MPEngine}
 			BUNDLE
-			DESTINATION ${JKAInstallDir}
+			DESTINATION .
 			COMPONENT ${JKAMPClientComponent})
 	else(MakeApplicationBundles)
 		install(TARGETS ${MPEngine}
 			RUNTIME
-			DESTINATION ${JKAInstallDir}
+			DESTINATION .
 			COMPONENT ${JKAMPClientComponent})
 		if(MPEngineExtraInstallFiles)
 			install(FILES ${MPEngineExtraInstallFiles}
-				DESTINATION ${JKAInstallDir}
+				DESTINATION .
 				COMPONENT ${JKAMPClientComponent})
 		endif()
 	endif(MakeApplicationBundles)
@@ -700,7 +700,7 @@ if(BuildMPDed)
 	add_executable(${MPDed} ${MPDedFiles})
 	install(TARGETS ${MPDed}
 		RUNTIME
-		DESTINATION ${JKAInstallDir}
+		DESTINATION .
 		COMPONENT ${JKAMPServerComponent})
 
 	set_target_properties(${MPDed} PROPERTIES COMPILE_DEFINITIONS "${MPDedDefines}")

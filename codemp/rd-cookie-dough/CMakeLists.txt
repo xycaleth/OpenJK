@@ -147,18 +147,18 @@ endif()
 if(WIN32)
 	install(TARGETS ${MPCookieDoughRenderer}
 		RUNTIME
-		DESTINATION ${JKAInstallDir}
+		DESTINATION .
 		COMPONENT ${JKAMPClientComponent})
 else(WIN32)
 	if(MakeApplicationBundles AND BuildMPEngine)
 		install(TARGETS ${MPCookieDoughRenderer}
 			LIBRARY
-			DESTINATION "${JKAInstallDir}/${MPEngine}.app/Contents/MacOS/"
+			DESTINATION "${MPEngine}.app/Contents/MacOS/"
 			COMPONENT ${JKAMPClientComponent})
 	else()
 		install(TARGETS ${MPCookieDoughRenderer}
 			LIBRARY
-			DESTINATION ${JKAInstallDir}
+			DESTINATION .
 			COMPONENT ${JKAMPClientComponent})
 	endif()
 endif()

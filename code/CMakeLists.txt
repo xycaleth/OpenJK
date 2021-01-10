@@ -376,7 +376,7 @@ if(BuildSPEngine OR BuildJK2SPEngine)
     list(APPEND SPEngineLibraries          ${ZLIB_LIBRARIES})
 
 	# project macro so we can invoke it twice: for jk2 and for ja
-	function(add_sp_project ProjectName Label SPDirName InstallDir Component)
+	function(add_sp_project ProjectName Label SPDirName Component)
 		if(MakeApplicationBundles)
 			set_source_files_properties(${SPDirName}/macosx/OpenJK.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 			set(SPEngineFiles ${SPEngineFiles} ${SPDirName}/macosx/OpenJK.icns)
@@ -415,16 +415,16 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 				COMPONENT Runtime)
 			install(TARGETS ${ProjectName}
 				BUNDLE
-				DESTINATION ${InstallDir}
+				DESTINATION .
 				COMPONENT ${Component})
 		else(MakeApplicationBundles)
 			install(TARGETS ${ProjectName}
 				RUNTIME
-				DESTINATION ${InstallDir}
+				DESTINATION .
 				COMPONENT ${Component})
 			if(SPEngineExtraInstallFiles)
 				install(FILES ${SPEngineExtraInstallFiles}
-					DESTINATION ${InstallDir}
+					DESTINATION .
 					COMPONENT ${Component})
 			endif()
 		endif(MakeApplicationBundles)
@@ -441,11 +441,11 @@ if(BuildSPEngine OR BuildJK2SPEngine)
 		endif(SPEngineLibraries)
 	endfunction(add_sp_project)
 	if(BuildSPEngine)
-		add_sp_project(${SPEngine} "SP Client" ${SPDir} ${JKAInstallDir} ${JKASPClientComponent})
+		add_sp_project(${SPEngine} "SP Client" ${SPDir} ${JKASPClientComponent})
 	endif(BuildSPEngine)
 	if(BuildJK2SPEngine)
 		set(SPEngineDefines ${SPEngineDefines} "JK2_MODE")
-		add_sp_project(${JK2SPEngine} "JK2 SP Client" ${JK2SPDir} ${JK2InstallDir} ${JK2SPClientComponent})
+		add_sp_project(${JK2SPEngine} "JK2 SP Client" ${JK2SPDir} ${JK2SPClientComponent})
 	endif(BuildJK2SPEngine)
 
 endif(BuildSPEngine OR BuildJK2SPEngine)

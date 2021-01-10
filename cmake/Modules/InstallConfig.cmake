@@ -16,10 +16,6 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 #============================================================================
 
-# Subdirectories to package JK2 and JKA into
-set(JKAInstallDir "JediAcademy")
-set(JK2InstallDir "JediOutcast")
-
 # Install components
 set(JKAMPCoreComponent "JKAMPCore")
 set(JKAMPServerComponent "JKAMPServer")
@@ -90,11 +86,11 @@ if(WIN32)
 			Delete '$SMPROGRAMS\\\\$MUI_TEMP\\\\Jedi Academy MP.lnk'")
 
 		install(FILES ${MPDir}/OpenAL32.dll ${MPDir}/EaxMan.dll
-				DESTINATION ${JKAInstallDir}
+				DESTINATION .
 				COMPONENT ${JKAMPClientComponent})
 
 		install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
-				DESTINATION ${JKAInstallDir}
+				DESTINATION .
 				COMPONENT ${JKAMPClientComponent})
 	endif()
 
@@ -112,11 +108,11 @@ if(WIN32)
 			Delete '$SMPROGRAMS\\\\$MUI_TEMP\\\\Jedi Academy SP.lnk'")
 
 		install(FILES ${MPDir}/OpenAL32.dll ${MPDir}/EaxMan.dll
-			DESTINATION ${JKAInstallDir}
+			DESTINATION .
 			COMPONENT ${JKASPClientComponent})
 
 		install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
-				DESTINATION ${JKAInstallDir}
+				DESTINATION .
 				COMPONENT ${JKASPClientComponent})
 	endif()
 
@@ -135,11 +131,11 @@ if(WIN32)
 			Delete '$SMPROGRAMS\\\\$MUI_TEMP\\\\Jedi Outcast SP.lnk'")
 
 		install(FILES ${MPDir}/OpenAL32.dll ${MPDir}/EaxMan.dll
-			DESTINATION ${JK2InstallDir}
+			DESTINATION .
 			COMPONENT ${JK2SPClientComponent})
 
 		install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
-				DESTINATION ${JK2InstallDir}
+				DESTINATION .
 				COMPONENT ${JK2SPClientComponent})
 	endif()
 endif()

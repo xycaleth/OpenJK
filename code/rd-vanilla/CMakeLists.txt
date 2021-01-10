@@ -155,7 +155,7 @@ if(BuildSPRdVanilla OR BuildJK2SPRdVanilla)
 
 	set(SPRDVanillaRendererIncludeDirectories ${SPRDVanillaRendererIncludeDirectories} ${OpenJKLibDir})
 
-	function(add_sp_renderer_project ProjectName Label EngineName InstallDir Component)
+	function(add_sp_renderer_project ProjectName Label EngineName Component)
 		add_library(${ProjectName} SHARED ${SPRDVanillaFiles})
 		if(NOT MSVC)
 			# remove "lib" prefix for .so/.dylib files
@@ -165,18 +165,18 @@ if(BuildSPRdVanilla OR BuildJK2SPRdVanilla)
 		if(WIN32)
 			install(TARGETS ${ProjectName}
 				RUNTIME
-				DESTINATION ${InstallDir}
+				DESTINATION .
 				COMPONENT ${Component})
 		else(WIN32)
 			if(MakeApplicationBundles AND (BuildSPEngine OR BuildJK2SPEngine))
 				install(TARGETS ${ProjectName}
 					LIBRARY
-					DESTINATION "${InstallDir}/${EngineName}.app/Contents/MacOS/"
+					DESTINATION "${EngineName}.app/Contents/MacOS/"
 					COMPONENT ${Component})
 			else()
 				install(TARGETS ${ProjectName}
 					LIBRARY
-					DESTINATION ${InstallDir}
+					DESTINATION .
 					COMPONENT ${Component})
 			endif()
 		endif()
@@ -193,11 +193,11 @@ if(BuildSPRdVanilla OR BuildJK2SPRdVanilla)
 	endfunction(add_sp_renderer_project)
 
 	if(BuildSPRdVanilla)
-		add_sp_renderer_project(${SPRDVanillaRenderer} "SP Vanilla Renderer" ${SPEngine} ${JKAInstallDir} ${JKASPClientComponent})
+		add_sp_renderer_project(${SPRDVanillaRenderer} "SP Vanilla Renderer" ${SPEngine} ${JKASPClientComponent})
 	endif(BuildSPRdVanilla)
 	if(BuildJK2SPRdVanilla)
 		set(SPRDVanillaDefines ${SPRDVanillaDefines} "JK2_MODE")
-		add_sp_renderer_project(${JK2SPVanillaRenderer} "JK2 SP Vanilla Renderer" ${JK2SPEngine} ${JK2InstallDir} ${JK2SPClientComponent})
+		add_sp_renderer_project(${JK2SPVanillaRenderer} "JK2 SP Vanilla Renderer" ${JK2SPEngine} ${JK2SPClientComponent})
 	endif(BuildJK2SPRdVanilla)
 
 endif(BuildSPRdVanilla OR BuildJK2SPRdVanilla)
