@@ -368,6 +368,14 @@ typedef struct textureBundle_s {
 
 #define NUM_TEXTURE_BUNDLES 2
 
+enum AlphaTestFunc
+{
+	ALPHA_TEST_OFF,
+	ALPHA_TEST_LT,
+	ALPHA_TEST_GT,
+	ALPHA_TEST_GE,
+};
+
 typedef struct shaderStage_s {
 	bool			active;
 	bool			isDetail;
@@ -386,6 +394,8 @@ typedef struct shaderStage_s {
 	byte			constantColor[4];			// for CGEN_CONST and AGEN_CONST
 
 	uint32_t		stateBits;					// GLS_xxxx mask
+	AlphaTestFunc	alphaTestFunc;
+	float			alphaTestValue;
 
 	acff_t			adjustColorsForFog;
 
@@ -1324,12 +1334,6 @@ uint64_t GL_GetCullState( int cullType );
 #define GLS_CULL_BITS							0x00300000ULL
 
 #define GLS_POLYGON_OFFSET_TRUE					0x01000000ULL
-
-#define GLS_ATEST_GT_0							0x10000000ULL
-#define GLS_ATEST_LT_80							0x20000000ULL
-#define GLS_ATEST_GE_80							0x40000000ULL
-#define GLS_ATEST_GE_C0							0x80000000ULL
-#define GLS_ATEST_BITS							0xF0000000ULL
 
 #define GLS_DEFAULT			GLS_DEPTHMASK_TRUE
 #define GLS_ALPHA			(GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA)

@@ -1503,6 +1503,9 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 		layer->constantBuffersUsed = 1;
 		layer->constantBuffers[0] = backEnd.viewConstantsBuffer;
 
+		layer->alphaTestFunc = pStage->alphaTestFunc;
+		layer->alphaTestValue = pStage->alphaTestValue;
+
 		if ( pStage->bundle[1].image != 0 )
 		{
 			DrawMultitextured( input, layer, stage );
@@ -1563,7 +1566,9 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 			else if (backEnd.currentEntity && (backEnd.currentEntity->e.renderfx & RF_DISINTEGRATE1))
 			{
 				// we want to be able to rip a hole in the thing being disintegrated, and by doing the depth-testing it avoids some kinds of artefacts, but will probably introduce others?
-				stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE | GLS_ATEST_GE_C0;
+				stateBits = GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA | GLS_DEPTHMASK_TRUE;
+				layer->alphaTestFunc = ALPHA_TEST_GE;
+				layer->alphaTestValue = 0.75f;
 			}
 			else
 			{
@@ -1584,28 +1589,6 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 			}
 
 			layer->stateGroup.stateBits = stateBits;
-			switch (layer->stateGroup.stateBits & GLS_ATEST_BITS)
-			{
-				case 0:
-					layer->alphaTestFunc = 0;
-					break;
-				case GLS_ATEST_GT_0:
-					layer->alphaTestFunc = 2;
-					layer->alphaTestValue = 0.0f;
-					break;
-				case GLS_ATEST_LT_80:
-					layer->alphaTestFunc = 1;
-					layer->alphaTestValue = 0.5f;
-					break;
-				case GLS_ATEST_GE_80:
-					layer->alphaTestFunc = 3;
-					layer->alphaTestValue = 0.5f;
-					break;
-				case GLS_ATEST_GE_C0:
-					layer->alphaTestFunc = 3;
-					layer->alphaTestValue = 0.75f;
-					break;
-			}
 
 			if (lStencilled)
 			{

@@ -236,35 +236,6 @@ qboolean ParseVector( const char **text, int count, float *v ) {
 
 /*
 ===============
-NameToAFunc
-===============
-*/
-static unsigned NameToAFunc( const char *funcname )
-{
-	if ( !Q_stricmp( funcname, "GT0" ) )
-	{
-		return GLS_ATEST_GT_0;
-	}
-	else if ( !Q_stricmp( funcname, "LT128" ) )
-	{
-		return GLS_ATEST_LT_80;
-	}
-	else if ( !Q_stricmp( funcname, "GE128" ) )
-	{
-		return GLS_ATEST_GE_80;
-	}
-	else if ( !Q_stricmp( funcname, "GE192" ) )
-	{
-		return GLS_ATEST_GE_C0;
-	}
-
-	ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid alphaFunc name '%s' in shader '%s'\n", funcname, shader.name );
-	return 0;
-}
-
-
-/*
-===============
 NameToSrcBlendMode
 ===============
 */
@@ -1163,7 +1134,7 @@ ParseStage
 static qboolean ParseStage( shaderStage_t *stage, const char **text )
 {
 	char *token;
-	int depthMaskBits = GLS_DEPTHMASK_TRUE, blendSrcBits = 0, blendDstBits = 0, atestBits = 0, depthFuncBits = 0;
+	int depthMaskBits = GLS_DEPTHMASK_TRUE, blendSrcBits = 0, blendDstBits = 0, depthFuncBits = 0;
 	qboolean depthMaskExplicit = qfalse;
 
 	stage->active = qtrue;
@@ -1312,7 +1283,30 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				return qfalse;
 			}
 
-			atestBits = NameToAFunc( token );
+			if ( !Q_stricmp( token, "GT0" ) )
+			{
+				stage->alphaTestFunc = ALPHA_TEST_GT;
+				stage->alphaTestValue = 0.0f;
+			}
+			else if ( !Q_stricmp( token, "LT128" ) )
+			{
+				stage->alphaTestFunc = ALPHA_TEST_LT;
+				stage->alphaTestValue = 0.5f;
+			}
+			else if ( !Q_stricmp( token, "GE128" ) )
+			{
+				stage->alphaTestFunc = ALPHA_TEST_GE;
+				stage->alphaTestValue = 0.5f;
+			}
+			else if ( !Q_stricmp( token, "GE192" ) )
+			{
+				stage->alphaTestFunc = ALPHA_TEST_GE;
+				stage->alphaTestValue = 0.75f;
+			}
+			else
+			{
+				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: invalid alphaFunc name '%s' in shader '%s'\n", token, shader.name );
+			}
 		}
 		//
 		// depthFunc <func>
@@ -1719,7 +1713,6 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 	//
 	stage->stateBits = depthMaskBits |
 		               blendSrcBits | blendDstBits |
-					   atestBits |
 					   depthFuncBits;
 
 	return qtrue;
