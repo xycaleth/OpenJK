@@ -101,7 +101,10 @@ static void RenderContext_Draw(const DrawItem* drawItem)
 			{
 				pushConstants[1] = 1.0f;
 			}
-			qglUniform1fv(0, 2, pushConstants);
+
+			pushConstants[2] = layer->alphaTestValue;
+			pushConstants[3] = (float)layer->alphaTestFunc;
+			qglUniform1fv(0, 4, pushConstants);
 		}
 
 		if (layer->constantBuffersUsed)

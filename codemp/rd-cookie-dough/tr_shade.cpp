@@ -1584,6 +1584,28 @@ static void RB_IterateStagesGeneric( DrawItem* drawItem, shaderCommands_t *input
 			}
 
 			layer->stateGroup.stateBits = stateBits;
+			switch (layer->stateGroup.stateBits & GLS_ATEST_BITS)
+			{
+				case 0:
+					layer->alphaTestFunc = 0;
+					break;
+				case GLS_ATEST_GT_0:
+					layer->alphaTestFunc = 2;
+					layer->alphaTestValue = 0.0f;
+					break;
+				case GLS_ATEST_LT_80:
+					layer->alphaTestFunc = 1;
+					layer->alphaTestValue = 0.5f;
+					break;
+				case GLS_ATEST_GE_80:
+					layer->alphaTestFunc = 3;
+					layer->alphaTestValue = 0.5f;
+					break;
+				case GLS_ATEST_GE_C0:
+					layer->alphaTestFunc = 3;
+					layer->alphaTestValue = 0.75f;
+					break;
+			}
 
 			if (lStencilled)
 			{

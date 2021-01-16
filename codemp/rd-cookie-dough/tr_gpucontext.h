@@ -42,6 +42,8 @@ struct DrawItem
 		ConstantBuffer constantBuffers[1];
 
 		bool modulateTextures;
+		float alphaTestValue;
+		int alphaTestFunc;
 	} layers[16];
 
 	float minDepthRange;

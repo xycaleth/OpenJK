@@ -178,6 +178,8 @@ layout(location = 2) in vec2 in_TexCoord1;
 layout(location = 0) out vec4 out_FragColor;
 
 #define u_MultiplyTextures (u_PushConstants[1] > 0.0)
+#define u_AlphaTestValue (u_PushConstants[2])
+#define u_AlphaTestFunc (int(u_PushConstants[3]))
 
 void main()
 {
@@ -188,7 +190,20 @@ void main()
 	color = mix(color + color1, color * color1, u_MultiplyTextures);
 #endif
 
-	out_FragColor = in_Color * color;
+	color *= in_Color;
+
+	bool alphaTestPasses[4] = {
+		true,
+		color.a < u_AlphaTestValue,
+		color.a > u_AlphaTestValue,
+		color.a >= u_AlphaTestValue,
+	};
+	if (!alphaTestPasses[u_AlphaTestFunc])
+	{
+		discard;
+	}
+
+	out_FragColor = color;
 }
 )";
 

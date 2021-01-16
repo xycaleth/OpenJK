@@ -399,38 +399,6 @@ void GL_State( uint64_t stateBits )
 	}
 
 	//
-	// alpha test
-	//
-	if ( diff & GLS_ATEST_BITS )
-	{
-		switch ( stateBits & GLS_ATEST_BITS )
-		{
-		case 0:
-			qglDisable( GL_ALPHA_TEST );
-			break;
-		case GLS_ATEST_GT_0:
-			qglEnable( GL_ALPHA_TEST );
-			qglAlphaFunc( GL_GREATER, 0.0f );
-			break;
-		case GLS_ATEST_LT_80:
-			qglEnable( GL_ALPHA_TEST );
-			qglAlphaFunc( GL_LESS, 0.5f );
-			break;
-		case GLS_ATEST_GE_80:
-			qglEnable( GL_ALPHA_TEST );
-			qglAlphaFunc( GL_GEQUAL, 0.5f );
-			break;
-		case GLS_ATEST_GE_C0:
-			qglEnable( GL_ALPHA_TEST );
-			qglAlphaFunc( GL_GEQUAL, 0.75f );
-			break;
-		default:
-			assert( 0 );
-			break;
-		}
-	}
-
-	//
 	// polygon offset
 	//
 	if (diff & GLS_POLYGON_OFFSET_TRUE)
